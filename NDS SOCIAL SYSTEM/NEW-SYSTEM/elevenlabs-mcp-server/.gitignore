@@ -1,0 +1,13 @@
+# Dependencies & build output
+node_modules/
+.vercel/
+dist/
+
+# Environment files
+.env
+.env.*
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
