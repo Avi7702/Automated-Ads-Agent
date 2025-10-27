@@ -13,6 +13,7 @@ const {
 const { generateAdCopy, scoreBrandAlignment } = require('./services/llm');
 const { generateHeroImage, transformImage, uploadMedia } = require('./services/cloudinary');
 const { sendWhatsappPreview, getWhatsappMessageStatus } = require('./services/twilio');
+const { clearSecretCache } = require('./services/secrets');
 
 const WORKFLOW_LOG_ENABLED = process.env.ENABLE_WORKFLOW_LOG === 'true';
 
@@ -201,6 +202,7 @@ const toolFunctions = {
 
 async function handleMCP(payload) {
     const { method, id } = payload;
+    clearSecretCache();
 
     try {
         switch (method) {

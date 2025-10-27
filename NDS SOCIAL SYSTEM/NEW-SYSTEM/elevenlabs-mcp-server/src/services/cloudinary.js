@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const { getImageCacheEntry, upsertImageCacheEntry } = require('./supabase');
+const { getSecrets, getSecret } = require('./secrets');
 const { getFromMemory, setInMemory, withInFlight } = require('../lib/cache');
 const { fetchWithRetry, DEFAULT_TIMEOUT_MS } = require('../lib/fetch');
 const { ProviderError, isProviderError } = require('../lib/errors');
@@ -19,16 +20,16 @@ function cleanSecret(value) {
         .replace(/\n/g, '');
 }
 
-function getCloudinaryConfig() {
-    const cloudName = cleanSecret(process.env.CLOUDINARY_CLOUD_NAME);
-    const apiKey = cleanSecret(process.env.CLOUDINARY_API_KEY);
-    const apiSecret = cleanSecret(process.env.CLOUDINARY_API_SECRET);
+async function getCloudinaryConfig() {
+    const secretMap = await getSecrets([
+        'CLOUDINARY_CLOUD_NAME',
+        'CLOUDINARY_API_KEY',
+        'CLOUDINARY_API_SECRET',
+    ]);
 
-    console.log('[cloudinary-config]', {
-        cloudNameLength: cloudName?.length ?? 0,
-        apiKeyLength: apiKey?.length ?? 0,
-        apiSecretLength: apiSecret?.length ?? 0,
-    });
+    const cloudName = cleanSecret(secretMap.CLOUDINARY_CLOUD_NAME ?? process.env.CLOUDINARY_CLOUD_NAME);
+    const apiKey = cleanSecret(secretMap.CLOUDINARY_API_KEY ?? process.env.CLOUDINARY_API_KEY);
+    const apiSecret = cleanSecret(secretMap.CLOUDINARY_API_SECRET ?? process.env.CLOUDINARY_API_SECRET);
 
     if (!cloudName || !apiKey || !apiSecret) {
         throw new ProviderError('Cloudinary credentials are not fully configured', {
@@ -40,8 +41,9 @@ function getCloudinaryConfig() {
     return { cloudName, apiKey, apiSecret };
 }
 
-function getOpenAIKey() {
-    return process.env.OPENAI_API_KEY;
+async function getOpenAIKey() {
+    const key = await getSecret('OPENAI_API_KEY');
+    return cleanSecret(key ?? process.env.OPENAI_API_KEY);
 }
 
 function slugify(value = '') {
@@ -87,7 +89,7 @@ function normalizePublicId({ publicId, prompt, style }) {
 }
 
 async function uploadToCloudinary({ file, publicId, folder, resourceType = 'image', format }) {
-    const config = getCloudinaryConfig();
+    const config = await getCloudinaryConfig();
     const endpoint = `https://api.cloudinary.com/v1_1/${config.cloudName}/${resourceType}/upload`;
     const form = new FormData();
 
@@ -138,7 +140,7 @@ async function uploadToCloudinary({ file, publicId, folder, resourceType = 'imag
 }
 
 async function generateViaOpenAI({ prompt, size, format }) {
-    const openaiKey = getOpenAIKey();
+    const openaiKey = await getOpenAIKey();
     if (!openaiKey) {
         throw new ProviderError('OPENAI_API_KEY is not configured', {
             code: 'missing_credentials',
@@ -397,7 +399,7 @@ async function generateHeroImage({
         let providerMetadata = null;
 
         const tryOpenAI = async () => {
-            const openaiKey = getOpenAIKey();
+            const openaiKey = await getOpenAIKey();
             if (!openaiKey) {
                 throw new ProviderError('OPENAI_API_KEY missing', {
                     code: 'missing_credentials',
@@ -550,8 +552,8 @@ async function generateHeroImage({
     });
 }
 
-function buildTransformedUrl({ publicId, transformation, format = 'png' }) {
-    const { cloudName } = getCloudinaryConfig();
+async function buildTransformedUrl({ publicId, transformation, format = 'png' }) {
+    const { cloudName } = await getCloudinaryConfig();
     const safeTransformation = transformation?.replace(/^\//, '') ?? '';
     const safePublicId = publicId.replace(/^\//, '');
     return `https://res.cloudinary.com/${cloudName}/image/upload/${safeTransformation}/${safePublicId}.${format}`;
@@ -565,7 +567,7 @@ async function transformImage({ publicId, transformation, format = 'png' }) {
         });
     }
 
-    const url = buildTransformedUrl({ publicId, transformation, format });
+    const url = await buildTransformedUrl({ publicId, transformation, format });
     return {
         success: true,
         public_id: publicId,

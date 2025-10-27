@@ -184,6 +184,7 @@ async function fetchCompetitorInsights(filters = {}) {
 }
 
 module.exports = {
+    getClient,
     queryProducts,
     createPost,
     updatePost,
