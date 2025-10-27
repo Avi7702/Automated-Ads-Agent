@@ -95,7 +95,8 @@ const tools = {
         },
     },
     generate_hero_image: {
-        description: 'Generate a hero image (placeholder implementation).',
+        description:
+            'Generate a hero image with provider fallback, cache the asset in Supabase, and return the Cloudinary URL.',
         parameters: {
             type: 'object',
             properties: {
@@ -104,6 +105,15 @@ const tools = {
                 format: { type: 'string', description: 'Image format (png, jpg).' },
                 folder: { type: 'string', description: 'Cloudinary folder to store in.' },
                 public_id: { type: 'string', description: 'Optional Cloudinary public ID override.' },
+                style: { type: 'string', description: 'Optional styling directive appended to the prompt.' },
+                cache: {
+                    type: 'boolean',
+                    description: 'Disable cache lookup/persist when false. Defaults to true.',
+                },
+                idempotency_key: {
+                    type: 'string',
+                    description: 'Custom cache key to reuse generated assets across calls.',
+                },
             },
             required: ['prompt'],
         },

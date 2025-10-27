@@ -114,9 +114,43 @@ async function getUserPreferences(userPhone) {
 
 async function logWorkflowEvent(payload = {}) {
     const client = getClient();
-    const { data, error } = await client.from('workflow_events').insert(payload).select().single();
+    const { data, error } = await client.from('workflow_events').insert(payload).select().maybeSingle();
     handleError(error, 'logWorkflowEvent');
-    return data;
+    return data ?? null;
+}
+
+async function getImageCacheEntry(cacheKey) {
+    if (!cacheKey) return null;
+    const client = getClient();
+    const { data, error } = await client.from('image_cache').select('*').eq('cache_key', cacheKey).maybeSingle();
+    if (error) {
+        if (error.code === '42P01' || error.message?.includes('image_cache')) {
+            console.warn('image_cache table missing; skipping persistent cache lookup.');
+            return null;
+        }
+        handleError(error, 'getImageCacheEntry');
+    }
+    return data ?? null;
+}
+
+async function upsertImageCacheEntry(record = {}) {
+    if (!record.cache_key) {
+        throw new Error('upsertImageCacheEntry requires cache_key');
+    }
+    const client = getClient();
+    const { data, error } = await client
+        .from('image_cache')
+        .upsert(record, { onConflict: 'cache_key' })
+        .select()
+        .maybeSingle();
+    if (error) {
+        if (error.code === '42P01' || error.message?.includes('image_cache')) {
+            console.warn('image_cache table missing; skipping persistent cache write.');
+            return null;
+        }
+        handleError(error, 'upsertImageCacheEntry');
+    }
+    return data ?? null;
 }
 
 async function storeCompetitorPost(payload = {}) {
@@ -158,4 +192,6 @@ module.exports = {
     storeCompetitorPost,
     storeCompetitorInsight,
     fetchCompetitorInsights,
+    getImageCacheEntry,
+    upsertImageCacheEntry,
 };

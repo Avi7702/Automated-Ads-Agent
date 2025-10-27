@@ -8,6 +8,16 @@ import { handleMCP } from '../src/handler.js';
 
 const toolCalls = [
   {
+    name: 'generate_hero_image',
+    arguments: {
+      prompt:
+        process.env.SMOKE_PROMPT ??
+        'Hero shot of galvanized steel beams stacked in a warehouse',
+      cache: false,
+    },
+    description: 'Cloudinary hero image generator',
+  },
+  {
     name: 'query_products',
     arguments: { query: 'T12', limit: 1 },
     description: 'Supabase product lookup',

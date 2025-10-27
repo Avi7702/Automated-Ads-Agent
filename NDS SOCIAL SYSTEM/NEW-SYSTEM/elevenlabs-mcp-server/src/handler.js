@@ -1,4 +1,5 @@
 const tools = require('./tools');
+const { isProviderError } = require('./lib/errors');
 const {
     queryProducts,
     createPost,
@@ -111,10 +112,13 @@ const toolFunctions = {
         if (!args.prompt) throw new Error('generate_hero_image requires prompt');
         const result = await generateHeroImage({
             prompt: args.prompt,
+            style: args.style,
             size: args.size,
             format: args.format,
             folder: args.folder,
             publicId: args.public_id,
+            cache: args.cache,
+            idempotencyKey: args.idempotency_key,
         });
         return result;
     },
@@ -223,12 +227,12 @@ async function handleMCP(payload) {
                     })),
                     id,
                 };
-            case 'tools.call':
-            const toolName = payload.params?.name;
-            const args = payload.params?.arguments || {};
-            if (!toolFunctions[toolName]) {
-                return {
-                    jsonrpc: '2.0',
+            case 'tools.call': {
+                const toolName = payload.params?.name;
+                const args = payload.params?.arguments || {};
+                if (!toolFunctions[toolName]) {
+                    return {
+                        jsonrpc: '2.0',
                         error: { code: -32601, message: `Method not found: ${toolName}` },
                         id,
                     };
@@ -247,6 +251,7 @@ async function handleMCP(payload) {
                     },
                     id,
                 };
+            }
             default:
                 return {
                     jsonrpc: '2.0',
@@ -264,9 +269,21 @@ async function handleMCP(payload) {
             }).catch(() => {});
         }
         console.error('MCP Execution Error:', error);
+        const errorPayload = {
+            code: -32000,
+            message: `Server error: ${error.message}`,
+        };
+        if (isProviderError(error)) {
+            errorPayload.data = {
+                code: error.code,
+                provider: error.provider,
+                status: error.status,
+                metadata: error.metadata,
+            };
+        }
         return {
             jsonrpc: '2.0',
-            error: { code: -32000, message: `Server error: ${error.message}` },
+            error: errorPayload,
             id,
         };
     }

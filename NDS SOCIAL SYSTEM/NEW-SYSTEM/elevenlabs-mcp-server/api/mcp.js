@@ -13,7 +13,7 @@ module.exports = async (req, res) => {
     }
 
     const authHeader = req.headers.authorization;
-    const sharedSecret = process.env.MCP_SHARED_SECRET;
+    const sharedSecret = (process.env.MCP_SHARED_SECRET || '').trim();
 
     if (!sharedSecret) {
         console.error('MCP_SHARED_SECRET is not configured');
@@ -24,7 +24,9 @@ module.exports = async (req, res) => {
         });
     }
 
-    if (!authHeader || authHeader !== `Bearer ${sharedSecret}`) {
+    const incomingSecret = authHeader?.replace(/^Bearer\s+/i, '').trim();
+
+    if (!incomingSecret || incomingSecret !== sharedSecret) {
         return res.status(401).json({
             jsonrpc: '2.0',
             error: { code: -32000, message: 'Unauthorized: Invalid or missing Bearer token.' },
