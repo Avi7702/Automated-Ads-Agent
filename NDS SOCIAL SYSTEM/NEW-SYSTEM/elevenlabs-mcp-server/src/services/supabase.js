@@ -1,10 +1,14 @@
 const { createClient } = require('@supabase/supabase-js');
 
 let supabase;
+function clean(value) {
+    return value ? value.replace(/^[\s"'`]+/, '').replace(/[\s"'`]+$/, '').replace(/\r/g, '').replace(/\n/g, '') : value;
+}
+
 function getClient() {
     if (!supabase) {
-        const url = process.env.SUPABASE_URL;
-        const key = process.env.SUPABASE_SERVICE_KEY;
+        const url = clean(process.env.SUPABASE_URL);
+        const key = clean(process.env.SUPABASE_SERVICE_KEY);
 
         if (!url || !key) {
             throw new Error('Supabase credentials are not configured');

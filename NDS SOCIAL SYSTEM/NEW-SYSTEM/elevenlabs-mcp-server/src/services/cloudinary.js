@@ -27,9 +27,16 @@ async function getCloudinaryConfig() {
         'CLOUDINARY_API_SECRET',
     ]);
 
-    const cloudName = cleanSecret(secretMap.CLOUDINARY_CLOUD_NAME ?? process.env.CLOUDINARY_CLOUD_NAME);
-    const apiKey = cleanSecret(secretMap.CLOUDINARY_API_KEY ?? process.env.CLOUDINARY_API_KEY);
-    const apiSecret = cleanSecret(secretMap.CLOUDINARY_API_SECRET ?? process.env.CLOUDINARY_API_SECRET);
+    if (!secretMap.CLOUDINARY_CLOUD_NAME || !secretMap.CLOUDINARY_API_KEY || !secretMap.CLOUDINARY_API_SECRET) {
+        throw new ProviderError('Cloudinary secrets are missing in Supabase (mcp_secrets)', {
+            code: 'missing_credentials',
+            provider: 'cloudinary',
+        });
+    }
+
+    const cloudName = cleanSecret(secretMap.CLOUDINARY_CLOUD_NAME);
+    const apiKey = cleanSecret(secretMap.CLOUDINARY_API_KEY);
+    const apiSecret = cleanSecret(secretMap.CLOUDINARY_API_SECRET);
 
     if (!cloudName || !apiKey || !apiSecret) {
         throw new ProviderError('Cloudinary credentials are not fully configured', {

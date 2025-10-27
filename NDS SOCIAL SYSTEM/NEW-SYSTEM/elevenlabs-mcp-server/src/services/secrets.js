@@ -1,4 +1,31 @@
-const { getClient } = require('./supabase');
+const RAW_SUPABASE_URL =
+    process.env.SUPABASE_URL || 'https://fecelxcsybawzgphekyq.supabase.co';
+const RAW_SUPABASE_SERVICE_KEY =
+    process.env.SUPABASE_SERVICE_KEY ||
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZlY2VleGNzeWJhd3pncGhla3lxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MDk1NDMwNSwiZXhwIjoyMDc2NTMwMzA1fQ.fWGtAiBcHIWDamaaPkBdOaBGLpPItkeRgTZTu3C_KrQ';
+
+function clean(value) {
+    return value
+        ? value
+              .replace(/^[\s"'`]+/, '')
+              .replace(/[\s"'`]+$/, '')
+              .replace(/\r/g, '')
+              .replace(/\n/g, '')
+        : value;
+}
+
+const supabaseUrl = clean(RAW_SUPABASE_URL);
+const supabaseServiceKey = clean(RAW_SUPABASE_SERVICE_KEY);
+
+if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Supabase URL or Service Key missing for secrets loader.');
+}
+
+console.log('[secrets-loader]', {
+    supabaseUrl,
+    supabaseServiceKeyLength: supabaseServiceKey.length,
+    supabaseServiceKeyTail: supabaseServiceKey.slice(-4),
+});
 
 let cachedSecrets = null;
 let cacheExpiresAt = 0;
@@ -10,12 +37,19 @@ async function fetchSecrets() {
         return cachedSecrets;
     }
 
-    const client = getClient();
-    const { data, error } = await client.from('mcp_secrets').select('key,value');
+    const response = await fetch(`${supabaseUrl}/rest/v1/mcp_secrets?select=key,value`, {
+        headers: {
+            apikey: supabaseServiceKey,
+            Authorization: `Bearer ${supabaseServiceKey}`,
+        },
+    });
 
-    if (error) {
-        throw new Error(`fetchSecrets failed: ${error.message}`);
+    if (!response.ok) {
+        const body = await response.text();
+        throw new Error(`fetchSecrets failed: ${response.status} ${body}`);
     }
+
+    const data = await response.json();
 
     const map = {};
     for (const row of data ?? []) {
