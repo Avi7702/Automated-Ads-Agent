@@ -53,24 +53,29 @@ export default function Home() {
       // Prepare form data
       const formData = new FormData();
       
-      // Get the file - either from uploaded files or demo images
-      let fileToUpload: File;
+      // Get the files - either from uploaded files or demo images
+      let filesToUpload: File[] = [];
       
       if (files.length > 0) {
-        // User uploaded their own file
-        fileToUpload = files[0];
+        // User uploaded their own files (limit to 6)
+        filesToUpload = files.slice(0, 6);
       } else if (selectedDemo) {
         // Convert demo image to file
         const demoImage = selectedDemo === "bottle" ? bottleBefore : 
                          selectedDemo === "shoe" ? shoeBefore : spacerBefore;
         const response = await fetch(demoImage);
         const blob = await response.blob();
-        fileToUpload = new File([blob], `${selectedDemo}-demo.png`, { type: "image/png" });
+        const file = new File([blob], `${selectedDemo}-demo.png`, { type: "image/png" });
+        filesToUpload = [file];
       } else {
         throw new Error("No image selected");
       }
       
-      formData.append("image", fileToUpload);
+      // Append all images
+      filesToUpload.forEach((file, index) => {
+        formData.append("images", file);
+      });
+      
       formData.append("prompt", prompt);
       
       // Call the API
@@ -209,18 +214,32 @@ export default function Home() {
               exit={{ opacity: 0, x: -20 }}
               className="space-y-8"
             >
-              <div className="flex items-center gap-4">
-                <button onClick={handleReset} className="p-2 rounded-full hover:bg-secondary transition-colors">
-                  <ArrowRight className="w-5 h-5 rotate-180" />
-                </button>
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl overflow-hidden border border-white/10 bg-card">
-                    <img src={getPreviewImage() || ""} alt="Preview" className="w-full h-full object-cover" />
-                  </div>
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <button onClick={handleReset} className="p-2 rounded-full hover:bg-secondary transition-colors" data-testid="button-back">
+                    <ArrowRight className="w-5 h-5 rotate-180" />
+                  </button>
                   <div>
-                    <h2 className="font-medium">Product Photo</h2>
+                    <h2 className="font-medium">
+                      {files.length > 0 ? `${files.length} Product${files.length > 1 ? 's' : ''}` : 'Product Photo'}
+                    </h2>
                     <p className="text-xs text-muted-foreground">Ready to transform</p>
                   </div>
+                </div>
+
+                {/* Image Thumbnails */}
+                <div className="flex flex-wrap gap-2">
+                  {files.length > 0 ? (
+                    files.map((file, index) => (
+                      <div key={index} className="w-16 h-16 rounded-lg overflow-hidden border border-white/10 bg-card">
+                        <img src={URL.createObjectURL(file)} alt={`Upload ${index + 1}`} className="w-full h-full object-cover" data-testid={`img-upload-${index}`} />
+                      </div>
+                    ))
+                  ) : selectedDemo ? (
+                    <div className="w-16 h-16 rounded-lg overflow-hidden border border-white/10 bg-card">
+                      <img src={getPreviewImage() || ""} alt="Demo" className="w-full h-full object-cover" data-testid="img-demo" />
+                    </div>
+                  ) : null}
                 </div>
               </div>
 

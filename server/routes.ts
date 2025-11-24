@@ -6,7 +6,10 @@ import { GoogleGenAI } from "@google/genai";
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+  limits: { 
+    fileSize: 10 * 1024 * 1024, // 10MB per file
+    files: 6 // Max 6 files
+  }
 });
 
 // Initialize Gemini client
@@ -17,10 +20,12 @@ const genai = new GoogleGenAI({
 export async function registerRoutes(app: Express): Promise<Server> {
   
   // Image transformation endpoint
-  app.post("/api/transform", upload.single("image"), async (req, res) => {
+  app.post("/api/transform", upload.array("images", 6), async (req, res) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({ error: "No image file provided" });
+      const files = req.files as Express.Multer.File[];
+      
+      if (!files || files.length === 0) {
+        return res.status(400).json({ error: "No image files provided" });
       }
 
       const { prompt } = req.body;
@@ -28,14 +33,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "No prompt provided" });
       }
 
-      console.log(`[Transform] Processing image with prompt: "${prompt}"`);
-
-      // Convert buffer to base64
-      const imageBase64 = req.file.buffer.toString("base64");
-      const mimeType = req.file.mimetype;
+      console.log(`[Transform] Processing ${files.length} image(s) with prompt: "${prompt}"`);
 
       // Build the prompt for transformation
-      const enhancedPrompt = `Transform this product photo based on the following instructions: ${prompt}
+      let enhancedPrompt = "";
+      
+      if (files.length === 1) {
+        enhancedPrompt = `Transform this product photo based on the following instructions: ${prompt}
 
 Guidelines:
 - Keep the product as the hero/focus
@@ -43,6 +47,33 @@ Guidelines:
 - Ensure the product is clearly visible and recognizable
 - Apply the requested scene, lighting, and style changes
 - Do not add text or watermarks`;
+      } else {
+        enhancedPrompt = `Transform these ${files.length} product photos based on the following instructions: ${prompt}
+
+Guidelines:
+- Combine/arrange all products in a cohesive scene
+- Keep all products clearly visible and recognizable
+- Maintain professional photography quality
+- Apply the requested scene, lighting, and style changes
+- Show how the products work together or as a collection
+- Do not add text or watermarks`;
+      }
+
+      // Build content parts with all images
+      const parts: any[] = [];
+      
+      // Add all images first
+      files.forEach((file, index) => {
+        parts.push({
+          inlineData: {
+            mimeType: file.mimetype,
+            data: file.buffer.toString("base64"),
+          },
+        });
+      });
+      
+      // Then add the prompt
+      parts.push({ text: enhancedPrompt });
 
       // Generate content with image input using Gemini image generation model
       const result = await genai.models.generateContent({
@@ -50,15 +81,7 @@ Guidelines:
         contents: [
           {
             role: "user",
-            parts: [
-              {
-                inlineData: {
-                  mimeType,
-                  data: imageBase64,
-                },
-              },
-              { text: enhancedPrompt },
-            ],
+            parts,
           },
         ],
       });

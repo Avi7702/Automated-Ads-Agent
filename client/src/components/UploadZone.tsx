@@ -58,6 +58,7 @@ export function UploadZone({ onFilesSelected, className }: UploadZoneProps) {
         multiple
         accept="image/png, image/jpeg, image/webp"
         onChange={handleFileChange}
+        data-testid="input-file-upload"
       />
       
       <div
@@ -80,10 +81,10 @@ export function UploadZone({ onFilesSelected, className }: UploadZoneProps) {
 
         <div className="space-y-1">
           <h3 className="font-display text-xl font-medium text-foreground">
-            Drop your product photo here
+            Drop your product photos here
           </h3>
           <p className="text-muted-foreground text-sm">
-            or click to browse (JPG, PNG, WEBP)
+            or click to browse • Upload 1-6 images (JPG, PNG, WEBP)
           </p>
         </div>
       </div>
