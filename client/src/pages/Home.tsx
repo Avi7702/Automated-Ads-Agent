@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { UploadZone } from "@/components/UploadZone";
 import { PromptInput } from "@/components/PromptInput";
 import { IntentVisualizer } from "@/components/IntentVisualizer";
+import { PromptSuggestions } from "@/components/PromptSuggestions";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, RefreshCw, Download, Check, Image, Sparkles, History } from "lucide-react";
+import { ArrowRight, RefreshCw, Download, Check, Image, Sparkles, History, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link } from "wouter";
 import {
@@ -27,6 +28,8 @@ export default function Home() {
   const [step, setStep] = useState<Step>("upload");
   const [files, setFiles] = useState<File[]>([]);
   const [selectedDemo, setSelectedDemo] = useState<"bottle" | "spacer" | null>(null);
+  const [selectedProductUrl, setSelectedProductUrl] = useState<string | null>(null);
+  const [selectedProductName, setSelectedProductName] = useState<string | null>(null);
   const [resolution, setResolution] = useState<"1K" | "2K" | "4K">("2K");
   const [prompt, setPrompt] = useState("");
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
@@ -43,11 +46,37 @@ export default function Home() {
     return () => clearTimeout(timeout);
   }, [prompt]);
 
-  // Restore draft prompt on mount
+  // Restore draft prompt and check for selected product on mount
   useEffect(() => {
     const savedPrompt = localStorage.getItem("promptDraft");
     if (savedPrompt) {
       setPrompt(savedPrompt);
+    }
+
+    // Check for selected product from library
+    const productUrl = localStorage.getItem("selectedProductUrl");
+    const productName = localStorage.getItem("selectedProductName");
+    if (productUrl && productName) {
+      const loadProductImage = async () => {
+        try {
+          const response = await fetch(productUrl);
+          const blob = await response.blob();
+          const file = new File([blob], productName, { type: blob.type });
+          setFiles([file]);
+          setSelectedProductUrl(productUrl);
+          setSelectedProductName(productName);
+          setStep("describe");
+          
+          // Clear from localStorage
+          localStorage.removeItem("selectedProductUrl");
+          localStorage.removeItem("selectedProductName");
+          localStorage.removeItem("selectedProductId");
+        } catch (error) {
+          console.error("Failed to load product image:", error);
+        }
+      };
+      loadProductImage();
+      return;
     }
 
     // Check for re-edit generation data
@@ -205,6 +234,9 @@ export default function Home() {
           </div>
           <nav className="flex items-center gap-6 text-sm font-medium text-muted-foreground">
             <span className="text-foreground">Generate</span>
+            <Link href="/library" className="hover:text-foreground cursor-pointer transition-colors" data-testid="link-library-header">
+              Library
+            </Link>
             <Link href="/gallery" className="hover:text-foreground cursor-pointer transition-colors" data-testid="link-gallery-header">
               Gallery
             </Link>
@@ -316,6 +348,13 @@ export default function Home() {
                   />
                   <IntentVisualizer prompt={prompt} />
                 </div>
+
+                {/* AI Prompt Suggestions */}
+                <PromptSuggestions
+                  productName={selectedProductName || files[0]?.name || "product"}
+                  onSelect={(suggestion) => setPrompt(suggestion)}
+                  className="mt-4"
+                />
 
                 {/* Resolution Selector */}
                 <div className="flex items-center gap-3">

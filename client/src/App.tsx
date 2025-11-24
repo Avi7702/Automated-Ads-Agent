@@ -7,11 +7,13 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import Gallery from "@/pages/Gallery";
 import GenerationDetail from "@/pages/GenerationDetail";
+import ProductLibrary from "@/pages/ProductLibrary";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/library" component={ProductLibrary} />
       <Route path="/gallery" component={Gallery} />
       <Route path="/generation/:id" component={GenerationDetail} />
       <Route component={NotFound} />
