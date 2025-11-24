@@ -329,6 +329,23 @@ Guidelines:
     }
   });
 
+  // Clear all products from database
+  app.delete("/api/products", async (req, res) => {
+    try {
+      const products = await storage.getProducts();
+      
+      for (const product of products) {
+        await storage.deleteProduct(product.id);
+      }
+
+      console.log(`[Products] Cleared ${products.length} products from database`);
+      res.json({ success: true, deleted: products.length });
+    } catch (error: any) {
+      console.error("[Clear Products] Error:", error);
+      res.status(500).json({ error: "Failed to clear products" });
+    }
+  });
+
   // Sync products from Cloudinary
   app.post("/api/products/sync", async (req, res) => {
     try {

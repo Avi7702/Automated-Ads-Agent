@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Upload, Trash2, Sparkles, ArrowLeft, RefreshCw } from "lucide-react";
+import { Upload, Trash2, Sparkles, ArrowLeft, RefreshCw, X } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import type { Product } from "@shared/schema";
@@ -108,6 +108,38 @@ export default function ProductLibrary() {
     }
   };
 
+  const handleClearAllProducts = async () => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete all ${products.length} products from the library? This cannot be undone.`
+    );
+    
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch("/api/products", {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to clear products");
+      }
+
+      const result = await res.json();
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+
+      toast({
+        title: "Products Cleared",
+        description: `Deleted ${result.deleted} products from the library.`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Clear Failed",
+        description: error.message || "Failed to clear products",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 text-white">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -129,6 +161,18 @@ export default function ProductLibrary() {
           </div>
 
           <div className="flex gap-3">
+            {products.length > 0 && (
+              <Button
+                variant="outline"
+                onClick={handleClearAllProducts}
+                data-testid="button-clear-all"
+                className="border-red-500/50 hover:bg-red-500/10 text-red-400 hover:text-red-300"
+              >
+                <X className="mr-2 h-4 w-4" />
+                Clear All ({products.length})
+              </Button>
+            )}
+
             <Button
               variant="outline"
               onClick={handleSyncFromCloudinary}
