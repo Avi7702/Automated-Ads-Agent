@@ -30,7 +30,6 @@ export function PromptInput({ value, onChange, onSubmit, isGenerating, className
   return (
     <div className={cn("relative group", className)}>
       <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-primary/20 via-purple-500/20 to-blue-500/20 blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-      
       <div className="relative bg-card border border-white/10 rounded-3xl shadow-2xl overflow-hidden ring-1 ring-white/5 focus-within:ring-primary/50 transition-all duration-300">
         <textarea
           ref={textareaRef}
@@ -38,7 +37,7 @@ export function PromptInput({ value, onChange, onSubmit, isGenerating, className
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Describe what you want (e.g., 'Make this look like a premium lifestyle shot in a misty forest...')"
-          className="w-full bg-transparent border-0 px-6 py-5 text-lg placeholder:text-muted-foreground/50 focus:ring-0 resize-none min-h-[80px] outline-none"
+          className="w-full border-0 px-6 py-5 text-lg placeholder:text-muted-foreground/50 focus:ring-0 resize-none min-h-[80px] outline-none bg-[#23252f]"
           rows={1}
           disabled={isGenerating}
         />
