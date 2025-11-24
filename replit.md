@@ -20,8 +20,9 @@ Preferred communication style: Simple, everyday language.
 
 **Styling**: TailwindCSS v4 with custom theme variables for consistent design system
 
-**Routing**: Wouter for lightweight client-side routing with three main routes:
+**Routing**: Wouter for lightweight client-side routing with four main routes:
 - Home (`/`) - Main upload and transformation interface
+- Product Library (`/library`) - Upload and manage reusable product catalog with Cloudinary storage
 - Gallery (`/gallery`) - View all generated transformations
 - Generation Detail (`/generation/:id`) - View individual generation details
 
@@ -35,6 +36,8 @@ Preferred communication style: Simple, everyday language.
 - Real-time prompt drafting with 500ms debounced auto-save to localStorage
 - Intent visualization that analyzes user prompts and displays detected transformation types
 - Demo mode with pre-generated example transformations
+- Product Library with Cloudinary storage for reusable product catalog
+- AI-powered prompt suggestions using Gemini and curated templates
 - Full generation history with persistent storage
 - Gallery view with thumbnail grid, search, and delete functionality
 - Generation detail page with full-size preview, before/after comparison
@@ -55,6 +58,11 @@ Preferred communication style: Simple, everyday language.
 - `GET /api/generations` - Retrieve all generation history (ordered by creation date, limit 50)
 - `GET /api/generations/:id` - Retrieve specific generation by ID with full metadata
 - `DELETE /api/generations/:id` - Delete generation from database and remove associated files from disk
+- `POST /api/products` - Upload product to Cloudinary with MIME type validation (images only, 10MB max)
+- `GET /api/products` - Retrieve all products from library
+- `DELETE /api/products/:id` - Delete product from Cloudinary and database
+- `GET /api/prompt-templates` - Get curated prompt templates (optional category filter)
+- `POST /api/prompt-suggestions` - Generate AI-powered prompt variations using Gemini
 - Static file serving from `/attached_assets` via Express static middleware
 
 **File Storage Strategy**:
@@ -82,6 +90,22 @@ generations {
   resolution: varchar (default "2K")
   createdAt: timestamp (auto-set)
 }
+
+products {
+  id: varchar (primary key, auto-generated UUID)
+  name: text (product name)
+  cloudinaryUrl: text (permanent Cloudinary storage URL)
+  cloudinaryPublicId: text (for deletion from Cloudinary)
+  category: text (optional: lifestyle, professional, outdoor, etc.)
+  createdAt: timestamp (auto-set)
+}
+
+promptTemplates {
+  id: varchar (primary key, auto-generated UUID)
+  prompt: text (curated prompt template)
+  category: text (lifestyle, professional, outdoor, urban, nature, luxury)
+  createdAt: timestamp (auto-set)
+}
 ```
 
 **Migration Strategy**: Schema defined in `shared/schema.ts`, pushed directly to database using `npm run db:push` (schema-first development with Drizzle Kit)
@@ -103,6 +127,8 @@ generations {
 - Multi-image input support for combining products or reference images
 - Response modality configured for both IMAGE generation and TEXT analysis
 - API key provided via `AI_INTEGRATIONS_GEMINI_API_KEY` environment variable
+- Base URL and empty apiVersion required via httpOptions for Replit AI Integrations
+- Prompt suggestion feature uses gemini-2.5-flash model for creative variations
 
 **Prompt Engineering**:
 - Single-image prompts focus on transformation while maintaining product identity
@@ -112,12 +138,15 @@ generations {
 ### External Dependencies
 
 **Third-Party Services**:
-- Google Generative AI (Gemini 3 Pro Image) - Core image transformation
+- Google Generative AI (Gemini 2.5 Flash Image) - Core image transformation
+- Google Generative AI (Gemini 2.5 Flash) - Prompt suggestion generation
+- Cloudinary - Product library cloud storage with automatic uploads
 - Neon Database - PostgreSQL serverless hosting
-- Replit platform integrations (optional development tools)
+- Replit AI Integrations - Automatic API key management for Gemini
 
 **Key Libraries**:
 - `@google/genai` - Google Gemini API client
+- `cloudinary` - Cloud image storage SDK
 - `@neondatabase/serverless` - Neon PostgreSQL driver
 - `drizzle-orm` - Database ORM
 - `multer` - Multipart form data handling
@@ -132,3 +161,56 @@ generations {
 - TypeScript with strict mode and path aliases
 
 **Font Resources**: Google Fonts (Space Grotesk for display, Inter for body text)
+
+## Product Library Feature
+
+**Purpose**: Reusable product catalog with permanent cloud storage
+
+**Workflow**:
+1. Users upload products to Cloudinary (persistent storage, not temporary)
+2. Products stored with name, category, and unique ID
+3. Library displays products in grid with hover controls
+4. Click "Use" to load product into generation flow
+5. Products persist across sessions for repeated use
+
+**Security Measures**:
+- MIME type validation (image/jpeg, image/png, image/gif, image/webp only)
+- File size limit enforcement (10MB maximum)
+- Graceful error handling if Cloudinary credentials missing
+- Environment variable validation at startup
+
+## AI Prompt Suggestions
+
+**Purpose**: Help users discover creative transformation ideas
+
+**How It Works**:
+1. Backend stores 15 curated prompt templates across 6 categories
+2. User clicks "Get AI Prompt Ideas" button
+3. System fetches relevant templates based on product category
+4. Gemini generates 4 creative variations of the templates
+5. User can click any suggestion to auto-fill prompt field
+6. Refresh button generates new variations
+
+**Security Measures**:
+- Input sanitization (removes special characters, limits length)
+- Response validation (ensures array format, limits to 4 suggestions)
+- Fallback to template prompts if AI generation fails
+- Input validation for required fields
+
+**Template Categories**: Lifestyle, Professional, Outdoor, Urban, Nature, Luxury
+
+## Known Limitations
+
+**Authentication**: Currently no user authentication or session management. API endpoints are publicly accessible.
+
+**Rate Limiting**: No rate limiting on Gemini API calls. In production, consider implementing:
+- Per-IP request throttling
+- API key authentication for external access
+- User quotas for AI generation credits
+- CAPTCHA for abuse prevention
+
+**Future Improvements**:
+- Add authentication system (Replit Auth recommended)
+- Implement rate limiting middleware (e.g., express-rate-limit)
+- Add usage analytics and quota tracking
+- Server-side file type sniffing for enhanced upload security
