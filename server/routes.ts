@@ -329,6 +329,69 @@ Guidelines:
     }
   });
 
+  // Sync products from Cloudinary
+  app.post("/api/products/sync", async (req, res) => {
+    try {
+      if (!isCloudinaryConfigured) {
+        return res.status(503).json({ error: "Cloudinary is not configured" });
+      }
+
+      console.log("[Cloudinary Sync] Starting sync...");
+
+      // Fetch all images from Cloudinary (max 500 for now)
+      const result = await cloudinary.api.resources({
+        type: 'upload',
+        resource_type: 'image',
+        max_results: 500,
+        prefix: req.body.folder || '', // Optional folder filter
+      });
+
+      console.log(`[Cloudinary Sync] Found ${result.resources.length} images`);
+
+      // Get existing products to avoid duplicates
+      const existingProducts = await storage.getProducts();
+      const existingPublicIds = new Set(existingProducts.map(p => p.cloudinaryPublicId));
+
+      let imported = 0;
+      let skipped = 0;
+
+      // Import each image
+      for (const resource of result.resources) {
+        // Skip if already in database
+        if (existingPublicIds.has(resource.public_id)) {
+          skipped++;
+          continue;
+        }
+
+        // Extract name from public_id (e.g., "product-library/bottle" -> "bottle")
+        const nameParts = resource.public_id.split('/');
+        const name = nameParts[nameParts.length - 1] || resource.public_id;
+
+        // Save to database
+        await storage.saveProduct({
+          name: name,
+          cloudinaryUrl: resource.secure_url,
+          cloudinaryPublicId: resource.public_id,
+          category: null, // User can update later
+        });
+
+        imported++;
+      }
+
+      console.log(`[Cloudinary Sync] Imported: ${imported}, Skipped: ${skipped}`);
+
+      res.json({
+        success: true,
+        imported,
+        skipped,
+        total: result.resources.length,
+      });
+    } catch (error: any) {
+      console.error("[Cloudinary Sync] Error:", error);
+      res.status(500).json({ error: "Failed to sync from Cloudinary", details: error.message });
+    }
+  });
+
   // Prompt template routes
   app.post("/api/prompt-templates", async (req, res) => {
     try {

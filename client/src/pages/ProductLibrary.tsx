@@ -3,16 +3,19 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Upload, Trash2, Sparkles, ArrowLeft } from "lucide-react";
+import { Upload, Trash2, Sparkles, ArrowLeft, RefreshCw } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import type { Product } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ProductLibrary() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const [uploading, setUploading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const { toast } = useToast();
 
   const { data: products = [], isLoading } = useQuery<Product[]>({
     queryKey: ["products"],
@@ -73,6 +76,38 @@ export default function ProductLibrary() {
     setLocation("/");
   };
 
+  const handleSyncFromCloudinary = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/products/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to sync");
+      }
+
+      const result = await res.json();
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+
+      toast({
+        title: "Sync Complete!",
+        description: `Imported ${result.imported} products. Skipped ${result.skipped} duplicates.`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Sync Failed",
+        description: error.message || "Failed to sync from Cloudinary",
+      });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 text-white">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -93,7 +128,18 @@ export default function ProductLibrary() {
             </p>
           </div>
 
-          <div>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={handleSyncFromCloudinary}
+              disabled={syncing}
+              data-testid="button-sync-cloudinary"
+              className="border-purple-500/50 hover:bg-purple-500/10"
+            >
+              <RefreshCw className={cn("mr-2 h-4 w-4", syncing && "animate-spin")} />
+              {syncing ? "Syncing..." : "Sync from Cloudinary"}
+            </Button>
+
             <Input
               type="file"
               accept="image/*"
