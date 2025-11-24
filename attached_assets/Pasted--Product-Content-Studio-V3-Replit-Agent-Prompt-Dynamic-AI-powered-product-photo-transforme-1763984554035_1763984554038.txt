@@ -1,0 +1,654 @@
+# Product Content Studio V3 - Replit Agent Prompt
+
+> **Dynamic AI-powered product photo transformer using Google Gemini 3 Nano Banana Pro**
+> Upload any product photo → Describe what you want → Get professional marketing content
+
+---
+
+## WHAT THIS APP DOES
+
+Users upload boring product photos. They describe what they want in plain English. The app understands their intent dynamically and generates professional marketing visuals.
+
+**No menus. No feature selection. Just natural conversation.**
+
+The same simple flow handles everything:
+- Lifestyle shots
+- Installation/combination visuals
+- Before/after transformations
+- Scale demonstrations
+- Seasonal campaigns
+- Problem/solution visuals
+- Product family shots
+- Action/in-use shots
+- Platform-optimized content
+- And anything else the user can describe
+
+---
+
+## MODEL SPECIFICATION (NON-NEGOTIABLE)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  USE ONLY: Google Gemini 3 Pro Image (Nano Banana Pro)          │
+│  Model ID: gemini-3-pro-image-preview                           │
+│                                                                 │
+│  • NO fallback to other models                                  │
+│  • NO Imagen, DALL-E, Midjourney, or alternatives               │
+│  • NO older Gemini versions                                     │
+│  • If model unavailable → Show error, do not substitute         │
+│                                                                 │
+│  Enable: google_search tool (for product research when needed)  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### API Configuration
+
+```
+Model: gemini-3-pro-image-preview
+Tools: google_search (grounding for product research)
+Response modality: IMAGE (for generation), TEXT (for analysis)
+Multi-image input: ENABLED (for combining products, references)
+
+Resolution options:
+- Preview/Fast: 1K (1024px)
+- Standard: 2K 
+- Premium: 4K
+
+Pricing awareness:
+- ~$0.13 per 1K/2K image
+- ~$0.24 per 4K image
+- Research/text calls: standard token pricing
+```
+
+### Rate Limit Handling
+
+```
+- Implement 3-5 second delays between generation requests
+- Queue system for multiple requests
+- Graceful 429 handling with exponential backoff
+- Show estimated wait time to user
+- Limit ~15-20 generations per session
+- Cache research results to reduce API calls
+```
+
+---
+
+## USER FLOW (SIMPLE)
+
+```
+┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+│   UPLOAD     │ →  │   DESCRIBE   │ →  │   RECEIVE    │
+│              │    │              │    │              │
+│ Product      │    │ "Make this   │    │ Professional │
+│ photo(s)     │    │  look..."    │    │ marketing    │
+│              │    │              │    │ image        │
+└──────────────┘    └──────────────┘    └──────────────┘
+```
+
+That's it. Three steps. Everything else happens dynamically underneath.
+
+---
+
+## DYNAMIC INTENT ENGINE (THE BRAIN)
+
+When user provides a description, the system analyzes it to determine:
+
+### 1. CONTENT TYPE DETECTION
+
+| User says... | System detects → |
+|-------------|------------------|
+| "premium" / "lifestyle" / "aspirational" / "amazing" | → Lifestyle Transformation |
+| "together" / "combined" / "installed" / "connected" / "assembled" | → Installation/Combination |
+| "before and after" / "transformation" / "result" / "vs" | → Before/After Visual |
+| "how big" / "size" / "scale" / "compared to" / "next to person" | → Scale Demonstration |
+| "christmas" / "summer" / "holiday" / "spring" / "winter" / "easter" | → Seasonal Styling |
+| "problem" / "solves" / "without" / "broken vs fixed" | → Problem/Solution |
+| "all products" / "range" / "collection" / "family" / "lineup" | → Product Family |
+| "in use" / "action" / "using" / "being used" / "working with" | → Action/In-Use Shot |
+| "for Instagram" / "for LinkedIn" / "social media" / "post" | → Platform-Optimized |
+| "professional" / "worksite" / "construction" / "industrial" | → Industry Context |
+| No clear match / ambiguous | → Ask ONE clarifying question |
+
+### 2. SCENE/ENVIRONMENT DETECTION
+
+| Keywords | Environment |
+|----------|-------------|
+| "backyard" / "garden" / "outdoor" / "park" / "nature" | Outdoor lifestyle |
+| "home" / "kitchen" / "living room" / "bedroom" / "interior" | Domestic setting |
+| "office" / "workspace" / "desk" / "corporate" | Professional office |
+| "construction" / "worksite" / "building" / "site" | Construction/industrial |
+| "studio" / "clean" / "minimal" / "white" | Studio product shot |
+| "street" / "urban" / "city" / "downtown" | Urban environment |
+| "luxury" / "premium" / "high-end" / "elegant" | Upscale setting |
+| Not specified | Infer from product type via research |
+
+### 3. MOOD/STYLE DETECTION
+
+| Keywords | Visual Style |
+|----------|-------------|
+| "premium" / "luxury" / "elegant" / "sophisticated" | Dramatic lighting, clean composition |
+| "cozy" / "warm" / "inviting" / "homey" | Soft lighting, warm tones |
+| "professional" / "corporate" / "business" | Clean, neutral, trustworthy |
+| "fun" / "vibrant" / "energetic" / "bold" | Bright colors, dynamic angles |
+| "minimal" / "clean" / "simple" | Uncluttered, lots of negative space |
+| "dramatic" / "epic" / "impressive" | Hero angles, powerful lighting |
+| "authentic" / "real" / "natural" | Documentary style, candid feel |
+
+### 4. PLATFORM OPTIMIZATION
+
+| Platform | Aspect Ratio | Style Notes |
+|----------|--------------|-------------|
+| Instagram Post | 1:1 or 4:5 | Scroll-stopping, vibrant |
+| Instagram Story | 9:16 | Full screen, immediate impact |
+| LinkedIn | 1.91:1 or 1:1 | Professional, trustworthy |
+| Facebook | 1.91:1 or 1:1 | Engagement-focused |
+| Twitter/X | 16:9 | Clean, quick read |
+| General/Not specified | 1:1 | Universal, works everywhere |
+
+### 5. MULTI-IMAGE LOGIC
+
+| Number of Images | System Behavior |
+|------------------|-----------------|
+| 1 image | Transform/place into scene |
+| 2 images | Combine, show relationship, or use one as reference |
+| 3+ images | Product family, collection, or multi-element scene |
+| Image + reference scene | Match product into provided scene style |
+
+---
+
+## SMART PRODUCT RESEARCH (CONDITIONAL)
+
+Research is triggered ONLY when needed:
+
+**DO research when:**
+- Product type is unclear from image
+- User asks about installation/combination (need to know HOW they work together)
+- Industry-specific context needed
+- User explicitly asks for accurate representation
+
+**SKIP research when:**
+- Simple lifestyle/background swap
+- User provides clear context
+- Speed is priority
+- Seasonal/style changes only
+
+### Research Query Structure
+
+When research IS needed, use Google Search grounding to find:
+
+```
+For product identification:
+→ "What is [visual description of product]"
+→ "What is [product] used for"
+
+For combination/installation:
+→ "How to install [product A] with [product B]"
+→ "How do [product A] and [product B] work together"
+
+For industry context:
+→ "[Product type] professional photography"
+→ "[Product] in use on [industry] site"
+
+For aspirational context:
+→ "Premium [product category] marketing photography"
+→ "Lifestyle [product] photography examples"
+```
+
+---
+
+## PROMPT CONSTRUCTION ENGINE
+
+Based on detected intent, build prompt dynamically:
+
+### Base Structure
+
+```
+[SCENE PLACEMENT] + [ENVIRONMENT DETAILS] + [LIGHTING/MOOD] + 
+[PRODUCT FOCUS] + [STYLE INSTRUCTIONS] + [TECHNICAL SPECS]
+```
+
+### Template by Content Type
+
+**LIFESTYLE TRANSFORMATION:**
+```
+"Place this [product] naturally in [environment]. [Time of day] lighting, 
+[mood] atmosphere. The product is clearly visible but feels organic to 
+the scene. [Style] photography, [platform-optimized] composition."
+```
+
+**INSTALLATION/COMBINATION:**
+```
+"Show [product A] and [product B] [installed/connected/working together] 
+in a [professional/realistic] [industry] setting. The connection/relationship 
+between products is clear. [Lighting], authentic feel, demonstrates proper use."
+```
+
+**BEFORE/AFTER:**
+```
+"Create a [split/comparison] composition showing: Left side - [problem state]. 
+Right side - [solution using product]. Clear visual contrast, same angle/lighting 
+for comparison. The product's value is immediately obvious."
+```
+
+**SCALE DEMONSTRATION:**
+```
+"Show this [product] with [human figure/common object] for scale reference. 
+The size relationship is immediately clear. [Professional/lifestyle] setting, 
+the product's scale is the focus while maintaining [mood] feel."
+```
+
+**SEASONAL STYLING:**
+```
+"Style this [product] for [season/holiday]. Add [seasonal elements] while 
+keeping product as hero. [Warm/cool/festive] color palette, [mood] atmosphere. 
+The product remains professional, the seasonal theme enhances not overwhelms."
+```
+
+**PROBLEM/SOLUTION:**
+```
+"Visual showing the problem of [issue] alongside the solution using [product]. 
+[Before state] transforms to [after state]. The product's value proposition 
+is immediately clear. Professional, compelling composition."
+```
+
+**PRODUCT FAMILY:**
+```
+"Arrange [these products] together as a cohesive collection/family. 
+[Organized/artistic] layout showing how they work as a system. Consistent 
+lighting across all products, [premium/professional] product photography style."
+```
+
+**ACTION/IN-USE:**
+```
+"Show [product] being actively used by [appropriate person] in [context]. 
+Capture the moment of use, [professional/authentic] feel. The product's 
+purpose is immediately clear, [dynamic/documentary] composition."
+```
+
+**INDUSTRY CONTEXT:**
+```
+"Place [product] in an authentic [industry] professional setting. 
+[Workers/context] in background, the product is hero but environment 
+is realistic. [Time of day] lighting, [documentary/professional] style, 
+aspirational but believable."
+```
+
+---
+
+## USER INTERFACE
+
+### Screen 1: Upload
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│                    PRODUCT CONTENT STUDIO                       │
+│                                                                 │
+│     Transform boring product photos into marketing gold         │
+│                                                                 │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │                                                           │  │
+│  │                                                           │  │
+│  │         📷 Drop your product photo(s) here                │  │
+│  │              or click to upload                           │  │
+│  │                                                           │  │
+│  │            Upload 1-6 product images                      │  │
+│  │            JPG, PNG, WEBP supported                       │  │
+│  │                                                           │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                                                                 │
+│  ☐ Add a reference image (optional - for style/scene matching) │
+│                                                                 │
+│                      [ Continue → ]                             │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Screen 2: Describe
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│  ┌─────┐ ┌─────┐                                               │
+│  │ 📷  │ │ 📷  │  Your products                                │
+│  └─────┘ └─────┘                                               │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  What do you want to create?                                    │
+│                                                                 │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │                                                           │  │
+│  │  "Show these products installed together on a             │  │
+│  │   professional construction site, premium feel"           │  │
+│  │                                                           │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                                                                 │
+│  💡 Examples:                                                   │
+│     • "Make this look premium for LinkedIn"                     │
+│     • "Show how these two work together"                        │
+│     • "Before and after with this product"                      │
+│     • "Summer campaign vibes for Instagram"                     │
+│     • "Someone actually using this on a worksite"               │
+│                                                                 │
+│  Platform (optional): [ Auto-detect ▼ ]                         │
+│                                                                 │
+│                    [ ✨ Generate → ]                            │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Screen 3: Processing
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│                    ✨ Creating your image...                    │
+│                                                                 │
+│              ▓▓▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░░░ 55%                      │
+│                                                                 │
+│              ✓ Analyzing your products                          │
+│              ✓ Understanding your vision                        │
+│              → Building the perfect scene                       │
+│              ○ Generating with Nano Banana Pro                  │
+│                                                                 │
+│              Estimated time: ~15-25 seconds                     │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Screen 4: Results
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │                                                           │  │
+│  │                                                           │  │
+│  │                                                           │  │
+│  │              [ GENERATED IMAGE ]                          │  │
+│  │                                                           │  │
+│  │                                                           │  │
+│  │                                                           │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  📝 Suggested caption:                                          │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │ "Building excellence, one connection at a time.           │  │
+│  │  Quality materials for quality results."                  │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                                                                 │
+│  🏷️ Hashtags: #Construction #Quality #Building #Professional   │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  [ 📥 Download ]  [ 📥 Download 4K ]  [ 🔄 Regenerate ]        │
+│                                                                 │
+│  [ 🎨 Try Different Style ]  [ 🆕 Start Over ]                 │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  ▼ What I understood (click to expand)                          │
+│    Content type: Installation/Combination                       │
+│    Scene: Professional construction site                        │
+│    Mood: Premium, aspirational                                  │
+│    Platform: LinkedIn (1.91:1)                                  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## CLARIFICATION HANDLING
+
+When intent is ambiguous, ask ONE focused question:
+
+```
+User: "Make this better"
+
+System: "I'd love to help! Quick question - what's the main goal?
+        
+        • 🏠 Lifestyle shot (show it in a beautiful setting)
+        • 👷 Professional context (show it being used at work)  
+        • 📱 Social media ready (optimized for a specific platform)
+        
+        Or just describe the vibe you're going for!"
+```
+
+Never ask more than one question. Never show a complex menu. Keep it conversational.
+
+---
+
+## EXAMPLE TRANSFORMATIONS
+
+### Example 1: Simple Lifestyle
+```
+INPUT:  [White background photo of BBQ grill]
+USER:   "Summer backyard party vibes"
+DETECT: Lifestyle + Outdoor + Seasonal(summer) + Warm mood
+OUTPUT: BBQ grill in beautiful backyard, golden hour, string lights, 
+        friends blurred in background, summer evening atmosphere
+```
+
+### Example 2: Installation Shot
+```
+INPUT:  [Photo of rebar] [Photo of tie wire]
+USER:   "Show how these work together on site"
+DETECT: Installation/Combination + Industry(construction) + Professional
+RESEARCH: How rebar and tie wire connect at intersections
+OUTPUT: Professional shot of rebar grid with tie wire at intersections,
+        realistic construction site, workers in background
+```
+
+### Example 3: Before/After
+```
+INPUT:  [Photo of cracked concrete] [Photo of rebar mesh]
+USER:   "Before and after - the problem this solves"
+DETECT: Before/After + Problem/Solution
+OUTPUT: Split composition: cracked failed concrete vs properly 
+        reinforced structure, clear cause-and-effect visual
+```
+
+### Example 4: Scale Demo
+```
+INPUT:  [Photo of large steel beam]
+USER:   "Show how massive this actually is"
+DETECT: Scale Demonstration
+OUTPUT: Steel beam with worker standing next to it for scale,
+        professional industrial setting, impressive perspective
+```
+
+### Example 5: Seasonal
+```
+INPUT:  [Standard product photo]
+USER:   "Christmas version for our holiday campaign"
+DETECT: Seasonal(Christmas) + Marketing
+OUTPUT: Product with subtle festive styling, warm lighting,
+        holiday elements without overwhelming the product
+```
+
+### Example 6: Platform Optimized
+```
+INPUT:  [Product photo]
+USER:   "Make it pop for Instagram"
+DETECT: Platform(Instagram) + Lifestyle + Vibrant mood
+OUTPUT: 1:1 ratio, scroll-stopping composition, vibrant but 
+        professional, optimized for mobile viewing
+```
+
+### Example 7: Product Family
+```
+INPUT:  [Photo 1] [Photo 2] [Photo 3] [Photo 4]
+USER:   "Show our complete product range together"
+DETECT: Product Family + Collection
+OUTPUT: All products arranged cohesively, consistent lighting,
+        shows how they work as a system, premium catalog feel
+```
+
+### Example 8: Action Shot
+```
+INPUT:  [Photo of safety equipment]
+USER:   "Someone actually using this properly"
+DETECT: Action/In-Use + Professional
+OUTPUT: Worker properly wearing/using equipment in realistic
+        setting, demonstrates correct usage, authentic feel
+```
+
+---
+
+## ERROR HANDLING
+
+### Rate Limit (429)
+```
+"High demand right now! ⏳
+
+Your image is queued and will be ready in approximately 30 seconds.
+
+[Cancel] [Wait]"
+```
+→ Implement exponential backoff: 5s → 10s → 20s → 40s
+→ Max 3 retries, then show "Try again in a few minutes"
+
+### Generation Failed
+```
+"That one didn't work out. Let me try a slightly different approach...
+
+[Trying again automatically...]"
+```
+→ Simplify prompt and retry once
+→ If second attempt fails: "Let's try describing it differently"
+
+### Model Unavailable
+```
+"The AI service is temporarily unavailable. 
+
+Please try again in a few minutes. Your uploaded images are saved.
+
+[Retry] [Save & Exit]"
+```
+→ NO fallback to other models. Wait or fail gracefully.
+
+### Unclear Product
+```
+"I want to make sure I get this right!
+
+Could you tell me briefly what this product is? 
+(e.g., 'steel rebar for construction' or 'outdoor furniture')"
+```
+
+### No Image Uploaded
+```
+"Please upload at least one product image to get started! 📷"
+```
+
+### Too Many Images
+```
+"For best results, please select up to 6 images. 
+
+Which ones are most important for this visual?"
+```
+
+---
+
+## CAPTION & HASHTAG GENERATION
+
+After image generation, automatically create:
+
+### Caption Generation Rules
+- Match the detected mood/platform
+- Keep it concise (under 150 characters for Twitter, flexible for others)
+- Include subtle call-to-action when appropriate
+- Professional tone for LinkedIn, casual for Instagram
+- Never cringey or over-promotional
+
+### Hashtag Generation Rules
+- 5-8 relevant hashtags
+- Mix of: industry, product type, mood, platform-trending
+- Avoid overused/spammy tags
+- Match the professional level of the content
+
+---
+
+## SESSION MANAGEMENT
+
+### Per Session Limits
+```
+- Track generation count per session
+- After 15 generations: "You've created 15 images! Want to continue?"
+- After 20 generations: "Consider downloading your favorites - 
+                         session will reset soon"
+- Store generated images temporarily (1 hour)
+- Provide "Download All" option
+```
+
+### Image Storage
+```
+- Save generated images to temp storage
+- Provide download links (1K standard, 2K, 4K options)
+- Clear after session ends or 1 hour timeout
+- No permanent storage (user downloads what they want)
+```
+
+---
+
+## ENVIRONMENT VARIABLES
+
+```
+GEMINI_API_KEY=user_provides_or_app_provides
+```
+
+Only this one variable needed. No other API keys or configurations.
+
+---
+
+## SUCCESS CRITERIA
+
+The app works when:
+
+```
+✓ User uploads 1-6 product images
+✓ User describes what they want in plain English
+✓ System correctly understands intent without asking multiple questions
+✓ System uses ONLY Gemini 3 Pro Image (Nano Banana Pro)
+✓ Generated image matches user's described vision
+✓ Product remains recognizable and accurate
+✓ User can download in multiple resolutions
+✓ User can regenerate or try different styles easily
+✓ Rate limits handled gracefully without crashes
+✓ Captions and hashtags are actually useful
+✓ Entire flow takes under 30 seconds
+✓ Works on mobile and desktop
+```
+
+---
+
+## FUTURE ADDITIONS (NOT FOR NOW)
+
+These features are planned but NOT included in V1:
+- Video generation (Veo integration)
+- Batch processing (multiple outputs at once)
+- Brand kit / style consistency across generations
+- Team collaboration features
+- API access for programmatic use
+- Template saving / favorites
+
+Build the core experience first. Add these later.
+
+---
+
+## BUILD INSTRUCTIONS FOR REPLIT AGENT
+
+1. Start with the upload flow - get image handling working
+2. Add the describe input with example prompts
+3. Implement the intent detection logic
+4. Connect to Gemini 3 Pro Image API
+5. Build the results display with download options
+6. Add regenerate/try different functionality
+7. Implement rate limit handling
+8. Add caption/hashtag generation
+9. Test with various product types
+10. Polish the UI and error states
+
+Build incrementally. Test each step. Checkpoint often.
