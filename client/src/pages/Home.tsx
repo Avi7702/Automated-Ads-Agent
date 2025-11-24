@@ -4,15 +4,20 @@ import { UploadZone } from "@/components/UploadZone";
 import { PromptInput } from "@/components/PromptInput";
 import { IntentVisualizer } from "@/components/IntentVisualizer";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, RefreshCw, Download, Check } from "lucide-react";
+import { ArrowRight, RefreshCw, Download, Check, Image, Sparkles, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link } from "wouter";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Import generated assets
 import bottleBefore from "@assets/generated_images/plain_white_water_bottle_product_shot.png";
 import bottleAfter from "@assets/generated_images/water_bottle_lifestyle_marketing_shot.png";
-import shoeBefore from "@assets/generated_images/white_running_shoe_product_shot.png";
-import shoeAfter from "@assets/generated_images/running_shoe_urban_marketing_shot.png";
 import spacerBefore from "@assets/generated_images/black_plastic_spacer_product_shot.png";
 import spacerAfter from "@assets/generated_images/industrial_spacer_lifestyle_shot.png";
 
@@ -21,7 +26,8 @@ type Step = "upload" | "describe" | "generating" | "result";
 export default function Home() {
   const [step, setStep] = useState<Step>("upload");
   const [files, setFiles] = useState<File[]>([]);
-  const [selectedDemo, setSelectedDemo] = useState<"bottle" | "shoe" | "spacer" | null>(null);
+  const [selectedDemo, setSelectedDemo] = useState<"bottle" | "spacer" | null>(null);
+  const [resolution, setResolution] = useState<"1K" | "2K" | "4K">("2K");
   const [prompt, setPrompt] = useState("");
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [generationId, setGenerationId] = useState<string | null>(null);
@@ -82,7 +88,7 @@ export default function Home() {
     setStep("describe");
   };
 
-  const selectDemo = (type: "bottle" | "shoe" | "spacer") => {
+  const selectDemo = (type: "bottle" | "spacer") => {
     setSelectedDemo(type);
     setFiles([]); // Clear files if demo is selected
     setStep("describe");
@@ -90,8 +96,6 @@ export default function Home() {
     // Pre-fill a prompt for the demo
     if (type === "bottle") {
       setPrompt("Make this look like a premium lifestyle shot in a misty forest, nature vibes.");
-    } else if (type === "shoe") {
-      setPrompt("Show this sneaker splashing through a puddle on a neon-lit city street at night.");
     } else if (type === "spacer") {
       setPrompt("Show this installed on a steel structure at a construction site, industrial engineering style.");
     }
@@ -112,8 +116,7 @@ export default function Home() {
         filesToUpload = files.slice(0, 6);
       } else if (selectedDemo) {
         // Convert demo image to file
-        const demoImage = selectedDemo === "bottle" ? bottleBefore : 
-                         selectedDemo === "shoe" ? shoeBefore : spacerBefore;
+        const demoImage = selectedDemo === "bottle" ? bottleBefore : spacerBefore;
         const response = await fetch(demoImage);
         const blob = await response.blob();
         const file = new File([blob], `${selectedDemo}-demo.png`, { type: "image/png" });
@@ -168,10 +171,19 @@ export default function Home() {
   // Get current preview image
   const getPreviewImage = () => {
     if (selectedDemo === "bottle") return bottleBefore;
-    if (selectedDemo === "shoe") return shoeBefore;
     if (selectedDemo === "spacer") return spacerBefore;
     if (files.length > 0) return URL.createObjectURL(files[0]);
     return null;
+  };
+
+  const handleDownload = () => {
+    if (!generatedImage) return;
+    const link = document.createElement("a");
+    link.href = generatedImage;
+    link.download = `product-${generationId || Date.now()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -230,28 +242,21 @@ export default function Home() {
                   <div className="h-px flex-1 bg-border" />
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
                   <button 
                     onClick={() => selectDemo("bottle")}
                     className="group relative aspect-[4/3] rounded-2xl overflow-hidden border border-white/10 hover:border-primary/50 transition-all"
+                    data-testid="button-demo-bottle"
                   >
                     <img src={bottleBefore} alt="Bottle" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-4">
                       <span className="text-white font-medium text-sm">Minimalist Bottle</span>
                     </div>
                   </button>
-                  <button 
-                    onClick={() => selectDemo("shoe")}
-                    className="group relative aspect-[4/3] rounded-2xl overflow-hidden border border-white/10 hover:border-primary/50 transition-all"
-                  >
-                    <img src={shoeBefore} alt="Shoe" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-4">
-                      <span className="text-white font-medium text-sm">Running Shoe</span>
-                    </div>
-                  </button>
                    <button 
                     onClick={() => selectDemo("spacer")}
                     className="group relative aspect-[4/3] rounded-2xl overflow-hidden border border-white/10 hover:border-primary/50 transition-all"
+                    data-testid="button-demo-spacer"
                   >
                     <img src={spacerBefore} alt="Spacer" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-4">
@@ -301,27 +306,60 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <PromptInput 
-                  value={prompt} 
-                  onChange={setPrompt} 
-                  onSubmit={handleGenerate} 
-                  isGenerating={false} 
-                />
-                <IntentVisualizer prompt={prompt} />
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <PromptInput 
+                    value={prompt} 
+                    onChange={setPrompt} 
+                    onSubmit={handleGenerate} 
+                    isGenerating={false} 
+                  />
+                  <IntentVisualizer prompt={prompt} />
+                </div>
+
+                {/* Resolution Selector */}
+                <div className="flex items-center gap-3">
+                  <label className="text-sm text-muted-foreground font-medium">Resolution:</label>
+                  <Select value={resolution} onValueChange={(value: "1K" | "2K" | "4K") => setResolution(value)}>
+                    <SelectTrigger className="w-[140px]" data-testid="select-resolution">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1K">1K (Fast)</SelectItem>
+                      <SelectItem value="2K">2K (Balanced)</SelectItem>
+                      <SelectItem value="4K">4K (Premium)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <span className="text-xs text-muted-foreground">
+                    {resolution === "1K" && "1024 × 1024"}
+                    {resolution === "2K" && "2048 × 2048"}
+                    {resolution === "4K" && "4096 × 4096"}
+                  </span>
+                </div>
               </div>
 
-              {/* Simulated Chat History / Context */}
-              <div className="p-6 rounded-3xl border border-white/5 bg-card/30 backdrop-blur-sm space-y-4">
-                <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">System Intelligence</h3>
-                <div className="space-y-3 text-sm">
-                  <div className="flex items-start gap-3 text-muted-foreground/80">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2" />
-                    <p>Model locked to <span className="text-foreground font-mono text-xs bg-white/5 px-1 py-0.5 rounded">gemini-3-pro-image-preview</span></p>
+              {/* Quick Actions */}
+              <div className="grid grid-cols-2 gap-3">
+                <Link href="/gallery" className="p-4 rounded-2xl border border-white/5 bg-card/30 hover:bg-card/50 transition-all group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Image className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium">View Gallery</h4>
+                      <p className="text-xs text-muted-foreground">Past generations</p>
+                    </div>
                   </div>
-                  <div className="flex items-start gap-3 text-muted-foreground/80">
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2" />
-                    <p>Dynamic Intent Engine active. Waiting for description...</p>
+                </Link>
+                <div className="p-4 rounded-2xl border border-white/5 bg-card/30">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                      <Check className="w-5 h-5 text-emerald-500" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium">Auto-saved</h4>
+                      <p className="text-xs text-muted-foreground">Draft stored</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -375,23 +413,27 @@ export default function Home() {
               animate={{ opacity: 1, scale: 1 }}
               className="space-y-6"
             >
-               <div className="flex items-center justify-between">
-                 <button onClick={handleReset} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="button-start-new">
-                   <ArrowRight className="w-4 h-4 rotate-180" />
-                   Start New
-                 </button>
-                 <div className="flex gap-2">
+               <div className="flex items-center justify-between flex-wrap gap-4">
+                 <div className="flex items-center gap-3">
+                   <button onClick={handleReset} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="button-start-new">
+                     <ArrowRight className="w-4 h-4 rotate-180" />
+                     <span className="hidden sm:inline">Start New</span>
+                   </button>
                    {generationId && (
-                     <Link href={`/generation/${generationId}`}>
-                       <Button variant="outline" size="sm" data-testid="button-view-details">
-                         <Check className="w-4 h-4 mr-2" />
-                         View in Gallery
-                       </Button>
+                     <Link href={`/generation/${generationId}`} className="text-sm text-primary hover:text-primary/80 transition-colors flex items-center gap-1.5" data-testid="link-view-details">
+                       <History className="w-4 h-4" />
+                       <span className="hidden sm:inline">View Details</span>
                      </Link>
                    )}
-                   <Button variant="outline" size="sm" onClick={handleGenerate} data-testid="button-regenerate">
-                     <RefreshCw className="w-4 h-4 mr-2" />
-                     Regenerate
+                 </div>
+                 <div className="flex gap-2">
+                   <Button variant="outline" size="sm" onClick={handleDownload} data-testid="button-download-result">
+                     <Download className="w-4 h-4 sm:mr-2" />
+                     <span className="hidden sm:inline">Download</span>
+                   </Button>
+                   <Button size="sm" onClick={handleGenerate} data-testid="button-regenerate">
+                     <Sparkles className="w-4 h-4 sm:mr-2" />
+                     <span className="hidden sm:inline">Refine</span>
                    </Button>
                  </div>
                </div>
@@ -430,11 +472,15 @@ export default function Home() {
                    <div className="space-y-1">
                      <div className="flex justify-between text-sm">
                        <span className="text-muted-foreground">Model</span>
-                       <span>Gemini 3 Pro</span>
+                       <span className="font-mono text-xs">gemini-2.5</span>
                      </div>
                      <div className="flex justify-between text-sm">
                        <span className="text-muted-foreground">Resolution</span>
-                       <span>2048 x 2048</span>
+                       <span>{resolution === "1K" ? "1024×1024" : resolution === "2K" ? "2048×2048" : "4096×4096"}</span>
+                     </div>
+                     <div className="flex justify-between text-sm">
+                       <span className="text-muted-foreground">Images</span>
+                       <span>{files.length || 1}</span>
                      </div>
                    </div>
                  </div>

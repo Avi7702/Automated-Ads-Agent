@@ -99,7 +99,7 @@ Guidelines:
 
       const part = result.candidates[0].content.parts[0];
       
-      if (part.inlineData) {
+      if (part.inlineData && part.inlineData.data) {
         // Save uploaded files to disk
         const originalImagePaths: string[] = [];
         for (const file of files) {
