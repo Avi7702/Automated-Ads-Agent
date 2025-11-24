@@ -46,26 +46,53 @@ export default function Home() {
     }
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     setStep("generating");
     
-    // Simulate API call delay
-    setTimeout(() => {
-      if (selectedDemo === "bottle") {
-        setGeneratedImage(bottleAfter);
-      } else if (selectedDemo === "shoe") {
-        setGeneratedImage(shoeAfter);
-      } else if (selectedDemo === "spacer") {
-        setGeneratedImage(spacerAfter);
+    try {
+      // Prepare form data
+      const formData = new FormData();
+      
+      // Get the file - either from uploaded files or demo images
+      let fileToUpload: File;
+      
+      if (files.length > 0) {
+        // User uploaded their own file
+        fileToUpload = files[0];
+      } else if (selectedDemo) {
+        // Convert demo image to file
+        const demoImage = selectedDemo === "bottle" ? bottleBefore : 
+                         selectedDemo === "shoe" ? shoeBefore : spacerBefore;
+        const response = await fetch(demoImage);
+        const blob = await response.blob();
+        fileToUpload = new File([blob], `${selectedDemo}-demo.png`, { type: "image/png" });
       } else {
-        // Fallback for custom uploads:
-        // In a real app, this would upload the image to the backend.
-        // For this prototype, we'll default to the Spacer since you asked about it!
-        // Or we can show a toast/alert explaining this limitation.
-        setGeneratedImage(spacerAfter); 
+        throw new Error("No image selected");
       }
+      
+      formData.append("image", fileToUpload);
+      formData.append("prompt", prompt);
+      
+      // Call the API
+      const response = await fetch("/api/transform", {
+        method: "POST",
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to transform image");
+      }
+      
+      const data = await response.json();
+      setGeneratedImage(data.imageUrl);
       setStep("result");
-    }, 3500);
+      
+    } catch (error: any) {
+      console.error("Generation error:", error);
+      alert(`Failed to generate image: ${error.message}`);
+      setStep("describe");
+    }
   };
 
   const handleReset = () => {
