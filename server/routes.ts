@@ -16,9 +16,13 @@ const upload = multer({
   }
 });
 
-// Initialize Gemini client
+// Initialize Gemini client using Replit AI Integrations
 const genai = new GoogleGenAI({
   apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY!,
+  httpOptions: {
+    apiVersion: "",
+    baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL!,
+  },
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
