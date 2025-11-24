@@ -173,11 +173,20 @@ promptTemplates {
 4. Click "Use" to load product into generation flow
 5. Products persist across sessions for repeated use
 
+**Cloudinary Sync Feature**:
+- One-click import of existing Cloudinary images into the app
+- "Sync from Cloudinary" button fetches all images from Cloudinary account
+- Automatically imports new products and skips duplicates
+- Extracts product names from Cloudinary public_id paths
+- Toast notification shows import statistics (imported, skipped, total)
+- Supports up to 500 images per sync (configurable)
+
 **Security Measures**:
 - MIME type validation (image/jpeg, image/png, image/gif, image/webp only)
 - File size limit enforcement (10MB maximum)
 - Graceful error handling if Cloudinary credentials missing
 - Environment variable validation at startup
+- Duplicate detection prevents re-importing existing products
 
 ## AI Prompt Suggestions
 
