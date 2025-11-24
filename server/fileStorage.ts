@@ -6,6 +6,11 @@ const STORAGE_BASE = path.join(process.cwd(), "attached_assets", "generations");
 const ORIGINALS_DIR = path.join(STORAGE_BASE, "originals");
 const RESULTS_DIR = path.join(STORAGE_BASE, "results");
 
+async function ensureDirectories() {
+  await fs.mkdir(ORIGINALS_DIR, { recursive: true });
+  await fs.mkdir(RESULTS_DIR, { recursive: true });
+}
+
 /**
  * Save an uploaded file to disk
  * @returns Relative path to the saved file
@@ -14,6 +19,8 @@ export async function saveOriginalFile(
   fileBuffer: Buffer,
   originalFilename: string
 ): Promise<string> {
+  await ensureDirectories();
+  
   const ext = path.extname(originalFilename);
   const filename = `${randomUUID()}${ext}`;
   const filepath = path.join(ORIGINALS_DIR, filename);
@@ -32,6 +39,8 @@ export async function saveGeneratedImage(
   base64Data: string,
   format: string = "png"
 ): Promise<string> {
+  await ensureDirectories();
+  
   const filename = `${randomUUID()}.${format}`;
   const filepath = path.join(RESULTS_DIR, filename);
   

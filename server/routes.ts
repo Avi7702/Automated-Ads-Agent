@@ -5,6 +5,8 @@ import multer from "multer";
 import { GoogleGenAI } from "@google/genai";
 import { saveOriginalFile, saveGeneratedImage, deleteFile } from "./fileStorage";
 import { insertGenerationSchema } from "@shared/schema";
+import express from "express";
+import path from "path";
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -20,6 +22,8 @@ const genai = new GoogleGenAI({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Serve static files from attached_assets directory
+  app.use("/attached_assets", express.static(path.join(process.cwd(), "attached_assets")));
   
   // Image transformation endpoint
   app.post("/api/transform", upload.array("images", 6), async (req, res) => {
@@ -105,7 +109,8 @@ Guidelines:
 
         // Save generated image to disk
         const generatedImageData = part.inlineData.data;
-        const format = part.inlineData.mimeType?.split("/")[1] || "png";
+        const mimeType = part.inlineData.mimeType || "image/png";
+        const format = mimeType.split("/")[1] || "png";
         const generatedImagePath = await saveGeneratedImage(generatedImageData, format);
 
         // Save generation record to database
@@ -118,12 +123,10 @@ Guidelines:
 
         console.log(`[Transform] Saved generation ${generation.id}`);
         
-        // Return the generated image as data URL + generation ID
-        const dataUrl = `data:${part.inlineData.mimeType};base64,${generatedImageData}`;
-        
+        // Return the file path for the frontend to use
         res.json({ 
           success: true,
-          imageUrl: dataUrl,
+          imageUrl: `/${generatedImagePath}`,
           generationId: generation.id,
           prompt: prompt
         });

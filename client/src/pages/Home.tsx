@@ -47,15 +47,31 @@ export default function Home() {
     // Check for re-edit generation data
     const reEditData = localStorage.getItem("reEditGeneration");
     if (reEditData) {
-      try {
-        const generation = JSON.parse(reEditData);
-        setPrompt(generation.prompt);
-        // Note: We can't restore File objects from paths, so user will need to re-upload
-        // Or we could fetch the images and convert to Files
-        localStorage.removeItem("reEditGeneration"); // Clear after loading
-      } catch (error) {
-        console.error("Failed to load re-edit data:", error);
-      }
+      const loadReEditData = async () => {
+        try {
+          const generation = JSON.parse(reEditData);
+          setPrompt(generation.prompt);
+          
+          // Fetch original images and convert to File objects
+          const filePromises = generation.originalImagePaths.map(async (path: string, index: number) => {
+            const response = await fetch(`/${path}`);
+            const blob = await response.blob();
+            const filename = path.split("/").pop() || `image-${index}.png`;
+            return new File([blob], filename, { type: blob.type });
+          });
+          
+          const loadedFiles = await Promise.all(filePromises);
+          setFiles(loadedFiles);
+          setStep("describe"); // Skip upload step since files are loaded
+          
+          localStorage.removeItem("reEditGeneration"); // Clear after loading
+        } catch (error) {
+          console.error("Failed to load re-edit data:", error);
+          localStorage.removeItem("reEditGeneration");
+        }
+      };
+      
+      loadReEditData();
     }
   }, []);
 
