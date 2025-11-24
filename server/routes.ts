@@ -17,19 +17,35 @@ const upload = multer({
   }
 });
 
-// Initialize Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
-  api_key: process.env.CLOUDINARY_API_KEY!,
-  api_secret: process.env.CLOUDINARY_API_SECRET!,
-});
+// Validate and initialize Cloudinary
+if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+  console.warn("[Cloudinary] Missing credentials - product library features disabled");
+}
 
-// Initialize Gemini client using Replit AI Integrations
+const isCloudinaryConfigured = !!(
+  process.env.CLOUDINARY_CLOUD_NAME &&
+  process.env.CLOUDINARY_API_KEY &&
+  process.env.CLOUDINARY_API_SECRET
+);
+
+if (isCloudinaryConfigured) {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+}
+
+// Validate and initialize Gemini client using Replit AI Integrations
+if (!process.env.AI_INTEGRATIONS_GEMINI_API_KEY || !process.env.AI_INTEGRATIONS_GEMINI_BASE_URL) {
+  throw new Error("[Gemini] Missing AI integration credentials");
+}
+
 const genai = new GoogleGenAI({
-  apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY!,
+  apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
   httpOptions: {
     apiVersion: "",
-    baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL!,
+    baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
   },
 });
 
@@ -208,9 +224,25 @@ Guidelines:
   // Product routes - Upload product to Cloudinary and save to DB
   app.post("/api/products", upload.single("image"), async (req, res) => {
     try {
+      if (!isCloudinaryConfigured) {
+        return res.status(503).json({ error: "Product library is not configured" });
+      }
+
       const file = req.file;
       if (!file) {
         return res.status(400).json({ error: "No image file provided" });
+      }
+
+      // Validate file is an image
+      const allowedMimeTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
+      if (!allowedMimeTypes.includes(file.mimetype)) {
+        return res.status(400).json({ error: "Only image files are allowed (JPEG, PNG, GIF, WebP)" });
+      }
+
+      // Validate file size (10MB max)
+      const maxSize = 10 * 1024 * 1024;
+      if (file.size > maxSize) {
+        return res.status(400).json({ error: "File size must be less than 10MB" });
       }
 
       const { name, category } = req.body;
@@ -336,6 +368,14 @@ Guidelines:
     try {
       const { productName, category } = req.body;
       
+      // Input validation
+      if (!productName || typeof productName !== 'string') {
+        return res.status(400).json({ error: "Product name is required" });
+      }
+      
+      // Sanitize product name to prevent injection
+      const sanitizedProductName = productName.replace(/[^\w\s-]/g, '').slice(0, 100);
+      
       // Get curated templates for the category (or all if no category)
       const templates = await storage.getPromptTemplates(category);
       
@@ -346,7 +386,7 @@ Guidelines:
       // Use Gemini to generate variations of the curated prompts
       const templateExamples = templates.slice(0, 5).map(t => `"${t.prompt}"`).join(", ");
       
-      const suggestionPrompt = `You are a creative marketing prompt generator. Given a product called "${productName}", generate 4 creative, professional marketing scene ideas similar to these examples: ${templateExamples}.
+      const suggestionPrompt = `You are a creative marketing prompt generator. Given a product called "${sanitizedProductName}", generate 4 creative, professional marketing scene ideas similar to these examples: ${templateExamples}.
 
 Each suggestion should be a concise, vivid description (max 15 words) of a marketing scene or lifestyle context for the product.
 
@@ -364,6 +404,12 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       let suggestions: string[] = [];
       try {
         suggestions = JSON.parse(responseText);
+        // Validate array and limit to 4 suggestions
+        if (!Array.isArray(suggestions)) {
+          suggestions = templates.slice(0, 4).map(t => t.prompt);
+        } else {
+          suggestions = suggestions.slice(0, 4);
+        }
       } catch (e) {
         // Fallback to template prompts if parsing fails
         suggestions = templates.slice(0, 4).map(t => t.prompt);
