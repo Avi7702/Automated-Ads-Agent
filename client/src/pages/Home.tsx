@@ -12,13 +12,15 @@ import bottleBefore from "@assets/generated_images/plain_white_water_bottle_prod
 import bottleAfter from "@assets/generated_images/water_bottle_lifestyle_marketing_shot.png";
 import shoeBefore from "@assets/generated_images/white_running_shoe_product_shot.png";
 import shoeAfter from "@assets/generated_images/running_shoe_urban_marketing_shot.png";
+import spacerBefore from "@assets/generated_images/black_plastic_spacer_product_shot.png";
+import spacerAfter from "@assets/generated_images/industrial_spacer_lifestyle_shot.png";
 
 type Step = "upload" | "describe" | "generating" | "result";
 
 export default function Home() {
   const [step, setStep] = useState<Step>("upload");
   const [files, setFiles] = useState<File[]>([]);
-  const [selectedDemo, setSelectedDemo] = useState<"bottle" | "shoe" | null>(null);
+  const [selectedDemo, setSelectedDemo] = useState<"bottle" | "shoe" | "spacer" | null>(null);
   const [prompt, setPrompt] = useState("");
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
 
@@ -29,7 +31,7 @@ export default function Home() {
     setStep("describe");
   };
 
-  const selectDemo = (type: "bottle" | "shoe") => {
+  const selectDemo = (type: "bottle" | "shoe" | "spacer") => {
     setSelectedDemo(type);
     setFiles([]); // Clear files if demo is selected
     setStep("describe");
@@ -37,8 +39,10 @@ export default function Home() {
     // Pre-fill a prompt for the demo
     if (type === "bottle") {
       setPrompt("Make this look like a premium lifestyle shot in a misty forest, nature vibes.");
-    } else {
+    } else if (type === "shoe") {
       setPrompt("Show this sneaker splashing through a puddle on a neon-lit city street at night.");
+    } else if (type === "spacer") {
+      setPrompt("Show this installed on a steel structure at a construction site, industrial engineering style.");
     }
   };
 
@@ -51,10 +55,14 @@ export default function Home() {
         setGeneratedImage(bottleAfter);
       } else if (selectedDemo === "shoe") {
         setGeneratedImage(shoeAfter);
+      } else if (selectedDemo === "spacer") {
+        setGeneratedImage(spacerAfter);
       } else {
-        // Fallback for custom uploads (since we can't actually transform them)
-        // We'll just show the bottle after as a "mock" result
-        setGeneratedImage(bottleAfter); 
+        // Fallback for custom uploads:
+        // In a real app, this would upload the image to the backend.
+        // For this prototype, we'll default to the Spacer since you asked about it!
+        // Or we can show a toast/alert explaining this limitation.
+        setGeneratedImage(spacerAfter); 
       }
       setStep("result");
     }, 3500);
@@ -72,6 +80,7 @@ export default function Home() {
   const getPreviewImage = () => {
     if (selectedDemo === "bottle") return bottleBefore;
     if (selectedDemo === "shoe") return shoeBefore;
+    if (selectedDemo === "spacer") return spacerBefore;
     if (files.length > 0) return URL.createObjectURL(files[0]);
     return null;
   };
@@ -131,7 +140,7 @@ export default function Home() {
                   <div className="h-px flex-1 bg-border" />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <button 
                     onClick={() => selectDemo("bottle")}
                     className="group relative aspect-[4/3] rounded-2xl overflow-hidden border border-white/10 hover:border-primary/50 transition-all"
@@ -148,6 +157,15 @@ export default function Home() {
                     <img src={shoeBefore} alt="Shoe" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-4">
                       <span className="text-white font-medium text-sm">Running Shoe</span>
+                    </div>
+                  </button>
+                   <button 
+                    onClick={() => selectDemo("spacer")}
+                    className="group relative aspect-[4/3] rounded-2xl overflow-hidden border border-white/10 hover:border-primary/50 transition-all"
+                  >
+                    <img src={spacerBefore} alt="Spacer" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-4">
+                      <span className="text-white font-medium text-sm">Industrial Clip</span>
                     </div>
                   </button>
                 </div>
