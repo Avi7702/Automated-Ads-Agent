@@ -8,12 +8,14 @@ import Home from "@/pages/Home";
 import Gallery from "@/pages/Gallery";
 import GenerationDetail from "@/pages/GenerationDetail";
 import ProductLibrary from "@/pages/ProductLibrary";
+import PromptTemplatesManager from "@/pages/PromptTemplatesManager";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/library" component={ProductLibrary} />
+      <Route path="/prompts" component={PromptTemplatesManager} />
       <Route path="/gallery" component={Gallery} />
       <Route path="/generation/:id" component={GenerationDetail} />
       <Route component={NotFound} />

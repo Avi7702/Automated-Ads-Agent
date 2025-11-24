@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
 import { UploadZone } from "@/components/UploadZone";
 import { PromptInput } from "@/components/PromptInput";
 import { IntentVisualizer } from "@/components/IntentVisualizer";
@@ -8,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, RefreshCw, Download, Check, Image, Sparkles, History, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link } from "wouter";
+import type { Product } from "@shared/schema";
 import {
   Select,
   SelectContent,
@@ -34,6 +36,16 @@ export default function Home() {
   const [prompt, setPrompt] = useState("");
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [generationId, setGenerationId] = useState<string | null>(null);
+
+  // Fetch real products from Cloudinary for demos
+  const { data: products = [] } = useQuery<Product[]>({
+    queryKey: ["products"],
+    queryFn: async () => {
+      const res = await fetch("/api/products");
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
 
   // Auto-save draft prompt to localStorage
   useEffect(() => {
@@ -237,6 +249,9 @@ export default function Home() {
             <Link href="/library" className="hover:text-foreground cursor-pointer transition-colors" data-testid="link-library-header">
               Library
             </Link>
+            <Link href="/prompts" className="hover:text-foreground cursor-pointer transition-colors" data-testid="link-prompts-header">
+              Prompts
+            </Link>
             <Link href="/gallery" className="hover:text-foreground cursor-pointer transition-colors" data-testid="link-gallery-header">
               Gallery
             </Link>
@@ -275,26 +290,33 @@ export default function Home() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
-                  <button 
-                    onClick={() => selectDemo("bottle")}
-                    className="group relative aspect-[4/3] rounded-2xl overflow-hidden border border-white/10 hover:border-primary/50 transition-all"
-                    data-testid="button-demo-bottle"
-                  >
-                    <img src={bottleBefore} alt="Bottle" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-4">
-                      <span className="text-white font-medium text-sm">Minimalist Bottle</span>
-                    </div>
-                  </button>
-                   <button 
-                    onClick={() => selectDemo("spacer")}
-                    className="group relative aspect-[4/3] rounded-2xl overflow-hidden border border-white/10 hover:border-primary/50 transition-all"
-                    data-testid="button-demo-spacer"
-                  >
-                    <img src={spacerBefore} alt="Spacer" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-4">
-                      <span className="text-white font-medium text-sm">Industrial Clip</span>
-                    </div>
-                  </button>
+                  {products.slice(0, 2).map((product) => (
+                    <button
+                      key={product.id}
+                      onClick={async () => {
+                        // Fetch the image from Cloudinary and convert to File
+                        const response = await fetch(product.cloudinaryUrl);
+                        const blob = await response.blob();
+                        const file = new File([blob], product.name + ".jpg", { type: blob.type });
+                        
+                        setFiles([file]);
+                        setSelectedProductUrl(product.cloudinaryUrl);
+                        setSelectedProductName(product.name);
+                        setStep("describe");
+                      }}
+                      className="group relative aspect-[4/3] rounded-2xl overflow-hidden border border-white/10 hover:border-primary/50 transition-all"
+                      data-testid={`button-demo-${product.id}`}
+                    >
+                      <img
+                        src={product.cloudinaryUrl}
+                        alt={product.name}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-4">
+                        <span className="text-white font-medium text-sm">{product.name}</span>
+                      </div>
+                    </button>
+                  ))}
                 </div>
               </div>
             </motion.div>
