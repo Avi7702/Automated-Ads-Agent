@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
 import { GoogleGenAI } from "@google/genai";
+import { saveOriginalFile, saveGeneratedImage, deleteFile } from "./fileStorage";
+import { insertGenerationSchema } from "@shared/schema";
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -94,16 +96,35 @@ Guidelines:
       const part = result.candidates[0].content.parts[0];
       
       if (part.inlineData) {
-        // Return the generated image
+        // Save uploaded files to disk
+        const originalImagePaths: string[] = [];
+        for (const file of files) {
+          const savedPath = await saveOriginalFile(file.buffer, file.originalname);
+          originalImagePaths.push(savedPath);
+        }
+
+        // Save generated image to disk
         const generatedImageData = part.inlineData.data;
-        const generatedMimeType = part.inlineData.mimeType || "image/png";
+        const format = part.inlineData.mimeType?.split("/")[1] || "png";
+        const generatedImagePath = await saveGeneratedImage(generatedImageData, format);
+
+        // Save generation record to database
+        const generation = await storage.saveGeneration({
+          prompt,
+          originalImagePaths,
+          generatedImagePath,
+          resolution: "2K", // Default for now
+        });
+
+        console.log(`[Transform] Saved generation ${generation.id}`);
         
-        // Send as base64 data URL
-        const dataUrl = `data:${generatedMimeType};base64,${generatedImageData}`;
+        // Return the generated image as data URL + generation ID
+        const dataUrl = `data:${part.inlineData.mimeType};base64,${generatedImageData}`;
         
         res.json({ 
           success: true,
           imageUrl: dataUrl,
+          generationId: generation.id,
           prompt: prompt
         });
       } else {
@@ -116,6 +137,56 @@ Guidelines:
         error: "Failed to transform image",
         details: error.message 
       });
+    }
+  });
+
+  // Get all generations (gallery)
+  app.get("/api/generations", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const allGenerations = await storage.getGenerations(limit);
+      res.json(allGenerations);
+    } catch (error: any) {
+      console.error("[Generations] Error:", error);
+      res.status(500).json({ error: "Failed to fetch generations" });
+    }
+  });
+
+  // Get single generation by ID
+  app.get("/api/generations/:id", async (req, res) => {
+    try {
+      const generation = await storage.getGenerationById(req.params.id);
+      if (!generation) {
+        return res.status(404).json({ error: "Generation not found" });
+      }
+      res.json(generation);
+    } catch (error: any) {
+      console.error("[Generation] Error:", error);
+      res.status(500).json({ error: "Failed to fetch generation" });
+    }
+  });
+
+  // Delete generation
+  app.delete("/api/generations/:id", async (req, res) => {
+    try {
+      const generation = await storage.getGenerationById(req.params.id);
+      if (!generation) {
+        return res.status(404).json({ error: "Generation not found" });
+      }
+
+      // Delete files from disk
+      await deleteFile(generation.generatedImagePath);
+      for (const originalPath of generation.originalImagePaths) {
+        await deleteFile(originalPath);
+      }
+
+      // Delete from database
+      await storage.deleteGeneration(req.params.id);
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[Delete Generation] Error:", error);
+      res.status(500).json({ error: "Failed to delete generation" });
     }
   });
 

@@ -5,11 +5,15 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
+import Gallery from "@/pages/Gallery";
+import GenerationDetail from "@/pages/GenerationDetail";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/gallery" component={Gallery} />
+      <Route path="/generation/:id" component={GenerationDetail} />
       <Route component={NotFound} />
     </Switch>
   );

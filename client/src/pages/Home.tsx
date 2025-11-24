@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { UploadZone } from "@/components/UploadZone";
 import { PromptInput } from "@/components/PromptInput";
@@ -6,6 +6,7 @@ import { IntentVisualizer } from "@/components/IntentVisualizer";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, RefreshCw, Download, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Link } from "wouter";
 
 // Import generated assets
 import bottleBefore from "@assets/generated_images/plain_white_water_bottle_product_shot.png";
@@ -23,6 +24,40 @@ export default function Home() {
   const [selectedDemo, setSelectedDemo] = useState<"bottle" | "shoe" | "spacer" | null>(null);
   const [prompt, setPrompt] = useState("");
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [generationId, setGenerationId] = useState<string | null>(null);
+
+  // Auto-save draft prompt to localStorage
+  useEffect(() => {
+    const savePromptDraft = () => {
+      if (prompt) {
+        localStorage.setItem("promptDraft", prompt);
+      }
+    };
+    const timeout = setTimeout(savePromptDraft, 500); // Debounce
+    return () => clearTimeout(timeout);
+  }, [prompt]);
+
+  // Restore draft prompt on mount
+  useEffect(() => {
+    const savedPrompt = localStorage.getItem("promptDraft");
+    if (savedPrompt) {
+      setPrompt(savedPrompt);
+    }
+
+    // Check for re-edit generation data
+    const reEditData = localStorage.getItem("reEditGeneration");
+    if (reEditData) {
+      try {
+        const generation = JSON.parse(reEditData);
+        setPrompt(generation.prompt);
+        // Note: We can't restore File objects from paths, so user will need to re-upload
+        // Or we could fetch the images and convert to Files
+        localStorage.removeItem("reEditGeneration"); // Clear after loading
+      } catch (error) {
+        console.error("Failed to load re-edit data:", error);
+      }
+    }
+  }, []);
 
   // Mock handlers
   const handleFilesSelected = (newFiles: File[]) => {
@@ -91,7 +126,11 @@ export default function Home() {
       
       const data = await response.json();
       setGeneratedImage(data.imageUrl);
+      setGenerationId(data.generationId);
       setStep("result");
+      
+      // Clear draft after successful generation
+      localStorage.removeItem("promptDraft");
       
     } catch (error: any) {
       console.error("Generation error:", error);
@@ -106,6 +145,8 @@ export default function Home() {
     setSelectedDemo(null);
     setPrompt("");
     setGeneratedImage(null);
+    setGenerationId(null);
+    localStorage.removeItem("promptDraft");
   };
 
   // Get current preview image
@@ -136,8 +177,9 @@ export default function Home() {
           </div>
           <nav className="flex items-center gap-6 text-sm font-medium text-muted-foreground">
             <span className="text-foreground">Generate</span>
-            <span className="hover:text-foreground cursor-pointer transition-colors">History</span>
-            <span className="hover:text-foreground cursor-pointer transition-colors">Settings</span>
+            <Link href="/gallery">
+              <a className="hover:text-foreground cursor-pointer transition-colors" data-testid="link-gallery-header">Gallery</a>
+            </Link>
           </nav>
         </div>
       </header>
@@ -318,18 +360,24 @@ export default function Home() {
               className="space-y-6"
             >
                <div className="flex items-center justify-between">
-                 <button onClick={handleReset} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                 <button onClick={handleReset} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="button-start-new">
                    <ArrowRight className="w-4 h-4 rotate-180" />
                    Start New
                  </button>
                  <div className="flex gap-2">
-                   <Button variant="outline" size="sm">
+                   {generationId && (
+                     <Link href={`/generation/${generationId}`}>
+                       <a>
+                         <Button variant="outline" size="sm" data-testid="button-view-details">
+                           <Check className="w-4 h-4 mr-2" />
+                           View in Gallery
+                         </Button>
+                       </a>
+                     </Link>
+                   )}
+                   <Button variant="outline" size="sm" onClick={handleGenerate} data-testid="button-regenerate">
                      <RefreshCw className="w-4 h-4 mr-2" />
                      Regenerate
-                   </Button>
-                   <Button size="sm">
-                     <Download className="w-4 h-4 mr-2" />
-                     Download High-Res
                    </Button>
                  </div>
                </div>
