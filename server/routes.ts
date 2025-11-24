@@ -4,9 +4,10 @@ import { storage } from "./storage";
 import multer from "multer";
 import { GoogleGenAI } from "@google/genai";
 import { saveOriginalFile, saveGeneratedImage, deleteFile } from "./fileStorage";
-import { insertGenerationSchema } from "@shared/schema";
+import { insertGenerationSchema, insertProductSchema, insertPromptTemplateSchema } from "@shared/schema";
 import express from "express";
 import path from "path";
+import { v2 as cloudinary } from "cloudinary";
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -14,6 +15,13 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024, // 10MB per file
     files: 6 // Max 6 files
   }
+});
+
+// Initialize Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
+  api_key: process.env.CLOUDINARY_API_KEY!,
+  api_secret: process.env.CLOUDINARY_API_SECRET!,
 });
 
 // Initialize Gemini client using Replit AI Integrations
@@ -194,6 +202,188 @@ Guidelines:
     } catch (error: any) {
       console.error("[Delete Generation] Error:", error);
       res.status(500).json({ error: "Failed to delete generation" });
+    }
+  });
+
+  // Product routes - Upload product to Cloudinary and save to DB
+  app.post("/api/products", upload.single("image"), async (req, res) => {
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ error: "No image file provided" });
+      }
+
+      const { name, category } = req.body;
+      if (!name) {
+        return res.status(400).json({ error: "Product name is required" });
+      }
+
+      console.log(`[Product Upload] Uploading ${name} to Cloudinary...`);
+
+      // Upload to Cloudinary using buffer
+      const uploadResult = await new Promise<any>((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: "product-library",
+            resource_type: "image",
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        uploadStream.end(file.buffer);
+      });
+
+      // Save product to database
+      const product = await storage.saveProduct({
+        name,
+        cloudinaryUrl: uploadResult.secure_url,
+        cloudinaryPublicId: uploadResult.public_id,
+        category: category || null,
+      });
+
+      console.log(`[Product Upload] Saved product ${product.id}`);
+      res.json(product);
+    } catch (error: any) {
+      console.error("[Product Upload] Error:", error);
+      res.status(500).json({ error: "Failed to upload product", details: error.message });
+    }
+  });
+
+  // Get all products
+  app.get("/api/products", async (req, res) => {
+    try {
+      const products = await storage.getProducts();
+      res.json(products);
+    } catch (error: any) {
+      console.error("[Products] Error:", error);
+      res.status(500).json({ error: "Failed to fetch products" });
+    }
+  });
+
+  // Get single product by ID
+  app.get("/api/products/:id", async (req, res) => {
+    try {
+      const product = await storage.getProductById(req.params.id);
+      if (!product) {
+        return res.status(404).json({ error: "Product not found" });
+      }
+      res.json(product);
+    } catch (error: any) {
+      console.error("[Product] Error:", error);
+      res.status(500).json({ error: "Failed to fetch product" });
+    }
+  });
+
+  // Delete product
+  app.delete("/api/products/:id", async (req, res) => {
+    try {
+      const product = await storage.getProductById(req.params.id);
+      if (!product) {
+        return res.status(404).json({ error: "Product not found" });
+      }
+
+      // Delete from Cloudinary
+      await cloudinary.uploader.destroy(product.cloudinaryPublicId);
+
+      // Delete from database
+      await storage.deleteProduct(req.params.id);
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[Delete Product] Error:", error);
+      res.status(500).json({ error: "Failed to delete product" });
+    }
+  });
+
+  // Prompt template routes
+  app.post("/api/prompt-templates", async (req, res) => {
+    try {
+      const { title, prompt, category, tags } = req.body;
+      if (!title || !prompt) {
+        return res.status(400).json({ error: "Title and prompt are required" });
+      }
+
+      const template = await storage.savePromptTemplate({
+        title,
+        prompt,
+        category: category || null,
+        tags: tags || [],
+      });
+
+      res.json(template);
+    } catch (error: any) {
+      console.error("[Prompt Template] Error:", error);
+      res.status(500).json({ error: "Failed to create prompt template" });
+    }
+  });
+
+  // Get prompt templates (optionally filtered by category)
+  app.get("/api/prompt-templates", async (req, res) => {
+    try {
+      const category = req.query.category as string | undefined;
+      const templates = await storage.getPromptTemplates(category);
+      res.json(templates);
+    } catch (error: any) {
+      console.error("[Prompt Templates] Error:", error);
+      res.status(500).json({ error: "Failed to fetch prompt templates" });
+    }
+  });
+
+  // Get AI-generated prompt suggestions based on curated templates
+  app.post("/api/prompt-suggestions", async (req, res) => {
+    try {
+      const { productName, category } = req.body;
+      
+      // Get curated templates for the category (or all if no category)
+      const templates = await storage.getPromptTemplates(category);
+      
+      if (templates.length === 0) {
+        return res.json([]);
+      }
+
+      // Use Gemini to generate variations of the curated prompts
+      const templateExamples = templates.slice(0, 5).map(t => `"${t.prompt}"`).join(", ");
+      
+      const suggestionPrompt = `You are a creative marketing prompt generator. Given a product called "${productName}", generate 4 creative, professional marketing scene ideas similar to these examples: ${templateExamples}.
+
+Each suggestion should be a concise, vivid description (max 15 words) of a marketing scene or lifestyle context for the product.
+
+Return ONLY a JSON array of 4 strings, nothing else. Example format:
+["professional desk setup with morning sunlight", "outdoor adventure scene in mountains", "minimalist lifestyle flat lay", "urban street photography aesthetic"]`;
+
+      const result = await genai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: suggestionPrompt,
+      });
+
+      const responseText = result.text || "[]";
+      
+      // Parse the JSON response
+      let suggestions: string[] = [];
+      try {
+        suggestions = JSON.parse(responseText);
+      } catch (e) {
+        // Fallback to template prompts if parsing fails
+        suggestions = templates.slice(0, 4).map(t => t.prompt);
+      }
+
+      res.json(suggestions);
+    } catch (error: any) {
+      console.error("[Prompt Suggestions] Error:", error);
+      res.status(500).json({ error: "Failed to generate suggestions", details: error.message });
+    }
+  });
+
+  // Delete prompt template
+  app.delete("/api/prompt-templates/:id", async (req, res) => {
+    try {
+      await storage.deletePromptTemplate(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[Delete Prompt Template] Error:", error);
+      res.status(500).json({ error: "Failed to delete prompt template" });
     }
   });
 
