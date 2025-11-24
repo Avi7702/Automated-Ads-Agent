@@ -15,6 +15,8 @@ export default function ProductLibrary() {
   const [uploading, setUploading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
   const { toast } = useToast();
 
   const { data: products = [], isLoading } = useQuery<Product[]>({
@@ -126,6 +128,7 @@ export default function ProductLibrary() {
 
       const result = await res.json();
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      setSelectedIds(new Set());
 
       toast({
         title: "Products Cleared",
@@ -137,6 +140,61 @@ export default function ProductLibrary() {
         title: "Clear Failed",
         description: error.message || "Failed to clear products",
       });
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const count = selectedIds.size;
+    if (count === 0) return;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${count} selected products? This cannot be undone.`
+    );
+    
+    if (!confirmed) return;
+
+    setDeleting(true);
+    try {
+      const deletePromises = Array.from(selectedIds).map(id =>
+        fetch(`/api/products/${id}`, { method: "DELETE" })
+      );
+
+      await Promise.all(deletePromises);
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      setSelectedIds(new Set());
+
+      toast({
+        title: "Products Deleted",
+        description: `Deleted ${count} products from the library.`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Delete Failed",
+        description: error.message || "Failed to delete selected products",
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const toggleProductSelection = (id: string) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === products.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(products.map(p => p.id)));
     }
   };
 
@@ -161,6 +219,19 @@ export default function ProductLibrary() {
           </div>
 
           <div className="flex gap-3">
+            {selectedIds.size > 0 && (
+              <Button
+                variant="outline"
+                onClick={handleBulkDelete}
+                disabled={deleting}
+                data-testid="button-delete-selected"
+                className="border-red-500/50 hover:bg-red-500/10 text-red-400 hover:text-red-300"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                {deleting ? "Deleting..." : `Delete Selected (${selectedIds.size})`}
+              </Button>
+            )}
+
             {products.length > 0 && (
               <Button
                 variant="outline"
@@ -225,18 +296,50 @@ export default function ProductLibrary() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {products.map((product) => (
+          <>
+            {/* Select All Button */}
+            <div className="mb-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={toggleSelectAll}
+                data-testid="button-select-all"
+                className="border-slate-700 hover:bg-slate-800"
+              >
+                {selectedIds.size === products.length ? "Deselect All" : "Select All"}
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {products.map((product) => (
               <motion.div
                 key={product.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className={cn(
                   "group relative bg-slate-900/50 backdrop-blur-sm rounded-xl overflow-hidden border border-slate-800 hover:border-purple-500 transition-all cursor-pointer",
-                  selectedProduct?.id === product.id && "ring-2 ring-purple-500"
+                  selectedProduct?.id === product.id && "ring-2 ring-purple-500",
+                  selectedIds.has(product.id) && "ring-2 ring-blue-500"
                 )}
                 data-testid={`product-card-${product.id}`}
               >
+                {/* Selection Checkbox */}
+                <div
+                  className="absolute top-2 left-2 z-10"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleProductSelection(product.id);
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(product.id)}
+                    onChange={() => {}}
+                    className="w-5 h-5 rounded border-2 border-white bg-slate-900/50 cursor-pointer"
+                    data-testid={`checkbox-product-${product.id}`}
+                  />
+                </div>
+
                 {/* Product Image */}
                 <div
                   className="aspect-square bg-slate-800 relative overflow-hidden"
@@ -290,8 +393,9 @@ export default function ProductLibrary() {
                   )}
                 </div>
               </motion.div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>
