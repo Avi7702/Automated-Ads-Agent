@@ -1,7 +1,17 @@
-import { type Generation, type InsertGeneration, generations } from "@shared/schema";
+import { 
+  type Generation, 
+  type InsertGeneration, 
+  type Product,
+  type InsertProduct,
+  type PromptTemplate,
+  type InsertPromptTemplate,
+  generations,
+  products,
+  promptTemplates
+} from "@shared/schema";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, ilike } from "drizzle-orm";
 
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL must be set");
@@ -16,6 +26,18 @@ export interface IStorage {
   getGenerations(limit?: number): Promise<Generation[]>;
   getGenerationById(id: string): Promise<Generation | undefined>;
   deleteGeneration(id: string): Promise<void>;
+  
+  // Product CRUD operations
+  saveProduct(product: InsertProduct): Promise<Product>;
+  getProducts(): Promise<Product[]>;
+  getProductById(id: string): Promise<Product | undefined>;
+  deleteProduct(id: string): Promise<void>;
+  
+  // Prompt Template CRUD operations
+  savePromptTemplate(template: InsertPromptTemplate): Promise<PromptTemplate>;
+  getPromptTemplates(category?: string): Promise<PromptTemplate[]>;
+  getPromptTemplateById(id: string): Promise<PromptTemplate | undefined>;
+  deletePromptTemplate(id: string): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -45,6 +67,67 @@ export class DbStorage implements IStorage {
 
   async deleteGeneration(id: string): Promise<void> {
     await db.delete(generations).where(eq(generations.id, id));
+  }
+
+  async saveProduct(insertProduct: InsertProduct): Promise<Product> {
+    const [product] = await db
+      .insert(products)
+      .values(insertProduct)
+      .returning();
+    return product;
+  }
+
+  async getProducts(): Promise<Product[]> {
+    return await db
+      .select()
+      .from(products)
+      .orderBy(desc(products.createdAt));
+  }
+
+  async getProductById(id: string): Promise<Product | undefined> {
+    const [product] = await db
+      .select()
+      .from(products)
+      .where(eq(products.id, id));
+    return product;
+  }
+
+  async deleteProduct(id: string): Promise<void> {
+    await db.delete(products).where(eq(products.id, id));
+  }
+
+  async savePromptTemplate(insertTemplate: InsertPromptTemplate): Promise<PromptTemplate> {
+    const [template] = await db
+      .insert(promptTemplates)
+      .values(insertTemplate)
+      .returning();
+    return template;
+  }
+
+  async getPromptTemplates(category?: string): Promise<PromptTemplate[]> {
+    if (category) {
+      return await db
+        .select()
+        .from(promptTemplates)
+        .where(eq(promptTemplates.category, category))
+        .orderBy(desc(promptTemplates.createdAt));
+    }
+    return await db
+      .select()
+      .from(promptTemplates)
+      .orderBy(desc(promptTemplates.createdAt));
+  }
+
+  async getPromptTemplateById(id: string): Promise<PromptTemplate | undefined> {
+    const [template] = await db
+      .select()
+      .from(promptTemplates)
+      .where(eq(promptTemplates.id, id));
+    return template;
+  }
+
+  async deletePromptTemplate(id: string): Promise<void> {
+    await db.delete(promptTemplates).where(eq(promptTemplates.id, id));
   }
 }
 
