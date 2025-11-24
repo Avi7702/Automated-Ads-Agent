@@ -57,11 +57,9 @@ export default function Gallery() {
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-background/50 backdrop-blur-md">
         <div className="container max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/">
-            <a className="flex items-center gap-3 text-muted-foreground hover:text-foreground transition-colors" data-testid="link-home">
-              <ArrowLeft className="w-5 h-5" />
-              <span className="font-medium">Back to Studio</span>
-            </a>
+          <Link href="/" className="flex items-center gap-3 text-muted-foreground hover:text-foreground transition-colors" data-testid="link-home">
+            <ArrowLeft className="w-5 h-5" />
+            <span className="font-medium">Back to Studio</span>
           </Link>
           <h1 className="font-display text-lg font-medium">Generation Gallery</h1>
           <div className="w-32" /> {/* Spacer for centering */}
@@ -84,9 +82,7 @@ export default function Gallery() {
               <p className="text-muted-foreground">Start creating product transformations to see them here</p>
             </div>
             <Link href="/">
-              <a>
-                <Button>Create First Generation</Button>
-              </a>
+              <Button>Create First Generation</Button>
             </Link>
           </div>
         ) : (
@@ -101,17 +97,15 @@ export default function Gallery() {
                 data-testid={`card-generation-${gen.id}`}
               >
                 {/* Image */}
-                <Link href={`/generation/${gen.id}`}>
-                  <a className="block">
-                    <div className="aspect-square overflow-hidden bg-black/50">
-                      <img
-                        src={`/${gen.generatedImagePath}`}
-                        alt={gen.prompt}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        data-testid={`img-generation-${gen.id}`}
-                      />
-                    </div>
-                  </a>
+                <Link href={`/generation/${gen.id}`} className="block">
+                  <div className="aspect-square overflow-hidden bg-black/50">
+                    <img
+                      src={`/${gen.generatedImagePath}`}
+                      alt={gen.prompt}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      data-testid={`img-generation-${gen.id}`}
+                    />
+                  </div>
                 </Link>
 
                 {/* Info */}
@@ -127,13 +121,11 @@ export default function Gallery() {
 
                   {/* Actions */}
                   <div className="flex gap-2">
-                    <Link href={`/generation/${gen.id}`}>
-                      <a className="flex-1">
-                        <Button variant="outline" size="sm" className="w-full" data-testid={`button-view-${gen.id}`}>
-                          <Edit className="w-3.5 h-3.5 mr-1.5" />
-                          View
-                        </Button>
-                      </a>
+                    <Link href={`/generation/${gen.id}`} className="flex-1">
+                      <Button variant="outline" size="sm" className="w-full" data-testid={`button-view-${gen.id}`}>
+                        <Edit className="w-3.5 h-3.5 mr-1.5" />
+                        View
+                      </Button>
                     </Link>
                     <Button
                       variant="outline"

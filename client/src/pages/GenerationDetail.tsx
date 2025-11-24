@@ -61,7 +61,7 @@ export default function GenerationDetail() {
         <div className="text-center space-y-4">
           <h2 className="text-2xl font-display">Generation not found</h2>
           <Link href="/gallery">
-            <a><Button>Back to Gallery</Button></a>
+            <Button>Back to Gallery</Button>
           </Link>
         </div>
       </div>
@@ -78,11 +78,9 @@ export default function GenerationDetail() {
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-background/50 backdrop-blur-md">
         <div className="container max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/gallery">
-            <a className="flex items-center gap-3 text-muted-foreground hover:text-foreground transition-colors" data-testid="link-gallery">
-              <ArrowLeft className="w-5 h-5" />
-              <span className="font-medium">Gallery</span>
-            </a>
+          <Link href="/gallery" className="flex items-center gap-3 text-muted-foreground hover:text-foreground transition-colors" data-testid="link-gallery">
+            <ArrowLeft className="w-5 h-5" />
+            <span className="font-medium">Gallery</span>
           </Link>
           <div className="flex gap-2">
             <Button variant="outline" onClick={handleReEdit} data-testid="button-reedit">

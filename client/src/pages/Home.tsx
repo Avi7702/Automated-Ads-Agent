@@ -177,8 +177,8 @@ export default function Home() {
           </div>
           <nav className="flex items-center gap-6 text-sm font-medium text-muted-foreground">
             <span className="text-foreground">Generate</span>
-            <Link href="/gallery">
-              <a className="hover:text-foreground cursor-pointer transition-colors" data-testid="link-gallery-header">Gallery</a>
+            <Link href="/gallery" className="hover:text-foreground cursor-pointer transition-colors" data-testid="link-gallery-header">
+              Gallery
             </Link>
           </nav>
         </div>
@@ -367,12 +367,10 @@ export default function Home() {
                  <div className="flex gap-2">
                    {generationId && (
                      <Link href={`/generation/${generationId}`}>
-                       <a>
-                         <Button variant="outline" size="sm" data-testid="button-view-details">
-                           <Check className="w-4 h-4 mr-2" />
-                           View in Gallery
-                         </Button>
-                       </a>
+                       <Button variant="outline" size="sm" data-testid="button-view-details">
+                         <Check className="w-4 h-4 mr-2" />
+                         View in Gallery
+                       </Button>
                      </Link>
                    )}
                    <Button variant="outline" size="sm" onClick={handleGenerate} data-testid="button-regenerate">
