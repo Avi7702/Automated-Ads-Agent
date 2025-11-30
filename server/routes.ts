@@ -111,10 +111,15 @@ Guidelines:
       ];
 
       // Generate content with image input using Gemini image generation model
+      const modelName = "gemini-3-pro-image-preview";
+      console.log(`[Transform] Using model: ${modelName}`);
+      
       const result = await genai.models.generateContent({
-        model: "gemini-3-pro-image-preview",
+        model: modelName,
         contents,
       });
+      
+      console.log(`[Transform] Model response - modelVersion: ${result.modelVersion}, candidates: ${result.candidates?.length}`);
 
       // Check if we got an image back
       if (!result.candidates?.[0]?.content?.parts?.[0]) {
@@ -301,10 +306,15 @@ Guidelines:
 
       // Call Gemini with the full conversation history
       // The thought signatures in the history allow Gemini to "remember" the image
+      const modelName = "gemini-3-pro-image-preview";
+      console.log(`[Edit] Using model: ${modelName}`);
+      
       const result = await genai.models.generateContent({
-        model: "gemini-3-pro-image-preview",
+        model: modelName,
         contents: history,
       });
+      
+      console.log(`[Edit] Model response - modelVersion: ${result.modelVersion}, candidates: ${result.candidates?.length}`);
 
       // Extract the new image
       if (!result.candidates?.[0]?.content?.parts) {
@@ -616,10 +626,15 @@ Each suggestion should be a concise, vivid description (max 15 words) of a marke
 Return ONLY a JSON array of 4 strings, nothing else. Example format:
 ["professional desk setup with morning sunlight", "outdoor adventure scene in mountains", "minimalist lifestyle flat lay", "urban street photography aesthetic"]`;
 
+      const modelName = "gemini-3-pro-preview";
+      console.log(`[Prompt Suggestions] Using model: ${modelName}`);
+      
       const result = await genai.models.generateContent({
-        model: "gemini-3-pro-preview",
+        model: modelName,
         contents: suggestionPrompt,
       });
+      
+      console.log(`[Prompt Suggestions] Model response - modelVersion: ${result.modelVersion}`);
 
       const responseText = result.text || "[]";
       
