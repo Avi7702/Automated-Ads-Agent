@@ -6,6 +6,8 @@ import {
   getCurrentUser
 } from './services/authService';
 import { requireAuth } from './middleware/auth';
+import { validate } from './middleware/validate';
+import { registerSchema, loginSchema, productSchema } from './validation/schemas';
 import { storage } from './storage';
 import { expensiveLimiter, editLimiter, loginLimiter } from './middleware/rateLimit';
 
@@ -27,7 +29,7 @@ const getClearCookieOptions = () => ({
 });
 
 // Auth routes
-router.post('/api/auth/register', async (req: Request, res: Response) => {
+router.post('/api/auth/register', validate(registerSchema), async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
   const result = await registerUser(email, password);
@@ -40,7 +42,7 @@ router.post('/api/auth/register', async (req: Request, res: Response) => {
   res.status(201).json({ user: result.user });
 });
 
-router.post('/api/auth/login', loginLimiter, async (req: Request, res: Response) => {
+router.post('/api/auth/login', loginLimiter, validate(loginSchema), async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
   const result = await loginUser(email, password);
@@ -77,13 +79,8 @@ router.get('/api/auth/me', requireAuth, async (req: Request, res: Response) => {
 });
 
 // Protected routes (examples for testing)
-router.post('/api/products', requireAuth, async (req: Request, res: Response) => {
+router.post('/api/products', requireAuth, validate(productSchema), async (req: Request, res: Response) => {
   const { name, description } = req.body;
-
-  if (!name) {
-    res.status(400).json({ error: 'Product name is required' });
-    return;
-  }
 
   const product = await storage.createProduct(req.user!.id, name, description);
   res.status(201).json({ product });

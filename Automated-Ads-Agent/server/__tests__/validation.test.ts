@@ -1,6 +1,8 @@
+import request from 'supertest';
 import { registerSchema, loginSchema, productSchema } from '../validation/schemas';
 import { validate } from '../middleware/validate';
 import { Request, Response, NextFunction } from 'express';
+import { app } from '../app';
 
 describe('Validation Schemas', () => {
   describe('registerSchema', () => {
@@ -178,6 +180,92 @@ describe('Validation Middleware', () => {
       const jsonCall = mockJson.mock.calls[0][0];
       expect(jsonCall).not.toHaveProperty('issues');
       expect(jsonCall).not.toHaveProperty('name', 'ZodError');
+    });
+  });
+});
+
+describe('Route Validation', () => {
+  describe('POST /api/auth/register', () => {
+    it('returns 400 for invalid email', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({ email: 'invalid-email', password: 'ValidPassword123!' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Validation failed');
+      expect(res.body.details).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ field: 'email' })
+        ])
+      );
+    });
+
+    it('returns 400 for short password', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({ email: 'test@example.com', password: 'short' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Validation failed');
+      expect(res.body.details).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ field: 'password' })
+        ])
+      );
+    });
+  });
+
+  describe('POST /api/auth/login', () => {
+    it('returns 400 for empty body', async () => {
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({});
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Validation failed');
+    });
+  });
+
+  describe('POST /api/products', () => {
+    it('returns 400 for missing name', async () => {
+      // First register and login to get auth
+      await request(app)
+        .post('/api/auth/register')
+        .send({ email: 'product-test@example.com', password: 'ValidPassword123!' });
+
+      const loginRes = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'product-test@example.com', password: 'ValidPassword123!' });
+
+      const cookies = loginRes.headers['set-cookie'];
+
+      const res = await request(app)
+        .post('/api/products')
+        .set('Cookie', cookies)
+        .send({});
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Validation failed');
+    });
+
+    it('accepts valid product with auth', async () => {
+      // First register and login to get auth
+      await request(app)
+        .post('/api/auth/register')
+        .send({ email: 'product-valid@example.com', password: 'ValidPassword123!' });
+
+      const loginRes = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'product-valid@example.com', password: 'ValidPassword123!' });
+
+      const cookies = loginRes.headers['set-cookie'];
+
+      const res = await request(app)
+        .post('/api/products')
+        .set('Cookie', cookies)
+        .send({ name: 'Valid Product' });
+
+      expect(res.status).toBe(201);
     });
   });
 });

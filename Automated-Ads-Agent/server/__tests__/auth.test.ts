@@ -34,7 +34,12 @@ describe('Authentication System', () => {
         .post('/api/auth/register')
         .send({ email: 'test@test.com', password: 'short' });
       expect(res.status).toBe(400);
-      expect(res.body.error.toLowerCase()).toContain('password');
+      expect(res.body.error).toBe('Validation failed');
+      expect(res.body.details).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ field: 'password' })
+        ])
+      );
     });
 
     it('should never expose password hash in responses', async () => {
@@ -91,7 +96,12 @@ describe('Authentication System', () => {
         .send({ email: 'invalid-email', password: 'ValidPassword123!' });
 
       expect(res.status).toBe(400);
-      expect(res.body.error).toContain('email');
+      expect(res.body.error).toBe('Validation failed');
+      expect(res.body.details).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ field: 'email' })
+        ])
+      );
     });
   });
 
