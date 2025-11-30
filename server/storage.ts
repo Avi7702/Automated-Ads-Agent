@@ -50,11 +50,24 @@ export class DbStorage implements IStorage {
   }
 
   async getGenerations(limit: number = 50): Promise<Generation[]> {
-    return await db
-      .select()
+    // Exclude conversationHistory to avoid exceeding Neon's 64MB response limit
+    const results = await db
+      .select({
+        id: generations.id,
+        prompt: generations.prompt,
+        originalImagePaths: generations.originalImagePaths,
+        generatedImagePath: generations.generatedImagePath,
+        resolution: generations.resolution,
+        parentGenerationId: generations.parentGenerationId,
+        editPrompt: generations.editPrompt,
+        createdAt: generations.createdAt,
+      })
       .from(generations)
       .orderBy(desc(generations.createdAt))
       .limit(limit);
+    
+    // Return with null conversationHistory (not needed for gallery view)
+    return results.map(r => ({ ...r, conversationHistory: null })) as Generation[];
   }
 
   async getGenerationById(id: string): Promise<Generation | undefined> {
