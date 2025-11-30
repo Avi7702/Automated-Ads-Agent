@@ -353,4 +353,109 @@ V3 spec mentions "Gemini 3 Pro Image (Nano Banana Pro)" with model ID `gemini-3-
 
 ---
 
-*Analysis complete. Ready to proceed with chosen option.*
+# ADDENDUM: CONTEXT ENGINE DISCOVERY
+
+**Date Added:** November 30, 2025
+
+## Critical Finding
+
+After deep analysis of the current "Intent Detection" system, we discovered it is **purely cosmetic**:
+
+| What We Thought | Reality |
+|-----------------|---------|
+| Smart intent detection | Just 5 regex patterns showing badges |
+| Prompt enhancement | Static template wrapper |
+| Personalized suggestions | 100% generic (yoga, coffee for construction!) |
+| Learning system | None |
+
+**The current suggestions endpoint:**
+- Takes product name only
+- Fetches generic templates (lifestyle, yoga, beach)
+- Asks Gemini for variations
+- Returns generic suggestions
+
+**What's missing:**
+- User's past generations (what worked)
+- User's business/industry context
+- User's saved ideas
+- Pattern learning over time
+- Personalization of any kind
+
+## New Option: Context Engine
+
+A full spec has been created at `/docs/CONTEXT-ENGINE-SPEC.md` that includes:
+
+1. **New Database Tables:**
+   - `user_profiles` - Business context (industry, brand style, audience)
+   - `generation_analytics` - Track what works (downloads, edits, satisfaction)
+   - `idea_bank` - User's saved ideas and inspiration
+   - `prompt_patterns` - Learned patterns that work for this user
+
+2. **New Backend Services:**
+   - Context gathering (profile + history + patterns)
+   - Smart intent detection (content type, scene, mood, platform)
+   - Dynamic prompt builder (uses ALL context)
+   - Pattern learning (improves with each generation)
+
+3. **New Frontend:**
+   - Onboarding flow (capture business context)
+   - Idea Bank component (save and reuse ideas)
+   - Enhanced suggestions (personalized, not generic)
+
+## Updated Effort Comparison
+
+| Approach | Effort | Personalization | Learning | Value |
+|----------|--------|-----------------|----------|-------|
+| Generic V3 Only | 32 hrs | None | None | Low |
+| Context Engine Only | 70 hrs | Full | Yes | High |
+| **Hybrid (Recommended)** | **64 hrs** | High | Yes | **High** |
+
+## Updated Recommendation
+
+**Original:** Option C (Security + V3 features)
+
+**New:** Option C+ (Security + Context Engine Core)
+
+### Revised Phases:
+
+**Phase 1: Foundation (12 hrs)**
+1. Rate limiting - 4 hrs
+2. Basic auth - 4 hrs
+3. User profile schema + onboarding - 4 hrs
+
+**Phase 2: Context Intelligence (24 hrs)**
+1. Analytics tracking - 4 hrs
+2. Context-aware suggestions - 8 hrs
+3. Intent detection + prompt builder - 8 hrs
+4. Pattern learning - 4 hrs
+
+**Phase 3: User Experience (16 hrs)**
+1. Idea Bank - 6 hrs
+2. Clarification flow - 4 hrs
+3. Enhanced UI - 4 hrs
+4. Profile settings - 2 hrs
+
+**Phase 4: Polish (12 hrs)**
+1. Caption generation - 4 hrs
+2. Analytics dashboard - 4 hrs
+3. Testing - 4 hrs
+
+**Total: ~64 hours**
+
+## Why This Matters
+
+The Context Engine transforms the product from:
+- "A generic AI image generator"
+- → "A learning system that knows YOUR business"
+
+**Key user experiences this enables:**
+- "It knows I'm in construction and suggests worksite shots"
+- "It learned I like dramatic lighting and now always includes it"
+- "My idea bank saves my best prompts for reuse"
+- "The more I use it, the better it gets"
+
+**This is the differentiator.**
+
+---
+
+*Analysis updated. Context Engine spec available at `/docs/CONTEXT-ENGINE-SPEC.md`*
