@@ -20,13 +20,17 @@ describe('Rate Limiting Middleware', () => {
     });
 
     it('should allow requests within limit', async () => {
-      const response = await request(app).get('/test');
+      const response = await request(app)
+        .get('/test')
+        .set('x-test-rate-limit', 'true');
       expect(response.status).toBe(200);
       expect(response.body).toEqual({ success: true });
     });
 
     it('should include rate limit headers', async () => {
-      const response = await request(app).get('/test');
+      const response = await request(app)
+        .get('/test')
+        .set('x-test-rate-limit', 'true');
       expect(response.headers['ratelimit-limit']).toBe('100');
       expect(response.headers['ratelimit-remaining']).toBeDefined();
     });
@@ -80,6 +84,7 @@ describe('Rate Limiting Middleware', () => {
 
       return request(app)
         .get('/test')
+        .set('x-test-rate-limit', 'true')
         .expect(200)
         .expect((res) => {
           expect(res.headers['ratelimit-limit']).toBe('20');
@@ -93,6 +98,7 @@ describe('Rate Limiting Middleware', () => {
 
       return request(app)
         .get('/test')
+        .set('x-test-rate-limit', 'true')
         .expect(200)
         .expect((res) => {
           expect(res.headers['ratelimit-limit']).toBe('30');
@@ -106,6 +112,7 @@ describe('Rate Limiting Middleware', () => {
 
       return request(app)
         .post('/test')
+        .set('x-test-rate-limit', 'true')
         .expect(200)
         .expect((res) => {
           expect(res.headers['ratelimit-limit']).toBe('10');

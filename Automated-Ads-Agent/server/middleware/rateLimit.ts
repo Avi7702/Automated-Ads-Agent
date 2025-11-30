@@ -1,8 +1,17 @@
 import rateLimit from 'express-rate-limit';
 import { Request, Response } from 'express';
 
+// Skip rate limiting in test environment when not explicitly testing rate limits
+// The rate limit tests set a special header to opt-in to actual rate limiting
+const shouldSkip = (req: Request): boolean => {
+  if (process.env.NODE_ENV !== 'test') return false;
+  // Allow rate limit tests to test actual behavior
+  return req.headers['x-test-rate-limit'] !== 'true';
+};
+
 // Standard API rate limiter - 100 requests per 15 minutes per IP
 export const apiLimiter = rateLimit({
+  skip: shouldSkip,
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100,
   standardHeaders: true, // Return rate limit info in headers
@@ -18,6 +27,7 @@ export const apiLimiter = rateLimit({
 
 // Expensive operations limiter - 20 requests per hour (for /api/transform)
 export const expensiveLimiter = rateLimit({
+  skip: shouldSkip,
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 20,
   standardHeaders: true,
@@ -33,6 +43,7 @@ export const expensiveLimiter = rateLimit({
 
 // Edit operations limiter - 30 requests per hour (for /api/generations/:id/edit)
 export const editLimiter = rateLimit({
+  skip: shouldSkip,
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 30,
   standardHeaders: true,
@@ -48,6 +59,7 @@ export const editLimiter = rateLimit({
 
 // Login limiter - 10 attempts per minute (brute force protection)
 export const loginLimiter = rateLimit({
+  skip: shouldSkip,
   windowMs: 60 * 1000, // 1 minute
   max: 10,
   standardHeaders: true,
