@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { registerSchema, loginSchema, productSchema } from '../validation/schemas';
+import { registerSchema, loginSchema, productSchema, transformSchema } from '../validation/schemas';
 import { validate } from '../middleware/validate';
 import { Request, Response, NextFunction } from 'express';
 import { app } from '../app';
@@ -91,6 +91,59 @@ describe('Validation Schemas', () => {
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data.description).toBe('A test product description');
+      }
+    });
+  });
+
+  describe('transformSchema', () => {
+    it('accepts valid transform request', () => {
+      const result = transformSchema.safeParse({
+        prompt: 'Generate a beautiful sunset image'
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.aspectRatio).toBe('1:1');
+      }
+    });
+
+    it('rejects missing prompt', () => {
+      const result = transformSchema.safeParse({});
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.errors[0].path).toContain('prompt');
+      }
+    });
+
+    it('accepts optional referenceImages', () => {
+      const result = transformSchema.safeParse({
+        prompt: 'Generate similar image',
+        referenceImages: ['base64image1', 'base64image2']
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.referenceImages).toHaveLength(2);
+      }
+    });
+
+    it('validates aspectRatio enum', () => {
+      const result = transformSchema.safeParse({
+        prompt: 'Generate landscape image',
+        aspectRatio: '16:9'
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.aspectRatio).toBe('16:9');
+      }
+    });
+
+    it('rejects invalid aspectRatio', () => {
+      const result = transformSchema.safeParse({
+        prompt: 'Generate image',
+        aspectRatio: '2:1'
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.errors[0].path).toContain('aspectRatio');
       }
     });
   });
