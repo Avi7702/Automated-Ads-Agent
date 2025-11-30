@@ -1,7 +1,12 @@
 import fs from 'fs/promises';
+import fsSync from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { ConversationMessage } from './geminiService';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
+import { eq } from 'drizzle-orm';
+import { generations } from '../../shared/schema';
+import type { ConversationMessage } from './geminiService';
 
 const UPLOAD_DIR = path.join(process.cwd(), 'uploads');
 
@@ -26,14 +31,40 @@ export interface SavedGeneration {
   createdAt: Date;
 }
 
-// In-memory storage for testing
-const inMemoryGenerations = new Map<string, SavedGeneration>();
-
-function generateUUID(): string {
-  return crypto.randomBytes(16).toString('hex');
-}
-
 class ImageStorageService {
+  private pool: Pool | null = null;
+  private db: ReturnType<typeof drizzle> | null = null;
+  private isInitialized = false;
+
+  async initialize(): Promise<void> {
+    if (this.isInitialized) return;
+
+    const databaseUrl = process.env.DATABASE_URL;
+
+    if (!databaseUrl) {
+      throw new Error('DATABASE_URL environment variable is required for ImageStorageService');
+    }
+
+    this.pool = new Pool({ connectionString: databaseUrl });
+    this.db = drizzle(this.pool);
+    this.isInitialized = true;
+  }
+
+  async close(): Promise<void> {
+    if (this.pool) {
+      await this.pool.end();
+      this.pool = null;
+      this.db = null;
+    }
+    this.isInitialized = false;
+  }
+
+  private ensureInitialized(): void {
+    if (!this.isInitialized || !this.db) {
+      throw new Error('ImageStorageService not initialized. Call initialize() first.');
+    }
+  }
+
   async ensureUploadDir(): Promise<void> {
     await fs.mkdir(UPLOAD_DIR, { recursive: true });
   }
@@ -71,33 +102,83 @@ class ImageStorageService {
   }
 
   async saveGeneration(metadata: GenerationMetadata): Promise<SavedGeneration> {
+    this.ensureInitialized();
+
+    // Save image to filesystem
     const filename = await this.saveImage(metadata.imageBase64);
-    const id = generateUUID();
-    
-    const generation: SavedGeneration = {
-      id,
+
+    // Save generation to database
+    const [dbGeneration] = await this.db!.insert(generations)
+      .values({
+        userId: metadata.userId,
+        prompt: metadata.prompt,
+        imagePath: filename,
+        conversationHistory: metadata.conversationHistory,
+        model: metadata.model,
+        aspectRatio: metadata.aspectRatio,
+        status: 'completed',
+      })
+      .returning();
+
+    return {
+      id: dbGeneration.id,
       userId: metadata.userId,
       prompt: metadata.prompt,
       imagePath: filename,
       imageUrl: this.getImageUrl(filename),
-      conversationHistory: metadata.conversationHistory,
+      conversationHistory: metadata.conversationHistory as ConversationMessage[],
       model: metadata.model,
       aspectRatio: metadata.aspectRatio,
-      createdAt: new Date(),
+      createdAt: dbGeneration.createdAt,
     };
-
-    inMemoryGenerations.set(id, generation);
-
-    return generation;
   }
 
   async getGeneration(id: string): Promise<SavedGeneration | null> {
-    const generation = inMemoryGenerations.get(id);
-    return generation || null;
+    this.ensureInitialized();
+
+    const [dbGeneration] = await this.db!.select()
+      .from(generations)
+      .where(eq(generations.id, id));
+
+    if (!dbGeneration) {
+      return null;
+    }
+
+    return {
+      id: dbGeneration.id,
+      userId: dbGeneration.userId || '',
+      prompt: dbGeneration.prompt,
+      imagePath: dbGeneration.imagePath || '',
+      imageUrl: this.getImageUrl(dbGeneration.imagePath || ''),
+      conversationHistory: (dbGeneration.conversationHistory as ConversationMessage[]) || [],
+      model: dbGeneration.model || '',
+      aspectRatio: dbGeneration.aspectRatio || '1:1',
+      createdAt: dbGeneration.createdAt,
+    };
   }
 
-  clearAll(): void {
-    inMemoryGenerations.clear();
+  async clearAll(): Promise<void> {
+    this.ensureInitialized();
+
+    // Delete all generations from database
+    await this.db!.delete(generations);
+
+    // Clean up uploads directory
+    try {
+      const files = await fs.readdir(UPLOAD_DIR);
+      for (const file of files) {
+        if (file.startsWith('generation_')) {
+          await fs.unlink(path.join(UPLOAD_DIR, file));
+        }
+      }
+    } catch (error) {
+      // Directory may not exist
+    }
+  }
+
+  fileExists(filename: string): boolean {
+    const filepath = this.getImagePath(filename);
+    return fsSync.existsSync(filepath);
   }
 }
 
