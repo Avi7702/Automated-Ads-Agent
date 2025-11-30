@@ -81,13 +81,6 @@ export default function Home() {
       localStorage.removeItem("selectedProductId");
     }
 
-    // Check for re-edit generation data
-    const reEditData = localStorage.getItem("reEditGeneration");
-    if (reEditData) {
-      const generation = JSON.parse(reEditData);
-      setPrompt(generation.prompt);
-      localStorage.removeItem("reEditGeneration");
-    }
   }, [products]);
 
   // Fetch AI prompt suggestions when products are selected
@@ -97,7 +90,7 @@ export default function Home() {
     setLoadingSuggestions(true);
     try {
       const productNames = selectedProducts.map(p => p.name).join(", ");
-      const categories = [...new Set(selectedProducts.map(p => p.category).filter(Boolean))];
+      const categories = Array.from(new Set(selectedProducts.map(p => p.category).filter(Boolean)));
       
       const res = await fetch("/api/prompt-suggestions", {
         method: "POST",
@@ -150,7 +143,7 @@ export default function Home() {
   });
 
   // Get unique categories from products
-  const categories = ["all", ...new Set(products.map(p => p.category).filter(Boolean))];
+  const categories: string[] = ["all", ...Array.from(new Set(products.map(p => p.category).filter((c): c is string => !!c)))];
 
   const handleGenerate = async () => {
     if (selectedProducts.length === 0) {

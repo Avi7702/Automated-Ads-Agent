@@ -93,12 +93,12 @@ Guidelines:
 - Do not add text or watermarks`;
       }
 
-      // Build content parts with all images
-      const parts: any[] = [];
+      // Build user message parts with all images
+      const userParts: any[] = [];
       
       // Add all images first
       files.forEach((file, index) => {
-        parts.push({
+        userParts.push({
           inlineData: {
             mimeType: file.mimetype,
             data: file.buffer.toString("base64"),
@@ -107,17 +107,17 @@ Guidelines:
       });
       
       // Then add the prompt
-      parts.push({ text: enhancedPrompt });
+      userParts.push({ text: enhancedPrompt });
+
+      // Build the contents array for the API call
+      const contents = [
+        { role: "user", parts: userParts }
+      ];
 
       // Generate content with image input using Gemini image generation model
       const result = await genai.models.generateContent({
         model: "gemini-2.5-flash-image",
-        contents: [
-          {
-            role: "user",
-            parts,
-          },
-        ],
+        contents,
       });
 
       // Check if we got an image back
@@ -125,9 +125,10 @@ Guidelines:
         throw new Error("No image generated");
       }
 
-      const part = result.candidates[0].content.parts[0];
+      const modelResponse = result.candidates[0].content;
+      const imagePart = modelResponse.parts?.find((p: any) => p.inlineData);
       
-      if (part.inlineData && part.inlineData.data) {
+      if (imagePart && imagePart.inlineData && imagePart.inlineData.data) {
         // Save uploaded files to disk
         const originalImagePaths: string[] = [];
         for (const file of files) {
@@ -136,27 +137,39 @@ Guidelines:
         }
 
         // Save generated image to disk
-        const generatedImageData = part.inlineData.data;
-        const mimeType = part.inlineData.mimeType || "image/png";
+        const generatedImageData = imagePart.inlineData.data;
+        const mimeType = imagePart.inlineData.mimeType || "image/png";
         const format = mimeType.split("/")[1] || "png";
         const generatedImagePath = await saveGeneratedImage(generatedImageData, format);
 
-        // Save generation record to database
+        // CRITICAL: Build and store conversation history for future edits
+        // This includes the thought signatures that Gemini needs to "remember" the image
+        // Store as raw object - Drizzle will handle JSONB serialization
+        const conversationHistory = [
+          { role: "user", parts: userParts },
+          modelResponse  // This contains thoughtSignature fields - DO NOT MODIFY
+        ];
+
+        // Save generation record to database with conversation history
         const generation = await storage.saveGeneration({
           prompt,
           originalImagePaths,
           generatedImagePath,
-          resolution: "2K", // Default for now
+          resolution: "2K",
+          conversationHistory,  // Pass as object, Drizzle handles JSONB
+          parentGenerationId: null,
+          editPrompt: null,
         });
 
-        console.log(`[Transform] Saved generation ${generation.id}`);
+        console.log(`[Transform] Saved generation ${generation.id} with conversation history`);
         
         // Return the file path for the frontend to use
         res.json({ 
           success: true,
           imageUrl: `/${generatedImagePath}`,
           generationId: generation.id,
-          prompt: prompt
+          prompt: prompt,
+          canEdit: true
         });
       } else {
         throw new Error("Generated content was not an image");
@@ -190,7 +203,10 @@ Guidelines:
       if (!generation) {
         return res.status(404).json({ error: "Generation not found" });
       }
-      res.json(generation);
+      res.json({
+        ...generation,
+        canEdit: !!generation.conversationHistory
+      });
     } catch (error: any) {
       console.error("[Generation] Error:", error);
       res.status(500).json({ error: "Failed to fetch generation" });
@@ -218,6 +234,137 @@ Guidelines:
     } catch (error: any) {
       console.error("[Delete Generation] Error:", error);
       res.status(500).json({ error: "Failed to delete generation" });
+    }
+  });
+
+  // Edit generation - Multi-turn image editing using stored conversation history
+  app.post("/api/generations/:id/edit", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { editPrompt } = req.body;
+
+      // Validate input
+      if (!editPrompt || editPrompt.trim().length === 0) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Edit prompt is required" 
+        });
+      }
+
+      // Load the parent generation
+      const parentGeneration = await storage.getGenerationById(id);
+
+      if (!parentGeneration) {
+        return res.status(404).json({ 
+          success: false, 
+          error: "Generation not found" 
+        });
+      }
+
+      // Check if this generation supports editing
+      if (!parentGeneration.conversationHistory) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "This generation does not support editing. It was created before the edit feature was available." 
+        });
+      }
+
+      // Get the stored conversation history
+      // JSONB column returns parsed object directly, no need to JSON.parse
+      let history: any[];
+      const storedHistory = parentGeneration.conversationHistory;
+      
+      if (typeof storedHistory === 'string') {
+        // Handle legacy data that might be double-stringified
+        try {
+          history = JSON.parse(storedHistory);
+        } catch (e) {
+          return res.status(500).json({ 
+            success: false, 
+            error: "Failed to parse conversation history" 
+          });
+        }
+      } else if (Array.isArray(storedHistory)) {
+        // JSONB returns parsed array directly
+        history = storedHistory;
+      } else {
+        return res.status(500).json({ 
+          success: false, 
+          error: "Invalid conversation history format" 
+        });
+      }
+
+      console.log(`[Edit] Editing generation ${id} with prompt: "${editPrompt}"`);
+
+      // Append the new edit request to the history
+      // This is the key to multi-turn editing - we send the FULL history
+      history.push({
+        role: "user",
+        parts: [{ text: editPrompt }]
+      });
+
+      // Call Gemini with the full conversation history
+      // The thought signatures in the history allow Gemini to "remember" the image
+      const result = await genai.models.generateContent({
+        model: "gemini-2.5-flash-image",
+        contents: history,
+      });
+
+      // Extract the new image
+      if (!result.candidates?.[0]?.content?.parts) {
+        return res.status(500).json({ 
+          success: false, 
+          error: "Gemini did not return a valid response. Try a different edit prompt." 
+        });
+      }
+
+      const modelResponse = result.candidates[0].content;
+      const imagePart = modelResponse.parts?.find((p: any) => p.inlineData);
+
+      if (!imagePart || !imagePart.inlineData || !imagePart.inlineData.data) {
+        return res.status(500).json({ 
+          success: false, 
+          error: "Gemini did not return an image. Try a different edit prompt." 
+        });
+      }
+
+      // Save the new image
+      const generatedImageData = imagePart.inlineData.data;
+      const mimeType = imagePart.inlineData.mimeType || "image/png";
+      const format = mimeType.split("/")[1] || "png";
+      const generatedImagePath = await saveGeneratedImage(generatedImageData, format);
+
+      // Update history with the new response (for potential future edits)
+      history.push(modelResponse);
+
+      // Create a NEW generation record (don't overwrite the original)
+      // Pass history as object - Drizzle handles JSONB serialization
+      const newGeneration = await storage.saveGeneration({
+        prompt: parentGeneration.prompt,
+        editPrompt: editPrompt.trim(),
+        generatedImagePath,
+        conversationHistory: history,  // Pass as object, Drizzle handles JSONB
+        parentGenerationId: parentGeneration.id,
+        originalImagePaths: parentGeneration.originalImagePaths,
+        resolution: parentGeneration.resolution || "2K",
+      });
+
+      console.log(`[Edit] Created new generation ${newGeneration.id} from parent ${id}`);
+
+      return res.json({
+        success: true,
+        generationId: newGeneration.id,
+        imageUrl: `/${generatedImagePath}`,
+        parentId: parentGeneration.id,
+        canEdit: true
+      });
+
+    } catch (error: any) {
+      console.error("[Edit] Error:", error);
+      return res.status(500).json({ 
+        success: false, 
+        error: error.message || "Failed to edit image" 
+      });
     }
   });
 
