@@ -1,4 +1,4 @@
-import { pgTable, varchar, timestamp, integer, uuid, text } from 'drizzle-orm/pg-core';
+import { pgTable, varchar, timestamp, integer, uuid, text, jsonb } from 'drizzle-orm/pg-core';
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -23,6 +23,10 @@ export const generations = pgTable('generations', {
   prompt: text('prompt').notNull(),
   result: text('result'),
   status: varchar('status', { length: 50 }).notNull().default('pending'),
+  imagePath: text('image_path'),
+  conversationHistory: jsonb('conversation_history'),
+  model: varchar('model', { length: 100 }),
+  aspectRatio: varchar('aspect_ratio', { length: 20 }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
