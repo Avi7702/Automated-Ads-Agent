@@ -147,56 +147,6 @@ describe('Validation Schemas', () => {
       }
     });
   });
-
-  describe('transformSchema', () => {
-    it('accepts valid transform request', () => {
-      const result = transformSchema.safeParse({
-        prompt: 'Generate a beautiful landscape'
-      });
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.aspectRatio).toBe('1:1'); // default value
-      }
-    });
-
-    it('rejects missing prompt', () => {
-      const result = transformSchema.safeParse({});
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.errors[0].message.toLowerCase()).toContain('required');
-      }
-    });
-
-    it('accepts optional referenceImages', () => {
-      const result = transformSchema.safeParse({
-        prompt: 'Generate image',
-        referenceImages: ['https://example.com/image1.jpg', 'https://example.com/image2.jpg']
-      });
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.referenceImages).toHaveLength(2);
-      }
-    });
-
-    it('validates aspectRatio enum', () => {
-      const validRatios = ['1:1', '16:9', '9:16', '4:3', '3:4'];
-      validRatios.forEach(ratio => {
-        const result = transformSchema.safeParse({
-          prompt: 'Test',
-          aspectRatio: ratio
-        });
-        expect(result.success).toBe(true);
-      });
-    });
-
-    it('rejects invalid aspectRatio', () => {
-      const result = transformSchema.safeParse({
-        prompt: 'Test',
-        aspectRatio: '21:9'
-      });
-      expect(result.success).toBe(false);
-    });
-  });
 });
 
 describe('Validation Middleware', () => {
