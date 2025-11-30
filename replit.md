@@ -134,7 +134,7 @@ promptTemplates {
 - Response modality configured for both IMAGE generation and TEXT analysis
 - API key provided via `AI_INTEGRATIONS_GEMINI_API_KEY` environment variable
 - Base URL and empty apiVersion required via httpOptions for Replit AI Integrations
-- Prompt suggestion feature uses gemini-2.0-flash model for creative variations
+- Prompt suggestion feature uses gemini-2.5-pro-preview-06-05 model for creative variations
 
 **Prompt Engineering**:
 - Single-image prompts focus on transformation while maintaining product identity
@@ -145,7 +145,7 @@ promptTemplates {
 
 **Third-Party Services**:
 - Google Generative AI (Gemini 3 Pro Image) - Core image transformation
-- Google Generative AI (Gemini 2.0 Flash) - Prompt suggestion generation
+- Google Generative AI (Gemini 2.5 Pro) - Prompt suggestion generation
 - Cloudinary - Product library cloud storage with automatic uploads
 - Neon Database - PostgreSQL serverless hosting
 - Replit AI Integrations - Automatic API key management for Gemini

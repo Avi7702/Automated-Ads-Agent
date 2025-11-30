@@ -621,7 +621,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 ["professional desk setup with morning sunlight", "outdoor adventure scene in mountains", "minimalist lifestyle flat lay", "urban street photography aesthetic"]`;
 
       const result = await genai.models.generateContent({
-        model: "gemini-2.0-flash",
+        model: "gemini-2.5-pro-preview-06-05",
         contents: suggestionPrompt,
       });
 
