@@ -36,17 +36,13 @@ if (isCloudinaryConfigured) {
   });
 }
 
-// Validate and initialize Gemini client using Replit AI Integrations
-if (!process.env.AI_INTEGRATIONS_GEMINI_API_KEY || !process.env.AI_INTEGRATIONS_GEMINI_BASE_URL) {
-  throw new Error("[Gemini] Missing AI integration credentials");
+// Validate and initialize Gemini client using direct Google API
+if (!process.env.GOOGLE_API_KEY) {
+  throw new Error("[Gemini] Missing GOOGLE_API_KEY");
 }
 
 const genai = new GoogleGenAI({
-  apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
-  httpOptions: {
-    apiVersion: "",
-    baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
-  },
+  apiKey: process.env.GOOGLE_API_KEY,
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
