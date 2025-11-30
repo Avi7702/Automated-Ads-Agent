@@ -41,7 +41,9 @@ Preferred communication style: Simple, everyday language.
 - Full generation history with persistent storage
 - Gallery view with thumbnail grid, search, and delete functionality
 - Generation detail page with full-size preview, before/after comparison
-- Re-edit functionality: automatically restores original images from storage for refinement
+- Multi-turn editing: make targeted tweaks to generated images using conversation history (preserves AI context)
+- Quick edit presets: Warmer lighting, Cooler tones, Add shadows, Softer look, More contrast, Blur background
+- Edit lineage tracking: see which generation an edit was based on
 - One-click download of generated marketing images
 
 ### Backend Architecture
@@ -54,9 +56,10 @@ Preferred communication style: Simple, everyday language.
 - Separate entry points (`index-dev.ts` and `index-prod.ts`) for each environment
 
 **API Endpoints**:
-- `POST /api/transform` - Image transformation endpoint accepting multiple files and text prompt, saves to database and disk
+- `POST /api/transform` - Image transformation endpoint accepting multiple files and text prompt, saves to database and disk with conversation history
 - `GET /api/generations` - Retrieve all generation history (ordered by creation date, limit 50)
-- `GET /api/generations/:id` - Retrieve specific generation by ID with full metadata
+- `GET /api/generations/:id` - Retrieve specific generation by ID with full metadata and canEdit flag
+- `POST /api/generations/:id/edit` - Multi-turn edit endpoint using stored conversation history for targeted tweaks
 - `DELETE /api/generations/:id` - Delete generation from database and remove associated files from disk
 - `POST /api/products` - Upload product to Cloudinary with MIME type validation (images only, 10MB max)
 - `GET /api/products` - Retrieve all products from library
@@ -88,6 +91,9 @@ generations {
   originalImagePaths: text[] (array of paths to uploaded images)
   generatedImagePath: text (path to AI-generated result)
   resolution: varchar (default "2K")
+  conversationHistory: jsonb (stores full Gemini conversation for multi-turn editing)
+  parentGenerationId: varchar (links edited generations to their parent)
+  editPrompt: text (the edit instruction that created this generation)
   createdAt: timestamp (auto-set)
 }
 
