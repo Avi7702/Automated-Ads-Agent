@@ -1,4 +1,6 @@
 import { registerSchema, loginSchema, productSchema } from '../validation/schemas';
+import { validate } from '../middleware/validate';
+import { Request, Response, NextFunction } from 'express';
 
 describe('Validation Schemas', () => {
   describe('registerSchema', () => {
@@ -88,6 +90,94 @@ describe('Validation Schemas', () => {
       if (result.success) {
         expect(result.data.description).toBe('A test product description');
       }
+    });
+  });
+});
+
+describe('Validation Middleware', () => {
+  describe('validate', () => {
+    const mockNext = jest.fn() as jest.MockedFunction<NextFunction>;
+    const mockJson = jest.fn();
+    const mockStatus = jest.fn().mockReturnValue({ json: mockJson });
+
+    const createMockReq = (body: any): Partial<Request> => ({
+      body
+    });
+
+    const createMockRes = (): Partial<Response> => ({
+      status: mockStatus,
+      json: mockJson
+    });
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('calls next() for valid data', () => {
+      const req = createMockReq({ email: 'test@example.com', password: 'ValidPassword123!' });
+      const res = createMockRes();
+
+      const middleware = validate(registerSchema);
+      middleware(req as Request, res as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalled();
+      expect(mockStatus).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 for invalid data', () => {
+      const req = createMockReq({ email: 'invalid', password: 'short' });
+      const res = createMockRes();
+
+      const middleware = validate(registerSchema);
+      middleware(req as Request, res as Response, mockNext);
+
+      expect(mockStatus).toHaveBeenCalledWith(400);
+      expect(mockNext).not.toHaveBeenCalled();
+    });
+
+    it('includes field name in error', () => {
+      const req = createMockReq({ password: 'ValidPassword123!' });
+      const res = createMockRes();
+
+      const middleware = validate(registerSchema);
+      middleware(req as Request, res as Response, mockNext);
+
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          details: expect.arrayContaining([
+            expect.objectContaining({ field: 'email' })
+          ])
+        })
+      );
+    });
+
+    it('includes error message in response', () => {
+      const req = createMockReq({ email: 'test@example.com', password: 'short' });
+      const res = createMockRes();
+
+      const middleware = validate(registerSchema);
+      middleware(req as Request, res as Response, mockNext);
+
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: 'Validation failed',
+          details: expect.arrayContaining([
+            expect.objectContaining({ message: expect.any(String) })
+          ])
+        })
+      );
+    });
+
+    it('does not expose Zod internals', () => {
+      const req = createMockReq({ email: 'invalid' });
+      const res = createMockRes();
+
+      const middleware = validate(registerSchema);
+      middleware(req as Request, res as Response, mockNext);
+
+      const jsonCall = mockJson.mock.calls[0][0];
+      expect(jsonCall).not.toHaveProperty('issues');
+      expect(jsonCall).not.toHaveProperty('name', 'ZodError');
     });
   });
 });
