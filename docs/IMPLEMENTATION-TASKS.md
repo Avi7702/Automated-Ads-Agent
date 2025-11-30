@@ -2,12 +2,12 @@
 ## Product Content Studio - Context Engine Upgrade
 
 **Date:** November 30, 2025
-**Total Effort:** ~64 hours
+**Total Effort:** ~72 hours
 **Phases:** 4
 
 ---
 
-# PHASE 1: FOUNDATION (12 hours)
+# PHASE 1: FOUNDATION (16 hours)
 
 ## Task 1.1: Rate Limiting Middleware
 **Effort:** 4 hours | **Priority:** P0 | **Dependencies:** None
@@ -54,53 +54,211 @@ const expensiveLimiter = rateLimit({
 
 ---
 
-## Task 1.2: Basic Authentication
-**Effort:** 4 hours | **Priority:** P0 | **Dependencies:** None
+## Task 1.2: Production Authentication System
+**Effort:** 8 hours | **Priority:** P0 | **Dependencies:** None
 
 ### Description
-Add basic authentication using Replit Auth or simple session-based auth.
+Implement production-grade authentication with secure session management, proper password hashing, and comprehensive security headers.
 
 ### Files to Create/Modify
 - CREATE: `server/middleware/auth.ts`
-- MODIFY: `server/app.ts` (add session middleware)
-- MODIFY: `server/routes.ts` (protect routes)
-- MODIFY: `shared/schema.ts` (add user_id to existing tables)
+- CREATE: `server/services/authService.ts`
+- CREATE: `client/src/pages/Login.tsx`
+- CREATE: `client/src/pages/Register.tsx`
+- CREATE: `client/src/contexts/AuthContext.tsx`
+- MODIFY: `server/app.ts` (add session middleware, security headers)
+- MODIFY: `server/routes.ts` (protect routes, add auth endpoints)
+- MODIFY: `shared/schema.ts` (add users table, add user_id to existing tables)
+
+### Database Schema
+```typescript
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: varchar("email", { length: 255 }).unique().notNull(),
+  passwordHash: varchar("password_hash", { length: 255 }).notNull(),
+  emailVerified: boolean("email_verified").default(false),
+  role: varchar("role", { length: 50 }).default('user'),
+  lastLoginAt: timestamp("last_login_at"),
+  failedLoginAttempts: integer("failed_login_attempts").default(0),
+  lockedUntil: timestamp("locked_until"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const sessions = pgTable("sessions", {
+  id: varchar("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  userAgent: text("user_agent"),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+```
 
 ### Acceptance Criteria
-- [ ] Session-based authentication working
+- [ ] User registration with email/password
+- [ ] Secure password hashing using bcrypt (cost factor 12+)
+- [ ] Session stored in PostgreSQL (not memory)
+- [ ] CSRF protection enabled
+- [ ] Secure cookie settings (httpOnly, sameSite, secure in prod)
+- [ ] Account lockout after 5 failed login attempts
 - [ ] Protected routes return 401 if not authenticated
-- [ ] User ID associated with generations and products
-- [ ] Login/logout flow functional
-- [ ] Session persists across page refreshes
+- [ ] User ID associated with all user-generated content
+- [ ] Login/logout flow with proper session cleanup
+- [ ] Session regeneration on login (prevent session fixation)
+- [ ] Security headers (helmet middleware)
 
 ### Implementation Notes
 ```typescript
-// Option A: Replit Auth (if available)
-// Option B: Simple session with express-session
+// server/services/authService.ts
+import bcrypt from 'bcrypt';
+import crypto from 'crypto';
+import { storage } from '../storage';
 
-import session from 'express-session';
+const BCRYPT_ROUNDS = 12;
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MINUTES = 30;
+const SESSION_DURATION_HOURS = 24;
 
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'dev-secret',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { secure: process.env.NODE_ENV === 'production' }
-}));
+export class AuthService {
+  async hashPassword(password: string): Promise<string> {
+    return bcrypt.hash(password, BCRYPT_ROUNDS);
+  }
 
-// Auth middleware
-export function requireAuth(req, res, next) {
-  if (!req.session?.userId) {
+  async verifyPassword(password: string, hash: string): Promise<boolean> {
+    return bcrypt.compare(password, hash);
+  }
+
+  async createSession(userId: string, req: Request): Promise<string> {
+    const sessionId = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + SESSION_DURATION_HOURS * 60 * 60 * 1000);
+
+    await storage.createSession({
+      id: sessionId,
+      userId,
+      expiresAt,
+      userAgent: req.headers['user-agent'] || null,
+      ipAddress: req.ip,
+    });
+
+    return sessionId;
+  }
+
+  async validateSession(sessionId: string): Promise<User | null> {
+    const session = await storage.getSession(sessionId);
+    if (!session || session.expiresAt < new Date()) {
+      if (session) await storage.deleteSession(sessionId);
+      return null;
+    }
+    return storage.getUserById(session.userId);
+  }
+
+  async handleFailedLogin(userId: string): Promise<void> {
+    const user = await storage.getUserById(userId);
+    const attempts = (user?.failedLoginAttempts || 0) + 1;
+
+    const updates: any = { failedLoginAttempts: attempts };
+    if (attempts >= MAX_LOGIN_ATTEMPTS) {
+      updates.lockedUntil = new Date(Date.now() + LOCKOUT_DURATION_MINUTES * 60 * 1000);
+    }
+
+    await storage.updateUser(userId, updates);
+  }
+
+  async isAccountLocked(user: User): Promise<boolean> {
+    if (!user.lockedUntil) return false;
+    if (user.lockedUntil < new Date()) {
+      await storage.updateUser(user.id, { lockedUntil: null, failedLoginAttempts: 0 });
+      return false;
+    }
+    return true;
+  }
+}
+
+// server/middleware/auth.ts
+import { Request, Response, NextFunction } from 'express';
+import { authService } from '../services/authService';
+
+export async function requireAuth(req: Request, res: Response, next: NextFunction) {
+  const sessionId = req.cookies?.sessionId;
+
+  if (!sessionId) {
     return res.status(401).json({ error: 'Authentication required' });
   }
+
+  const user = await authService.validateSession(sessionId);
+  if (!user) {
+    res.clearCookie('sessionId');
+    return res.status(401).json({ error: 'Session expired' });
+  }
+
+  req.user = user;
   next();
 }
+
+export function requireRole(role: string) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (req.user?.role !== role && req.user?.role !== 'admin') {
+      return res.status(403).json({ error: 'Insufficient permissions' });
+    }
+    next();
+  };
+}
+
+// server/app.ts additions
+import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
+
+app.use(helmet());
+app.use(cookieParser());
+
+// Secure cookie settings
+const cookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'strict' as const,
+  maxAge: 24 * 60 * 60 * 1000, // 24 hours
+};
 ```
+
+### API Endpoints
+```typescript
+POST /api/auth/register
+Body: { email: string, password: string }
+Response: { user: User, message: string }
+
+POST /api/auth/login
+Body: { email: string, password: string }
+Response: { user: User } + sets session cookie
+
+POST /api/auth/logout
+Response: { message: string } + clears session cookie
+
+GET /api/auth/me
+Response: { user: User } or 401
+
+POST /api/auth/refresh
+Response: { user: User } + refreshes session
+```
+
+### Security Requirements
+- [ ] Passwords minimum 8 characters, require complexity
+- [ ] No password exposure in logs or responses
+- [ ] Rate limit login endpoint (10 attempts per minute)
+- [ ] Log all authentication events for audit
+- [ ] Session invalidation on password change
+- [ ] HTTPS enforced in production
 
 ### Test Cases
 - [ ] Unauthenticated request to protected route returns 401
-- [ ] Authenticated request succeeds
-- [ ] Session persists across requests
-- [ ] Logout clears session
+- [ ] Valid registration creates user with hashed password
+- [ ] Login with correct credentials succeeds
+- [ ] Login with wrong password fails and increments attempts
+- [ ] Account locks after 5 failed attempts
+- [ ] Locked account returns 423 with lockout time
+- [ ] Session expires after 24 hours
+- [ ] Logout invalidates session server-side
+- [ ] Cannot access other users' data
 
 ---
 
@@ -737,7 +895,7 @@ Allow users to update their profile after initial onboarding.
 
 ---
 
-# PHASE 4: POLISH (12 hours)
+# PHASE 4: POLISH & HARDENING (16 hours)
 
 ## Task 4.1: Caption & Hashtag Generation
 **Effort:** 4 hours | **Priority:** P3 | **Dependencies:** Phase 2
@@ -842,33 +1000,96 @@ Show users insights about their usage and what works.
 
 ---
 
-## Task 4.3: Testing Suite
-**Effort:** 4 hours | **Priority:** P3 | **Dependencies:** All above
+## Task 4.3: Comprehensive Testing Suite
+**Effort:** 8 hours | **Priority:** P1 | **Dependencies:** All above
 
 ### Description
-Add tests for critical paths to prevent regressions.
+Implement production-grade test suite with unit, integration, and e2e tests to ensure system reliability and prevent regressions.
 
 ### Files to Create
+- `server/__tests__/auth.test.ts`
 - `server/__tests__/contextEngine.test.ts`
 - `server/__tests__/analytics.test.ts`
 - `server/__tests__/routes.test.ts`
+- `server/__tests__/rateLimit.test.ts`
 - `client/src/__tests__/IdeaBank.test.tsx`
+- `client/src/__tests__/Onboarding.test.tsx`
+- `client/src/__tests__/Auth.test.tsx`
+- `e2e/auth.spec.ts`
+- `e2e/generation.spec.ts`
+- `jest.config.ts`
+- `playwright.config.ts`
 
 ### Test Coverage Targets
+- Authentication: 95%
 - Intent detection: 100%
-- Pattern learning: 80%
-- API endpoints: 80%
-- Critical UI flows: 60%
+- Pattern learning: 90%
+- API endpoints: 90%
+- Critical UI flows: 80%
+- E2E happy paths: 100%
 
 ### Test Types
-- Unit tests for context engine functions
-- Integration tests for API endpoints
-- Component tests for key UI
+- **Unit tests**: Context engine, auth service, pattern algorithms
+- **Integration tests**: API endpoints with database
+- **Component tests**: React components with mocked APIs
+- **E2E tests**: Full user flows (registration, login, generation)
+
+### Test Framework Setup
+```typescript
+// jest.config.ts
+export default {
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+  roots: ['<rootDir>/server/__tests__'],
+  coverageThreshold: {
+    global: {
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80,
+    },
+  },
+  setupFilesAfterEnv: ['<rootDir>/server/__tests__/setup.ts'],
+};
+
+// playwright.config.ts
+export default {
+  testDir: './e2e',
+  use: {
+    baseURL: 'http://localhost:5000',
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
+  },
+  webServer: {
+    command: 'npm run dev',
+    port: 5000,
+    reuseExistingServer: !process.env.CI,
+  },
+};
+```
+
+### Security Test Cases
+```typescript
+// server/__tests__/auth.test.ts
+describe('Authentication Security', () => {
+  it('should hash passwords with bcrypt cost factor 12+');
+  it('should lock account after 5 failed attempts');
+  it('should not expose password hash in responses');
+  it('should invalidate session on logout');
+  it('should prevent session fixation attacks');
+  it('should rate limit login endpoint');
+  it('should reject weak passwords');
+});
+```
 
 ### Acceptance Criteria
-- [ ] Tests pass
-- [ ] Critical paths covered
-- [ ] CI can run tests
+- [ ] All tests pass in CI pipeline
+- [ ] Coverage thresholds enforced
+- [ ] Auth flow fully tested
+- [ ] Rate limiting tested under load
+- [ ] E2E tests cover critical user journeys
+- [ ] Test database isolation (no production data)
+- [ ] GitHub Actions workflow configured
 
 ---
 
@@ -911,28 +1132,62 @@ Phase 4 (Polish)
 
 ---
 
-# SPRINT BREAKDOWN (Suggested)
+# SPRINT BREAKDOWN (Production-Ready)
 
-## Sprint 1: Foundation (Week 1)
+## Sprint 1: Security Foundation
 - Tasks: 1.1, 1.2, 1.3
-- Goal: Secure, authenticated app with user profiles
-- Demo: User can log in, complete onboarding, see profile
+- Goal: Production-grade authentication, rate limiting, and user profiles
+- Deliverables:
+  - [ ] Full auth system with bcrypt, session management, account lockout
+  - [ ] Rate limiting protecting all endpoints
+  - [ ] User profile schema with onboarding flow
+- Demo: Complete registration → login → onboarding → profile view
 
-## Sprint 2: Intelligence (Week 2)
+## Sprint 2: Context Intelligence
 - Tasks: 2.1, 2.2, 2.3, 2.4
-- Goal: Context-aware suggestions working
-- Demo: Personalized suggestions based on industry/history
+- Goal: Personalized AI that learns user preferences
+- Deliverables:
+  - [ ] Analytics tracking with success scoring
+  - [ ] Context engine gathering user profile + history + patterns
+  - [ ] Intent detection with enhanced prompt building
+  - [ ] Pattern learning that improves over time
+- Demo: Construction user gets construction-specific suggestions, system learns from downloads
 
-## Sprint 3: Experience (Week 3)
+## Sprint 3: User Experience
 - Tasks: 3.1, 3.2, 3.3, 3.4
-- Goal: Full user experience complete
-- Demo: Idea bank, clarification flow, enhanced UI
+- Goal: Complete polished user experience
+- Deliverables:
+  - [ ] Idea Bank with favorites, categories, AI generation
+  - [ ] Clarification flow for ambiguous prompts
+  - [ ] Smart suggestions showing context/patterns
+  - [ ] Settings page for profile management
+- Demo: Save ideas → reuse them → see why suggestions were made
 
-## Sprint 4: Polish (Week 4)
+## Sprint 4: Production Hardening
 - Tasks: 4.1, 4.2, 4.3
-- Goal: Production ready
-- Demo: Captions, analytics, passing tests
+- Goal: Production-ready with full test coverage
+- Deliverables:
+  - [ ] Caption/hashtag generation
+  - [ ] Analytics dashboard with insights
+  - [ ] Comprehensive test suite (unit, integration, e2e)
+  - [ ] CI/CD pipeline with coverage gates
+- Demo: All tests pass, 80%+ coverage, production deployment checklist complete
 
 ---
 
-*Task breakdown complete. Ready for implementation.*
+# PRODUCTION DEPLOYMENT CHECKLIST
+
+Before going live:
+- [ ] All tests passing with 80%+ coverage
+- [ ] Security audit completed (auth, rate limits, input validation)
+- [ ] Session storage in PostgreSQL (not memory)
+- [ ] All secrets in environment variables
+- [ ] HTTPS enforced
+- [ ] Error monitoring configured (Sentry or similar)
+- [ ] Database backups configured
+- [ ] Rate limit thresholds validated
+- [ ] Load testing completed
+
+---
+
+*Task breakdown complete. Production-ready implementation plan.*

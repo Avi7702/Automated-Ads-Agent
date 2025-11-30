@@ -1469,15 +1469,15 @@ function IdeaRow({
 
 | Feature | Effort | Value |
 |---------|--------|-------|
-| Intent Detection (basic) | 8 hrs | Medium |
+| Intent Detection | 8 hrs | Medium |
 | Dynamic Prompt Templates | 8 hrs | Medium |
 | Caption/Hashtag Generation | 4 hrs | Low |
 | Clarification Flow | 4 hrs | Medium |
-| Rate Limiting | 4 hrs | High |
+| Rate Limiting | 4 hrs | Critical |
 | Session Management | 4 hrs | Medium |
 | **TOTAL** | **32 hrs** | |
 
-**Result:** Better than current, but still generic. Everyone gets the same suggestions.
+**Result:** Better than current, but still generic. Everyone gets the same suggestions. **Not recommended for production.**
 
 ---
 
@@ -1516,49 +1516,61 @@ function IdeaRow({
 
 ---
 
-## Option 3: Hybrid (Context Engine Core + Select V3)
+## Option 3: Hybrid (Context Engine Core + Select V3) - RECOMMENDED
 
 | Component | Effort | Priority |
 |-----------|--------|----------|
-| **Phase 1: Foundation** | | |
+| **Phase 1: Foundation (Security)** | | |
+| Production authentication system | 8 hrs | P0 |
 | User profiles + onboarding | 8 hrs | P0 |
-| Basic analytics tracking | 4 hrs | P0 |
-| Rate limiting | 4 hrs | P0 |
+| Rate limiting middleware | 4 hrs | P0 |
 | **Phase 2: Intelligence** | | |
+| Analytics tracking system | 4 hrs | P1 |
 | Context-aware suggestions | 8 hrs | P1 |
-| Intent detection | 6 hrs | P1 |
+| Intent detection engine | 6 hrs | P1 |
 | Smart prompt builder | 6 hrs | P1 |
 | **Phase 3: Learning** | | |
 | Pattern tracking | 6 hrs | P1 |
 | Success scoring | 4 hrs | P1 |
 | Idea bank | 6 hrs | P2 |
-| **Phase 4: Polish** | | |
+| **Phase 4: Production Hardening** | | |
 | Clarification flow | 4 hrs | P2 |
 | Caption generation | 4 hrs | P2 |
+| Comprehensive test suite | 8 hrs | P1 |
 | Analytics dashboard | 4 hrs | P3 |
-| **TOTAL** | **64 hrs** | |
+| **TOTAL** | **80 hrs** | |
 
 ---
 
 ## Comparison Summary
 
-| Approach | Effort | Personalization | Learning | Differentiation |
-|----------|--------|-----------------|----------|-----------------|
-| Generic V3 | 32 hrs | None | None | Low |
-| Full Context Engine | 70 hrs | Full | Yes | High |
-| Hybrid (Recommended) | 64 hrs | High | Yes | High |
+| Approach | Effort | Security | Personalization | Learning | Production-Ready |
+|----------|--------|----------|-----------------|----------|------------------|
+| Generic V3 | 32 hrs | None | None | None | No |
+| Full Context Engine | 70 hrs | None | Full | Yes | No |
+| **Hybrid (Recommended)** | **80 hrs** | **Full** | **High** | **Yes** | **Yes** |
 
 ---
 
 # RECOMMENDATION
 
-## Go with Hybrid Approach
+## Go with Hybrid Approach - Production-Ready
 
 **Why:**
-1. Gets core personalization (user profile, context-aware suggestions) in Phase 1
-2. Adds learning system in Phase 2 (becomes smarter over time)
-3. Skips low-value V3 features (basic intent badges already exist)
-4. 64 hours delivers 90% of the value of full 70-hour approach
+1. Security-first: Authentication and rate limiting from day 1
+2. Gets core personalization (user profile, context-aware suggestions) in Phase 1
+3. Adds learning system in Phase 2 (becomes smarter over time)
+4. Comprehensive test suite ensures reliability and prevents regressions
+5. Production-grade implementation, not MVP
+
+**Security Features Included:**
+- bcrypt password hashing (cost factor 12+)
+- PostgreSQL session storage (not memory)
+- Account lockout after failed attempts
+- CSRF protection
+- Secure cookie settings
+- Rate limiting on all endpoints
+- Audit logging for authentication events
 
 **Key Differentiators This Enables:**
 - "The system knows I'm in construction and suggests worksite shots"
@@ -1566,8 +1578,15 @@ function IdeaRow({
 - "My idea bank saves my best prompts for reuse"
 - "The more I use it, the better it gets"
 
-**This is what turns a tool into a product.**
+**Production Deployment Ready:**
+- [ ] All tests passing with 80%+ coverage
+- [ ] Security audit completed
+- [ ] Error monitoring configured
+- [ ] Database backups configured
+- [ ] Load testing completed
+
+**This is what turns a tool into a production-ready product.**
 
 ---
 
-*Spec complete. Ready for implementation.*
+*Spec complete. Ready for production-grade implementation.*
