@@ -1,4 +1,5 @@
 import express from 'express';
+import path from 'path';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
@@ -21,6 +22,9 @@ app.use(express.urlencoded({ extended: true }));
 
 // Cookie parsing
 app.use(cookieParser());
+
+// Static file serving for uploads
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Initialize storage before handling requests
 app.use(async (req, res, next) => {
