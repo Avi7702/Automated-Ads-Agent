@@ -3,7 +3,8 @@ module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   roots: ['<rootDir>/server'],
-  testMatch: ['**/__tests__/**/*.test.ts'],
+  testMatch: ['**/__tests__/**/*.test.ts', '!**/*.integration.test.ts'],
+  testPathIgnorePatterns: ['/node_modules/', '\\.integration\\.test\\.ts$'],
   moduleNameMapper: {
     '^@shared/(.*)$': '<rootDir>/shared/$1',
     '^@server/(.*)$': '<rootDir>/server/$1'

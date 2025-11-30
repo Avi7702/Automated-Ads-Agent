@@ -58,7 +58,9 @@ docs/
 - `server/middleware/validate.ts` - Zod validation middleware (Task 2.1 complete)
 - `server/validation/schemas.ts` - Validation schemas (Task 2.1 complete)
 - `server/services/geminiService.ts` - Gemini API wrapper (Task 2.2 complete)
+- `server/services/imageStorage.ts` - Image storage service (Task 2.3 complete)
 - `server/routes.ts` - All API endpoints
+- `docker-compose.test.yml` - PostgreSQL for integration tests
 
 ## Environment
 
@@ -75,6 +77,7 @@ docs/
 | 1.2 Authentication | Complete | `claude/task-1.2-authentication` |
 | 2.1 Input Validation | Complete | `claude/task-2.1-input-validation` |
 | 2.2 Gemini Integration | Complete | `claude/task-2.2-gemini-integration` |
+| 2.3 Image Storage | Complete | `claude/task-2.3-image-storage` |
 
 ## Agent Handoff Protocol
 
