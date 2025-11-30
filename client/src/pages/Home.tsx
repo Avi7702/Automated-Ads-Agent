@@ -313,16 +313,10 @@ export default function Home() {
                     </Link>
                   )}
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={handleDownload} data-testid="button-download-result">
-                    <Download className="w-4 h-4 mr-2" />
-                    Download
-                  </Button>
-                  <Button size="sm" onClick={handleGenerate} data-testid="button-regenerate">
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Refine
-                  </Button>
-                </div>
+                <Button variant="outline" size="sm" onClick={handleDownload} data-testid="button-download-result">
+                  <Download className="w-4 h-4 mr-2" />
+                  Download
+                </Button>
               </div>
 
               <div className="relative aspect-square rounded-3xl overflow-hidden border border-white/10 bg-black group shadow-2xl">
