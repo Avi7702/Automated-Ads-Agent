@@ -7,6 +7,7 @@ import {
 } from './services/authService';
 import { requireAuth } from './middleware/auth';
 import { storage } from './storage';
+import { expensiveLimiter, editLimiter, loginLimiter } from './middleware/rateLimit';
 
 const router = Router();
 
@@ -39,7 +40,7 @@ router.post('/api/auth/register', async (req: Request, res: Response) => {
   res.status(201).json({ user: result.user });
 });
 
-router.post('/api/auth/login', async (req: Request, res: Response) => {
+router.post('/api/auth/login', loginLimiter, async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
   const result = await loginUser(email, password);
@@ -98,12 +99,12 @@ router.delete('/api/products/:id', requireAuth, async (req: Request, res: Respon
   res.json({ message: 'Product deleted' });
 });
 
-router.post('/api/transform', requireAuth, async (req: Request, res: Response) => {
+router.post('/api/transform', expensiveLimiter, requireAuth, async (req: Request, res: Response) => {
   // Placeholder for image transformation
   res.json({ message: 'Transform initiated' });
 });
 
-router.post('/api/generations/:id/edit', requireAuth, async (req: Request, res: Response) => {
+router.post('/api/generations/:id/edit', editLimiter, requireAuth, async (req: Request, res: Response) => {
   // Placeholder for generation edit
   res.json({ message: 'Generation edit initiated' });
 });

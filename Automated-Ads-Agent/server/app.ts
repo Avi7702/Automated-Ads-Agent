@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import routes from './routes';
 import { storage } from './storage';
+import { apiLimiter } from './middleware/rateLimit';
 
 const app = express();
 
@@ -30,6 +31,9 @@ app.use(async (req, res, next) => {
     next(error);
   }
 });
+
+// Rate limiting for all API routes
+app.use('/api', apiLimiter);
 
 // Routes
 app.use(routes);
