@@ -57,6 +57,7 @@ docs/
 - `server/middleware/auth.ts` - Auth middleware
 - `server/middleware/validate.ts` - Zod validation middleware (Task 2.1 complete)
 - `server/validation/schemas.ts` - Validation schemas (Task 2.1 complete)
+- `server/services/geminiService.ts` - Gemini API wrapper (Task 2.2 complete)
 - `server/routes.ts` - All API endpoints
 
 ## Environment
@@ -73,6 +74,7 @@ docs/
 | 1.1 Rate Limiting | Complete | `claude/task-1.1-rate-limiting` |
 | 1.2 Authentication | Complete | `claude/task-1.2-authentication` |
 | 2.1 Input Validation | Complete | `claude/task-2.1-input-validation` |
+| 2.2 Gemini Integration | Complete | `claude/task-2.2-gemini-integration` |
 
 ## Agent Handoff Protocol
 
