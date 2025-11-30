@@ -116,7 +116,7 @@ Guidelines:
 
       // Generate content with image input using Gemini image generation model
       const result = await genai.models.generateContent({
-        model: "gemini-2.5-flash-image",
+        model: "gemini-3-pro-image-preview",
         contents,
       });
 
@@ -306,7 +306,7 @@ Guidelines:
       // Call Gemini with the full conversation history
       // The thought signatures in the history allow Gemini to "remember" the image
       const result = await genai.models.generateContent({
-        model: "gemini-2.5-flash-image",
+        model: "gemini-3-pro-image-preview",
         contents: history,
       });
 
@@ -621,7 +621,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 ["professional desk setup with morning sunlight", "outdoor adventure scene in mountains", "minimalist lifestyle flat lay", "urban street photography aesthetic"]`;
 
       const result = await genai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-2.0-flash",
         contents: suggestionPrompt,
       });
 

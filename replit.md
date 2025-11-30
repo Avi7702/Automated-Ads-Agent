@@ -2,7 +2,7 @@
 
 ## Overview
 
-Product Content Studio V3 is a production-ready AI-powered product photo transformation application that uses Google Gemini AI (gemini-2.5-flash-image model) to generate professional marketing content from user-uploaded product photos. Users upload product images, describe their desired transformation in natural language, and receive professionally generated marketing visuals without navigating through menus or feature selections.
+Product Content Studio V3 is a production-ready AI-powered product photo transformation application that uses Google Gemini AI (gemini-3-pro-image-preview model) to generate professional marketing content from user-uploaded product photos. Users upload product images, describe their desired transformation in natural language, and receive professionally generated marketing visuals without navigating through menus or feature selections.
 
 The application is a full-stack production system with PostgreSQL persistence, file storage, generation history, gallery views, re-editing capabilities, and draft auto-save. All generated images and metadata are permanently stored and can be accessed, downloaded, or refined later.
 
@@ -124,7 +124,7 @@ promptTemplates {
 
 ### AI Integration
 
-**Model**: Google Gemini 2.5 Flash Image (gemini-2.5-flash-image) via `@google/genai` SDK and Replit AI Integrations
+**Model**: Google Gemini 3 Pro Image (gemini-3-pro-image-preview) via `@google/genai` SDK and Replit AI Integrations
 
 **Integration Method**: Uses Replit's AI Integrations for seamless API key management - no user API key required, billed to Replit credits
 
@@ -134,7 +134,7 @@ promptTemplates {
 - Response modality configured for both IMAGE generation and TEXT analysis
 - API key provided via `AI_INTEGRATIONS_GEMINI_API_KEY` environment variable
 - Base URL and empty apiVersion required via httpOptions for Replit AI Integrations
-- Prompt suggestion feature uses gemini-2.5-flash model for creative variations
+- Prompt suggestion feature uses gemini-2.0-flash model for creative variations
 
 **Prompt Engineering**:
 - Single-image prompts focus on transformation while maintaining product identity
@@ -144,8 +144,8 @@ promptTemplates {
 ### External Dependencies
 
 **Third-Party Services**:
-- Google Generative AI (Gemini 2.5 Flash Image) - Core image transformation
-- Google Generative AI (Gemini 2.5 Flash) - Prompt suggestion generation
+- Google Generative AI (Gemini 3 Pro Image) - Core image transformation
+- Google Generative AI (Gemini 2.0 Flash) - Prompt suggestion generation
 - Cloudinary - Product library cloud storage with automatic uploads
 - Neon Database - PostgreSQL serverless hosting
 - Replit AI Integrations - Automatic API key management for Gemini
