@@ -344,6 +344,45 @@ router.get('/api/generations', requireAuth, async (req: Request, res: Response) 
   }
 });
 
+// GET history must come before GET :id to avoid matching "history" as an id
+router.get('/api/generations/:id/history', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.id;
+
+    await imageStorageService.initialize();
+
+    // Get the generation to check ownership
+    const generation = await imageStorageService.getGeneration(id);
+
+    if (!generation) {
+      res.status(404).json({ error: 'Generation not found' });
+      return;
+    }
+
+    if (generation.userId !== userId) {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+
+    // Get full edit chain
+    const history = await imageStorageService.getEditChain(id);
+
+    res.json({
+      generationId: id,
+      history: history.map(item => ({
+        id: item.id,
+        editPrompt: item.editPrompt,
+        imageUrl: item.imageUrl,
+        createdAt: item.createdAt.toISOString()
+      })),
+      totalEdits: history.length - 1 // Exclude original
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to retrieve history' });
+  }
+});
+
 router.get('/api/generations/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
