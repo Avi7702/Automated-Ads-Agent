@@ -59,6 +59,7 @@ docs/
 - `server/validation/schemas.ts` - Validation schemas (Task 2.1 complete)
 - `server/services/geminiService.ts` - Gemini API wrapper (Task 2.2 complete)
 - `server/services/imageStorage.ts` - Image storage service (Task 2.3 complete)
+- `server/types/api.ts` - API response types (Task 2.4 complete)
 - `server/routes.ts` - All API endpoints
 - `docker-compose.test.yml` - PostgreSQL for integration tests
 
@@ -78,6 +79,7 @@ docs/
 | 2.1 Input Validation | Complete | `claude/task-2.1-input-validation` |
 | 2.2 Gemini Integration | Complete | `claude/task-2.2-gemini-integration` |
 | 2.3 Image Storage | Complete | `claude/task-2.3-image-storage` |
+| 2.4 Transform Endpoint | Complete | `claude/task-2.4-generate-endpoint` |
 
 ## Agent Handoff Protocol
 
