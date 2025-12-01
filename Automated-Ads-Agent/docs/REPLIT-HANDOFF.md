@@ -2,197 +2,281 @@
 
 ## Summary
 
-A separate Claude Code agent has been building add-on features for the Automated-Ads-Agent project. These add-ons are now ready to be **selectively integrated** with the live Replit software.
+Add-on features for the Automated-Ads-Agent project - ready for **selective integration**.
 
 **Branch:** `claude/task-3.4-frontend-edit-ui`
 **GitHub Repo:** https://github.com/Avi7702/Automated-Ads-Agent
 
 ---
 
-## CRITICAL: Do NOT Merge Directly
+## CRITICAL Configuration Notes
 
-The following files **MUST NOT be directly copied/merged** - they will break existing working functionality:
-
-| File | Reason |
-|------|--------|
-| `server/services/geminiService.ts` | Replit already has working Gemini integration |
-| `server/routes.ts` | Will break existing working endpoints |
-| `server/storage.ts` | Schema differences with production database |
-| `client/` folder | Will overwrite working UI |
-
-### What To Do Instead
-
-**Review the add-on code as REFERENCE ONLY**, then:
-1. Extract specific features/patterns you need
-2. Manually integrate into your existing working code
-3. Test each change before moving to the next
-
----
-
-## Git History Warning
-
-The add-on branch and Replit's main branch have **no common git ancestor**. Standard `git merge` will fail.
-
-## What Was Built
-
-### Phase 1: Security (Tasks 1.1-1.2)
-
-| Task | Files | Description |
-|------|-------|-------------|
-| 1.1 Rate Limiting | `server/middleware/rateLimit.ts`, `server/lib/redis.ts` | IP-based rate limiting with optional Redis support |
-| 1.2 Authentication | `server/services/authService.ts`, `server/middleware/auth.ts` | bcrypt password hashing, session management |
-
-### Phase 2: Core Features (Tasks 2.1-2.4)
-
-| Task | Files | Description |
-|------|-------|-------------|
-| 2.1 Input Validation | `server/middleware/validate.ts`, `server/validation/schemas.ts` | Zod-based validation middleware |
-| 2.2 Gemini Integration | `server/services/geminiService.ts`, `server/services/geminiErrors.ts` | Gemini 3 Pro Image generation |
-| 2.3 Image Storage | `server/storage.ts` | PostgreSQL storage for generations + images |
-| 2.4 Transform Endpoint | `server/routes.ts` | POST /api/transform endpoint |
-
-### Phase 3: Edit Flow (Tasks 3.1-3.4)
-
-| Task | Files | Description |
-|------|-------|-------------|
-| 3.1 Edit Schema | `server/storage.ts` | Edit tracking schema and saveEdit method |
-| 3.2 Edit Endpoint | `server/routes.ts` | PUT /api/generations/:id/edit |
-| 3.3 History Endpoint | `server/routes.ts` | GET /api/generations/:id/history |
-| 3.4 Frontend Edit UI | `client/` folder | React components for edit flow |
-
-## Critical Configuration
-
-### Gemini API Setup
-
-The Gemini integration uses **gemini-3-pro-image-preview** model:
+### 1. SDK - Use @google/genai (NOT @google/generative-ai)
 
 ```typescript
-// server/services/geminiService.ts
-private readonly modelName = 'gemini-3-pro-image-preview';
+import { GoogleGenAI } from '@google/genai';
 
-const model = this.genAI.getGenerativeModel({
-  model: this.modelName,
+const genAI = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
+const model = genAI.getGenerativeModel({
+  model: 'gemini-3-pro-image-preview',
   generationConfig: {
-    responseModalities: ['TEXT', 'IMAGE']  // Required for image generation
+    responseModalities: ['TEXT', 'IMAGE']
   }
 });
 ```
 
-**SDK:** `@google/generative-ai` (NOT `@google/genai`)
+### 2. Environment Variable
 
-### Environment Variables
+Use `GOOGLE_API_KEY` (NOT `GEMINI_API_KEY`)
 
-```env
-GEMINI_API_KEY=your-api-key
-GEMINI_MODEL=gemini-3-pro-image-preview
-DATABASE_URL=postgresql://...
-SESSION_SECRET=...
-USE_REDIS=false  # Set true if Redis available
-```
+### 3. Edit Endpoint Method
 
-## Files Added/Modified
+Use `POST /api/generations/:id/edit` (NOT PUT)
 
-### New Files (41 total)
+### 4. Match Existing Schema
 
-**Server:**
-- `server/lib/redis.ts` - Redis client for rate limiting
-- `server/services/geminiErrors.ts` - Custom error classes
-- `server/__tests__/attack-scenarios.test.ts` - Security tests
+Schema already has: `parentGenerationId`, `editPrompt`, `conversationHistory` - don't rename these.
 
-**Client (new React app):**
-- `client/` - Complete Vite + React + TypeScript frontend
-- `client/src/components/GenerateForm.tsx` - Image generation form
-- `client/src/pages/Dashboard.tsx` - User dashboard
-- `client/src/pages/GenerationView.tsx` - Edit flow UI
+---
 
-**Docs:**
-- `docs/PHASE-3-IMPLEMENTATION-READY.md` - Complete implementation spec
-- `docs/PRODUCTION-READINESS-PLAN.md` - Deployment checklist
+## Files To Include (NEW FILES ONLY)
 
-### Modified Files
+### SAFE TO COPY - These are new files:
 
-- `server/app.ts` - Added middleware stack
-- `server/routes.ts` - Added all API endpoints
-- `server/storage.ts` - Added edit tracking schema
-- `server/middleware/rateLimit.ts` - Enhanced rate limiting
-- `server/services/authService.ts` - Password hashing
-- `server/services/geminiService.ts` - Gemini 3 integration
-- `server/validation/schemas.ts` - Zod schemas
-- `package.json` - Added dependencies
-
-## API Endpoints Added
-
-```
-POST   /api/auth/register     - User registration
-POST   /api/auth/login        - User login
-POST   /api/auth/logout       - User logout
-GET    /api/auth/me           - Current user
-
-POST   /api/transform         - Generate image from prompt
-PUT    /api/generations/:id/edit    - Edit existing generation
-GET    /api/generations/:id/history - Get edit history
-GET    /api/generations/:id         - Get generation details
-DELETE /api/generations/:id         - Delete generation
-```
-
-## Integration Strategy
-
-### SAFE to copy (new files that don't exist in Replit):
-
-| File | Purpose |
-|------|---------|
+| File | Description |
+|------|-------------|
+| `server/middleware/rateLimit.ts` | IP-based rate limiting |
+| `server/middleware/auth.ts` | Auth middleware |
+| `server/services/authService.ts` | bcrypt password hashing |
 | `server/lib/redis.ts` | Redis client helper |
-| `server/services/geminiErrors.ts` | Custom error classes |
-| `server/middleware/validate.ts` | Zod validation middleware |
-| `server/validation/schemas.ts` | Request validation schemas |
-| `server/__tests__/*.ts` | Test files |
-| `docs/*.md` | Documentation |
+| `server/validation/schemas.ts` | Zod validation schemas |
+| `client/src/components/EditPanel.tsx` | Edit panel component |
+| `client/src/components/EditHistory.tsx` | History component |
 
-### REFERENCE ONLY (extract patterns, don't copy):
+---
 
-| File | What to extract |
-|------|-----------------|
-| `server/routes.ts` | Edit/History endpoint patterns |
-| `server/storage.ts` | Edit tracking schema design |
-| `client/src/pages/GenerationView.tsx` | Edit UI component patterns |
+## DO NOT INCLUDE
 
-### Recommended approach:
+| File | Reason |
+|------|--------|
+| `server/services/geminiService.ts` | Already working in Replit |
+| `server/routes.ts` | Don't overwrite - see snippets below |
+| `server/storage.ts` | Don't overwrite - see snippets below |
+| `client/` folder (except EditPanel & EditHistory) | UI already working |
 
-1. Read the add-on code to understand the patterns
-2. Add new features to YOUR existing working files
-3. Test each addition individually
-4. Never overwrite working code
+---
 
-## Dependencies Added
+## Code Snippets (Add to existing files)
 
-```json
-{
-  "@google/generative-ai": "^0.7.1",
-  "zod": "^3.23.0",
-  "ioredis": "^5.4.1"
+### Auth Routes (add to your routes.ts)
+
+```typescript
+import { authService } from './services/authService';
+import { requireAuth } from './middleware/auth';
+
+// POST /api/auth/register
+app.post('/api/auth/register', async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password required' });
+  }
+
+  const existingUser = await storage.getUserByEmail(email);
+  if (existingUser) {
+    return res.status(409).json({ error: 'User already exists' });
+  }
+
+  const hashedPassword = await authService.hashPassword(password);
+  const user = await storage.createUser({ email, password: hashedPassword });
+
+  req.session.userId = user.id;
+  res.json({ id: user.id, email: user.email });
+});
+
+// POST /api/auth/login
+app.post('/api/auth/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  const user = await storage.getUserByEmail(email);
+  if (!user) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+
+  const valid = await authService.comparePassword(password, user.password);
+  if (!valid) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+
+  req.session.userId = user.id;
+  res.json({ id: user.id, email: user.email });
+});
+
+// POST /api/auth/logout
+app.post('/api/auth/logout', (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).json({ error: 'Logout failed' });
+    }
+    res.json({ success: true });
+  });
+});
+
+// GET /api/auth/me
+app.get('/api/auth/me', requireAuth, async (req, res) => {
+  const user = await storage.getUserById(req.session.userId);
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+  res.json({ id: user.id, email: user.email });
+});
+```
+
+### History Endpoint (add to your routes.ts)
+
+```typescript
+// GET /api/generations/:id/history
+app.get('/api/generations/:id/history', async (req, res) => {
+  const { id } = req.params;
+
+  const generation = await storage.getGenerationById(Number(id));
+  if (!generation) {
+    return res.status(404).json({ error: 'Generation not found' });
+  }
+
+  // Get full edit chain
+  const history = await storage.getEditHistory(Number(id));
+
+  res.json({
+    current: generation,
+    history: history,
+    totalEdits: history.length
+  });
+});
+```
+
+### New Storage Methods (add to your storage.ts)
+
+```typescript
+// Get edit history for a generation
+async getEditHistory(generationId: number): Promise<Generation[]> {
+  const history: Generation[] = [];
+  let currentId: number | null = generationId;
+
+  while (currentId) {
+    const generation = await this.getGenerationById(currentId);
+    if (!generation) break;
+
+    history.push(generation);
+    currentId = generation.parentGenerationId;
+  }
+
+  return history.reverse(); // Oldest first
+}
+
+// Save an edit (creates new generation linked to parent)
+async saveEdit(parentId: number, editPrompt: string, newImageUrl: string): Promise<Generation> {
+  const parent = await this.getGenerationById(parentId);
+  if (!parent) {
+    throw new Error('Parent generation not found');
+  }
+
+  // Build conversation history
+  const parentHistory = parent.conversationHistory || [];
+  const newHistory = [
+    ...parentHistory,
+    { role: 'user', content: editPrompt },
+    { role: 'assistant', content: 'Image edited successfully', imageUrl: newImageUrl }
+  ];
+
+  const newGeneration = await this.createGeneration({
+    userId: parent.userId,
+    prompt: editPrompt,
+    imageUrl: newImageUrl,
+    parentGenerationId: parentId,
+    editPrompt: editPrompt,
+    conversationHistory: newHistory
+  });
+
+  return newGeneration;
 }
 ```
 
-## Testing
+---
 
-All tests pass:
-```bash
-npm test
+## Dependencies to Add (if not present)
+
+```json
+{
+  "zod": "^3.23.0",
+  "ioredis": "^5.4.1",
+  "bcrypt": "^5.1.1"
+}
 ```
 
-Test files:
-- `server/__tests__/geminiService.test.ts`
-- `server/__tests__/attack-scenarios.test.ts`
+**Note:** `@google/genai` should already be installed in Replit.
 
-## Warnings
+---
 
-1. **Do NOT use `@google/genai` SDK** - Use `@google/generative-ai`
-2. **Model name must be `gemini-3-pro-image-preview`** - Not gemini-2.x
-3. **responseModalities is required** for image generation
-4. **Rate limiting needs Redis in production** - Set `USE_REDIS=true`
+## Rate Limiting Setup
 
-## Contact
+The rate limiter can use in-memory or Redis storage:
 
-This handoff document was created by Claude Code agent on December 1, 2025.
+```typescript
+// In your app.ts
+import { createRateLimiter } from './middleware/rateLimit';
+
+// Use Redis in production
+const rateLimiter = createRateLimiter({
+  useRedis: process.env.USE_REDIS === 'true',
+  redisUrl: process.env.REDIS_URL
+});
+
+app.use('/api/', rateLimiter);
+```
+
+---
+
+## Testing
+
+Test the new auth endpoints:
+```bash
+# Register
+curl -X POST http://localhost:5000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password123"}'
+
+# Login
+curl -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password123"}'
+
+# History
+curl http://localhost:5000/api/generations/1/history
+```
+
+---
+
+## Summary of What To Do
+
+1. Copy these NEW files:
+   - `server/middleware/rateLimit.ts`
+   - `server/middleware/auth.ts`
+   - `server/services/authService.ts`
+   - `server/lib/redis.ts`
+   - `server/validation/schemas.ts`
+   - `client/src/components/EditPanel.tsx`
+   - `client/src/components/EditHistory.tsx`
+
+2. Add code snippets above to:
+   - Your existing `routes.ts`
+   - Your existing `storage.ts`
+
+3. Add dependencies if missing: `zod`, `ioredis`, `bcrypt`
+
+4. Do NOT replace any existing files
+
+---
+
+Created: December 1, 2025
 Branch: `claude/task-3.4-frontend-edit-ui`
-Commit: `b8e9eec`
