@@ -49,27 +49,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Serve static files from attached_assets directory
   app.use("/attached_assets", express.static(path.join(process.cwd(), "attached_assets")));
   
-  // Image transformation endpoint
+  // Image transformation endpoint (supports both image transformation and text-only generation)
   app.post("/api/transform", upload.array("images", 6), async (req, res) => {
     try {
       const files = req.files as Express.Multer.File[];
-      
-      if (!files || files.length === 0) {
-        return res.status(400).json({ error: "No image files provided" });
-      }
-
       const { prompt } = req.body;
+      
       if (!prompt) {
         return res.status(400).json({ error: "No prompt provided" });
       }
 
-      console.log(`[Transform] Processing ${files.length} image(s) with prompt: "${prompt}"`);
+      const hasFiles = files && files.length > 0;
+      console.log(`[Transform] Processing ${hasFiles ? files.length : 0} image(s) with prompt: "${prompt.substring(0, 100)}..."`);
 
-      // Build the prompt for transformation
-      let enhancedPrompt = "";
+      // Build the prompt for transformation or generation
+      let enhancedPrompt = prompt;
       
-      if (files.length === 1) {
-        enhancedPrompt = `Transform this product photo based on the following instructions: ${prompt}
+      if (hasFiles) {
+        if (files.length === 1) {
+          enhancedPrompt = `Transform this product photo based on the following instructions: ${prompt}
 
 Guidelines:
 - Keep the product as the hero/focus
@@ -77,8 +75,8 @@ Guidelines:
 - Ensure the product is clearly visible and recognizable
 - Apply the requested scene, lighting, and style changes
 - Do not add text or watermarks`;
-      } else {
-        enhancedPrompt = `Transform these ${files.length} product photos based on the following instructions: ${prompt}
+        } else {
+          enhancedPrompt = `Transform these ${files.length} product photos based on the following instructions: ${prompt}
 
 Guidelines:
 - Combine/arrange all products in a cohesive scene
@@ -87,20 +85,24 @@ Guidelines:
 - Apply the requested scene, lighting, and style changes
 - Show how the products work together or as a collection
 - Do not add text or watermarks`;
+        }
       }
+      // If no files, use prompt as-is for text-only generation
 
-      // Build user message parts with all images
+      // Build user message parts
       const userParts: any[] = [];
       
-      // Add all images first
-      files.forEach((file, index) => {
-        userParts.push({
-          inlineData: {
-            mimeType: file.mimetype,
-            data: file.buffer.toString("base64"),
-          },
+      // Add all images first (if provided)
+      if (hasFiles) {
+        files.forEach((file, index) => {
+          userParts.push({
+            inlineData: {
+              mimeType: file.mimetype,
+              data: file.buffer.toString("base64"),
+            },
+          });
         });
-      });
+      }
       
       // Then add the prompt
       userParts.push({ text: enhancedPrompt });
@@ -130,11 +132,13 @@ Guidelines:
       const imagePart = modelResponse.parts?.find((p: any) => p.inlineData);
       
       if (imagePart && imagePart.inlineData && imagePart.inlineData.data) {
-        // Save uploaded files to disk
+        // Save uploaded files to disk (if any were provided)
         const originalImagePaths: string[] = [];
-        for (const file of files) {
-          const savedPath = await saveOriginalFile(file.buffer, file.originalname);
-          originalImagePaths.push(savedPath);
+        if (hasFiles) {
+          for (const file of files) {
+            const savedPath = await saveOriginalFile(file.buffer, file.originalname);
+            originalImagePaths.push(savedPath);
+          }
         }
 
         // Save generated image to disk
