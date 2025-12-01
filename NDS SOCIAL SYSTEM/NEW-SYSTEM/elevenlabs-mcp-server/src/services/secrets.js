@@ -1,8 +1,7 @@
-const RAW_SUPABASE_URL =
-    process.env.SUPABASE_URL || 'https://fecelxcsybawzgphekyq.supabase.co';
-const RAW_SUPABASE_SERVICE_KEY =
-    process.env.SUPABASE_SERVICE_KEY ||
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZlY2VleGNzeWJhd3pncGhla3lxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MDk1NDMwNSwiZXhwIjoyMDc2NTMwMzA1fQ.fWGtAiBcHIWDamaaPkBdOaBGLpPItkeRgTZTu3C_KrQ';
+// SECURITY: Never hardcode secrets - always use environment variables
+// Create a .env file with SUPABASE_URL and SUPABASE_SERVICE_KEY
+const RAW_SUPABASE_URL = process.env.SUPABASE_URL;
+const RAW_SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
 function clean(value) {
     return value
