@@ -2,17 +2,36 @@
 
 ## Summary
 
-A separate Claude Code agent has been building add-on features for the Automated-Ads-Agent project. These add-ons are now ready to be merged with the live Replit software.
+A separate Claude Code agent has been building add-on features for the Automated-Ads-Agent project. These add-ons are now ready to be **selectively integrated** with the live Replit software.
 
-**Branch to merge:** `claude/task-3.4-frontend-edit-ui`
+**Branch:** `claude/task-3.4-frontend-edit-ui`
 **GitHub Repo:** https://github.com/Avi7702/Automated-Ads-Agent
 
-## Important: Git History Warning
+---
 
-The add-on branch and Replit's main branch have **no common git ancestor**. This means a standard `git merge` will fail. You have two options:
+## CRITICAL: Do NOT Merge Directly
 
-1. **Cherry-pick commits** (recommended) - Pick specific commits to apply
-2. **Manual file copy** - Copy specific files from the branch
+The following files **MUST NOT be directly copied/merged** - they will break existing working functionality:
+
+| File | Reason |
+|------|--------|
+| `server/services/geminiService.ts` | Replit already has working Gemini integration |
+| `server/routes.ts` | Will break existing working endpoints |
+| `server/storage.ts` | Schema differences with production database |
+| `client/` folder | Will overwrite working UI |
+
+### What To Do Instead
+
+**Review the add-on code as REFERENCE ONLY**, then:
+1. Extract specific features/patterns you need
+2. Manually integrate into your existing working code
+3. Test each change before moving to the next
+
+---
+
+## Git History Warning
+
+The add-on branch and Replit's main branch have **no common git ancestor**. Standard `git merge` will fail.
 
 ## What Was Built
 
@@ -118,26 +137,31 @@ DELETE /api/generations/:id         - Delete generation
 
 ## Integration Strategy
 
-### Option 1: Cherry-pick specific features
+### SAFE to copy (new files that don't exist in Replit):
 
-```bash
-git fetch origin claude/task-3.4-frontend-edit-ui
-git cherry-pick <commit-hash>  # Pick specific commits
-```
+| File | Purpose |
+|------|---------|
+| `server/lib/redis.ts` | Redis client helper |
+| `server/services/geminiErrors.ts` | Custom error classes |
+| `server/middleware/validate.ts` | Zod validation middleware |
+| `server/validation/schemas.ts` | Request validation schemas |
+| `server/__tests__/*.ts` | Test files |
+| `docs/*.md` | Documentation |
 
-### Option 2: Manual file integration
+### REFERENCE ONLY (extract patterns, don't copy):
 
-1. Copy needed files from the branch
-2. Update `package.json` with new dependencies
-3. Run database migrations
-4. Test each endpoint
+| File | What to extract |
+|------|-----------------|
+| `server/routes.ts` | Edit/History endpoint patterns |
+| `server/storage.ts` | Edit tracking schema design |
+| `client/src/pages/GenerationView.tsx` | Edit UI component patterns |
 
-### Option 3: Feature-by-feature
+### Recommended approach:
 
-Start with the most critical features:
-1. Gemini integration (`server/services/geminiService.ts`)
-2. Storage layer (`server/storage.ts`)
-3. Routes (`server/routes.ts`)
+1. Read the add-on code to understand the patterns
+2. Add new features to YOUR existing working files
+3. Test each addition individually
+4. Never overwrite working code
 
 ## Dependencies Added
 
