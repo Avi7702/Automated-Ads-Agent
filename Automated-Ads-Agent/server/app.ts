@@ -9,6 +9,11 @@ import { apiLimiter } from './middleware/rateLimit';
 
 const app = express();
 
+// Trust proxy - REQUIRED for rate limiting behind load balancer
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 // Security middleware
 app.use(helmet());
 app.use(cors({
@@ -16,9 +21,9 @@ app.use(cors({
   credentials: true,
 }));
 
-// Body parsing
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Body parsing with size limits to prevent DoS attacks
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // Cookie parsing
 app.use(cookieParser());

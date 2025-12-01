@@ -80,6 +80,20 @@ docs/
 | 2.2 Gemini Integration | Complete | `claude/task-2.2-gemini-integration` |
 | 2.3 Image Storage | Complete | `claude/task-2.3-image-storage` |
 | 2.4 Transform Endpoint | Complete | `claude/task-2.4-generate-endpoint` |
+| 3.1 Edit Schema | Complete | `claude/task-3.1-edit-schema` |
+| 3.2 Edit Endpoint | Complete | `claude/task-3.2-edit-endpoint` |
+| 3.3 History Endpoint | Complete | `claude/task-3.3-history-endpoint` |
+| 3.4 Frontend Edit UI | Complete | `claude/task-3.4-frontend-edit-ui` |
+
+## Phase 3 Implementation
+
+**Full spec with production-ready code:** `docs/PHASE-3-IMPLEMENTATION-READY.md`
+
+This document contains:
+- Complete code for all 4 tasks
+- All test cases (30 new tests total)
+- Schema changes, type definitions, API endpoints
+- Frontend React components with CSS
 
 ## Agent Handoff Protocol
 

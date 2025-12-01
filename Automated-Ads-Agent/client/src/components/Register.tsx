@@ -1,13 +1,11 @@
-import React, { useState, FormEvent } from 'react';
+import { useState, FormEvent } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import './Auth.css';
 
-interface RegisterProps {
-  onSuccess?: () => void;
-  onSwitchToLogin?: () => void;
-}
-
-export function Register({ onSuccess, onSwitchToLogin }: RegisterProps) {
+export function Register() {
   const { register } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -34,7 +32,7 @@ export function Register({ onSuccess, onSwitchToLogin }: RegisterProps) {
     const result = await register(email, password);
 
     if (result.success) {
-      onSuccess?.();
+      navigate('/dashboard');
     } else {
       setError(result.error || 'Registration failed');
     }
@@ -94,16 +92,10 @@ export function Register({ onSuccess, onSwitchToLogin }: RegisterProps) {
         </button>
       </form>
 
-      {onSwitchToLogin && (
-        <p className="auth-switch">
-          Already have an account?{' '}
-          <button type="button" onClick={onSwitchToLogin} className="link-button">
-            Login
-          </button>
-        </p>
-      )}
+      <p className="auth-switch">
+        Already have an account?{' '}
+        <Link to="/login">Login</Link>
+      </p>
     </div>
   );
 }
-
-export default Register;

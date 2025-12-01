@@ -1,13 +1,11 @@
-import React, { useState, FormEvent } from 'react';
+import { useState, FormEvent } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import './Auth.css';
 
-interface LoginProps {
-  onSuccess?: () => void;
-  onSwitchToRegister?: () => void;
-}
-
-export function Login({ onSuccess, onSwitchToRegister }: LoginProps) {
+export function Login() {
   const { login } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -21,7 +19,7 @@ export function Login({ onSuccess, onSwitchToRegister }: LoginProps) {
     const result = await login(email, password);
 
     if (result.success) {
-      onSuccess?.();
+      navigate('/dashboard');
     } else {
       setError(result.error || 'Login failed');
     }
@@ -67,16 +65,10 @@ export function Login({ onSuccess, onSwitchToRegister }: LoginProps) {
         </button>
       </form>
 
-      {onSwitchToRegister && (
-        <p className="auth-switch">
-          Don't have an account?{' '}
-          <button type="button" onClick={onSwitchToRegister} className="link-button">
-            Register
-          </button>
-        </p>
-      )}
+      <p className="auth-switch">
+        Don't have an account?{' '}
+        <Link to="/register">Register</Link>
+      </p>
     </div>
   );
 }
-
-export default Login;

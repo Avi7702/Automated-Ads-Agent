@@ -222,6 +222,20 @@ class Storage {
     await this.db!.delete(sessions).where(lt(sessions.expiresAt, new Date()));
   }
 
+  // Delete all sessions for a user (for session fixation prevention)
+  async deleteAllUserSessions(userId: string): Promise<void> {
+    if (this.inMemory) {
+      for (const [id, session] of this.inMemory.sessions) {
+        if (session.userId === userId) {
+          this.inMemory.sessions.delete(id);
+        }
+      }
+      return;
+    }
+
+    await this.db!.delete(sessions).where(eq(sessions.userId, userId));
+  }
+
   // Product operations (placeholder for protected route testing)
   async createProduct(userId: string, name: string, description?: string): Promise<any> {
     if (this.inMemory) {
