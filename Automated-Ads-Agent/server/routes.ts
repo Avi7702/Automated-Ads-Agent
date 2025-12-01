@@ -217,20 +217,27 @@ router.post('/api/generations/:id/edit', editLimiter, requireAuth, validate(edit
       prompt
     );
 
-    // Update generation with new image
-    const updatedGeneration = await imageStorageService.updateGeneration(
+    // Create new generation linked to parent using saveEdit
+    const newGeneration = await imageStorageService.saveEdit(
       id,
-      result.imageBase64,
-      result.conversationHistory
+      prompt,
+      {
+        userId,
+        prompt: `${existingGeneration.prompt} [EDIT: ${prompt}]`,
+        imageBase64: result.imageBase64,
+        conversationHistory: result.conversationHistory,
+        model: result.model,
+        aspectRatio: existingGeneration.aspectRatio,
+      }
     );
 
-    res.json({
-      id: updatedGeneration.id,
-      prompt: existingGeneration.prompt,
-      imageUrl: updatedGeneration.imageUrl,
-      model: updatedGeneration.model,
-      aspectRatio: updatedGeneration.aspectRatio,
-      createdAt: updatedGeneration.createdAt
+    // Return new format with parentId
+    res.status(201).json({
+      success: true,
+      generationId: newGeneration.id,
+      imageUrl: newGeneration.imageUrl,
+      parentId: id,
+      canEdit: true
     });
   } catch (error) {
     // Same error handling pattern as /api/transform
