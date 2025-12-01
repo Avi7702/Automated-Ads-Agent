@@ -27,6 +27,11 @@ export const generations = pgTable('generations', {
   conversationHistory: jsonb('conversation_history'),
   model: varchar('model', { length: 100 }),
   aspectRatio: varchar('aspect_ratio', { length: 20 }),
+  // Edit tracking columns (Phase 3)
+  // Note: Foreign key constraint can be added at database level; omitted here to avoid circular reference
+  parentGenerationId: uuid('parent_generation_id'),
+  editPrompt: text('edit_prompt'),
+  editCount: integer('edit_count').default(0),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
