@@ -59,6 +59,7 @@ Preferred communication style: Simple, everyday language.
 - `POST /api/transform` - Image transformation endpoint accepting multiple files and text prompt, saves to database and disk with conversation history
 - `GET /api/generations` - Retrieve all generation history (ordered by creation date, limit 50)
 - `GET /api/generations/:id` - Retrieve specific generation by ID with full metadata and canEdit flag
+- `GET /api/generations/:id/history` - Get edit history chain for a generation (all parent generations)
 - `POST /api/generations/:id/edit` - Multi-turn edit endpoint using stored conversation history for targeted tweaks
 - `DELETE /api/generations/:id` - Delete generation from database and remove associated files from disk
 - `POST /api/products` - Upload product to Cloudinary with MIME type validation (images only, 10MB max)
@@ -66,7 +67,18 @@ Preferred communication style: Simple, everyday language.
 - `DELETE /api/products/:id` - Delete product from Cloudinary and database
 - `GET /api/prompt-templates` - Get curated prompt templates (optional category filter)
 - `POST /api/prompt-suggestions` - Generate AI-powered prompt variations using Gemini
+- `POST /api/auth/register` - User registration with email/password
+- `POST /api/auth/login` - User login with lockout protection
+- `POST /api/auth/logout` - User logout
+- `GET /api/auth/me` - Get current authenticated user
 - Static file serving from `/attached_assets` via Express static middleware
+
+**Security Middleware**:
+- Rate limiting on all API routes (100 requests per 15 minutes per IP)
+- Optional Redis-backed rate limiting for production (`USE_REDIS=true`)
+- Session-based authentication with express-session
+- Password hashing with bcrypt (12 salt rounds)
+- Login lockout after 5 failed attempts (15 minute cooldown)
 
 **File Storage Strategy**:
 - Local filesystem storage in `attached_assets/generations/` directory
@@ -110,6 +122,13 @@ promptTemplates {
   id: varchar (primary key, auto-generated UUID)
   prompt: text (curated prompt template)
   category: text (lifestyle, professional, outdoor, urban, nature, luxury)
+  createdAt: timestamp (auto-set)
+}
+
+users {
+  id: varchar (primary key, auto-generated UUID)
+  email: text (unique, required)
+  password: text (bcrypt hashed)
   createdAt: timestamp (auto-set)
 }
 ```
@@ -214,18 +233,37 @@ promptTemplates {
 
 **Template Categories**: Lifestyle, Professional, Outdoor, Urban, Nature, Luxury
 
+## Security Features (Added December 2025)
+
+**Authentication System**:
+- Email/password registration and login
+- bcrypt password hashing with 12 salt rounds
+- Session-based authentication with express-session
+- Login lockout after 5 failed attempts (15 minute cooldown)
+- Protected routes via `requireAuth` middleware
+
+**Rate Limiting**:
+- IP-based rate limiting on all API routes
+- 100 requests per 15 minutes by default
+- In-memory store with optional Redis backend
+- Automatic cleanup of expired entries
+- X-RateLimit headers on responses
+
+**New Files Added**:
+- `server/middleware/rateLimit.ts` - Rate limiting middleware
+- `server/middleware/auth.ts` - Authentication middleware
+- `server/services/authService.ts` - Password hashing and lockout logic
+- `server/lib/redis.ts` - Redis client helper
+- `server/validation/schemas.ts` - Zod validation schemas
+- `client/src/components/EditPanel.tsx` - Standalone edit panel component
+- `client/src/components/EditHistory.tsx` - Edit history viewer component
+
 ## Known Limitations
 
-**Authentication**: Currently no user authentication or session management. API endpoints are publicly accessible.
-
-**Rate Limiting**: No rate limiting on Gemini API calls. In production, consider implementing:
-- Per-IP request throttling
-- API key authentication for external access
-- User quotas for AI generation credits
-- CAPTCHA for abuse prevention
+**Authentication Status**: Basic email/password authentication is implemented. Consider upgrading to Replit Auth for OAuth support.
 
 **Future Improvements**:
-- Add authentication system (Replit Auth recommended)
-- Implement rate limiting middleware (e.g., express-rate-limit)
 - Add usage analytics and quota tracking
 - Server-side file type sniffing for enhanced upload security
+- Add OAuth providers (Google, GitHub)
+- Implement user-specific generation limits

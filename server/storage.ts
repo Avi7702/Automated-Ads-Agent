@@ -5,9 +5,12 @@ import {
   type InsertProduct,
   type PromptTemplate,
   type InsertPromptTemplate,
+  type User,
+  type InsertUser,
   generations,
   products,
-  promptTemplates
+  promptTemplates,
+  users
 } from "@shared/schema";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
@@ -26,6 +29,7 @@ export interface IStorage {
   getGenerations(limit?: number): Promise<Generation[]>;
   getGenerationById(id: string): Promise<Generation | undefined>;
   deleteGeneration(id: string): Promise<void>;
+  getEditHistory(generationId: string): Promise<Generation[]>;
   
   // Product CRUD operations
   saveProduct(product: InsertProduct): Promise<Product>;
@@ -38,6 +42,11 @@ export interface IStorage {
   getPromptTemplates(category?: string): Promise<PromptTemplate[]>;
   getPromptTemplateById(id: string): Promise<PromptTemplate | undefined>;
   deletePromptTemplate(id: string): Promise<void>;
+  
+  // User CRUD operations
+  createUser(user: InsertUser): Promise<User>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  getUserById(id: string): Promise<User | undefined>;
 }
 
 export class DbStorage implements IStorage {
@@ -141,6 +150,45 @@ export class DbStorage implements IStorage {
 
   async deletePromptTemplate(id: string): Promise<void> {
     await db.delete(promptTemplates).where(eq(promptTemplates.id, id));
+  }
+
+  async getEditHistory(generationId: string): Promise<Generation[]> {
+    const history: Generation[] = [];
+    let currentId: string | null = generationId;
+
+    while (currentId) {
+      const generation = await this.getGenerationById(currentId);
+      if (!generation) break;
+
+      history.push(generation);
+      currentId = generation.parentGenerationId;
+    }
+
+    return history.reverse(); // Oldest first
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
+    return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email));
+    return user;
+  }
+
+  async getUserById(id: string): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, id));
+    return user;
   }
 }
 
