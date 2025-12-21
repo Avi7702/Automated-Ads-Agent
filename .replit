@@ -6,29 +6,18 @@ hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 channel = "stable-24_05"
 
 [deployment]
-deploymentTarget = "autoscale"
+deploymentTarget = "static"
 build = ["npm", "run", "build"]
-run = ["npm", "run", "start"]
+publicDir = "dist/public"
 
 [[ports]]
 localPort = 5000
 externalPort = 80
 
-<<<<<<< HEAD
-=======
 [[ports]]
-localPort = 33377
-externalPort = 3002
-
-[[ports]]
-localPort = 35543
-externalPort = 3000
-
-[[ports]]
-localPort = 36635
+localPort = 37579
 externalPort = 3001
 
->>>>>>> 47b549acf2c111b4c061ae77e8feb450ffecb970
 [env]
 PORT = "5000"
 
@@ -50,9 +39,8 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "npm run dev"
+args = "npm run dev:client"
 waitForPort = 5000
 
 [agent]
-mockupState = "FULLSTACK"
-integrations = ["javascript_gemini_ai_integrations:1.0.0"]
+mockupState = "MOCKUP"
