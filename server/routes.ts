@@ -8,6 +8,9 @@ import { insertGenerationSchema, insertProductSchema, insertPromptTemplateSchema
 import express from "express";
 import path from "path";
 import { v2 as cloudinary } from "cloudinary";
+import { authService } from "./services/authService";
+import { requireAuth } from "./middleware/auth";
+import { createRateLimiter } from "./middleware/rateLimit";
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -48,6 +51,111 @@ const genai = new GoogleGenAI({
 export async function registerRoutes(app: Express): Promise<Server> {
   // Serve static files from attached_assets directory
   app.use("/attached_assets", express.static(path.join(process.cwd(), "attached_assets")));
+  
+  // Apply rate limiting to API routes
+  const rateLimiter = createRateLimiter({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    maxRequests: 100,
+    useRedis: process.env.USE_REDIS === 'true'
+  });
+  app.use("/api/", rateLimiter);
+
+  // ===== AUTH ROUTES =====
+  
+  // POST /api/auth/register
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email and password required" });
+      }
+
+      if (password.length < 8) {
+        return res.status(400).json({ error: "Password must be at least 8 characters" });
+      }
+
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(409).json({ error: "User already exists" });
+      }
+
+      const hashedPassword = await authService.hashPassword(password);
+      const user = await storage.createUser({ email, password: hashedPassword });
+
+      (req as any).session.userId = user.id;
+      res.json({ id: user.id, email: user.email });
+    } catch (error: any) {
+      console.error("[Auth Register] Error:", error);
+      res.status(500).json({ error: "Registration failed" });
+    }
+  });
+
+  // POST /api/auth/login
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email and password required" });
+      }
+
+      // Check lockout
+      if (authService.isLockedOut(email)) {
+        const remaining = authService.getLockoutTimeRemaining(email);
+        return res.status(429).json({ 
+          error: "Too many failed attempts. Try again later.",
+          retryAfter: remaining
+        });
+      }
+
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        authService.recordFailedLogin(email);
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      const valid = await authService.comparePassword(password, user.password);
+      if (!valid) {
+        authService.recordFailedLogin(email);
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      authService.clearFailedLogins(email);
+      (req as any).session.userId = user.id;
+      res.json({ id: user.id, email: user.email });
+    } catch (error: any) {
+      console.error("[Auth Login] Error:", error);
+      res.status(500).json({ error: "Login failed" });
+    }
+  });
+
+  // POST /api/auth/logout
+  app.post("/api/auth/logout", (req, res) => {
+    (req as any).session.destroy((err: any) => {
+      if (err) {
+        return res.status(500).json({ error: "Logout failed" });
+      }
+      res.json({ success: true });
+    });
+  });
+
+  // GET /api/auth/me
+  app.get("/api/auth/me", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).session.userId;
+      const user = await storage.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json({ id: user.id, email: user.email });
+    } catch (error: any) {
+      console.error("[Auth Me] Error:", error);
+      res.status(500).json({ error: "Failed to get user" });
+    }
+  });
+
+  // ===== END AUTH ROUTES =====
   
   // Image transformation endpoint (supports both image transformation and text-only generation)
   app.post("/api/transform", upload.array("images", 6), async (req, res) => {
@@ -215,6 +323,30 @@ Guidelines:
     } catch (error: any) {
       console.error("[Generation] Error:", error);
       res.status(500).json({ error: "Failed to fetch generation" });
+    }
+  });
+
+  // Get edit history for a generation
+  app.get("/api/generations/:id/history", async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const generation = await storage.getGenerationById(id);
+      if (!generation) {
+        return res.status(404).json({ error: "Generation not found" });
+      }
+
+      // Get full edit chain
+      const history = await storage.getEditHistory(id);
+
+      res.json({
+        current: generation,
+        history: history,
+        totalEdits: history.length - 1 // Subtract 1 because the original is included
+      });
+    } catch (error: any) {
+      console.error("[Generation History] Error:", error);
+      res.status(500).json({ error: "Failed to fetch generation history" });
     }
   });
 

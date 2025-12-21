@@ -1,0 +1,282 @@
+# Replit Agent Handoff Document
+
+## Summary
+
+Add-on features for the Automated-Ads-Agent project - ready for **selective integration**.
+
+**Branch:** `claude/task-3.4-frontend-edit-ui`
+**GitHub Repo:** https://github.com/Avi7702/Automated-Ads-Agent
+
+---
+
+## CRITICAL Configuration Notes
+
+### 1. SDK - Use @google/genai (NOT @google/generative-ai)
+
+```typescript
+import { GoogleGenAI } from '@google/genai';
+
+const genAI = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
+const model = genAI.getGenerativeModel({
+  model: 'gemini-3-pro-image-preview',
+  generationConfig: {
+    responseModalities: ['TEXT', 'IMAGE']
+  }
+});
+```
+
+### 2. Environment Variable
+
+Use `GOOGLE_API_KEY` (NOT `GEMINI_API_KEY`)
+
+### 3. Edit Endpoint Method
+
+Use `POST /api/generations/:id/edit` (NOT PUT)
+
+### 4. Match Existing Schema
+
+Schema already has: `parentGenerationId`, `editPrompt`, `conversationHistory` - don't rename these.
+
+---
+
+## Files To Include (NEW FILES ONLY)
+
+### SAFE TO COPY - These are new files:
+
+| File | Description |
+|------|-------------|
+| `server/middleware/rateLimit.ts` | IP-based rate limiting |
+| `server/middleware/auth.ts` | Auth middleware |
+| `server/services/authService.ts` | bcrypt password hashing |
+| `server/lib/redis.ts` | Redis client helper |
+| `server/validation/schemas.ts` | Zod validation schemas |
+| `client/src/components/EditPanel.tsx` | Edit panel component |
+| `client/src/components/EditHistory.tsx` | History component |
+
+---
+
+## DO NOT INCLUDE
+
+| File | Reason |
+|------|--------|
+| `server/services/geminiService.ts` | Already working in Replit |
+| `server/routes.ts` | Don't overwrite - see snippets below |
+| `server/storage.ts` | Don't overwrite - see snippets below |
+| `client/` folder (except EditPanel & EditHistory) | UI already working |
+
+---
+
+## Code Snippets (Add to existing files)
+
+### Auth Routes (add to your routes.ts)
+
+```typescript
+import { authService } from './services/authService';
+import { requireAuth } from './middleware/auth';
+
+// POST /api/auth/register
+app.post('/api/auth/register', async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password required' });
+  }
+
+  const existingUser = await storage.getUserByEmail(email);
+  if (existingUser) {
+    return res.status(409).json({ error: 'User already exists' });
+  }
+
+  const hashedPassword = await authService.hashPassword(password);
+  const user = await storage.createUser({ email, password: hashedPassword });
+
+  req.session.userId = user.id;
+  res.json({ id: user.id, email: user.email });
+});
+
+// POST /api/auth/login
+app.post('/api/auth/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  const user = await storage.getUserByEmail(email);
+  if (!user) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+
+  const valid = await authService.comparePassword(password, user.password);
+  if (!valid) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+
+  req.session.userId = user.id;
+  res.json({ id: user.id, email: user.email });
+});
+
+// POST /api/auth/logout
+app.post('/api/auth/logout', (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).json({ error: 'Logout failed' });
+    }
+    res.json({ success: true });
+  });
+});
+
+// GET /api/auth/me
+app.get('/api/auth/me', requireAuth, async (req, res) => {
+  const user = await storage.getUserById(req.session.userId);
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+  res.json({ id: user.id, email: user.email });
+});
+```
+
+### History Endpoint (add to your routes.ts)
+
+```typescript
+// GET /api/generations/:id/history
+app.get('/api/generations/:id/history', async (req, res) => {
+  const { id } = req.params;
+
+  const generation = await storage.getGenerationById(Number(id));
+  if (!generation) {
+    return res.status(404).json({ error: 'Generation not found' });
+  }
+
+  // Get full edit chain
+  const history = await storage.getEditHistory(Number(id));
+
+  res.json({
+    current: generation,
+    history: history,
+    totalEdits: history.length
+  });
+});
+```
+
+### New Storage Methods (add to your storage.ts)
+
+```typescript
+// Get edit history for a generation
+async getEditHistory(generationId: number): Promise<Generation[]> {
+  const history: Generation[] = [];
+  let currentId: number | null = generationId;
+
+  while (currentId) {
+    const generation = await this.getGenerationById(currentId);
+    if (!generation) break;
+
+    history.push(generation);
+    currentId = generation.parentGenerationId;
+  }
+
+  return history.reverse(); // Oldest first
+}
+
+// Save an edit (creates new generation linked to parent)
+async saveEdit(parentId: number, editPrompt: string, newImageUrl: string): Promise<Generation> {
+  const parent = await this.getGenerationById(parentId);
+  if (!parent) {
+    throw new Error('Parent generation not found');
+  }
+
+  // Build conversation history
+  const parentHistory = parent.conversationHistory || [];
+  const newHistory = [
+    ...parentHistory,
+    { role: 'user', content: editPrompt },
+    { role: 'assistant', content: 'Image edited successfully', imageUrl: newImageUrl }
+  ];
+
+  const newGeneration = await this.createGeneration({
+    userId: parent.userId,
+    prompt: editPrompt,
+    imageUrl: newImageUrl,
+    parentGenerationId: parentId,
+    editPrompt: editPrompt,
+    conversationHistory: newHistory
+  });
+
+  return newGeneration;
+}
+```
+
+---
+
+## Dependencies to Add (if not present)
+
+```json
+{
+  "zod": "^3.23.0",
+  "ioredis": "^5.4.1",
+  "bcrypt": "^5.1.1"
+}
+```
+
+**Note:** `@google/genai` should already be installed in Replit.
+
+---
+
+## Rate Limiting Setup
+
+The rate limiter can use in-memory or Redis storage:
+
+```typescript
+// In your app.ts
+import { createRateLimiter } from './middleware/rateLimit';
+
+// Use Redis in production
+const rateLimiter = createRateLimiter({
+  useRedis: process.env.USE_REDIS === 'true',
+  redisUrl: process.env.REDIS_URL
+});
+
+app.use('/api/', rateLimiter);
+```
+
+---
+
+## Testing
+
+Test the new auth endpoints:
+```bash
+# Register
+curl -X POST http://localhost:5000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password123"}'
+
+# Login
+curl -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password123"}'
+
+# History
+curl http://localhost:5000/api/generations/1/history
+```
+
+---
+
+## Summary of What To Do
+
+1. Copy these NEW files:
+   - `server/middleware/rateLimit.ts`
+   - `server/middleware/auth.ts`
+   - `server/services/authService.ts`
+   - `server/lib/redis.ts`
+   - `server/validation/schemas.ts`
+   - `client/src/components/EditPanel.tsx`
+   - `client/src/components/EditHistory.tsx`
+
+2. Add code snippets above to:
+   - Your existing `routes.ts`
+   - Your existing `storage.ts`
+
+3. Add dependencies if missing: `zod`, `ioredis`, `bcrypt`
+
+4. Do NOT replace any existing files
+
+---
+
+Created: December 1, 2025
+Branch: `claude/task-3.4-frontend-edit-ui`
