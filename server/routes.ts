@@ -480,14 +480,19 @@ Guidelines:
       ];
 
       // Generate content with image input using Gemini image generation model
+      // MUST use genaiImage (direct Google API) - Replit AI Integrations doesn't support image models
+      if (!genaiImage) {
+        throw new Error("Image generation requires GEMINI_API_KEY or GOOGLE_API_KEY (direct API, not AI Integrations)");
+      }
+      
       const modelName = "gemini-3-pro-image-preview";
       const validResolutions = ["1K", "2K", "4K"];
       const requestedResolution = validResolutions.includes(req.body.resolution) 
         ? req.body.resolution 
         : "2K";
-      console.log(`[Transform] Using model: ${modelName}, resolution: ${requestedResolution}`);
+      console.log(`[Transform] Using model: ${modelName}, resolution: ${requestedResolution} (direct Google API)`);
       
-      const result = await genai.models.generateContent({
+      const result = await genaiImage.models.generateContent({
         model: modelName,
         contents,
         config: {
@@ -773,10 +778,18 @@ Guidelines:
 
       // Call Gemini with the full conversation history
       // The thought signatures in the history allow Gemini to "remember" the image
-      const modelName = "gemini-3-pro-image-preview";
-      console.log(`[Edit] Using model: ${modelName}`);
+      // MUST use genaiImage (direct Google API) - Replit AI Integrations doesn't support image models
+      if (!genaiImage) {
+        return res.status(500).json({ 
+          success: false, 
+          error: "Image editing requires GEMINI_API_KEY or GOOGLE_API_KEY (direct API)" 
+        });
+      }
       
-      const result = await genai.models.generateContent({
+      const modelName = "gemini-3-pro-image-preview";
+      console.log(`[Edit] Using model: ${modelName} (direct Google API)`);
+      
+      const result = await genaiImage.models.generateContent({
         model: modelName,
         contents: history,
       });
