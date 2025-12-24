@@ -40,7 +40,7 @@ if (isCloudinaryConfigured) {
 }
 
 // Validate and initialize Gemini client using direct Google API
-const geminiApiKey = process.env.GOOGLE_API_KEY_TEST || process.env.GOOGLE_API_KEY;
+const geminiApiKey = process.env.GOOGLE_API_KEY_TEST;
 if (!geminiApiKey) {
   throw new Error("[Gemini] Missing GOOGLE_API_KEY");
 }

@@ -2,7 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 import { storage } from "../storage";
 import type { InsertAdCopy, AdCopy } from "@shared/schema";
 
-const copywritingApiKey = process.env.GOOGLE_API_KEY_TEST || process.env.GOOGLE_API_KEY;
+const copywritingApiKey = process.env.GOOGLE_API_KEY_TEST;
 if (!copywritingApiKey) {
   console.warn("[Copywriting] Missing GOOGLE_API_KEY - copywriting features disabled");
 }
