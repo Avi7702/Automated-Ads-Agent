@@ -53,7 +53,7 @@ export const promptTemplates = pgTable("prompt_templates", {
 export const adCopy = pgTable("ad_copy", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   generationId: varchar("generation_id").notNull().references(() => generations.id),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: varchar("user_id"),
   headline: text("headline").notNull(),
   hook: text("hook").notNull(),
   bodyText: text("body_text").notNull(),

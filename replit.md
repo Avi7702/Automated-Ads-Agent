@@ -45,6 +45,14 @@ Preferred communication style: Simple, everyday language.
 - Quick edit presets: Warmer lighting, Cooler tones, Add shadows, Softer look, More contrast, Blur background
 - Edit lineage tracking: see which generation an edit was based on
 - One-click download of generated marketing images
+- **AI Ad Copywriting**: Generate platform-optimized ad copy for generated images with:
+  - 5 social platforms: Instagram, LinkedIn, Twitter/X, Facebook, TikTok
+  - 6 tone options: Professional, Casual, Fun, Luxury, Minimal, Authentic
+  - 4 copywriting frameworks: AIDA, PAS, BAB, FAB (or auto-select)
+  - Headlines, hooks, captions, CTAs, and hashtags
+  - Quality scoring with relevance, engagement, and clarity metrics
+  - Copy-to-clipboard functionality
+  - Multiple variations per generation
 
 ### Backend Architecture
 
@@ -71,6 +79,10 @@ Preferred communication style: Simple, everyday language.
 - `POST /api/auth/login` - User login with lockout protection
 - `POST /api/auth/logout` - User logout
 - `GET /api/auth/me` - Get current authenticated user
+- `POST /api/copy/generate` - Generate AI ad copy for a generation (platform, tone, product details)
+- `GET /api/copy/generation/:id` - Get all copy variations for a generation
+- `GET /api/copy/:id` - Get specific copy by ID
+- `DELETE /api/copy/:id` - Delete copy
 - Static file serving from `/attached_assets` via Express static middleware
 
 **Security Middleware**:

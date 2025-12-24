@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { useState } from "react";
+import { CopywritingPanel } from "@/components/CopywritingPanel";
 
 const QUICK_EDITS = [
   { label: "Warmer lighting", prompt: "Make the lighting warmer and more golden" },
@@ -329,6 +330,8 @@ export default function GenerationDetail() {
               </div>
             </div>
           </div>
+
+          <CopywritingPanel generationId={generation.id} prompt={generation.prompt} />
         </div>
       </main>
     </div>
