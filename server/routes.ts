@@ -223,11 +223,20 @@ Guidelines:
 
       // Generate content with image input using Gemini image generation model
       const modelName = "gemini-3-pro-image-preview";
-      console.log(`[Transform] Using model: ${modelName}`);
+      const validResolutions = ["1K", "2K", "4K"];
+      const requestedResolution = validResolutions.includes(req.body.resolution) 
+        ? req.body.resolution 
+        : "2K";
+      console.log(`[Transform] Using model: ${modelName}, resolution: ${requestedResolution}`);
       
       const result = await genai.models.generateContent({
         model: modelName,
         contents,
+        config: {
+          imageConfig: {
+            imageSize: requestedResolution, // "1K", "2K", or "4K"
+          }
+        }
       });
       
       console.log(`[Transform] Model response - modelVersion: ${result.modelVersion}, candidates: ${result.candidates?.length}`);
@@ -269,7 +278,7 @@ Guidelines:
           prompt,
           originalImagePaths,
           generatedImagePath,
-          resolution: "2K",
+          resolution: requestedResolution,
           conversationHistory,  // Pass as object, Drizzle handles JSONB
           parentGenerationId: null,
           editPrompt: null,

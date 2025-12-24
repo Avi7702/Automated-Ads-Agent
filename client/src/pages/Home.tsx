@@ -170,6 +170,7 @@ export default function Home() {
       });
       
       formData.append("prompt", prompt);
+      formData.append("resolution", resolution);
       
       const response = await fetch("/api/transform", {
         method: "POST",
