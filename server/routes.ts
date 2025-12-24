@@ -41,15 +41,24 @@ if (isCloudinaryConfigured) {
   });
 }
 
-// Validate and initialize Gemini client using direct Google API
-// Using GEMINI_API_KEY with fallback to GOOGLE_API_KEY for backward compatibility
-const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+// Validate and initialize Gemini client
+// Priority: Replit AI Integrations > GEMINI_API_KEY > GOOGLE_API_KEY
+const apiKey = process.env.AI_INTEGRATIONS_GEMINI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+const isReplitAI = !!process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
 if (!apiKey) {
-  throw new Error("[Gemini] Missing GEMINI_API_KEY (or GOOGLE_API_KEY)");
+  throw new Error("[Gemini] Missing API key (AI_INTEGRATIONS_GEMINI_API_KEY, GEMINI_API_KEY, or GOOGLE_API_KEY)");
 }
+
+console.log(`[Gemini] Using ${isReplitAI ? 'Replit AI Integrations' : 'direct API'} key`);
 
 const genai = new GoogleGenAI({
   apiKey,
+  ...(isReplitAI && {
+    httpOptions: {
+      baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
+      apiVersion: '',
+    },
+  }),
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
