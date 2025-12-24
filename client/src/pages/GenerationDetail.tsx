@@ -52,6 +52,7 @@ export default function GenerationDetail() {
   const [isAskAIOpen, setIsAskAIOpen] = useState(false);
   const [askAIQuestion, setAskAIQuestion] = useState("");
   const [askAIResponse, setAskAIResponse] = useState<string | null>(null);
+  const [lastAskedQuestion, setLastAskedQuestion] = useState<string | null>(null);
   const [isAskingAI, setIsAskingAI] = useState(false);
   const [askAIError, setAskAIError] = useState<string | null>(null);
 
@@ -122,6 +123,7 @@ export default function GenerationDetail() {
     setIsAskingAI(true);
     setAskAIError(null);
     setAskAIResponse(null);
+    setLastAskedQuestion(q.trim());
 
     try {
       const response = await fetch(`/api/generations/${generation.id}/analyze`, {
@@ -150,6 +152,7 @@ export default function GenerationDetail() {
     setIsAskAIOpen(false);
     setAskAIQuestion("");
     setAskAIResponse(null);
+    setLastAskedQuestion(null);
     setAskAIError(null);
   };
 
@@ -409,10 +412,31 @@ export default function GenerationDetail() {
                 </div>
               )}
 
-              {askAIResponse && (
-                <div className="bg-muted/50 rounded-xl p-4 space-y-2" data-testid="ask-ai-response">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">AI Response</p>
-                  <p className="text-sm whitespace-pre-wrap leading-relaxed">{askAIResponse}</p>
+              {(askAIResponse || isAskingAI) && lastAskedQuestion && (
+                <div className="space-y-3">
+                  <div className="bg-muted/30 rounded-lg p-3 border-l-2 border-muted-foreground/30">
+                    <p className="text-xs text-muted-foreground mb-1">You asked:</p>
+                    <p className="text-sm italic">"{lastAskedQuestion}"</p>
+                  </div>
+                  
+                  {isAskingAI && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Analyzing images and thinking...</span>
+                    </div>
+                  )}
+                  
+                  {askAIResponse && (
+                    <div className="bg-muted/50 rounded-xl p-4 space-y-2 border border-primary/20" data-testid="ask-ai-response">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-primary" />
+                        <p className="text-xs font-medium text-primary uppercase tracking-wider">AI Response</p>
+                      </div>
+                      <div className="max-h-64 overflow-y-auto pr-2">
+                        <p className="text-sm whitespace-pre-wrap leading-relaxed">{askAIResponse}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

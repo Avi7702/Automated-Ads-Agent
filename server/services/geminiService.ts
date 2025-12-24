@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 
 export interface ConversationMessage {
   role: 'user' | 'model';
@@ -23,7 +23,7 @@ export interface GenerateOptions {
 }
 
 export class GeminiService {
-  private readonly genAI: GoogleGenerativeAI;
+  private readonly genAI: GoogleGenAI;
   private readonly modelName = 'gemini-3-pro-image-preview';
 
   constructor() {
@@ -31,151 +31,7 @@ export class GeminiService {
     if (!apiKey) {
       throw new Error('GOOGLE_API_KEY is not set in environment variables');
     }
-    this.genAI = new GoogleGenerativeAI(apiKey);
-  }
-
-  async generateImage(prompt: string, options?: GenerateOptions): Promise<GenerateResult> {
-    const model = this.genAI.getGenerativeModel({
-      model: this.modelName,
-      generationConfig: {
-        responseModalities: ['TEXT', 'IMAGE']
-      } as any
-    });
-
-    // Build the user message parts
-    const userParts: ConversationMessage['parts'] = [{ text: prompt }];
-
-    // Add aspect ratio to prompt if specified
-    let enhancedPrompt = prompt;
-    if (options?.aspectRatio) {
-      enhancedPrompt = `${prompt} [Aspect ratio: ${options.aspectRatio}]`;
-      userParts[0].text = enhancedPrompt;
-    }
-
-    // Add reference images if provided
-    if (options?.referenceImages && options.referenceImages.length > 0) {
-      for (const refImage of options.referenceImages) {
-        userParts.push({
-          inlineData: {
-            mimeType: 'image/png',
-            data: refImage
-          }
-        });
-      }
-    }
-
-    // Create conversation history
-    const conversationHistory: ConversationMessage[] = [
-      {
-        role: 'user',
-        parts: userParts
-      }
-    ];
-
-    // Generate content
-    const result = await model.generateContent(enhancedPrompt);
-    const response = result.response;
-
-    // Extract image data from response
-    const candidate = response.candidates?.[0];
-    if (!candidate?.content?.parts) {
-      throw new Error('No content in response');
-    }
-
-    let imageData = '';
-    let mimeType = 'image/png';
-
-    for (const part of candidate.content.parts) {
-      if (part.inlineData) {
-        imageData = part.inlineData.data;
-        mimeType = part.inlineData.mimeType || 'image/png';
-        break;
-      }
-    }
-
-    if (!imageData) {
-      throw new Error('No image data in response');
-    }
-
-    // Add model response to conversation history
-    conversationHistory.push({
-      role: 'model',
-      parts: [{
-        inlineData: {
-          mimeType,
-          data: imageData
-        }
-      }]
-    });
-
-    return {
-      imageBase64: imageData,
-      conversationHistory,
-      model: this.modelName
-    };
-  }
-
-  async continueConversation(
-    history: ConversationMessage[],
-    editPrompt: string
-  ): Promise<GenerateResult> {
-    const model = this.genAI.getGenerativeModel({
-      model: this.modelName,
-      generationConfig: {
-        responseModalities: ['TEXT', 'IMAGE']
-      } as any
-    });
-
-    // Create new history with the edit prompt
-    const newHistory: ConversationMessage[] = [
-      ...history,
-      {
-        role: 'user',
-        parts: [{ text: editPrompt }]
-      }
-    ];
-
-    // Generate content with the conversation history
-    const result = await model.generateContent(editPrompt);
-    const response = result.response;
-
-    // Extract image data from response
-    const candidate = response.candidates?.[0];
-    if (!candidate?.content?.parts) {
-      throw new Error('No content in response');
-    }
-
-    let imageData = '';
-    let mimeType = 'image/png';
-
-    for (const part of candidate.content.parts) {
-      if (part.inlineData) {
-        imageData = part.inlineData.data;
-        mimeType = part.inlineData.mimeType || 'image/png';
-        break;
-      }
-    }
-
-    if (!imageData) {
-      throw new Error('No image data in response');
-    }
-
-    // Add model response to conversation history
-    newHistory.push({
-      role: 'model',
-      parts: [{
-        inlineData: {
-          mimeType,
-          data: imageData
-        }
-      }]
-    });
-
-    return {
-      imageBase64: imageData,
-      conversationHistory: newHistory,
-      model: this.modelName
-    };
+    this.genAI = new GoogleGenAI({ apiKey });
   }
 
   async analyzeGeneration(
@@ -184,14 +40,6 @@ export class GeminiService {
     originalPrompt: string,
     userQuestion: string
   ): Promise<string> {
-    const model = this.genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 1024,
-      }
-    });
-
     const systemContext = `You are an AI assistant helping users understand image transformations. 
 You are looking at:
 1. Original product image(s)
@@ -205,7 +53,6 @@ Be helpful, specific, and give actionable advice. Keep responses concise but inf
       { text: systemContext + "\n\nOriginal image(s):" }
     ];
 
-    // Add original images
     for (const imgData of originalImageBase64) {
       parts.push({
         inlineData: {
@@ -215,7 +62,6 @@ Be helpful, specific, and give actionable advice. Keep responses concise but inf
       });
     }
 
-    // Add generated image
     parts.push({ text: "\n\nTransformed/generated image:" });
     parts.push({
       inlineData: {
@@ -224,12 +70,14 @@ Be helpful, specific, and give actionable advice. Keep responses concise but inf
       }
     });
 
-    // Add user question
     parts.push({ text: `\n\nUser question: ${userQuestion}` });
 
-    const result = await model.generateContent(parts);
-    const response = result.response;
-    const text = response.text();
+    const result = await this.genAI.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: [{ role: 'user', parts }],
+    });
+
+    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!text) {
       throw new Error('No text response from analysis');
