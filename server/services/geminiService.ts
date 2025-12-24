@@ -24,7 +24,7 @@ export interface GenerateOptions {
 
 export class GeminiService {
   private readonly genAI: GoogleGenerativeAI;
-  private readonly modelName = 'gemini-2.5-flash-preview-image-generation';
+  private readonly modelName = 'gemini-3-pro-image-preview';
 
   constructor() {
     const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
