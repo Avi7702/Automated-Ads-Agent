@@ -53,6 +53,44 @@ export const promptTemplates = pgTable("prompt_templates", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Brand profiles for intelligent Idea Bank
+export const brandProfiles = pgTable("brand_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  industry: varchar("industry", { length: 100 }),
+  targetAudience: text("target_audience"),
+  brandVoice: varchar("brand_voice", { length: 50 }), // professional, playful, luxury, minimal, etc.
+  brandValues: text("brand_values").array(),
+  colorPalette: text("color_palette").array(),
+  competitors: text("competitors").array(),
+  uniqueSellingPoints: text("unique_selling_points").array(),
+  preferredStyles: text("preferred_styles").array(), // lifestyle, studio, outdoor, etc.
+  avoidStyles: text("avoid_styles").array(),
+  additionalContext: text("additional_context"),
+  isDefault: integer("is_default").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Cached product analysis from vision AI
+export const productAnalysis = pgTable("product_analysis", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  productId: varchar("product_id").notNull().references(() => products.id),
+  category: varchar("category", { length: 100 }),
+  subcategory: varchar("subcategory", { length: 100 }),
+  materials: text("materials").array(),
+  colors: text("colors").array(),
+  style: varchar("style", { length: 100 }),
+  usageContext: text("usage_context").array(),
+  targetDemographic: text("target_demographic"),
+  pricePoint: varchar("price_point", { length: 50 }), // budget, mid-range, premium, luxury
+  seasonality: text("seasonality").array(),
+  keywords: text("keywords").array(),
+  rawAnalysis: jsonb("raw_analysis"),
+  confidence: real("confidence"),
+  analyzedAt: timestamp("analyzed_at").defaultNow().notNull(),
+});
+
 export const adCopy = pgTable("ad_copy", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   generationId: varchar("generation_id").notNull().references(() => generations.id),
@@ -125,3 +163,18 @@ export const insertAdCopySchema = createInsertSchema(adCopy).omit({
 });
 export type InsertAdCopy = z.infer<typeof insertAdCopySchema>;
 export type AdCopy = typeof adCopy.$inferSelect;
+
+export const insertBrandProfileSchema = createInsertSchema(brandProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertBrandProfile = z.infer<typeof insertBrandProfileSchema>;
+export type BrandProfile = typeof brandProfiles.$inferSelect;
+
+export const insertProductAnalysisSchema = createInsertSchema(productAnalysis).omit({
+  id: true,
+  analyzedAt: true,
+});
+export type InsertProductAnalysis = z.infer<typeof insertProductAnalysisSchema>;
+export type ProductAnalysis = typeof productAnalysis.$inferSelect;

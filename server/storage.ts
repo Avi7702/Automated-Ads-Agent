@@ -11,16 +11,22 @@ import {
   type InsertSession,
   type AdCopy,
   type InsertAdCopy,
+  type BrandProfile,
+  type InsertBrandProfile,
+  type ProductAnalysis,
+  type InsertProductAnalysis,
   generations,
   products,
   promptTemplates,
   users,
   sessions,
-  adCopy
+  adCopy,
+  brandProfiles,
+  productAnalysis
 } from "@shared/schema";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
-import { eq, desc, and, gt } from "drizzle-orm";
+import { eq, desc, and, gt, inArray } from "drizzle-orm";
 
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL must be set");
@@ -68,6 +74,20 @@ export interface IStorage {
   getAdCopyByGenerationId(generationId: string): Promise<AdCopy[]>;
   getAdCopyById(id: string): Promise<AdCopy | undefined>;
   deleteAdCopy(id: string): Promise<void>;
+  
+  // Brand Profile CRUD operations
+  saveBrandProfile(profile: InsertBrandProfile): Promise<BrandProfile>;
+  getBrandProfiles(): Promise<BrandProfile[]>;
+  getDefaultBrandProfile(): Promise<BrandProfile | undefined>;
+  getBrandProfileById(id: string): Promise<BrandProfile | undefined>;
+  updateBrandProfile(id: string, profile: Partial<InsertBrandProfile>): Promise<BrandProfile | undefined>;
+  deleteBrandProfile(id: string): Promise<void>;
+  
+  // Product Analysis CRUD operations
+  saveProductAnalysis(analysis: InsertProductAnalysis): Promise<ProductAnalysis>;
+  getProductAnalysisByProductId(productId: string): Promise<ProductAnalysis | undefined>;
+  getProductAnalysesByProductIds(productIds: string[]): Promise<ProductAnalysis[]>;
+  deleteProductAnalysis(productId: string): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -299,6 +319,82 @@ export class DbStorage implements IStorage {
 
   async deleteAdCopy(id: string): Promise<void> {
     await db.delete(adCopy).where(eq(adCopy.id, id));
+  }
+
+  // Brand Profile CRUD
+  async saveBrandProfile(insertProfile: InsertBrandProfile): Promise<BrandProfile> {
+    const [profile] = await db
+      .insert(brandProfiles)
+      .values(insertProfile)
+      .returning();
+    return profile;
+  }
+
+  async getBrandProfiles(): Promise<BrandProfile[]> {
+    return await db
+      .select()
+      .from(brandProfiles)
+      .orderBy(desc(brandProfiles.createdAt));
+  }
+
+  async getDefaultBrandProfile(): Promise<BrandProfile | undefined> {
+    const [profile] = await db
+      .select()
+      .from(brandProfiles)
+      .where(eq(brandProfiles.isDefault, 1));
+    return profile;
+  }
+
+  async getBrandProfileById(id: string): Promise<BrandProfile | undefined> {
+    const [profile] = await db
+      .select()
+      .from(brandProfiles)
+      .where(eq(brandProfiles.id, id));
+    return profile;
+  }
+
+  async updateBrandProfile(id: string, updates: Partial<InsertBrandProfile>): Promise<BrandProfile | undefined> {
+    const [profile] = await db
+      .update(brandProfiles)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(brandProfiles.id, id))
+      .returning();
+    return profile;
+  }
+
+  async deleteBrandProfile(id: string): Promise<void> {
+    await db.delete(brandProfiles).where(eq(brandProfiles.id, id));
+  }
+
+  // Product Analysis CRUD
+  async saveProductAnalysis(insertAnalysis: InsertProductAnalysis): Promise<ProductAnalysis> {
+    // Upsert - replace existing analysis for this product
+    await db.delete(productAnalysis).where(eq(productAnalysis.productId, insertAnalysis.productId));
+    const [analysis] = await db
+      .insert(productAnalysis)
+      .values(insertAnalysis)
+      .returning();
+    return analysis;
+  }
+
+  async getProductAnalysisByProductId(productId: string): Promise<ProductAnalysis | undefined> {
+    const [analysis] = await db
+      .select()
+      .from(productAnalysis)
+      .where(eq(productAnalysis.productId, productId));
+    return analysis;
+  }
+
+  async getProductAnalysesByProductIds(productIds: string[]): Promise<ProductAnalysis[]> {
+    if (productIds.length === 0) return [];
+    return await db
+      .select()
+      .from(productAnalysis)
+      .where(inArray(productAnalysis.productId, productIds));
+  }
+
+  async deleteProductAnalysis(productId: string): Promise<void> {
+    await db.delete(productAnalysis).where(eq(productAnalysis.productId, productId));
   }
 }
 
