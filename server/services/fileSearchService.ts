@@ -141,12 +141,10 @@ export async function uploadReferenceFile(params: {
       customMetadata.push({ key: 'description', stringValue: description });
     }
 
-    // Add user-provided metadata
+    // Add user-provided metadata (convert all values to strings)
     for (const [key, value] of Object.entries(metadata)) {
-      if (typeof value === 'string') {
-        customMetadata.push({ key, stringValue: value });
-      } else if (typeof value === 'number') {
-        customMetadata.push({ key, numericValue: value });
+      if (value !== null && value !== undefined) {
+        customMetadata.push({ key, stringValue: String(value) });
       }
     }
 
@@ -263,10 +261,10 @@ export async function queryFileSearchStore(params: {
     // Build metadata filter if category specified
     const metadataFilter = category ? `category="${category}"` : undefined;
 
-    // Use Gemini's File Search tool
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-
-    const result = await model.generateContent({
+    // Use Gemini's File Search tool with new SDK pattern
+    // Note: File Search tools may not be fully typed in the SDK yet
+    const response = await (genAI.models.generateContent as any)({
+      model: 'gemini-2.0-flash-exp',
       contents: [{ role: 'user', parts: [{ text: query }] }],
       tools: [
         {
@@ -278,13 +276,14 @@ export async function queryFileSearchStore(params: {
       ],
     });
 
-    const response = await result.response;
     const citations = (response as any).citations || [];
     resultsCount = citations.length;
     success = true;
 
+    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
     return {
-      context: response.text(),
+      context: text,
       citations,
     };
   } catch (error) {

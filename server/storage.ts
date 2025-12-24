@@ -1,4 +1,4 @@
-import {
+﻿import {
   type Generation,
   type InsertGeneration,
   type Product,
@@ -9,15 +9,27 @@ import {
   type InsertUser,
   type AdCopy,
   type InsertAdCopy,
+  type GenerationUsage,
+  type InsertGenerationUsage,
+  type AdSceneTemplate,
+  type InsertAdSceneTemplate,
+  type BrandProfile,
+  type InsertBrandProfile,
+  type ProductAnalysis,
+  type InsertProductAnalysis,
   generations,
+  generationUsage,
   products,
   promptTemplates,
   users,
-  adCopy
+  adCopy,
+  adSceneTemplates,
+  brandProfiles,
+  productAnalyses,
 } from "@shared/schema";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
-import { eq, desc, ilike } from "drizzle-orm";
+import { and, eq, desc, ilike } from "drizzle-orm";
 
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL must be set");
@@ -58,6 +70,45 @@ export interface IStorage {
   getAdCopyById(id: string): Promise<AdCopy | undefined>;
   deleteAdCopy(id: string): Promise<void>;
   getCopyVariations(parentCopyId: string): Promise<AdCopy[]>;
+
+  // Generation usage/cost tracking
+  saveGenerationUsage(usage: InsertGenerationUsage): Promise<GenerationUsage>;
+  getGenerationUsageRows(params: {
+    brandId: string;
+    operation: string;
+    resolution: string;
+    inputImagesCount: number;
+    limit?: number;
+  }): Promise<{ estimatedCostMicros: number; createdAt: Date }[]>;
+
+  // ============================================
+  // INTELLIGENT IDEA BANK OPERATIONS
+  // ============================================
+
+  // Ad Scene Template CRUD operations
+  saveAdSceneTemplate(template: InsertAdSceneTemplate): Promise<AdSceneTemplate>;
+  getAdSceneTemplates(filters?: {
+    category?: string;
+    isGlobal?: boolean;
+    createdBy?: string;
+  }): Promise<AdSceneTemplate[]>;
+  getAdSceneTemplateById(id: string): Promise<AdSceneTemplate | undefined>;
+  updateAdSceneTemplate(id: string, updates: Partial<InsertAdSceneTemplate>): Promise<AdSceneTemplate>;
+  deleteAdSceneTemplate(id: string): Promise<void>;
+  searchAdSceneTemplates(query: string): Promise<AdSceneTemplate[]>;
+
+  // Brand Profile CRUD operations
+  saveBrandProfile(profile: InsertBrandProfile): Promise<BrandProfile>;
+  getBrandProfileByUserId(userId: string): Promise<BrandProfile | undefined>;
+  updateBrandProfile(userId: string, updates: Partial<InsertBrandProfile>): Promise<BrandProfile>;
+  deleteBrandProfile(userId: string): Promise<void>;
+
+  // Product Analysis CRUD operations
+  saveProductAnalysis(analysis: InsertProductAnalysis): Promise<ProductAnalysis>;
+  getProductAnalysisByProductId(productId: string): Promise<ProductAnalysis | undefined>;
+  getProductAnalysisByFingerprint(fingerprint: string): Promise<ProductAnalysis | undefined>;
+  updateProductAnalysis(productId: string, updates: Partial<InsertProductAnalysis>): Promise<ProductAnalysis>;
+  deleteProductAnalysis(productId: string): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -246,6 +297,196 @@ export class DbStorage implements IStorage {
       .where(eq(adCopy.parentCopyId, parentCopyId))
       .orderBy(adCopy.variationNumber);
   }
+
+  async saveGenerationUsage(insertUsage: InsertGenerationUsage): Promise<GenerationUsage> {
+    const [usage] = await db
+      .insert(generationUsage)
+      .values(insertUsage)
+      .returning();
+    return usage;
+  }
+
+  async getGenerationUsageRows(params: {
+    brandId: string;
+    operation: string;
+    resolution: string;
+    inputImagesCount: number;
+    limit?: number;
+  }): Promise<{ estimatedCostMicros: number; createdAt: Date }[]> {
+    const { brandId, operation, resolution, inputImagesCount, limit = 200 } = params;
+
+    return await db
+      .select({
+        estimatedCostMicros: generationUsage.estimatedCostMicros,
+        createdAt: generationUsage.createdAt,
+      })
+      .from(generationUsage)
+      .where(
+        and(
+          eq(generationUsage.brandId, brandId),
+          eq(generationUsage.operation, operation),
+          eq(generationUsage.resolution, resolution),
+          eq(generationUsage.inputImagesCount, inputImagesCount),
+        ),
+      )
+      .orderBy(desc(generationUsage.createdAt))
+      .limit(limit);
+  }
+
+  // ============================================
+  // AD SCENE TEMPLATE OPERATIONS
+  // ============================================
+
+  async saveAdSceneTemplate(insertTemplate: InsertAdSceneTemplate): Promise<AdSceneTemplate> {
+    const [template] = await db
+      .insert(adSceneTemplates)
+      .values(insertTemplate)
+      .returning();
+    return template;
+  }
+
+  async getAdSceneTemplates(filters?: {
+    category?: string;
+    isGlobal?: boolean;
+    createdBy?: string;
+  }): Promise<AdSceneTemplate[]> {
+    const conditions = [];
+
+    if (filters?.category) {
+      conditions.push(eq(adSceneTemplates.category, filters.category));
+    }
+    if (filters?.isGlobal !== undefined) {
+      conditions.push(eq(adSceneTemplates.isGlobal, filters.isGlobal));
+    }
+    if (filters?.createdBy) {
+      conditions.push(eq(adSceneTemplates.createdBy, filters.createdBy));
+    }
+
+    if (conditions.length > 0) {
+      return await db
+        .select()
+        .from(adSceneTemplates)
+        .where(and(...conditions))
+        .orderBy(desc(adSceneTemplates.createdAt));
+    }
+
+    return await db
+      .select()
+      .from(adSceneTemplates)
+      .orderBy(desc(adSceneTemplates.createdAt));
+  }
+
+  async getAdSceneTemplateById(id: string): Promise<AdSceneTemplate | undefined> {
+    const [template] = await db
+      .select()
+      .from(adSceneTemplates)
+      .where(eq(adSceneTemplates.id, id));
+    return template;
+  }
+
+  async updateAdSceneTemplate(id: string, updates: Partial<InsertAdSceneTemplate>): Promise<AdSceneTemplate> {
+    const [template] = await db
+      .update(adSceneTemplates)
+      .set(updates)
+      .where(eq(adSceneTemplates.id, id))
+      .returning();
+    return template;
+  }
+
+  async deleteAdSceneTemplate(id: string): Promise<void> {
+    await db.delete(adSceneTemplates).where(eq(adSceneTemplates.id, id));
+  }
+
+  async searchAdSceneTemplates(query: string): Promise<AdSceneTemplate[]> {
+    // Search in title, description, and tags
+    const searchTerm = `%${query.toLowerCase()}%`;
+    return await db
+      .select()
+      .from(adSceneTemplates)
+      .where(
+        ilike(adSceneTemplates.title, searchTerm)
+      )
+      .orderBy(desc(adSceneTemplates.createdAt));
+  }
+
+  // ============================================
+  // BRAND PROFILE OPERATIONS
+  // ============================================
+
+  async saveBrandProfile(insertProfile: InsertBrandProfile): Promise<BrandProfile> {
+    const [profile] = await db
+      .insert(brandProfiles)
+      .values(insertProfile)
+      .returning();
+    return profile;
+  }
+
+  async getBrandProfileByUserId(userId: string): Promise<BrandProfile | undefined> {
+    const [profile] = await db
+      .select()
+      .from(brandProfiles)
+      .where(eq(brandProfiles.userId, userId));
+    return profile;
+  }
+
+  async updateBrandProfile(userId: string, updates: Partial<InsertBrandProfile>): Promise<BrandProfile> {
+    const [profile] = await db
+      .update(brandProfiles)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(brandProfiles.userId, userId))
+      .returning();
+    return profile;
+  }
+
+  async deleteBrandProfile(userId: string): Promise<void> {
+    await db.delete(brandProfiles).where(eq(brandProfiles.userId, userId));
+  }
+
+  // ============================================
+  // PRODUCT ANALYSIS OPERATIONS
+  // ============================================
+
+  async saveProductAnalysis(insertAnalysis: InsertProductAnalysis): Promise<ProductAnalysis> {
+    const [analysis] = await db
+      .insert(productAnalyses)
+      .values(insertAnalysis)
+      .returning();
+    return analysis;
+  }
+
+  async getProductAnalysisByProductId(productId: string): Promise<ProductAnalysis | undefined> {
+    const [analysis] = await db
+      .select()
+      .from(productAnalyses)
+      .where(eq(productAnalyses.productId, productId));
+    return analysis;
+  }
+
+  async getProductAnalysisByFingerprint(fingerprint: string): Promise<ProductAnalysis | undefined> {
+    const [analysis] = await db
+      .select()
+      .from(productAnalyses)
+      .where(eq(productAnalyses.imageFingerprint, fingerprint));
+    return analysis;
+  }
+
+  async updateProductAnalysis(productId: string, updates: Partial<InsertProductAnalysis>): Promise<ProductAnalysis> {
+    const [analysis] = await db
+      .update(productAnalyses)
+      .set({ ...updates, analyzedAt: new Date() })
+      .where(eq(productAnalyses.productId, productId))
+      .returning();
+    return analysis;
+  }
+
+  async deleteProductAnalysis(productId: string): Promise<void> {
+    await db.delete(productAnalyses).where(eq(productAnalyses.productId, productId));
+  }
 }
 
 export const storage = new DbStorage();
+
+
+
+
+

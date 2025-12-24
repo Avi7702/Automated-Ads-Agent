@@ -9,6 +9,8 @@ import Gallery from "@/pages/Gallery";
 import GenerationDetail from "@/pages/GenerationDetail";
 import ProductLibrary from "@/pages/ProductLibrary";
 import PromptTemplatesManager from "@/pages/PromptTemplatesManager";
+import BrandProfile from "@/pages/BrandProfile";
+import Templates from "@/pages/Templates";
 
 function Router() {
   return (
@@ -16,7 +18,9 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/library" component={ProductLibrary} />
       <Route path="/prompts" component={PromptTemplatesManager} />
+      <Route path="/templates" component={Templates} />
       <Route path="/gallery" component={Gallery} />
+      <Route path="/brand-profile" component={BrandProfile} />
       <Route path="/generation/:id" component={GenerationDetail} />
       <Route component={NotFound} />
     </Switch>

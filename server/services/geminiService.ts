@@ -16,6 +16,11 @@ export interface GenerateResult {
   imageBase64: string;
   conversationHistory: ConversationMessage[];
   model: string;
+  usageMetadata?: {
+    promptTokenCount?: number;
+    candidatesTokenCount?: number;
+    totalTokenCount?: number;
+  };
 }
 
 export interface GenerateOptions {
@@ -25,7 +30,7 @@ export interface GenerateOptions {
 
 export class GeminiService {
   private readonly genAI: GoogleGenAI;
-  private readonly modelName = 'gemini-3-pro-image-preview';
+  private readonly modelName = 'gemini-2.0-flash-exp';
 
   constructor() {
     const apiKey = process.env.GEMINI_API_KEY;
@@ -41,28 +46,20 @@ export class GeminiService {
     let errorType: string | undefined;
 
     try {
-      const model = this.genAI.getGenerativeModel({
-        model: this.modelName,
-        generationConfig: {
-          // @ts-expect-error - responseModalities is valid for image models
-          responseModalities: ['TEXT', 'IMAGE']
-        }
-      });
-
-      // Build the user message parts
-      const userParts: ConversationMessage['parts'] = [{ text: prompt }];
+      // Build the content parts
+      const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [];
 
       // Add aspect ratio to prompt if specified
       let enhancedPrompt = prompt;
       if (options?.aspectRatio) {
         enhancedPrompt = `${prompt} [Aspect ratio: ${options.aspectRatio}]`;
-        userParts[0].text = enhancedPrompt;
       }
+      parts.push({ text: enhancedPrompt });
 
       // Add reference images if provided
       if (options?.referenceImages && options.referenceImages.length > 0) {
         for (const refImage of options.referenceImages) {
-          userParts.push({
+          parts.push({
             inlineData: {
               mimeType: 'image/png',
               data: refImage
@@ -75,13 +72,18 @@ export class GeminiService {
       const conversationHistory: ConversationMessage[] = [
         {
           role: 'user',
-          parts: userParts
+          parts: parts as ConversationMessage['parts']
         }
       ];
 
-      // Generate content
-      const result = await model.generateContent(enhancedPrompt);
-      const response = result.response;
+      // Generate content using the new SDK pattern
+      const response = await this.genAI.models.generateContent({
+        model: this.modelName,
+        contents: parts,
+        config: {
+          responseModalities: ['TEXT', 'IMAGE']
+        }
+      });
 
       // Extract image data from response
       const candidate = response.candidates?.[0];
@@ -95,7 +97,7 @@ export class GeminiService {
 
       for (const part of candidate.content.parts) {
         if (part.inlineData) {
-          imageData = part.inlineData.data;
+          imageData = part.inlineData.data || '';
           mimeType = part.inlineData.mimeType || 'image/png';
           break;
         }
@@ -122,7 +124,8 @@ export class GeminiService {
       return {
         imageBase64: imageData,
         conversationHistory,
-        model: this.modelName
+        model: this.modelName,
+        usageMetadata: response.usageMetadata
       };
     } catch (error) {
       errorType = errorType || (error instanceof Error ? error.name : 'unknown');
@@ -153,14 +156,6 @@ export class GeminiService {
     let errorType: string | undefined;
 
     try {
-      const model = this.genAI.getGenerativeModel({
-        model: this.modelName,
-        generationConfig: {
-          // @ts-expect-error - responseModalities is valid for image models
-          responseModalities: ['TEXT', 'IMAGE']
-        }
-      });
-
       // Create new history with the edit prompt
       const newHistory: ConversationMessage[] = [
         ...history,
@@ -170,9 +165,20 @@ export class GeminiService {
         }
       ];
 
-      // Generate content with the conversation history
-      const result = await model.generateContent(editPrompt);
-      const response = result.response;
+      // Build contents array from history for the API
+      const contents = newHistory.map(msg => ({
+        role: msg.role,
+        parts: msg.parts
+      }));
+
+      // Generate content using the new SDK pattern
+      const response = await this.genAI.models.generateContent({
+        model: this.modelName,
+        contents,
+        config: {
+          responseModalities: ['TEXT', 'IMAGE']
+        }
+      });
 
       // Extract image data from response
       const candidate = response.candidates?.[0];
@@ -186,7 +192,7 @@ export class GeminiService {
 
       for (const part of candidate.content.parts) {
         if (part.inlineData) {
-          imageData = part.inlineData.data;
+          imageData = part.inlineData.data || '';
           mimeType = part.inlineData.mimeType || 'image/png';
           break;
         }
@@ -213,7 +219,8 @@ export class GeminiService {
       return {
         imageBase64: imageData,
         conversationHistory: newHistory,
-        model: this.modelName
+        model: this.modelName,
+        usageMetadata: response.usageMetadata
       };
     } catch (error) {
       errorType = errorType || (error instanceof Error ? error.name : 'unknown');

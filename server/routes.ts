@@ -1,4 +1,4 @@
-﻿import type { Express } from "express";
+import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
@@ -58,9 +58,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Apply rate limiting to API routes
   const rateLimiter = createRateLimiter({
+    prefix: 'api',
     windowMs: 15 * 60 * 1000, // 15 minutes
-    maxRequests: 100,
-    useRedis: process.env.USE_REDIS === 'true'
+    max: 100,
+    message: 'Too many requests, please try again later'
   });
   app.use("/api/", rateLimiter);
 
@@ -256,23 +257,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       const files = req.files as Express.Multer.File[];
-      const { prompt, resolution } = req.body;
-      
+      const { prompt, resolution, mode, templateId, templateReferenceUrls } = req.body;
+
       if (!prompt) {
         return res.status(400).json({ error: "No prompt provided" });
       }
 
       const hasFiles = files && files.length > 0;
 
-      const selectedResolution = normalizeResolution(resolution) || '2K';
-      console.log(`[Transform] Processing ${hasFiles ? files.length : 0} image(s) with prompt: "${prompt.substring(0, 100)}..."`);
+      // Parse and validate generation mode
+      const generationMode = mode || 'standard';
+      const validModes = ['standard', 'exact_insert', 'inspiration'];
+      if (!validModes.includes(generationMode)) {
+        return res.status(400).json({ error: `Invalid mode. Must be one of: ${validModes.join(', ')}` });
+      }
 
-      // Build the prompt for transformation or generation
+      // Validate template-related parameters
+      if ((generationMode === 'exact_insert' || generationMode === 'inspiration') && !templateId) {
+        return res.status(400).json({ error: `templateId is required for ${generationMode} mode` });
+      }
+
+      const selectedResolution = normalizeResolution(resolution) || '2K';
+      console.log(`[Transform] Processing ${hasFiles ? files.length : 0} image(s) with prompt: "${prompt.substring(0, 100)}..." [Mode: ${generationMode}]`);
+
+      // Fetch template if using template-based mode
+      let template = null;
+      if (templateId) {
+        template = await storage.getAdSceneTemplateById(templateId);
+        if (!template) {
+          return res.status(404).json({ error: "Template not found" });
+        }
+      }
+
+      // Build the prompt for transformation or generation based on mode
       let enhancedPrompt = prompt;
-      
-      if (hasFiles) {
-        if (files.length === 1) {
-          enhancedPrompt = `Transform this product photo based on the following instructions: ${prompt}
+
+      if (generationMode === 'exact_insert' && template) {
+        // EXACT_INSERT MODE: Product must be inserted into template scene with quality constraints
+        if (hasFiles) {
+          enhancedPrompt = `Insert this product into the following scene template while maintaining exact quality standards.
+
+Template Scene: ${template.promptBlueprint}
+
+User Instructions: ${prompt}
+
+CRITICAL QUALITY CONSTRAINTS:
+- Product must be clearly visible and recognizable as the main subject
+- Product lighting must match the template scene's lighting style exactly
+- Product placement must follow the template's placement hints: ${JSON.stringify(template.placementHints || {})}
+- Maintain professional photography quality
+- Scene environment should match template exactly: ${template.environment || 'as described'}
+- Overall mood must match template mood: ${template.mood || 'as described'}
+- Do not add text or watermarks
+- Product must look natural and integrated into the scene, not pasted on
+
+If multiple products provided, arrange them according to the template's composition while maintaining all quality constraints.`;
+        } else {
+          enhancedPrompt = `Generate an image following this scene template exactly.
+
+Template Scene: ${template.promptBlueprint}
+
+User Instructions: ${prompt}
+
+QUALITY CONSTRAINTS:
+- Follow the template's scene description precisely
+- Match lighting style: ${template.lightingStyle || 'as described in template'}
+- Match environment: ${template.environment || 'as described'}
+- Match mood: ${template.mood || 'as described'}
+- Professional photography quality
+- Do not add text or watermarks`;
+        }
+      } else if (generationMode === 'inspiration' && template) {
+        // INSPIRATION MODE: Use template as style guide, but create new scene
+        if (hasFiles) {
+          enhancedPrompt = `Transform this product photo inspired by the following template style, but create a unique scene.
+
+Template Inspiration:
+- Category: ${template.category}
+- Mood: ${template.mood || 'not specified'}
+- Lighting Style: ${template.lightingStyle || 'not specified'}
+- Environment Type: ${template.environment || 'not specified'}
+- General Vibe: ${template.promptBlueprint.slice(0, 200)}
+
+User Instructions: ${prompt}
+
+Guidelines:
+- Keep the product as the hero/focus
+- Capture the template's mood and style, but create a NEW unique scene
+- Maintain professional photography quality
+- Ensure the product is clearly visible and recognizable
+- Do not copy the template scene exactly - be creative while maintaining the aesthetic
+- Do not add text or watermarks`;
+        } else {
+          enhancedPrompt = `Generate an image inspired by this template style, creating a unique scene.
+
+Template Inspiration:
+- Category: ${template.category}
+- Mood: ${template.mood || 'not specified'}
+- Lighting Style: ${template.lightingStyle || 'not specified'}
+- Environment: ${template.environment || 'not specified'}
+
+User Instructions: ${prompt}
+
+Guidelines:
+- Capture the template's aesthetic and mood
+- Create a unique scene, don't copy the template exactly
+- Professional photography quality
+- Do not add text or watermarks`;
+        }
+      } else {
+        // STANDARD MODE: Original behavior
+        if (hasFiles) {
+          if (files.length === 1) {
+            enhancedPrompt = `Transform this product photo based on the following instructions: ${prompt}
 
 Guidelines:
 - Keep the product as the hero/focus
@@ -280,8 +377,8 @@ Guidelines:
 - Ensure the product is clearly visible and recognizable
 - Apply the requested scene, lighting, and style changes
 - Do not add text or watermarks`;
-        } else {
-          enhancedPrompt = `Transform these ${files.length} product photos based on the following instructions: ${prompt}
+          } else {
+            enhancedPrompt = `Transform these ${files.length} product photos based on the following instructions: ${prompt}
 
 Guidelines:
 - Combine/arrange all products in a cohesive scene
@@ -290,14 +387,35 @@ Guidelines:
 - Apply the requested scene, lighting, and style changes
 - Show how the products work together or as a collection
 - Do not add text or watermarks`;
+          }
         }
+        // If no files in standard mode, use prompt as-is for text-only generation
       }
-      // If no files, use prompt as-is for text-only generation
 
       // Build user message parts
       const userParts: any[] = [];
-      
-      // Add all images first (if provided)
+
+      // Add template reference images first (for exact_insert mode)
+      if (generationMode === 'exact_insert' && templateReferenceUrls && Array.isArray(templateReferenceUrls)) {
+        for (const refUrl of templateReferenceUrls.slice(0, 3)) { // Max 3 reference images
+          try {
+            const response = await fetch(refUrl);
+            if (response.ok) {
+              const buffer = await response.arrayBuffer();
+              userParts.push({
+                inlineData: {
+                  mimeType: 'image/jpeg',
+                  data: Buffer.from(buffer).toString('base64'),
+                },
+              });
+            }
+          } catch (err) {
+            console.warn(`[Transform] Failed to fetch template reference image: ${refUrl}`, err);
+          }
+        }
+      }
+
+      // Add product images (if provided)
       if (hasFiles) {
         files.forEach((file, index) => {
           userParts.push({
@@ -308,7 +426,7 @@ Guidelines:
           });
         });
       }
-      
+
       // Then add the prompt
       userParts.push({ text: enhancedPrompt });
 
@@ -405,14 +523,16 @@ Guidelines:
         }
         
         success = true;
-        
+
         // Return the file path for the frontend to use
-        res.json({ 
+        res.json({
           success: true,
           imageUrl: `/${generatedImagePath}`,
           generationId: generation.id,
           prompt: prompt,
-          canEdit: true
+          canEdit: true,
+          mode: generationMode,
+          templateId: templateId || null
         });
       } else {
         errorType = 'no_image_content';
@@ -425,7 +545,7 @@ Guidelines:
       
       telemetry.trackError({
         endpoint: '/api/transform',
-        errorType: errorType,
+        errorType: errorType || 'unknown',
         statusCode: 500,
         userId,
       });
@@ -701,7 +821,7 @@ Guidelines:
       
       telemetry.trackError({
         endpoint: '/api/generations/:id/edit',
-        errorType: errorType,
+        errorType: errorType || 'unknown',
         statusCode: 500,
         userId,
       });
@@ -1267,9 +1387,357 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
     }
   });
 
+  // ============================================
+  // INTELLIGENT IDEA BANK ENDPOINTS
+  // ============================================
+
+  // Analyze a product image (vision analysis)
+  app.post("/api/products/:productId/analyze", requireAuth, async (req, res) => {
+    try {
+      const { productId } = req.params;
+      const userId = (req.session as any).userId;
+      const { forceRefresh } = req.body || {};
+
+      const { visionAnalysisService } = await import('./services/visionAnalysisService');
+      const product = await storage.getProductById(productId);
+
+      if (!product) {
+        return res.status(404).json({ error: "Product not found" });
+      }
+
+      const result = await visionAnalysisService.analyzeProductImage(product, userId, forceRefresh);
+
+      if (!result.success) {
+        const statusCode = result.error.code === "RATE_LIMITED" ? 429 : 500;
+        return res.status(statusCode).json({ error: result.error.message, code: result.error.code });
+      }
+
+      res.json({
+        analysis: result.analysis,
+        fromCache: !forceRefresh,
+      });
+    } catch (error: any) {
+      console.error("[Product Analyze] Error:", error);
+      res.status(500).json({ error: "Failed to analyze product" });
+    }
+  });
+
+  // Get cached analysis for a product
+  app.get("/api/products/:productId/analysis", requireAuth, async (req, res) => {
+    try {
+      const { productId } = req.params;
+      const { visionAnalysisService } = await import('./services/visionAnalysisService');
+
+      const analysis = await visionAnalysisService.getCachedAnalysis(productId);
+
+      if (!analysis) {
+        return res.status(404).json({ error: "No analysis found for this product" });
+      }
+
+      res.json({ analysis });
+    } catch (error: any) {
+      console.error("[Product Analysis Get] Error:", error);
+      res.status(500).json({ error: "Failed to get product analysis" });
+    }
+  });
+
+  // Generate idea bank suggestions
+  app.post("/api/idea-bank/suggest", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const { productId, productIds, userGoal, enableWebSearch, maxSuggestions } = req.body;
+
+      // Support both single productId and multiple productIds
+      const ids = productIds || (productId ? [productId] : []);
+
+      if (ids.length === 0) {
+        return res.status(400).json({ error: "productId or productIds is required" });
+      }
+
+      const { ideaBankService } = await import('./services/ideaBankService');
+
+      // For multiple products, aggregate suggestions from each
+      if (ids.length > 1) {
+        const results = await Promise.all(
+          ids.slice(0, 6).map((id: string) => // Limit to 6 products max
+            ideaBankService.generateSuggestions({
+              productId: id,
+              userId,
+              userGoal,
+              enableWebSearch: enableWebSearch || false,
+              maxSuggestions: 2, // Fewer per product when multiple
+            })
+          )
+        );
+
+        // Filter successful results and aggregate
+        const successfulResults = results.filter(r => r.success);
+        if (successfulResults.length === 0) {
+          return res.status(500).json({ error: "Failed to generate suggestions for all products" });
+        }
+
+        // Merge suggestions and aggregate analysis status
+        const allSuggestions: any[] = [];
+        const aggregateStatus = {
+          visionComplete: false,
+          kbQueried: false,
+          templatesMatched: 0,
+          webSearchUsed: false,
+        };
+
+        for (const result of successfulResults) {
+          if (result.success) {
+            allSuggestions.push(...result.response.suggestions);
+            aggregateStatus.visionComplete = aggregateStatus.visionComplete || result.response.analysisStatus.visionComplete;
+            aggregateStatus.kbQueried = aggregateStatus.kbQueried || result.response.analysisStatus.kbQueried;
+            aggregateStatus.templatesMatched += result.response.analysisStatus.templatesMatched;
+            aggregateStatus.webSearchUsed = aggregateStatus.webSearchUsed || result.response.analysisStatus.webSearchUsed;
+          }
+        }
+
+        // Sort by confidence and limit
+        const sortedSuggestions = allSuggestions
+          .sort((a, b) => b.confidence - a.confidence)
+          .slice(0, Math.min(maxSuggestions || 6, 10));
+
+        return res.json({
+          suggestions: sortedSuggestions,
+          analysisStatus: aggregateStatus,
+        });
+      }
+
+      // Single product flow
+      const result = await ideaBankService.generateSuggestions({
+        productId: ids[0],
+        userId,
+        userGoal,
+        enableWebSearch: enableWebSearch || false,
+        maxSuggestions: Math.min(maxSuggestions || 3, 5),
+      });
+
+      if (!result.success) {
+        const statusCode = result.error.code === "RATE_LIMITED" ? 429 :
+                          result.error.code === "PRODUCT_NOT_FOUND" ? 404 : 500;
+        return res.status(statusCode).json({ error: result.error.message, code: result.error.code });
+      }
+
+      res.json(result.response);
+    } catch (error: any) {
+      console.error("[Idea Bank Suggest] Error:", error);
+      res.status(500).json({ error: "Failed to generate suggestions" });
+    }
+  });
+
+  // Get matched templates for a product
+  app.get("/api/idea-bank/templates/:productId", requireAuth, async (req, res) => {
+    try {
+      const { productId } = req.params;
+      const userId = (req.session as any).userId;
+
+      const { ideaBankService } = await import('./services/ideaBankService');
+
+      const result = await ideaBankService.getMatchedTemplates(productId, userId);
+
+      if (!result) {
+        return res.status(404).json({ error: "Product not found or analysis failed" });
+      }
+
+      res.json({
+        templates: result.templates,
+        productAnalysis: result.analysis,
+      });
+    } catch (error: any) {
+      console.error("[Idea Bank Templates] Error:", error);
+      res.status(500).json({ error: "Failed to get matched templates" });
+    }
+  });
+
+  // ============================================
+  // AD SCENE TEMPLATE ENDPOINTS
+  // ============================================
+
+  // List all templates (with optional filters)
+  app.get("/api/templates", requireAuth, async (req, res) => {
+    try {
+      const { category, isGlobal } = req.query;
+
+      const templates = await storage.getAdSceneTemplates({
+        category: category as string | undefined,
+        isGlobal: isGlobal === "true" ? true : isGlobal === "false" ? false : undefined,
+      });
+
+      res.json({ templates, total: templates.length });
+    } catch (error: any) {
+      console.error("[Templates List] Error:", error);
+      res.status(500).json({ error: "Failed to list templates" });
+    }
+  });
+
+  // Get a single template
+  app.get("/api/templates/:id", requireAuth, async (req, res) => {
+    try {
+      const template = await storage.getAdSceneTemplateById(req.params.id);
+
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+
+      res.json(template);
+    } catch (error: any) {
+      console.error("[Template Get] Error:", error);
+      res.status(500).json({ error: "Failed to get template" });
+    }
+  });
+
+  // Search templates
+  app.get("/api/templates/search", requireAuth, async (req, res) => {
+    try {
+      const { q } = req.query;
+
+      if (!q || typeof q !== "string") {
+        return res.status(400).json({ error: "Query parameter 'q' is required" });
+      }
+
+      const templates = await storage.searchAdSceneTemplates(q);
+      res.json({ templates, total: templates.length });
+    } catch (error: any) {
+      console.error("[Templates Search] Error:", error);
+      res.status(500).json({ error: "Failed to search templates" });
+    }
+  });
+
+  // Create a new template (admin only for now - TODO: add admin check)
+  app.post("/api/templates", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+
+      // TODO: Add admin role check here
+      // if (!await isUserAdmin(userId)) {
+      //   return res.status(403).json({ error: "Admin access required" });
+      // }
+
+      const templateData = {
+        ...req.body,
+        createdBy: userId,
+        isGlobal: req.body.isGlobal ?? true,
+      };
+
+      const template = await storage.saveAdSceneTemplate(templateData);
+      res.status(201).json(template);
+    } catch (error: any) {
+      console.error("[Template Create] Error:", error);
+      res.status(500).json({ error: "Failed to create template" });
+    }
+  });
+
+  // Update a template
+  app.patch("/api/templates/:id", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const template = await storage.getAdSceneTemplateById(req.params.id);
+
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+
+      // Only creator or admin can update
+      // TODO: Add admin check
+      if (template.createdBy !== userId) {
+        return res.status(403).json({ error: "Not authorized to update this template" });
+      }
+
+      const updated = await storage.updateAdSceneTemplate(req.params.id, req.body);
+      res.json(updated);
+    } catch (error: any) {
+      console.error("[Template Update] Error:", error);
+      res.status(500).json({ error: "Failed to update template" });
+    }
+  });
+
+  // Delete a template
+  app.delete("/api/templates/:id", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const template = await storage.getAdSceneTemplateById(req.params.id);
+
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+
+      // Only creator or admin can delete
+      // TODO: Add admin check
+      if (template.createdBy !== userId) {
+        return res.status(403).json({ error: "Not authorized to delete this template" });
+      }
+
+      await storage.deleteAdSceneTemplate(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[Template Delete] Error:", error);
+      res.status(500).json({ error: "Failed to delete template" });
+    }
+  });
+
+  // ============================================
+  // BRAND PROFILE ENDPOINTS
+  // ============================================
+
+  // Get current user's brand profile
+  app.get("/api/brand-profile", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const profile = await storage.getBrandProfileByUserId(userId);
+
+      if (!profile) {
+        return res.status(404).json({ error: "Brand profile not found" });
+      }
+
+      res.json(profile);
+    } catch (error: any) {
+      console.error("[Brand Profile Get] Error:", error);
+      res.status(500).json({ error: "Failed to get brand profile" });
+    }
+  });
+
+  // Create or update brand profile
+  app.put("/api/brand-profile", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+
+      const existing = await storage.getBrandProfileByUserId(userId);
+
+      if (existing) {
+        const updated = await storage.updateBrandProfile(userId, req.body);
+        res.json(updated);
+      } else {
+        const created = await storage.saveBrandProfile({
+          userId,
+          ...req.body,
+        });
+        res.status(201).json(created);
+      }
+    } catch (error: any) {
+      console.error("[Brand Profile Update] Error:", error);
+      res.status(500).json({ error: "Failed to update brand profile" });
+    }
+  });
+
+  // Delete brand profile
+  app.delete("/api/brand-profile", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      await storage.deleteBrandProfile(userId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[Brand Profile Delete] Error:", error);
+      res.status(500).json({ error: "Failed to delete brand profile" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
+
 
 
 

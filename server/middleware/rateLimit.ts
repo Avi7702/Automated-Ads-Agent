@@ -141,3 +141,35 @@ export const loginLimiter = rateLimit({
     });
   },
 });
+
+// Factory function to create custom rate limiters
+export function createRateLimiter(options: {
+  prefix: string;
+  windowMs: number;
+  max: number;
+  message?: string;
+}) {
+  return rateLimit({
+    store: createStore(options.prefix),
+    skip: shouldSkip,
+    windowMs: options.windowMs,
+    max: options.max,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req: Request) => {
+      const userId = (req as any).user?.id;
+      return userId || req.ip || req.socket.remoteAddress || 'unknown';
+    },
+    handler: (req: Request, res: Response) => {
+      const retryAfter = Math.ceil(
+        (req.rateLimit?.resetTime?.getTime() ?? Date.now() + options.windowMs - Date.now()) / 1000
+      );
+      res.status(429).json({
+        error: options.message || 'Too many requests',
+        retryAfter,
+        limit: options.max,
+        windowMs: options.windowMs,
+      });
+    },
+  });
+}

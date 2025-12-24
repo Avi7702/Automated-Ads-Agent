@@ -131,16 +131,8 @@ class CopywritingService {
     const prompt = this.buildPTCFPromptWithRAG(request, variationNumber, ragContext);
 
     // STEP 3: Generate with File Search tool enabled
-    const model = this.genAI.getGenerativeModel({
-      model: 'gemini-3-pro-image-preview',
-      generationConfig: {
-        responseModalities: ['TEXT'],
-        responseSchema: this.getResponseSchema(request.platform),
-      },
-    });
-
     // Configure with File Search tool if available
-    let tools = undefined;
+    let tools: Array<{ fileSearch: { fileSearchStoreNames: string[] } }> | undefined = undefined;
     try {
       const fileSearchStore = await getFileSearchStoreForGeneration();
       tools = [
@@ -154,18 +146,23 @@ class CopywritingService {
       // No File Search available, continue without tools
     }
 
-    const result = await model.generateContent({
+    const response = await this.genAI.models.generateContent({
+      model: 'gemini-2.0-flash-exp',
       contents: [
         {
           role: 'user',
           parts: [{ text: prompt }],
         },
       ],
+      config: {
+        responseModalities: ['TEXT'],
+        responseMimeType: 'application/json',
+        responseSchema: this.getResponseSchema(request.platform),
+      },
       ...(tools && { tools }),
     });
-
-    const response = await result.response;
-    const generatedCopy = JSON.parse(response.text());
+    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const generatedCopy = JSON.parse(text);
 
     // Calculate character counts
     const characterCounts = {
