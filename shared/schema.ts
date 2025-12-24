@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, jsonb, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -26,6 +26,9 @@ export const generations = pgTable("generations", {
   originalImagePaths: text("original_image_paths").array().notNull(),
   generatedImagePath: text("generated_image_path").notNull(),
   resolution: varchar("resolution", { length: 10 }).default("2K"),
+  cost: real("cost"),
+  inputTokens: integer("input_tokens"),
+  outputTokens: integer("output_tokens"),
   conversationHistory: jsonb("conversation_history"),
   parentGenerationId: varchar("parent_generation_id"),
   editPrompt: text("edit_prompt"),

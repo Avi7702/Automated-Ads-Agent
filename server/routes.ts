@@ -239,7 +239,15 @@ Guidelines:
         }
       });
       
-      console.log(`[Transform] Model response - modelVersion: ${result.modelVersion}, candidates: ${result.candidates?.length}`);
+      // Extract usage metadata for cost tracking
+      const usageMetadata = result.usageMetadata;
+      const inputTokens = usageMetadata?.promptTokenCount || 0;
+      const outputTokens = usageMetadata?.candidatesTokenCount || 0;
+      // Image output pricing: $120 per 1M tokens
+      const costPerMillionTokens = 120;
+      const calculatedCost = (outputTokens / 1_000_000) * costPerMillionTokens;
+      
+      console.log(`[Transform] Model response - modelVersion: ${result.modelVersion}, candidates: ${result.candidates?.length}, inputTokens: ${inputTokens}, outputTokens: ${outputTokens}, cost: $${calculatedCost.toFixed(4)}`);
 
       // Check if we got an image back
       if (!result.candidates?.[0]?.content?.parts?.[0]) {
@@ -279,6 +287,9 @@ Guidelines:
           originalImagePaths,
           generatedImagePath,
           resolution: requestedResolution,
+          cost: calculatedCost,
+          inputTokens,
+          outputTokens,
           conversationHistory,  // Pass as object, Drizzle handles JSONB
           parentGenerationId: null,
           editPrompt: null,
@@ -292,7 +303,10 @@ Guidelines:
           imageUrl: `/${generatedImagePath}`,
           generationId: generation.id,
           prompt: prompt,
-          canEdit: true
+          canEdit: true,
+          cost: calculatedCost,
+          inputTokens,
+          outputTokens
         });
       } else {
         throw new Error("Generated content was not an image");
@@ -460,7 +474,14 @@ Guidelines:
         contents: history,
       });
       
-      console.log(`[Edit] Model response - modelVersion: ${result.modelVersion}, candidates: ${result.candidates?.length}`);
+      // Extract usage metadata for cost tracking
+      const usageMetadata = result.usageMetadata;
+      const inputTokens = usageMetadata?.promptTokenCount || 0;
+      const outputTokens = usageMetadata?.candidatesTokenCount || 0;
+      const costPerMillionTokens = 120;
+      const calculatedCost = (outputTokens / 1_000_000) * costPerMillionTokens;
+      
+      console.log(`[Edit] Model response - modelVersion: ${result.modelVersion}, candidates: ${result.candidates?.length}, inputTokens: ${inputTokens}, outputTokens: ${outputTokens}, cost: $${calculatedCost.toFixed(4)}`);
 
       // Extract the new image
       if (!result.candidates?.[0]?.content?.parts) {
@@ -499,6 +520,9 @@ Guidelines:
         parentGenerationId: parentGeneration.id,
         originalImagePaths: parentGeneration.originalImagePaths,
         resolution: parentGeneration.resolution || "2K",
+        cost: calculatedCost,
+        inputTokens,
+        outputTokens,
       });
 
       console.log(`[Edit] Created new generation ${newGeneration.id} from parent ${id}`);
