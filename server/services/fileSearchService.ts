@@ -29,21 +29,30 @@ const genAI = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 const FILE_SEARCH_STORE_NAME = 'nds-copywriting-rag';
 
 // Allowed file types for File Search (Google supports 100+ formats)
-const ALLOWED_FILE_EXTENSIONS = [
+export const ALLOWED_FILE_EXTENSIONS = [
   '.pdf', '.docx', '.doc', '.txt', '.md', '.csv', '.xlsx', '.xls',
   '.pptx', '.ppt', '.json', '.xml', '.yaml', '.yml', '.html', '.htm'
 ];
 
-const MAX_FILE_SIZE_MB = 100; // Google File Search limit
-const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+// Dangerous extensions that should be blocked (security check)
+export const DANGEROUS_EXTENSIONS = ['.exe', '.sh', '.bat', '.cmd', '.ps1'];
+
+export const MAX_FILE_SIZE_MB = 100; // Google File Search limit
+export const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 /**
  * Validate file before upload
+ * Security checks run first (dangerous extensions), then format, then size
  */
-function validateFile(filePath: string, stats: { size: number }): void {
+export function validateFile(filePath: string, stats: { size: number }): void {
   const ext = path.extname(filePath).toLowerCase();
 
-  // Check file extension
+  // SECURITY FIRST: Block dangerous executable files
+  if (DANGEROUS_EXTENSIONS.includes(ext)) {
+    throw new Error(`Dangerous file type blocked: ${ext}`);
+  }
+
+  // Check file extension is in allowed list
   if (!ALLOWED_FILE_EXTENSIONS.includes(ext)) {
     throw new Error(
       `Unsupported file type: ${ext}. Allowed types: ${ALLOWED_FILE_EXTENSIONS.join(', ')}`
@@ -55,12 +64,6 @@ function validateFile(filePath: string, stats: { size: number }): void {
     throw new Error(
       `File too large: ${(stats.size / 1024 / 1024).toFixed(2)}MB (max: ${MAX_FILE_SIZE_MB}MB)`
     );
-  }
-
-  // Block executable files for security
-  const dangerousExtensions = ['.exe', '.sh', '.bat', '.cmd', '.ps1'];
-  if (dangerousExtensions.includes(ext)) {
-    throw new Error(`Dangerous file type blocked: ${ext}`);
   }
 }
 

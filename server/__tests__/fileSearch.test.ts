@@ -9,8 +9,38 @@ const { mockTrackFileSearchUpload, mockTrackFileSearchQuery, mockStat, mockMkdir
   mockReaddir: vi.fn(),
 }));
 
+// Track SDK calls for verification
+const sdkCalls = vi.hoisted(() => ({
+  uploadToFileSearchStore: vi.fn(),
+  generateContent: vi.fn(),
+  listStores: vi.fn(),
+  createStore: vi.fn(),
+  listFiles: vi.fn(),
+  deleteFile: vi.fn(),
+}));
+
 // Mock GoogleGenAI SDK - must be done before import
 vi.mock('@google/genai', () => {
+  class MockGoogleGenAI {
+    fileSearchStores = {
+      list: sdkCalls.listStores,
+      create: sdkCalls.createStore,
+      uploadToFileSearchStore: sdkCalls.uploadToFileSearchStore,
+      listFiles: sdkCalls.listFiles,
+      deleteFile: sdkCalls.deleteFile,
+    };
+    models = {
+      generateContent: sdkCalls.generateContent,
+    };
+  }
+
+  return {
+    GoogleGenAI: MockGoogleGenAI,
+  };
+});
+
+// Helper to set up default mock implementations
+function setupDefaultMocks() {
   const store = {
     name: 'fileSearchStores/test-store-123',
     config: {
@@ -26,48 +56,33 @@ vi.mock('@google/genai', () => {
     result: () => Promise.resolve(file),
   };
 
-  const genAIInstance = {
-    fileSearchStores: {
-      list: () => Promise.resolve([store]),
-      create: () => Promise.resolve(store),
-      uploadToFileSearchStore: () => Promise.resolve(operation),
-      listFiles: () => Promise.resolve([
-        {
-          name: 'files/test-file-1',
-          config: {
-            displayName: 'test-ad.pdf',
-            customMetadata: [
-              { key: 'category', stringValue: 'ad_examples' },
-              { key: 'uploadedAt', stringValue: '2025-12-24T00:00:00.000Z' },
-            ],
-          },
-        },
-      ]),
-      deleteFile: () => Promise.resolve({}),
-    },
-    models: {
-      generateContent: () => Promise.resolve({
-        candidates: [
-          {
-            content: {
-              parts: [{ text: 'Retrieved context from knowledge base' }],
-            },
-          },
+  sdkCalls.listStores.mockImplementation(() => Promise.resolve([store]));
+  sdkCalls.createStore.mockImplementation(() => Promise.resolve(store));
+  sdkCalls.uploadToFileSearchStore.mockImplementation(() => Promise.resolve(operation));
+  sdkCalls.listFiles.mockImplementation(() => Promise.resolve([
+    {
+      name: 'files/test-file-1',
+      config: {
+        displayName: 'test-ad.pdf',
+        customMetadata: [
+          { key: 'category', stringValue: 'ad_examples' },
+          { key: 'uploadedAt', stringValue: '2025-12-24T00:00:00.000Z' },
         ],
-        citations: [{ source: 'test-doc-1', text: 'Citation text' }],
-      }),
+      },
     },
-  };
-
-  class MockGoogleGenAI {
-    fileSearchStores = genAIInstance.fileSearchStores;
-    models = genAIInstance.models;
-  }
-
-  return {
-    GoogleGenAI: MockGoogleGenAI,
-  };
-});
+  ]));
+  sdkCalls.deleteFile.mockImplementation(() => Promise.resolve({}));
+  sdkCalls.generateContent.mockImplementation(() => Promise.resolve({
+    candidates: [
+      {
+        content: {
+          parts: [{ text: 'Retrieved context from knowledge base' }],
+        },
+      },
+    ],
+    citations: [{ source: 'test-doc-1', text: 'Citation text' }],
+  }));
+}
 
 // Mock telemetry
 vi.mock('../instrumentation', () => ({
@@ -90,10 +105,147 @@ vi.mock('fs/promises', () => ({
 import * as fileSearchService from '../services/fileSearchService';
 import { telemetry } from '../instrumentation';
 
-describe('File Search Service', () => {
+// ============================================================================
+// Part 1: Direct Unit Tests for validateFile (no SDK mocking needed)
+// ============================================================================
+describe('validateFile', () => {
+  describe('dangerous file blocking (security first)', () => {
+    it('should block .exe files with specific error message', () => {
+      expect(() => fileSearchService.validateFile('/test/virus.exe', { size: 1024 }))
+        .toThrow('Dangerous file type blocked: .exe');
+    });
+
+    it('should block .sh files', () => {
+      expect(() => fileSearchService.validateFile('/test/script.sh', { size: 1024 }))
+        .toThrow('Dangerous file type blocked: .sh');
+    });
+
+    it('should block .bat files', () => {
+      expect(() => fileSearchService.validateFile('/test/batch.bat', { size: 1024 }))
+        .toThrow('Dangerous file type blocked: .bat');
+    });
+
+    it('should block .cmd files', () => {
+      expect(() => fileSearchService.validateFile('/test/command.cmd', { size: 1024 }))
+        .toThrow('Dangerous file type blocked: .cmd');
+    });
+
+    it('should block .ps1 files', () => {
+      expect(() => fileSearchService.validateFile('/test/powershell.ps1', { size: 1024 }))
+        .toThrow('Dangerous file type blocked: .ps1');
+    });
+  });
+
+  describe('unsupported file type rejection', () => {
+    it('should reject .xyz files with unsupported error', () => {
+      expect(() => fileSearchService.validateFile('/test/file.xyz', { size: 1024 }))
+        .toThrow('Unsupported file type: .xyz');
+    });
+
+    it('should reject .mp3 files', () => {
+      expect(() => fileSearchService.validateFile('/test/audio.mp3', { size: 1024 }))
+        .toThrow('Unsupported file type: .mp3');
+    });
+
+    it('should reject .jpg files', () => {
+      expect(() => fileSearchService.validateFile('/test/image.jpg', { size: 1024 }))
+        .toThrow('Unsupported file type: .jpg');
+    });
+  });
+
+  describe('file size validation', () => {
+    it('should reject files over 100MB', () => {
+      const size101MB = 101 * 1024 * 1024;
+      expect(() => fileSearchService.validateFile('/test/large.pdf', { size: size101MB }))
+        .toThrow('File too large');
+    });
+
+    it('should accept files at exactly 100MB', () => {
+      const size100MB = 100 * 1024 * 1024;
+      expect(() => fileSearchService.validateFile('/test/exact.pdf', { size: size100MB }))
+        .not.toThrow();
+    });
+
+    it('should accept files under 100MB', () => {
+      const size50MB = 50 * 1024 * 1024;
+      expect(() => fileSearchService.validateFile('/test/normal.pdf', { size: size50MB }))
+        .not.toThrow();
+    });
+
+    it('should accept very small files', () => {
+      expect(() => fileSearchService.validateFile('/test/tiny.txt', { size: 1 }))
+        .not.toThrow();
+    });
+  });
+
+  describe('supported file types', () => {
+    const supportedExtensions = [
+      '.pdf', '.docx', '.doc', '.txt', '.md', '.csv', '.xlsx', '.xls',
+      '.pptx', '.ppt', '.json', '.xml', '.yaml', '.yml', '.html', '.htm'
+    ];
+
+    supportedExtensions.forEach(ext => {
+      it(`should accept ${ext} files`, () => {
+        expect(() => fileSearchService.validateFile(`/test/file${ext}`, { size: 1024 }))
+          .not.toThrow();
+      });
+    });
+  });
+
+  describe('case insensitivity', () => {
+    it('should accept .PDF (uppercase)', () => {
+      expect(() => fileSearchService.validateFile('/test/document.PDF', { size: 1024 }))
+        .not.toThrow();
+    });
+
+    it('should accept .TXT (uppercase)', () => {
+      expect(() => fileSearchService.validateFile('/test/readme.TXT', { size: 1024 }))
+        .not.toThrow();
+    });
+
+    it('should block .EXE (uppercase)', () => {
+      expect(() => fileSearchService.validateFile('/test/virus.EXE', { size: 1024 }))
+        .toThrow('Dangerous file type blocked');
+    });
+  });
+});
+
+// ============================================================================
+// Part 2: Exported Constants Verification
+// ============================================================================
+describe('exported constants', () => {
+  it('should export ALLOWED_FILE_EXTENSIONS with 16 types', () => {
+    expect(fileSearchService.ALLOWED_FILE_EXTENSIONS).toBeDefined();
+    expect(fileSearchService.ALLOWED_FILE_EXTENSIONS.length).toBe(16);
+    expect(fileSearchService.ALLOWED_FILE_EXTENSIONS).toContain('.pdf');
+    expect(fileSearchService.ALLOWED_FILE_EXTENSIONS).toContain('.docx');
+  });
+
+  it('should export DANGEROUS_EXTENSIONS with 5 types', () => {
+    expect(fileSearchService.DANGEROUS_EXTENSIONS).toBeDefined();
+    expect(fileSearchService.DANGEROUS_EXTENSIONS.length).toBe(5);
+    expect(fileSearchService.DANGEROUS_EXTENSIONS).toContain('.exe');
+    expect(fileSearchService.DANGEROUS_EXTENSIONS).toContain('.sh');
+  });
+
+  it('should export MAX_FILE_SIZE_MB as 100', () => {
+    expect(fileSearchService.MAX_FILE_SIZE_MB).toBe(100);
+  });
+
+  it('should export MAX_FILE_SIZE_BYTES as 100 * 1024 * 1024', () => {
+    expect(fileSearchService.MAX_FILE_SIZE_BYTES).toBe(100 * 1024 * 1024);
+  });
+});
+
+// ============================================================================
+// Part 3: Integration Tests with SDK Mocking
+// ============================================================================
+describe('File Search Service Integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset mock implementations
+    // Set up SDK mocks
+    setupDefaultMocks();
+    // Reset fs mock implementations
     mockStat.mockResolvedValue({
       size: 1024 * 1024, // 1MB
       isFile: () => true,
@@ -113,23 +265,75 @@ describe('File Search Service', () => {
       expect(store).toBeDefined();
       expect(store.name).toBe('fileSearchStores/test-store-123');
       expect(store.config.displayName).toBe('nds-copywriting-rag');
+      expect(sdkCalls.listStores).toHaveBeenCalled();
+    });
+
+    it('should create new store if none exists', async () => {
+      sdkCalls.listStores.mockResolvedValueOnce([]);
+
+      const store = await fileSearchService.initializeFileSearchStore();
+
+      expect(store).toBeDefined();
+      expect(sdkCalls.createStore).toHaveBeenCalledWith({
+        config: {
+          displayName: 'nds-copywriting-rag',
+        },
+      });
     });
   });
 
   describe('uploadReferenceFile', () => {
-    it('should successfully upload a valid PDF file', async () => {
+    it('should upload valid PDF and verify SDK call parameters', async () => {
       const result = await fileSearchService.uploadReferenceFile({
         filePath: '/test/path/test-ad.pdf',
         category: fileSearchService.FileCategory.AD_EXAMPLES,
         description: 'Test ad example',
       });
 
-      expect(result).toBeDefined();
       expect(result.fileName).toBe('test-ad.pdf');
       expect(result.fileId).toBe('files/test-file-456');
       expect(result.category).toBe('ad_examples');
 
-      // Verify telemetry was called
+      // Verify SDK was called with correct parameters
+      expect(sdkCalls.uploadToFileSearchStore).toHaveBeenCalledWith({
+        file: '/test/path/test-ad.pdf',
+        fileSearchStoreName: 'fileSearchStores/test-store-123',
+        config: expect.objectContaining({
+          displayName: 'test-ad.pdf',
+          customMetadata: expect.arrayContaining([
+            { key: 'category', stringValue: 'ad_examples' },
+            { key: 'description', stringValue: 'Test ad example' },
+          ]),
+        }),
+      });
+    });
+
+    it('should include chunking config in upload', async () => {
+      await fileSearchService.uploadReferenceFile({
+        filePath: '/test/doc.pdf',
+        category: fileSearchService.FileCategory.BRAND_GUIDELINES,
+      });
+
+      expect(sdkCalls.uploadToFileSearchStore).toHaveBeenCalledWith(
+        expect.objectContaining({
+          config: expect.objectContaining({
+            chunkingConfig: {
+              whiteSpaceConfig: {
+                maxTokensPerChunk: 500,
+                maxOverlapTokens: 50,
+              },
+            },
+          }),
+        })
+      );
+    });
+
+    it('should track telemetry on successful upload', async () => {
+      await fileSearchService.uploadReferenceFile({
+        filePath: '/test/ad.pdf',
+        category: fileSearchService.FileCategory.AD_EXAMPLES,
+      });
+
       expect(telemetry.trackFileSearchUpload).toHaveBeenCalledWith(
         expect.objectContaining({
           category: 'ad_examples',
@@ -139,21 +343,19 @@ describe('File Search Service', () => {
       );
     });
 
-    it('should reject files that are too large', async () => {
-      // Mock file larger than 100MB
+    it('should track telemetry on failed upload', async () => {
       mockStat.mockResolvedValue({
-        size: 101 * 1024 * 1024, // 101MB
+        size: 101 * 1024 * 1024, // 101MB - too large
         isFile: () => true,
       });
 
       await expect(
         fileSearchService.uploadReferenceFile({
-          filePath: '/test/path/large-file.pdf',
+          filePath: '/test/large.pdf',
           category: fileSearchService.FileCategory.AD_EXAMPLES,
         })
       ).rejects.toThrow('File too large');
 
-      // Verify telemetry tracked the error
       expect(telemetry.trackFileSearchUpload).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
@@ -162,103 +364,110 @@ describe('File Search Service', () => {
       );
     });
 
-    it('should reject unsupported file types', async () => {
+    it('should reject dangerous files before reaching SDK', async () => {
       await expect(
         fileSearchService.uploadReferenceFile({
-          filePath: '/test/path/file.xyz',
+          filePath: '/test/virus.exe',
           category: fileSearchService.FileCategory.AD_EXAMPLES,
         })
-      ).rejects.toThrow('Unsupported file type');
+      ).rejects.toThrow('Dangerous file type blocked: .exe');
+
+      // SDK should never be called for dangerous files
+      expect(sdkCalls.uploadToFileSearchStore).not.toHaveBeenCalled();
     });
 
-    it('should block dangerous executable files', async () => {
-      // Note: In the actual service, unsupported file types are rejected first,
-      // so dangerous executables get the "Unsupported file type" error
-      const dangerousFiles = [
-        '/test/virus.exe',
-        '/test/script.sh',
-        '/test/batch.bat',
-        '/test/command.cmd',
-        '/test/powershell.ps1',
-      ];
-
-      for (const filePath of dangerousFiles) {
-        await expect(
-          fileSearchService.uploadReferenceFile({
-            filePath,
-            category: fileSearchService.FileCategory.AD_EXAMPLES,
-          })
-        ).rejects.toThrow(); // These are rejected - either as unsupported or dangerous
-      }
-    });
-
-    it('should accept all supported file types', async () => {
-      const supportedFiles = [
-        '/test/doc.pdf',
-        '/test/doc.docx',
-        '/test/doc.doc',
-        '/test/doc.txt',
-        '/test/doc.md',
-        '/test/data.csv',
-        '/test/data.xlsx',
-        '/test/data.xls',
-        '/test/presentation.pptx',
-        '/test/presentation.ppt',
-        '/test/config.json',
-        '/test/config.xml',
-        '/test/config.yaml',
-        '/test/config.yml',
-        '/test/page.html',
-        '/test/page.htm',
-      ];
-
-      for (const filePath of supportedFiles) {
-        const result = await fileSearchService.uploadReferenceFile({
-          filePath,
-          category: fileSearchService.FileCategory.AD_EXAMPLES,
-        });
-        expect(result).toBeDefined();
-        expect(result.fileId).toBe('files/test-file-456');
-      }
-    });
-
-    it('should include custom metadata in upload', async () => {
-      const result = await fileSearchService.uploadReferenceFile({
+    it('should convert metadata values to strings', async () => {
+      await fileSearchService.uploadReferenceFile({
         filePath: '/test/ad.pdf',
         category: fileSearchService.FileCategory.AD_EXAMPLES,
-        description: 'Nike Instagram ad',
         metadata: {
-          brand: 'Nike',
-          platform: 'Instagram',
           year: 2025,
+          priority: 1,
         },
       });
 
-      expect(result.metadata).toEqual({
-        brand: 'Nike',
-        platform: 'Instagram',
-        year: 2025,
-      });
+      expect(sdkCalls.uploadToFileSearchStore).toHaveBeenCalledWith(
+        expect.objectContaining({
+          config: expect.objectContaining({
+            customMetadata: expect.arrayContaining([
+              { key: 'year', stringValue: '2025' },
+              { key: 'priority', stringValue: '1' },
+            ]),
+          }),
+        })
+      );
     });
   });
 
   describe('queryFileSearchStore', () => {
-    it('should successfully query for context', async () => {
-      const result = await fileSearchService.queryFileSearchStore({
-        query: 'Instagram ad for running shoes',
+    it('should construct query with category filter', async () => {
+      await fileSearchService.queryFileSearchStore({
+        query: 'Instagram ad examples',
         category: fileSearchService.FileCategory.AD_EXAMPLES,
         maxResults: 5,
       });
 
-      expect(result).toBeDefined();
+      expect(sdkCalls.generateContent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          model: 'gemini-2.0-flash-exp',
+          contents: [{ role: 'user', parts: [{ text: 'Instagram ad examples' }] }],
+          tools: [
+            expect.objectContaining({
+              fileSearch: expect.objectContaining({
+                fileSearchStoreNames: ['fileSearchStores/test-store-123'],
+                metadataFilter: 'category="ad_examples"',
+              }),
+            }),
+          ],
+        })
+      );
+    });
+
+    it('should omit metadata filter when no category provided', async () => {
+      await fileSearchService.queryFileSearchStore({
+        query: 'Any examples',
+        maxResults: 3,
+      });
+
+      expect(sdkCalls.generateContent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tools: [
+            expect.objectContaining({
+              fileSearch: expect.not.objectContaining({
+                metadataFilter: expect.anything(),
+              }),
+            }),
+          ],
+        })
+      );
+    });
+
+    it('should extract text from response candidates', async () => {
+      const result = await fileSearchService.queryFileSearchStore({
+        query: 'test query',
+      });
+
       expect(result.context).toBe('Retrieved context from knowledge base');
+    });
+
+    it('should return citations from response', async () => {
+      const result = await fileSearchService.queryFileSearchStore({
+        query: 'test query',
+      });
+
       expect(result.citations).toHaveLength(1);
       expect(result.citations[0]).toEqual({
         source: 'test-doc-1',
         text: 'Citation text',
       });
+    });
 
-      // Verify telemetry was called
+    it('should track telemetry on successful query', async () => {
+      await fileSearchService.queryFileSearchStore({
+        query: 'test query',
+        category: fileSearchService.FileCategory.AD_EXAMPLES,
+      });
+
       expect(telemetry.trackFileSearchQuery).toHaveBeenCalledWith(
         expect.objectContaining({
           category: 'ad_examples',
@@ -269,76 +478,88 @@ describe('File Search Service', () => {
       );
     });
 
-    it('should query without category filter', async () => {
-      const result = await fileSearchService.queryFileSearchStore({
-        query: 'Any ad copy examples',
-        maxResults: 3,
-      });
+    it('should track telemetry on failed query', async () => {
+      const error = new Error('SDK error');
+      sdkCalls.generateContent.mockRejectedValueOnce(error);
 
-      expect(result).toBeDefined();
-      expect(result.context).toBeDefined();
+      await expect(
+        fileSearchService.queryFileSearchStore({ query: 'test' })
+      ).rejects.toThrow('SDK error');
 
-      // Verify telemetry tracked query without category
       expect(telemetry.trackFileSearchQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          category: undefined,
-          success: true,
+          success: false,
+          errorType: 'Error',
         })
       );
     });
   });
 
   describe('listReferenceFiles', () => {
-    it('should list all files without category filter', async () => {
-      const files = await fileSearchService.listReferenceFiles();
+    it('should call SDK listFiles with store name', async () => {
+      await fileSearchService.listReferenceFiles();
 
-      expect(files).toBeDefined();
-      expect(Array.isArray(files)).toBe(true);
-      expect(files.length).toBeGreaterThan(0);
+      expect(sdkCalls.listFiles).toHaveBeenCalledWith({
+        fileSearchStoreName: 'fileSearchStores/test-store-123',
+      });
     });
 
-    it('should filter files by category', async () => {
+    it('should filter files by category when provided', async () => {
+      sdkCalls.listFiles.mockResolvedValueOnce([
+        {
+          name: 'files/1',
+          config: {
+            customMetadata: [{ key: 'category', stringValue: 'ad_examples' }],
+          },
+        },
+        {
+          name: 'files/2',
+          config: {
+            customMetadata: [{ key: 'category', stringValue: 'brand_guidelines' }],
+          },
+        },
+      ]);
+
       const files = await fileSearchService.listReferenceFiles(
         fileSearchService.FileCategory.AD_EXAMPLES
       );
 
-      expect(files).toBeDefined();
-      expect(Array.isArray(files)).toBe(true);
+      expect(files).toHaveLength(1);
+      expect(files[0].name).toBe('files/1');
     });
   });
 
   describe('deleteReferenceFile', () => {
-    it('should successfully delete a file', async () => {
-      const result = await fileSearchService.deleteReferenceFile('files/test-file-123');
+    it('should call SDK deleteFile with correct parameters', async () => {
+      await fileSearchService.deleteReferenceFile('files/test-file-123');
 
-      expect(result).toBeDefined();
+      expect(sdkCalls.deleteFile).toHaveBeenCalledWith({
+        fileSearchStoreName: 'fileSearchStores/test-store-123',
+        fileName: 'files/test-file-123',
+      });
+    });
+
+    it('should return success on deletion', async () => {
+      const result = await fileSearchService.deleteReferenceFile('files/test-123');
+
       expect(result.success).toBe(true);
     });
   });
 
   describe('seedFileSearchStore', () => {
-    it('should create directory structure', async () => {
+    it('should create reference directory structure', async () => {
       const result = await fileSearchService.seedFileSearchStore();
 
-      expect(result).toBeDefined();
       expect(result.success).toBe(true);
       expect(result.referenceDir).toContain('reference-materials');
-
-      // Verify mkdir was called
       expect(mockMkdir).toHaveBeenCalled();
     });
 
-    it('should create subdirectories for each category', async () => {
+    it('should create subdirectory for each category', async () => {
       await fileSearchService.seedFileSearchStore();
 
-      // Check that mkdir was called at least for the main directory
-      expect(mockMkdir).toHaveBeenCalledWith(
-        expect.stringContaining('reference-materials'),
-        expect.objectContaining({ recursive: true })
-      );
-
-      // Verify mkdir was called multiple times (once for main + once per category)
-      expect(mockMkdir).toHaveBeenCalledTimes(7); // 1 main + 6 categories
+      // 1 main directory + 6 category directories
+      expect(mockMkdir).toHaveBeenCalledTimes(7);
     });
   });
 
@@ -355,18 +576,10 @@ describe('File Search Service', () => {
       const results = await fileSearchService.uploadDirectoryToFileSearch({
         directoryPath: '/test/ads',
         category: fileSearchService.FileCategory.AD_EXAMPLES,
-        description: 'Bulk upload test',
       });
 
-      expect(results).toBeDefined();
-      expect(Array.isArray(results)).toBe(true);
       expect(results.length).toBe(3);
-
-      // Verify each file was uploaded
-      for (const result of results) {
-        expect(result.fileId).toBe('files/test-file-456');
-        expect(result.category).toBe('ad_examples');
-      }
+      expect(sdkCalls.uploadToFileSearchStore).toHaveBeenCalledTimes(3);
     });
 
     it('should skip non-file entries', async () => {
@@ -381,13 +594,32 @@ describe('File Search Service', () => {
         category: fileSearchService.FileCategory.AD_EXAMPLES,
       });
 
-      // Should return empty array since all entries are directories
       expect(results).toEqual([]);
+      expect(sdkCalls.uploadToFileSearchStore).not.toHaveBeenCalled();
+    });
+
+    it('should add source_directory to metadata', async () => {
+      mockReaddir.mockResolvedValue(['file.pdf']);
+
+      await fileSearchService.uploadDirectoryToFileSearch({
+        directoryPath: '/test/my-ads',
+        category: fileSearchService.FileCategory.AD_EXAMPLES,
+      });
+
+      expect(sdkCalls.uploadToFileSearchStore).toHaveBeenCalledWith(
+        expect.objectContaining({
+          config: expect.objectContaining({
+            customMetadata: expect.arrayContaining([
+              { key: 'source_directory', stringValue: 'my-ads' },
+            ]),
+          }),
+        })
+      );
     });
   });
 
   describe('getFileSearchStoreForGeneration', () => {
-    it('should return store name for generation', async () => {
+    it('should return store name string', async () => {
       const storeName = await fileSearchService.getFileSearchStoreForGeneration();
 
       expect(storeName).toBe('fileSearchStores/test-store-123');
@@ -395,7 +627,7 @@ describe('File Search Service', () => {
   });
 
   describe('FileCategory enum', () => {
-    it('should have all required categories', () => {
+    it('should export all required categories', () => {
       expect(fileSearchService.FileCategory.BRAND_GUIDELINES).toBe('brand_guidelines');
       expect(fileSearchService.FileCategory.AD_EXAMPLES).toBe('ad_examples');
       expect(fileSearchService.FileCategory.PRODUCT_CATALOG).toBe('product_catalog');
@@ -403,5 +635,61 @@ describe('File Search Service', () => {
       expect(fileSearchService.FileCategory.PERFORMANCE_DATA).toBe('performance_data');
       expect(fileSearchService.FileCategory.GENERAL).toBe('general');
     });
+  });
+});
+
+// ============================================================================
+// Part 4: Error Handling Tests
+// ============================================================================
+describe('Error handling', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setupDefaultMocks();
+    mockStat.mockResolvedValue({
+      size: 1024,
+      isFile: () => true,
+    });
+  });
+
+  it('should propagate SDK errors from uploadToFileSearchStore', async () => {
+    const sdkError = new Error('Upload quota exceeded');
+    sdkCalls.uploadToFileSearchStore.mockRejectedValueOnce(sdkError);
+
+    await expect(
+      fileSearchService.uploadReferenceFile({
+        filePath: '/test/file.pdf',
+        category: fileSearchService.FileCategory.AD_EXAMPLES,
+      })
+    ).rejects.toThrow('Upload quota exceeded');
+  });
+
+  it('should propagate SDK errors from generateContent', async () => {
+    const sdkError = new Error('Rate limit exceeded');
+    sdkCalls.generateContent.mockRejectedValueOnce(sdkError);
+
+    await expect(
+      fileSearchService.queryFileSearchStore({ query: 'test' })
+    ).rejects.toThrow('Rate limit exceeded');
+  });
+
+  it('should propagate SDK errors from listFiles', async () => {
+    const sdkError = new Error('Store not found');
+    sdkCalls.listStores.mockResolvedValueOnce([{ name: 'test', config: { displayName: 'nds-copywriting-rag' } }]);
+    sdkCalls.listFiles.mockRejectedValueOnce(sdkError);
+
+    await expect(
+      fileSearchService.listReferenceFiles()
+    ).rejects.toThrow('Store not found');
+  });
+
+  it('should handle file stat errors', async () => {
+    mockStat.mockRejectedValueOnce(new Error('ENOENT: no such file'));
+
+    await expect(
+      fileSearchService.uploadReferenceFile({
+        filePath: '/nonexistent/file.pdf',
+        category: fileSearchService.FileCategory.AD_EXAMPLES,
+      })
+    ).rejects.toThrow('ENOENT');
   });
 });
