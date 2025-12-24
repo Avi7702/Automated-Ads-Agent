@@ -42,15 +42,6 @@ if (isCloudinaryConfigured) {
 }
 
 // Validate and initialize Gemini client using direct Google API
-<<<<<<< HEAD
-const geminiApiKey = process.env.GOOGLE_API_KEY_TEST;
-if (!geminiApiKey) {
-  throw new Error("[Gemini] Missing GOOGLE_API_KEY");
-}
-
-const genai = new GoogleGenAI({
-  apiKey: geminiApiKey,
-=======
 // Using GEMINI_API_KEY with fallback to GOOGLE_API_KEY for backward compatibility
 const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 if (!apiKey) {
@@ -59,7 +50,6 @@ if (!apiKey) {
 
 const genai = new GoogleGenAI({
   apiKey,
->>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -463,23 +453,11 @@ Guidelines:
         }
       });
       
-<<<<<<< HEAD
-      // Extract usage metadata for cost tracking
-      const usageMetadata = result.usageMetadata;
-      const inputTokens = usageMetadata?.promptTokenCount || 0;
-      const outputTokens = usageMetadata?.candidatesTokenCount || 0;
-      // Image output pricing: $120 per 1M tokens
-      const costPerMillionTokens = 120;
-      const calculatedCost = (outputTokens / 1_000_000) * costPerMillionTokens;
-      
-      console.log(`[Transform] Model response - modelVersion: ${result.modelVersion}, candidates: ${result.candidates?.length}, inputTokens: ${inputTokens}, outputTokens: ${outputTokens}, cost: $${calculatedCost.toFixed(4)}`);
-=======
       console.log(`[Transform] Model response - modelVersion: ${result.modelVersion}, candidates: ${result.candidates?.length}`);
       const usageMetadata = (result as any).usageMetadata;
       if (usageMetadata) {
         console.log(`[Transform] Captured usageMetadata: ${JSON.stringify(usageMetadata)}`);
       }
->>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
 
       // Check if we got an image back
       if (!result.candidates?.[0]?.content?.parts?.[0]) {
@@ -518,14 +496,7 @@ Guidelines:
           prompt,
           originalImagePaths,
           generatedImagePath,
-<<<<<<< HEAD
-          resolution: requestedResolution,
-          cost: calculatedCost,
-          inputTokens,
-          outputTokens,
-=======
           resolution: selectedResolution,
->>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
           conversationHistory,  // Pass as object, Drizzle handles JSONB
           parentGenerationId: null,
           editPrompt: null,
@@ -569,14 +540,8 @@ Guidelines:
           generationId: generation.id,
           prompt: prompt,
           canEdit: true,
-<<<<<<< HEAD
-          cost: calculatedCost,
-          inputTokens,
-          outputTokens
-=======
           mode: generationMode,
           templateId: templateId || null
->>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
         });
       } else {
         errorType = 'no_image_content';
@@ -772,22 +737,11 @@ Guidelines:
         contents: history,
       });
       
-<<<<<<< HEAD
-      // Extract usage metadata for cost tracking
-      const usageMetadata = result.usageMetadata;
-      const inputTokens = usageMetadata?.promptTokenCount || 0;
-      const outputTokens = usageMetadata?.candidatesTokenCount || 0;
-      const costPerMillionTokens = 120;
-      const calculatedCost = (outputTokens / 1_000_000) * costPerMillionTokens;
-      
-      console.log(`[Edit] Model response - modelVersion: ${result.modelVersion}, candidates: ${result.candidates?.length}, inputTokens: ${inputTokens}, outputTokens: ${outputTokens}, cost: $${calculatedCost.toFixed(4)}`);
-=======
       console.log(`[Edit] Model response - modelVersion: ${result.modelVersion}, candidates: ${result.candidates?.length}`);
       const usageMetadata = (result as any).usageMetadata;
       if (usageMetadata) {
         console.log(`[Edit] Captured usageMetadata: ${JSON.stringify(usageMetadata)}`);
       }
->>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
 
       // Extract the new image
       if (!result.candidates?.[0]?.content?.parts) {
@@ -826,9 +780,6 @@ Guidelines:
         parentGenerationId: parentGeneration.id,
         originalImagePaths: parentGeneration.originalImagePaths,
         resolution: parentGeneration.resolution || "2K",
-        cost: calculatedCost,
-        inputTokens,
-        outputTokens,
       });
 
       console.log(`[Edit] Created new generation ${newGeneration.id} from parent ${id}`);
@@ -1326,58 +1277,6 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
     }
   });
 
-<<<<<<< HEAD
-  // ===== COPYWRITING ROUTES (Phase 4) =====
-
-  // Generate ad copy for a generation
-  app.post("/api/copy/generate", async (req, res) => {
-    try {
-      const { 
-        generateCopy, 
-        PLATFORMS, 
-        TONES 
-      } = await import("./services/copywritingService");
-      
-      // TODO: Re-enable authentication when login UI is built
-      const userId = (req as any).session?.userId || (req as any).user?.id || null;
-
-      const { 
-        generationId, 
-        platform, 
-        tone, 
-        productName, 
-        productDescription, 
-        industry,
-        framework,
-        campaignObjective,
-        productBenefits,
-        uniqueValueProp,
-        targetAudience,
-        brandVoice,
-        socialProof,
-        variations = 3
-      } = req.body;
-
-      if (!generationId || !platform || !tone || !productName || !productDescription || !industry) {
-        return res.status(400).json({ 
-          error: "Missing required fields: generationId, platform, tone, productName, productDescription, industry" 
-        });
-      }
-
-      if (!PLATFORMS.includes(platform)) {
-        return res.status(400).json({ 
-          error: `Platform must be one of: ${PLATFORMS.join(", ")}` 
-        });
-      }
-
-      if (!TONES.includes(tone)) {
-        return res.status(400).json({ 
-          error: `Tone must be one of: ${TONES.join(", ")}` 
-        });
-      }
-
-      const generation = await storage.getGenerationById(generationId);
-=======
   // COPYWRITING ENDPOINTS
 
   // Generate ad copy with multiple variations
@@ -1394,40 +1293,10 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       // Verify generation exists
       const generation = await storage.getGenerationById(validatedData.generationId);
->>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
       if (!generation) {
         return res.status(404).json({ error: "Generation not found" });
       }
 
-<<<<<<< HEAD
-      console.log(`[Copywriting] Generating ${variations} variations for generation ${generationId}`);
-
-      const result = await generateCopy({
-        generationId,
-        userId,
-        platform,
-        tone,
-        productName,
-        productDescription,
-        industry,
-        framework,
-        campaignObjective,
-        productBenefits,
-        uniqueValueProp,
-        targetAudience,
-        brandVoice,
-        socialProof,
-        variations: Math.min(5, Math.max(1, variations))
-      });
-
-      if (!result.success) {
-        return res.status(500).json({ error: result.error });
-      }
-
-      res.json({ success: true, copies: result.copies });
-    } catch (error: any) {
-      console.error("[Copywriting Generate] Error:", error);
-=======
       // Get user's brand voice if not provided
       let brandVoice = validatedData.brandVoice;
       if (!brandVoice) {
@@ -1486,21 +1355,10 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       if (error.name === "ZodError") {
         return res.status(400).json({ error: "Validation failed", details: error.errors });
       }
->>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
       res.status(500).json({ error: "Failed to generate copy", details: error.message });
     }
   });
 
-<<<<<<< HEAD
-  // Get all copy for a generation
-  app.get("/api/copy/generation/:id", async (req, res) => {
-    try {
-      const { getCopyByGenerationId } = await import("./services/copywritingService");
-      const copies = await getCopyByGenerationId(req.params.id);
-      res.json(copies);
-    } catch (error: any) {
-      console.error("[Copywriting Get By Generation] Error:", error);
-=======
   // Get copy by generation ID
   app.get("/api/copy/generation/:generationId", requireAuth, async (req, res) => {
     try {
@@ -1508,24 +1366,11 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       res.json({ copies });
     } catch (error: any) {
       console.error("[Get Copy by Generation] Error:", error);
->>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
       res.status(500).json({ error: "Failed to fetch copy" });
     }
   });
 
   // Get specific copy by ID
-<<<<<<< HEAD
-  app.get("/api/copy/:id", async (req, res) => {
-    try {
-      const { getCopyById } = await import("./services/copywritingService");
-      const copy = await getCopyById(req.params.id);
-      if (!copy) {
-        return res.status(404).json({ error: "Copy not found" });
-      }
-      res.json(copy);
-    } catch (error: any) {
-      console.error("[Copywriting Get By ID] Error:", error);
-=======
   app.get("/api/copy/:id", requireAuth, async (req, res) => {
     try {
       const copy = await storage.getAdCopyById(req.params.id);
@@ -1535,58 +1380,21 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       res.json({ copy });
     } catch (error: any) {
       console.error("[Get Copy] Error:", error);
->>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
       res.status(500).json({ error: "Failed to fetch copy" });
     }
   });
 
   // Delete copy
-<<<<<<< HEAD
-  app.delete("/api/copy/:id", async (req, res) => {
-    try {
-      const { deleteCopy, getCopyById } = await import("./services/copywritingService");
-      const copy = await getCopyById(req.params.id);
-      if (!copy) {
-        return res.status(404).json({ error: "Copy not found" });
-      }
-      await deleteCopy(req.params.id);
-      res.json({ success: true });
-    } catch (error: any) {
-      console.error("[Copywriting Delete] Error:", error);
-=======
   app.delete("/api/copy/:id", requireAuth, async (req, res) => {
     try {
       await storage.deleteAdCopy(req.params.id);
       res.json({ success: true });
     } catch (error: any) {
       console.error("[Delete Copy] Error:", error);
->>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
       res.status(500).json({ error: "Failed to delete copy" });
     }
   });
 
-<<<<<<< HEAD
-  // Update user brand voice
-  app.put("/api/user/brand-voice", requireAuth, async (req, res) => {
-    try {
-      const { updateBrandVoice } = await import("./services/copywritingService");
-      const userId = (req as any).session?.userId || (req as any).user?.id;
-      if (!userId) {
-        return res.status(401).json({ error: "Authentication required" });
-      }
-
-      const { brandVoice } = req.body;
-      if (!brandVoice) {
-        return res.status(400).json({ error: "Brand voice data required" });
-      }
-
-      const success = await updateBrandVoice(userId, brandVoice);
-      if (!success) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      res.json({ success: true });
-=======
   // Update user's brand voice
   app.put("/api/user/brand-voice", requireAuth, async (req, res) => {
     try {
@@ -1602,16 +1410,12 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       const updatedUser = await storage.updateUserBrandVoice(userId, brandVoice);
       res.json({ success: true, brandVoice: updatedUser.brandVoice });
->>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
     } catch (error: any) {
       console.error("[Update Brand Voice] Error:", error);
       res.status(500).json({ error: "Failed to update brand voice" });
     }
   });
 
-<<<<<<< HEAD
-  // ===== END COPYWRITING ROUTES =====
-=======
   // =============================================================================
   // File Search RAG Endpoints
   // =============================================================================
@@ -2063,7 +1867,6 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       res.status(500).json({ error: "Failed to delete brand profile" });
     }
   });
->>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
 
   const httpServer = createServer(app);
   return httpServer;

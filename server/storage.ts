@@ -1,4 +1,4 @@
-﻿import {
+import {
   type Generation,
   type InsertGeneration,
   type Product,
@@ -7,19 +7,12 @@
   type InsertPromptTemplate,
   type User,
   type InsertUser,
-<<<<<<< HEAD
-  type Session,
-  type InsertSession,
-  type AdCopy,
-  type InsertAdCopy,
-=======
   type AdCopy,
   type InsertAdCopy,
   type GenerationUsage,
   type InsertGenerationUsage,
   type AdSceneTemplate,
   type InsertAdSceneTemplate,
->>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
   type BrandProfile,
   type InsertBrandProfile,
   type ProductAnalysis,
@@ -29,16 +22,6 @@
   products,
   promptTemplates,
   users,
-<<<<<<< HEAD
-  sessions,
-  adCopy,
-  brandProfiles,
-  productAnalysis
-} from "@shared/schema";
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
-import { eq, desc, and, gt, inArray } from "drizzle-orm";
-=======
   adCopy,
   adSceneTemplates,
   brandProfiles,
@@ -47,7 +30,6 @@ import { eq, desc, and, gt, inArray } from "drizzle-orm";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import { and, eq, desc, ilike } from "drizzle-orm";
->>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
 
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL must be set");
@@ -80,42 +62,13 @@ export interface IStorage {
   createUser(email: string, passwordHash: string): Promise<User>;
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserById(id: string): Promise<User | undefined>;
-<<<<<<< HEAD
-  updateUserBrandVoice(userId: string, brandVoice: any): Promise<User | undefined>;
-  incrementFailedAttempts(userId: string): Promise<void>;
-  resetFailedAttempts(userId: string): Promise<void>;
-  
-  // Session CRUD operations
-  createSession(userId: string, sessionId: string, expiresAt: Date): Promise<Session>;
-  getSession(sessionId: string): Promise<Session | undefined>;
-  deleteSession(sessionId: string): Promise<void>;
-  deleteAllUserSessions(userId: string): Promise<void>;
-  
-  // Ad Copy CRUD operations
-=======
   updateUserBrandVoice(userId: string, brandVoice: any): Promise<User>;
 
   // AdCopy CRUD operations
->>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
   saveAdCopy(copy: InsertAdCopy): Promise<AdCopy>;
   getAdCopyByGenerationId(generationId: string): Promise<AdCopy[]>;
   getAdCopyById(id: string): Promise<AdCopy | undefined>;
   deleteAdCopy(id: string): Promise<void>;
-<<<<<<< HEAD
-  
-  // Brand Profile CRUD operations
-  saveBrandProfile(profile: InsertBrandProfile): Promise<BrandProfile>;
-  getBrandProfiles(): Promise<BrandProfile[]>;
-  getDefaultBrandProfile(): Promise<BrandProfile | undefined>;
-  getBrandProfileById(id: string): Promise<BrandProfile | undefined>;
-  updateBrandProfile(id: string, profile: Partial<InsertBrandProfile>): Promise<BrandProfile | undefined>;
-  deleteBrandProfile(id: string): Promise<void>;
-  
-  // Product Analysis CRUD operations
-  saveProductAnalysis(analysis: InsertProductAnalysis): Promise<ProductAnalysis>;
-  getProductAnalysisByProductId(productId: string): Promise<ProductAnalysis | undefined>;
-  getProductAnalysesByProductIds(productIds: string[]): Promise<ProductAnalysis[]>;
-=======
   getCopyVariations(parentCopyId: string): Promise<AdCopy[]>;
 
   // Generation usage/cost tracking
@@ -155,7 +108,6 @@ export interface IStorage {
   getProductAnalysisByProductId(productId: string): Promise<ProductAnalysis | undefined>;
   getProductAnalysisByFingerprint(fingerprint: string): Promise<ProductAnalysis | undefined>;
   updateProductAnalysis(productId: string, updates: Partial<InsertProductAnalysis>): Promise<ProductAnalysis>;
->>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
   deleteProductAnalysis(productId: string): Promise<void>;
 }
 
@@ -304,11 +256,7 @@ export class DbStorage implements IStorage {
     return user;
   }
 
-<<<<<<< HEAD
-  async updateUserBrandVoice(userId: string, brandVoice: any): Promise<User | undefined> {
-=======
   async updateUserBrandVoice(userId: string, brandVoice: any): Promise<User> {
->>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
     const [user] = await db
       .update(users)
       .set({ brandVoice })
@@ -317,58 +265,6 @@ export class DbStorage implements IStorage {
     return user;
   }
 
-<<<<<<< HEAD
-  async incrementFailedAttempts(userId: string): Promise<void> {
-    const user = await this.getUserById(userId);
-    if (!user) return;
-    
-    const newAttempts = (user.failedAttempts || 0) + 1;
-    const MAX_FAILED_ATTEMPTS = 5;
-    const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
-    
-    const lockedUntil = newAttempts >= MAX_FAILED_ATTEMPTS 
-      ? new Date(Date.now() + LOCKOUT_DURATION_MS) 
-      : null;
-    
-    await db
-      .update(users)
-      .set({ failedAttempts: newAttempts, lockedUntil })
-      .where(eq(users.id, userId));
-  }
-
-  async resetFailedAttempts(userId: string): Promise<void> {
-    await db
-      .update(users)
-      .set({ failedAttempts: 0, lockedUntil: null })
-      .where(eq(users.id, userId));
-  }
-
-  async createSession(userId: string, sessionId: string, expiresAt: Date): Promise<Session> {
-    const [session] = await db
-      .insert(sessions)
-      .values({ id: sessionId, userId, expiresAt })
-      .returning();
-    return session;
-  }
-
-  async getSession(sessionId: string): Promise<Session | undefined> {
-    const [session] = await db
-      .select()
-      .from(sessions)
-      .where(and(eq(sessions.id, sessionId), gt(sessions.expiresAt, new Date())));
-    return session;
-  }
-
-  async deleteSession(sessionId: string): Promise<void> {
-    await db.delete(sessions).where(eq(sessions.id, sessionId));
-  }
-
-  async deleteAllUserSessions(userId: string): Promise<void> {
-    await db.delete(sessions).where(eq(sessions.userId, userId));
-  }
-
-=======
->>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
   async saveAdCopy(insertCopy: InsertAdCopy): Promise<AdCopy> {
     const [copy] = await db
       .insert(adCopy)
@@ -397,9 +293,6 @@ export class DbStorage implements IStorage {
     await db.delete(adCopy).where(eq(adCopy.id, id));
   }
 
-<<<<<<< HEAD
-  // Brand Profile CRUD
-=======
   async getCopyVariations(parentCopyId: string): Promise<AdCopy[]> {
     return await db
       .select()
@@ -523,7 +416,6 @@ export class DbStorage implements IStorage {
   // BRAND PROFILE OPERATIONS
   // ============================================
 
->>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
   async saveBrandProfile(insertProfile: InsertBrandProfile): Promise<BrandProfile> {
     const [profile] = await db
       .insert(brandProfiles)
@@ -532,36 +424,6 @@ export class DbStorage implements IStorage {
     return profile;
   }
 
-<<<<<<< HEAD
-  async getBrandProfiles(): Promise<BrandProfile[]> {
-    return await db
-      .select()
-      .from(brandProfiles)
-      .orderBy(desc(brandProfiles.createdAt));
-  }
-
-  async getDefaultBrandProfile(): Promise<BrandProfile | undefined> {
-    const [profile] = await db
-      .select()
-      .from(brandProfiles)
-      .where(eq(brandProfiles.isDefault, 1));
-    return profile;
-  }
-
-  async getBrandProfileById(id: string): Promise<BrandProfile | undefined> {
-    const [profile] = await db
-      .select()
-      .from(brandProfiles)
-      .where(eq(brandProfiles.id, id));
-    return profile;
-  }
-
-  async updateBrandProfile(id: string, updates: Partial<InsertBrandProfile>): Promise<BrandProfile | undefined> {
-    const [profile] = await db
-      .update(brandProfiles)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(brandProfiles.id, id))
-=======
   async getBrandProfileByUserId(userId: string): Promise<BrandProfile | undefined> {
     const [profile] = await db
       .select()
@@ -575,23 +437,10 @@ export class DbStorage implements IStorage {
       .update(brandProfiles)
       .set({ ...updates, updatedAt: new Date() })
       .where(eq(brandProfiles.userId, userId))
->>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
       .returning();
     return profile;
   }
 
-<<<<<<< HEAD
-  async deleteBrandProfile(id: string): Promise<void> {
-    await db.delete(brandProfiles).where(eq(brandProfiles.id, id));
-  }
-
-  // Product Analysis CRUD
-  async saveProductAnalysis(insertAnalysis: InsertProductAnalysis): Promise<ProductAnalysis> {
-    // Upsert - replace existing analysis for this product
-    await db.delete(productAnalysis).where(eq(productAnalysis.productId, insertAnalysis.productId));
-    const [analysis] = await db
-      .insert(productAnalysis)
-=======
   async deleteBrandProfile(userId: string): Promise<void> {
     await db.delete(brandProfiles).where(eq(brandProfiles.userId, userId));
   }
@@ -603,7 +452,6 @@ export class DbStorage implements IStorage {
   async saveProductAnalysis(insertAnalysis: InsertProductAnalysis): Promise<ProductAnalysis> {
     const [analysis] = await db
       .insert(productAnalyses)
->>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
       .values(insertAnalysis)
       .returning();
     return analysis;
@@ -612,23 +460,6 @@ export class DbStorage implements IStorage {
   async getProductAnalysisByProductId(productId: string): Promise<ProductAnalysis | undefined> {
     const [analysis] = await db
       .select()
-<<<<<<< HEAD
-      .from(productAnalysis)
-      .where(eq(productAnalysis.productId, productId));
-    return analysis;
-  }
-
-  async getProductAnalysesByProductIds(productIds: string[]): Promise<ProductAnalysis[]> {
-    if (productIds.length === 0) return [];
-    return await db
-      .select()
-      .from(productAnalysis)
-      .where(inArray(productAnalysis.productId, productIds));
-  }
-
-  async deleteProductAnalysis(productId: string): Promise<void> {
-    await db.delete(productAnalysis).where(eq(productAnalysis.productId, productId));
-=======
       .from(productAnalyses)
       .where(eq(productAnalyses.productId, productId));
     return analysis;
@@ -653,13 +484,7 @@ export class DbStorage implements IStorage {
 
   async deleteProductAnalysis(productId: string): Promise<void> {
     await db.delete(productAnalyses).where(eq(productAnalyses.productId, productId));
->>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
   }
 }
 
 export const storage = new DbStorage();
-
-
-
-
-

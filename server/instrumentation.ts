@@ -1,50 +1,32 @@
 /**
  * OpenTelemetry Instrumentation for Automated-Ads-Agent
- *
- * This file MUST be imported before any other modules to ensure
- * proper instrumentation of all dependencies (Express, PostgreSQL, Redis, etc.)
- *
- * Automatically traces:
- * - HTTP requests (Express routes)
- * - PostgreSQL queries (via pg driver)
- * - Redis operations (via ioredis)
- * - External HTTP calls (to Gemini API, etc.)
- *
- * Custom metrics tracked:
- * - Gemini API token usage and costs
- * - Image generations per user
- * - API request latencies
- * - Error rates by endpoint
- *
- * Supported backends:
- * - Grafana Cloud (recommended)
- * - Axiom
- * - New Relic
- * - Uptrace
- * - Any OTLP-compatible backend
+ * 
+ * This module is OPTIONAL - the app works without OpenTelemetry packages installed.
  */
 
-// Load environment variables FIRST (before reading process.env below)
-import dotenv from 'dotenv';
-dotenv.config();
+const OTEL_PACKAGES_AVAILABLE = (() => {
+  try {
+    require.resolve('@opentelemetry/sdk-node');
+    return true;
+  } catch {
+    return false;
+  }
+})();
 
-import { NodeSDK } from '@opentelemetry/sdk-node';
-import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto';
-import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-proto';
-import { PeriodicExportingMetricReader, MeterProvider } from '@opentelemetry/sdk-metrics';
-import { defaultResource, resourceFromAttributes } from '@opentelemetry/resources';
-import {
-  SEMRESATTRS_SERVICE_NAME,
-  SEMRESATTRS_SERVICE_VERSION,
-  SEMRESATTRS_DEPLOYMENT_ENVIRONMENT,
-} from '@opentelemetry/semantic-conventions';
-import { metrics } from '@opentelemetry/api';
+if (!OTEL_PACKAGES_AVAILABLE) {
+  console.log('Telemetry disabled - OpenTelemetry packages not installed');
+}
+
+let NodeSDK: any, getNodeAutoInstrumentations: any, OTLPTraceExporter: any;
+let OTLPMetricExporter: any, PeriodicExportingMetricReader: any;
+let defaultResource: any, resourceFromAttributes: any;
+let SEMRESATTRS_SERVICE_NAME: any, SEMRESATTRS_SERVICE_VERSION: any, SEMRESATTRS_DEPLOYMENT_ENVIRONMENT: any;
+let metrics: any;
 
 // =============================================================================
 // Configuration from environment variables
 // =============================================================================
-const OTEL_ENABLED = process.env.OTEL_ENABLED !== 'false';
+const OTEL_ENABLED = OTEL_PACKAGES_AVAILABLE && process.env.OTEL_ENABLED !== 'false';
 const OTEL_ENDPOINT = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4318';
 const OTEL_HEADERS = process.env.OTEL_EXPORTER_OTLP_HEADERS || '';
 const SERVICE_NAME = process.env.OTEL_SERVICE_NAME || 'automated-ads-agent';
@@ -405,7 +387,29 @@ export const telemetry = {
 // SDK Initialization
 // =============================================================================
 
-if (OTEL_ENABLED) {
+if (OTEL_ENABLED && OTEL_PACKAGES_AVAILABLE) {
+  // Dynamic imports only if packages are available
+  const sdk = require('@opentelemetry/sdk-node');
+  const autoInstr = require('@opentelemetry/auto-instrumentations-node');
+  const traceExport = require('@opentelemetry/exporter-trace-otlp-proto');
+  const metricExport = require('@opentelemetry/exporter-metrics-otlp-proto');
+  const sdkMetrics = require('@opentelemetry/sdk-metrics');
+  const resources = require('@opentelemetry/resources');
+  const semConv = require('@opentelemetry/semantic-conventions');
+  const otelApi = require('@opentelemetry/api');
+  
+  NodeSDK = sdk.NodeSDK;
+  getNodeAutoInstrumentations = autoInstr.getNodeAutoInstrumentations;
+  OTLPTraceExporter = traceExport.OTLPTraceExporter;
+  OTLPMetricExporter = metricExport.OTLPMetricExporter;
+  PeriodicExportingMetricReader = sdkMetrics.PeriodicExportingMetricReader;
+  defaultResource = resources.defaultResource;
+  resourceFromAttributes = resources.resourceFromAttributes;
+  SEMRESATTRS_SERVICE_NAME = semConv.SEMRESATTRS_SERVICE_NAME;
+  SEMRESATTRS_SERVICE_VERSION = semConv.SEMRESATTRS_SERVICE_VERSION;
+  SEMRESATTRS_DEPLOYMENT_ENVIRONMENT = semConv.SEMRESATTRS_DEPLOYMENT_ENVIRONMENT;
+  metrics = otelApi.metrics;
+  
   const resource = defaultResource().merge(resourceFromAttributes({
     [SEMRESATTRS_SERVICE_NAME]: SERVICE_NAME,
     [SEMRESATTRS_SERVICE_VERSION]: SERVICE_VERSION,
@@ -441,7 +445,7 @@ if (OTEL_ENABLED) {
   });
 
   // Initialize the SDK
-  const sdk = new NodeSDK({
+  const otelSdk = new NodeSDK({
     resource,
     traceExporter,
     metricReader,
@@ -473,7 +477,7 @@ if (OTEL_ENABLED) {
   });
 
   // Start the SDK
-  sdk.start();
+  otelSdk.start();
 
   // Initialize custom metrics after SDK starts
   initializeCustomMetrics();
@@ -488,10 +492,10 @@ if (OTEL_ENABLED) {
 
   // Graceful shutdown
   process.on('SIGTERM', () => {
-    sdk
+    otelSdk
       .shutdown()
       .then(() => console.log('OpenTelemetry SDK shut down successfully'))
-      .catch((error) => console.error('Error shutting down OpenTelemetry SDK', error))
+      .catch((error: any) => console.error('Error shutting down OpenTelemetry SDK', error))
       .finally(() => process.exit(0));
   });
 } else {
