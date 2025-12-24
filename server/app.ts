@@ -2,8 +2,6 @@ import { type Server } from "node:http";
 
 import express, { type Express, type Request, Response, NextFunction } from "express";
 import session from "express-session";
-import RedisStore from "connect-redis";
-import { getRedisClient } from "./lib/redis";
 import { registerRoutes } from "./routes";
 
 export function log(message: string, source = "express") {
@@ -31,14 +29,27 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: false }));
 
-// Session middleware for authentication with Redis store
-const redisStore = new RedisStore({
-  client: getRedisClient(),
-  prefix: 'sess:',
-});
+// Session middleware - uses Redis if available, falls back to memory store
+let sessionStore: session.Store | undefined;
+
+if (process.env.REDIS_URL) {
+  try {
+    const RedisStore = require('connect-redis').default;
+    const { getRedisClient } = require('./lib/redis');
+    sessionStore = new RedisStore({
+      client: getRedisClient(),
+      prefix: 'sess:',
+    });
+    log('Using Redis session store', 'session');
+  } catch (error) {
+    log('Redis not available, using memory session store', 'session');
+  }
+} else {
+  log('REDIS_URL not set, using memory session store (sessions will not persist across restarts)', 'session');
+}
 
 app.use(session({
-  store: redisStore,
+  store: sessionStore, // undefined = default memory store
   secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
   resave: false,
   saveUninitialized: false,
