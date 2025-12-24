@@ -18,12 +18,13 @@ import fs from 'fs/promises';
 import path from 'path';
 import { telemetry } from '../instrumentation';
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+// Fallback to GOOGLE_API_KEY for backward compatibility
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 if (!GEMINI_API_KEY) {
-  throw new Error('GEMINI_API_KEY environment variable is required');
+  console.warn('[FileSearch] No GEMINI_API_KEY or GOOGLE_API_KEY found - File Search features disabled');
 }
 
-const genAI = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+const genAI = GEMINI_API_KEY ? new GoogleGenAI({ apiKey: GEMINI_API_KEY }) : null;
 
 // File Search Store configuration
 const FILE_SEARCH_STORE_NAME = 'nds-copywriting-rag';

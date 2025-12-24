@@ -270,13 +270,8 @@ export const insertGenerationUsageSchema = createInsertSchema(generationUsage).o
   id: true,
   createdAt: true,
 });
-export type InsertGeneration = z.infer<typeof insertGenerationSchema>;
-export type Generation = typeof generations.$inferSelect;
-
 export type InsertGenerationUsage = z.infer<typeof insertGenerationUsageSchema>;
 export type GenerationUsage = typeof generationUsage.$inferSelect;
-export type InsertProduct = z.infer<typeof insertProductSchema>;
-export type Product = typeof products.$inferSelect;
 
 export type InsertPromptTemplate = z.infer<typeof insertPromptTemplateSchema>;
 export type PromptTemplate = typeof promptTemplates.$inferSelect;

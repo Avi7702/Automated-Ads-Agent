@@ -198,6 +198,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/auth/demo - Auto-login as demo user for single-tenant mode
+  app.get("/api/auth/demo", async (req, res) => {
+    try {
+      const demoEmail = "demo@company.com";
+      let user = await storage.getUserByEmail(demoEmail);
+      
+      if (!user) {
+        // Create demo user if doesn't exist
+        const hashedPassword = await authService.hashPassword("demo123");
+        user = await storage.createUser(demoEmail, hashedPassword);
+      }
+      
+      (req as any).session.userId = user.id;
+      res.json({ id: user.id, email: user.email, isDemo: true });
+    } catch (error: any) {
+      console.error("[Auth Demo] Error:", error);
+      res.status(500).json({ error: "Demo login failed" });
+    }
+  });
+
   // ===== END AUTH ROUTES =====
   // Price estimator (adaptive, based on generation history)
   app.get("/api/pricing/estimate", async (req, res) => {

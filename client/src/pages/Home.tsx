@@ -1,12 +1,12 @@
 ﻿import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PromptInput } from "@/components/PromptInput";
 import { IntentVisualizer } from "@/components/IntentVisualizer";
 import { IdeaBankPanel } from "@/components/IdeaBankPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowRight, RefreshCw, Download, Check, Image, Sparkles, History, Package, X, Search, Filter } from "lucide-react";
+import { ArrowRight, RefreshCw, Download, Check, Image, Sparkles, History, Package, X, Search, Filter, User, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link } from "wouter";
 import type { Product } from "@shared/schema";
@@ -21,6 +21,7 @@ import {
 type GenerationState = "idle" | "generating" | "result";
 
 export default function Home() {
+  const queryClient = useQueryClient();
   const [state, setState] = useState<GenerationState>("idle");
   const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
   const [resolution, setResolution] = useState<"1K" | "2K" | "4K">("2K");
@@ -41,6 +42,37 @@ export default function Home() {
     usedFallback: boolean;
   }>(null);
   const [loadingPriceEstimate, setLoadingPriceEstimate] = useState(false);
+
+  // Auth state
+  const { data: authUser, isLoading: authLoading } = useQuery({
+    queryKey: ["auth"],
+    queryFn: async () => {
+      const res = await fetch("/api/auth/me", { credentials: "include" });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    retry: false,
+  });
+
+  const demoLoginMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/auth/demo", { credentials: "include" });
+      if (!res.ok) throw new Error("Demo login failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["auth"] });
+    },
+  });
+
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["auth"] });
+    },
+  });
 
   // Fetch all products from Cloudinary
   const { data: products = [] } = useQuery<Product[]>({
@@ -262,6 +294,31 @@ export default function Home() {
             <Link href="/brand-profile" className="hover:text-foreground cursor-pointer transition-colors" data-testid="link-brand-profile-header">
               Brand
             </Link>
+            <div className="border-l border-white/10 h-5 mx-2" />
+            {authUser ? (
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-primary">{authUser.email}</span>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => logoutMutation.mutate()}
+                  data-testid="button-logout"
+                >
+                  <LogOut className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => demoLoginMutation.mutate()}
+                disabled={demoLoginMutation.isPending}
+                data-testid="button-demo-login"
+              >
+                <User className="w-4 h-4 mr-2" />
+                {demoLoginMutation.isPending ? "Logging in..." : "Demo Login"}
+              </Button>
+            )}
           </nav>
         </div>
       </header>
