@@ -1,0 +1,57 @@
+# Sweep AI Configuration
+# Automatically creates PRs from GitHub Issues
+# Install: https://github.com/apps/sweep-ai
+
+# Repository description for Sweep to understand context
+description: |
+  AI-powered product content generation studio.
+  - Backend: Node.js, Express, TypeScript, PostgreSQL, Redis
+  - Frontend: React, Vite, TypeScript
+  - AI: Google Gemini API for image generation
+  - Key features: Image generation, editing, user auth, rate limiting
+
+# Directories Sweep should focus on
+include_dirs:
+  - server
+  - client/src
+  - shared
+
+# Directories to ignore
+exclude_dirs:
+  - node_modules
+  - dist
+  - build
+  - coverage
+  - .git
+
+# File patterns to exclude
+exclude_exts:
+  - .log
+  - .lock
+  - .map
+
+# Branch naming convention
+branch_prefix: sweep
+
+# Draft PRs (set to false for auto-merge ready PRs)
+draft: false
+
+# Sandbox mode (test without creating PRs)
+sandbox: false
+
+# Rules for Sweep to follow
+rules:
+  - "Always add TypeScript types, never use 'any'"
+  - "Follow existing code patterns and conventions"
+  - "Add error handling with try/catch"
+  - "Include telemetry tracking for new endpoints"
+  - "Write tests for bug fixes"
+  - "Use existing utilities and services, don't duplicate"
+  - "Keep functions small and focused"
+
+# Documentation for context
+docs:
+  - CLAUDE.md
+  - docs/IMPLEMENTATION-TASKS.md
+
+
