@@ -1,21 +1,21 @@
 /**
  * OpenTelemetry Instrumentation for Automated-Ads-Agent
- * 
+ *
  * This file MUST be imported before any other modules to ensure
  * proper instrumentation of all dependencies (Express, PostgreSQL, Redis, etc.)
- * 
+ *
  * Automatically traces:
  * - HTTP requests (Express routes)
  * - PostgreSQL queries (via pg driver)
  * - Redis operations (via ioredis)
  * - External HTTP calls (to Gemini API, etc.)
- * 
+ *
  * Custom metrics tracked:
  * - Gemini API token usage and costs
  * - Image generations per user
  * - API request latencies
  * - Error rates by endpoint
- * 
+ *
  * Supported backends:
  * - Grafana Cloud (recommended)
  * - Axiom
@@ -23,6 +23,10 @@
  * - Uptrace
  * - Any OTLP-compatible backend
  */
+
+// Load environment variables FIRST (before reading process.env below)
+import dotenv from 'dotenv';
+dotenv.config();
 
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
