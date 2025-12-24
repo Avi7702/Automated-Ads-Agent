@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import request from 'supertest';
 import { registerSchema, loginSchema, productSchema, transformSchema } from '../validation/schemas';
 import { validate } from '../middleware/validate';
@@ -151,9 +152,9 @@ describe('Validation Schemas', () => {
 
 describe('Validation Middleware', () => {
   describe('validate', () => {
-    const mockNext = jest.fn() as jest.MockedFunction<NextFunction>;
-    const mockJson = jest.fn();
-    const mockStatus = jest.fn().mockReturnValue({ json: mockJson });
+    const mockNext = vi.fn() as ReturnType<typeof vi.fn>;
+    const mockJson = vi.fn();
+    const mockStatus = vi.fn().mockReturnValue({ json: mockJson });
 
     const createMockReq = (body: any): Partial<Request> => ({
       body
@@ -165,7 +166,7 @@ describe('Validation Middleware', () => {
     });
 
     beforeEach(() => {
-      jest.clearAllMocks();
+      vi.clearAllMocks();
     });
 
     it('calls next() for valid data', () => {

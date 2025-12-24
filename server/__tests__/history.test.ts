@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import request from 'supertest';
 import { app } from '../app';
 import { imageStorageService } from '../services/imageStorage';
@@ -58,7 +59,7 @@ describe('GET /api/generations/:id/history', () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   describe('Authentication', () => {
@@ -72,8 +73,8 @@ describe('GET /api/generations/:id/history', () => {
 
   describe('Authorization', () => {
     it('returns 404 for non-existent generation', async () => {
-      jest.spyOn(imageStorageService, 'initialize').mockResolvedValue();
-      jest.spyOn(imageStorageService, 'getGeneration').mockResolvedValue(null);
+      vi.spyOn(imageStorageService, 'initialize').mockResolvedValue();
+      vi.spyOn(imageStorageService, 'getGeneration').mockResolvedValue(null);
 
       const res = await request(app)
         .get('/api/generations/nonexistent/history')
@@ -84,8 +85,8 @@ describe('GET /api/generations/:id/history', () => {
     });
 
     it('returns 403 for other user\'s generation', async () => {
-      jest.spyOn(imageStorageService, 'initialize').mockResolvedValue();
-      jest.spyOn(imageStorageService, 'getGeneration').mockResolvedValue({
+      vi.spyOn(imageStorageService, 'initialize').mockResolvedValue();
+      vi.spyOn(imageStorageService, 'getGeneration').mockResolvedValue({
         ...mockGeneration,
         userId: 'different-user',
       });
@@ -101,9 +102,9 @@ describe('GET /api/generations/:id/history', () => {
 
   describe('Response Format', () => {
     it('returns array of edit chain', async () => {
-      jest.spyOn(imageStorageService, 'initialize').mockResolvedValue();
-      jest.spyOn(imageStorageService, 'getGeneration').mockResolvedValue(mockGeneration);
-      jest.spyOn(imageStorageService, 'getEditChain').mockResolvedValue([
+      vi.spyOn(imageStorageService, 'initialize').mockResolvedValue();
+      vi.spyOn(imageStorageService, 'getGeneration').mockResolvedValue(mockGeneration);
+      vi.spyOn(imageStorageService, 'getEditChain').mockResolvedValue([
         { id: 'original', editPrompt: null, imageUrl: '/uploads/original.png', createdAt: new Date('2024-01-01') },
         { id: 'edit-1', editPrompt: 'First edit', imageUrl: '/uploads/edit1.png', createdAt: new Date('2024-01-02') },
       ]);
@@ -118,9 +119,9 @@ describe('GET /api/generations/:id/history', () => {
     });
 
     it('includes original generation', async () => {
-      jest.spyOn(imageStorageService, 'initialize').mockResolvedValue();
-      jest.spyOn(imageStorageService, 'getGeneration').mockResolvedValue(mockGeneration);
-      jest.spyOn(imageStorageService, 'getEditChain').mockResolvedValue([
+      vi.spyOn(imageStorageService, 'initialize').mockResolvedValue();
+      vi.spyOn(imageStorageService, 'getGeneration').mockResolvedValue(mockGeneration);
+      vi.spyOn(imageStorageService, 'getEditChain').mockResolvedValue([
         { id: 'original', editPrompt: null, imageUrl: '/uploads/original.png', createdAt: new Date('2024-01-01') },
       ]);
 
@@ -132,9 +133,9 @@ describe('GET /api/generations/:id/history', () => {
     });
 
     it('orders by creation date ascending', async () => {
-      jest.spyOn(imageStorageService, 'initialize').mockResolvedValue();
-      jest.spyOn(imageStorageService, 'getGeneration').mockResolvedValue(mockGeneration);
-      jest.spyOn(imageStorageService, 'getEditChain').mockResolvedValue([
+      vi.spyOn(imageStorageService, 'initialize').mockResolvedValue();
+      vi.spyOn(imageStorageService, 'getGeneration').mockResolvedValue(mockGeneration);
+      vi.spyOn(imageStorageService, 'getEditChain').mockResolvedValue([
         { id: 'original', editPrompt: null, imageUrl: '/uploads/1.png', createdAt: new Date('2024-01-01') },
         { id: 'edit-1', editPrompt: 'Edit 1', imageUrl: '/uploads/2.png', createdAt: new Date('2024-01-02') },
         { id: 'edit-2', editPrompt: 'Edit 2', imageUrl: '/uploads/3.png', createdAt: new Date('2024-01-03') },
@@ -150,9 +151,9 @@ describe('GET /api/generations/:id/history', () => {
     });
 
     it('includes editPrompt for each item', async () => {
-      jest.spyOn(imageStorageService, 'initialize').mockResolvedValue();
-      jest.spyOn(imageStorageService, 'getGeneration').mockResolvedValue(mockGeneration);
-      jest.spyOn(imageStorageService, 'getEditChain').mockResolvedValue([
+      vi.spyOn(imageStorageService, 'initialize').mockResolvedValue();
+      vi.spyOn(imageStorageService, 'getGeneration').mockResolvedValue(mockGeneration);
+      vi.spyOn(imageStorageService, 'getEditChain').mockResolvedValue([
         { id: 'original', editPrompt: null, imageUrl: '/uploads/1.png', createdAt: new Date() },
         { id: 'edit-1', editPrompt: 'Make it warmer', imageUrl: '/uploads/2.png', createdAt: new Date() },
       ]);
@@ -166,9 +167,9 @@ describe('GET /api/generations/:id/history', () => {
     });
 
     it('includes imageUrl for each item', async () => {
-      jest.spyOn(imageStorageService, 'initialize').mockResolvedValue();
-      jest.spyOn(imageStorageService, 'getGeneration').mockResolvedValue(mockGeneration);
-      jest.spyOn(imageStorageService, 'getEditChain').mockResolvedValue([
+      vi.spyOn(imageStorageService, 'initialize').mockResolvedValue();
+      vi.spyOn(imageStorageService, 'getGeneration').mockResolvedValue(mockGeneration);
+      vi.spyOn(imageStorageService, 'getEditChain').mockResolvedValue([
         { id: 'original', editPrompt: null, imageUrl: '/uploads/original.png', createdAt: new Date() },
       ]);
 
@@ -180,9 +181,9 @@ describe('GET /api/generations/:id/history', () => {
     });
 
     it('returns single item for unedited generation', async () => {
-      jest.spyOn(imageStorageService, 'initialize').mockResolvedValue();
-      jest.spyOn(imageStorageService, 'getGeneration').mockResolvedValue(mockGeneration);
-      jest.spyOn(imageStorageService, 'getEditChain').mockResolvedValue([
+      vi.spyOn(imageStorageService, 'initialize').mockResolvedValue();
+      vi.spyOn(imageStorageService, 'getGeneration').mockResolvedValue(mockGeneration);
+      vi.spyOn(imageStorageService, 'getEditChain').mockResolvedValue([
         { id: 'original', editPrompt: null, imageUrl: '/uploads/original.png', createdAt: new Date() },
       ]);
 
@@ -195,9 +196,9 @@ describe('GET /api/generations/:id/history', () => {
     });
 
     it('returns totalEdits count', async () => {
-      jest.spyOn(imageStorageService, 'initialize').mockResolvedValue();
-      jest.spyOn(imageStorageService, 'getGeneration').mockResolvedValue(mockGeneration);
-      jest.spyOn(imageStorageService, 'getEditChain').mockResolvedValue([
+      vi.spyOn(imageStorageService, 'initialize').mockResolvedValue();
+      vi.spyOn(imageStorageService, 'getGeneration').mockResolvedValue(mockGeneration);
+      vi.spyOn(imageStorageService, 'getEditChain').mockResolvedValue([
         { id: 'original', editPrompt: null, imageUrl: '/uploads/1.png', createdAt: new Date() },
         { id: 'edit-1', editPrompt: 'Edit 1', imageUrl: '/uploads/2.png', createdAt: new Date() },
         { id: 'edit-2', editPrompt: 'Edit 2', imageUrl: '/uploads/3.png', createdAt: new Date() },
@@ -211,9 +212,9 @@ describe('GET /api/generations/:id/history', () => {
     });
 
     it('includes generationId in response', async () => {
-      jest.spyOn(imageStorageService, 'initialize').mockResolvedValue();
-      jest.spyOn(imageStorageService, 'getGeneration').mockResolvedValue(mockGeneration);
-      jest.spyOn(imageStorageService, 'getEditChain').mockResolvedValue([
+      vi.spyOn(imageStorageService, 'initialize').mockResolvedValue();
+      vi.spyOn(imageStorageService, 'getGeneration').mockResolvedValue(mockGeneration);
+      vi.spyOn(imageStorageService, 'getEditChain').mockResolvedValue([
         { id: 'original', editPrompt: null, imageUrl: '/uploads/original.png', createdAt: new Date() },
       ]);
 

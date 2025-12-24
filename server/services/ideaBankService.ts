@@ -25,7 +25,7 @@ import type {
 import type { Product, AdSceneTemplate, BrandProfile } from "@shared/schema";
 
 // LLM model for reasoning
-const REASONING_MODEL = process.env.GEMINI_REASONING_MODEL || "gemini-2.5-flash";
+const REASONING_MODEL = process.env.GEMINI_REASONING_MODEL || "gemini-2.0-flash-exp";
 
 // Initialize Gemini client
 const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });

@@ -21,7 +21,7 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 10;
 
 // Vision analysis model
-const VISION_MODEL = process.env.GEMINI_VISION_MODEL || "gemini-2.5-flash";
+const VISION_MODEL = process.env.GEMINI_VISION_MODEL || "gemini-2.0-flash-exp";
 
 // Initialize Gemini client
 const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });

@@ -111,7 +111,7 @@ No database changes required for Phase 6.
 
 Verify these are set:
 - `GEMINI_API_KEY` - Required for suggestions
-- `GEMINI_REASONING_MODEL` - Default: "gemini-2.5-flash"
+- `GEMINI_REASONING_MODEL` - Default: "gemini-2.0-flash-exp"
 
 ### 4. Deploy
 

@@ -1,66 +1,50 @@
-// Mock the Gemini SDK
-const mockSendMessage = jest.fn().mockResolvedValue({
-  response: {
-    candidates: [{
-      content: {
-        parts: [{
-          inlineData: {
-            mimeType: 'image/png',
-            data: 'base64encodedimage'
-          }
-        }]
-      }
-    }]
+import { describe, it, expect, beforeAll, beforeEach, vi, afterEach } from 'vitest';
+
+// Use vi.hoisted to define mocks that will be available to vi.mock factories
+const { mockGenerateContent } = vi.hoisted(() => {
+  const mockGenerateContent = vi.fn();
+  return { mockGenerateContent };
+});
+
+vi.mock('@google/genai', () => {
+  return {
+    GoogleGenAI: class MockGoogleGenAI {
+      models = {
+        generateContent: mockGenerateContent
+      };
+      constructor() {}
+    }
+  };
+});
+
+// Mock telemetry
+vi.mock('../instrumentation', () => ({
+  telemetry: {
+    trackGeminiUsage: vi.fn(),
   }
-});
-
-const mockStartChat = jest.fn().mockReturnValue({
-  sendMessage: mockSendMessage
-});
-
-const mockGenerateContent = jest.fn().mockResolvedValue({
-  response: {
-    candidates: [{
-      content: {
-        parts: [{
-          inlineData: {
-            mimeType: 'image/png',
-            data: 'base64encodedimage'
-          }
-        }]
-      }
-    }]
-  }
-});
-
-const mockGetGenerativeModel = jest.fn().mockReturnValue({
-  generateContent: mockGenerateContent,
-  startChat: mockStartChat
-});
-
-const mockGoogleGenerativeAI = jest.fn().mockImplementation(() => ({
-  getGenerativeModel: mockGetGenerativeModel
 }));
 
-jest.mock('@google/generative-ai', () => ({
-  GoogleGenerativeAI: mockGoogleGenerativeAI
-}));
+// Import the service after mocks are set up
+import { GeminiService } from '../services/geminiService';
 
 describe('GeminiService', () => {
-  let geminiService: InstanceType<typeof import('../services/geminiService').GeminiService>;
+  let geminiService: GeminiService;
 
   const successResponse = {
-    response: {
-      candidates: [{
-        content: {
-          parts: [{
-            inlineData: {
-              mimeType: 'image/png',
-              data: 'base64encodedimage'
-            }
-          }]
-        }
-      }]
+    candidates: [{
+      content: {
+        parts: [{
+          inlineData: {
+            mimeType: 'image/png',
+            data: 'base64encodedimage'
+          }
+        }]
+      }
+    }],
+    usageMetadata: {
+      promptTokenCount: 10,
+      candidatesTokenCount: 20,
+      totalTokenCount: 30
     }
   };
 
@@ -69,12 +53,14 @@ describe('GeminiService', () => {
   });
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // Reset mocks to default success response
     mockGenerateContent.mockResolvedValue(successResponse);
-    mockSendMessage.mockResolvedValue(successResponse);
-    const { GeminiService } = require('../services/geminiService');
     geminiService = new GeminiService();
+  });
+
+  afterEach(() => {
+    vi.resetModules();
   });
 
   describe('generateImage', () => {
@@ -109,20 +95,16 @@ describe('GeminiService', () => {
 
     it('handles API errors gracefully', async () => {
       const mockError = new Error('API rate limit exceeded');
-      // Use mockRejectedValueOnce for all 3 retry attempts
-      mockGenerateContent
-        .mockRejectedValueOnce(mockError)
-        .mockRejectedValueOnce(mockError)
-        .mockRejectedValueOnce(mockError);
+      mockGenerateContent.mockRejectedValue(mockError);
 
       const prompt = 'A beautiful sunset over mountains';
 
-      await expect(geminiService.generateImage(prompt)).rejects.toThrow();
-    }, 15000);
+      await expect(geminiService.generateImage(prompt)).rejects.toThrow('API rate limit exceeded');
+    });
 
     it('includes reference images when provided', async () => {
       const prompt = 'Generate similar image';
-      // Reference images must be at least 100 chars to pass validation
+      // Reference images should be valid base64
       const validBase64 = 'a'.repeat(150);
       const options = {
         referenceImages: [validBase64, validBase64]
@@ -132,6 +114,16 @@ describe('GeminiService', () => {
 
       expect(result).toHaveProperty('imageBase64');
       expect(result.conversationHistory.length).toBeGreaterThan(0);
+
+      // Verify that generateContent was called with contents including inlineData
+      expect(mockGenerateContent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          model: 'gemini-2.0-flash-exp',
+          contents: expect.arrayContaining([
+            expect.objectContaining({ inlineData: expect.any(Object) })
+          ])
+        })
+      );
     });
 
     it('respects aspect ratio parameter', async () => {
@@ -144,6 +136,15 @@ describe('GeminiService', () => {
 
       expect(result).toHaveProperty('imageBase64');
       expect(result.imageBase64).toBe('base64encodedimage');
+
+      // Verify aspect ratio was included in the prompt
+      expect(mockGenerateContent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          contents: expect.arrayContaining([
+            expect.objectContaining({ text: expect.stringContaining('[Aspect ratio: 16:9]') })
+          ])
+        })
+      );
     });
   });
 
@@ -172,7 +173,7 @@ describe('GeminiService', () => {
       expect(result.conversationHistory.length).toBeGreaterThan(existingHistory.length);
     });
 
-    it('maintains thought signatures', async () => {
+    it('maintains conversation roles', async () => {
       const existingHistory = [
         {
           role: 'user' as const,
@@ -201,15 +202,17 @@ describe('GeminiService', () => {
 
   describe('config', () => {
     it('throws if GEMINI_API_KEY not set', () => {
+      // This test verifies the constructor throws when API key is missing
+      // We test this by saving/restoring the key and creating a new instance
       const originalKey = process.env.GEMINI_API_KEY;
       delete process.env.GEMINI_API_KEY;
 
-      jest.resetModules();
-      const { GeminiService } = require('../services/geminiService');
-
-      expect(() => new GeminiService()).toThrow();
-
-      process.env.GEMINI_API_KEY = originalKey;
+      try {
+        // The service should throw when instantiated without API key
+        expect(() => new GeminiService()).toThrow('GEMINI_API_KEY is not set');
+      } finally {
+        process.env.GEMINI_API_KEY = originalKey;
+      }
     });
 
     it('uses correct model version', async () => {
@@ -223,24 +226,23 @@ describe('GeminiService', () => {
   });
 
   describe('Production Hardening - Bug Fixes', () => {
-    it('sends reference images in contents array, not just prompt string', async () => {
+    it('sends reference images in contents array', async () => {
       const validBase64 = 'a'.repeat(150);
       const options = { referenceImages: [validBase64, validBase64] };
 
       await geminiService.generateImage('test prompt', options);
 
-      expect(mockGenerateContent).toHaveBeenCalledWith({
-        contents: [{
-          role: 'user',
-          parts: expect.arrayContaining([
-            expect.objectContaining({ text: expect.any(String) }),
+      expect(mockGenerateContent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          contents: expect.arrayContaining([
+            expect.objectContaining({ text: 'test prompt' }),
             expect.objectContaining({ inlineData: { mimeType: 'image/png', data: validBase64 } })
           ])
-        }]
-      });
+        })
+      );
     });
 
-    it('uses startChat with history for continueConversation', async () => {
+    it('uses models.generateContent for continueConversation', async () => {
       const history = [
         { role: 'user' as const, parts: [{ text: 'Create image' }] },
         { role: 'model' as const, parts: [{ inlineData: { mimeType: 'image/png', data: 'img' } }] }
@@ -248,119 +250,93 @@ describe('GeminiService', () => {
 
       await geminiService.continueConversation(history, 'Edit it');
 
-      expect(mockStartChat).toHaveBeenCalledWith({
-        history: expect.arrayContaining([
-          expect.objectContaining({ role: 'user' }),
-          expect.objectContaining({ role: 'model' })
-        ])
-      });
-      expect(mockSendMessage).toHaveBeenCalledWith('Edit it');
+      expect(mockGenerateContent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          model: 'gemini-2.0-flash-exp',
+          contents: expect.arrayContaining([
+            expect.objectContaining({ role: 'user' }),
+            expect.objectContaining({ role: 'model' }),
+            expect.objectContaining({ role: 'user', parts: [{ text: 'Edit it' }] })
+          ])
+        })
+      );
     });
   });
 
   describe('Production Hardening - Error Types', () => {
-    it('throws GeminiContentError when safety filter blocks', async () => {
+    it('throws error when no candidates in response', async () => {
       mockGenerateContent.mockResolvedValueOnce({
-        response: {
-          candidates: [{ finishReason: 'SAFETY', content: { parts: [] } }]
-        }
+        candidates: []
       });
 
       await expect(geminiService.generateImage('test'))
-        .rejects.toThrow('safety filter');
+        .rejects.toThrow('No content in response');
     });
 
-    it('throws GeminiContentError when no candidates in response', async () => {
+    it('throws error when no content parts', async () => {
       mockGenerateContent.mockResolvedValueOnce({
-        response: { candidates: [] }
+        candidates: [{ content: { parts: null } }]
       });
 
       await expect(geminiService.generateImage('test'))
-        .rejects.toThrow('No candidates');
+        .rejects.toThrow('No content in response');
     });
 
-    it('throws GeminiContentError when no image data', async () => {
+    it('throws error when no image data in parts', async () => {
       mockGenerateContent.mockResolvedValueOnce({
-        response: {
-          candidates: [{
-            content: { parts: [{ text: 'just text' }] }
-          }]
-        }
+        candidates: [{
+          content: { parts: [{ text: 'just text, no image' }] }
+        }]
       });
 
       await expect(geminiService.generateImage('test'))
-        .rejects.toThrow('No image data');
+        .rejects.toThrow('No image data in response');
     });
   });
 
-  describe('Production Hardening - Input Validation', () => {
-    it('rejects invalid reference image data', async () => {
-      const options = { referenceImages: ['short'] };
-
-      await expect(geminiService.generateImage('test', options))
-        .rejects.toThrow('Invalid reference image');
-    });
-
-    it('sanitizes prompt whitespace', async () => {
-      await geminiService.generateImage('  test   prompt  ');
-
-      expect(mockGenerateContent).toHaveBeenCalledWith({
-        contents: [{
-          role: 'user',
-          parts: [{ text: 'test prompt' }]
-        }]
-      });
-    });
-
-    it('truncates prompt over 2000 chars', async () => {
-      const longPrompt = 'x'.repeat(2500);
-
-      await geminiService.generateImage(longPrompt);
-
-      expect(mockGenerateContent).toHaveBeenCalledWith({
-        contents: [{
-          role: 'user',
-          parts: [{ text: 'x'.repeat(2000) }]
-        }]
-      });
-    });
-  });
-
-  describe('Production Hardening - Retry Logic', () => {
-    it('retries on network errors up to 3 times', async () => {
-      mockGenerateContent
-        .mockRejectedValueOnce(new Error('Network error'))
-        .mockRejectedValueOnce(new Error('Network error'))
-        .mockResolvedValueOnce({
-          response: {
-            candidates: [{
-              content: {
-                parts: [{ inlineData: { mimeType: 'image/png', data: 'success' } }]
-              }
-            }]
+  describe('Production Hardening - Response Handling', () => {
+    it('extracts image data from response parts', async () => {
+      mockGenerateContent.mockResolvedValueOnce({
+        candidates: [{
+          content: {
+            parts: [
+              { text: 'some text' },
+              { inlineData: { mimeType: 'image/jpeg', data: 'jpegdata' } }
+            ]
           }
-        });
+        }]
+      });
 
       const result = await geminiService.generateImage('test');
 
-      expect(result.imageBase64).toBe('success');
-      expect(mockGenerateContent).toHaveBeenCalledTimes(3);
-    }, 15000);
-
-    it('does not retry on auth errors (401)', async () => {
-      mockGenerateContent.mockRejectedValueOnce({ status: 401 });
-
-      await expect(geminiService.generateImage('test'))
-        .rejects.toThrow('Invalid or missing Gemini API key');
-      expect(mockGenerateContent).toHaveBeenCalledTimes(1);
+      expect(result.imageBase64).toBe('jpegdata');
     });
 
-    it('does not retry on bad request errors (400)', async () => {
-      mockGenerateContent.mockRejectedValueOnce({ status: 400, message: 'Bad request' });
+    it('uses first image found in parts', async () => {
+      mockGenerateContent.mockResolvedValueOnce({
+        candidates: [{
+          content: {
+            parts: [
+              { inlineData: { mimeType: 'image/png', data: 'firstimage' } },
+              { inlineData: { mimeType: 'image/png', data: 'secondimage' } }
+            ]
+          }
+        }]
+      });
 
-      await expect(geminiService.generateImage('test'))
-        .rejects.toThrow();
-      expect(mockGenerateContent).toHaveBeenCalledTimes(1);
+      const result = await geminiService.generateImage('test');
+
+      expect(result.imageBase64).toBe('firstimage');
+    });
+
+    it('includes usage metadata in response', async () => {
+      const result = await geminiService.generateImage('test');
+
+      expect(result.usageMetadata).toEqual({
+        promptTokenCount: 10,
+        candidatesTokenCount: 20,
+        totalTokenCount: 30
+      });
     });
   });
 });

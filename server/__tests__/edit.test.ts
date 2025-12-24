@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach, afterEach, vi, MockedClass } from 'vitest';
 import request from 'supertest';
 import { app } from '../app';
 import { GeminiService } from '../services/geminiService';
@@ -36,7 +37,7 @@ class MockGeminiTimeoutError extends Error {
   }
 }
 
-jest.mock('../services/geminiService');
+vi.mock('../services/geminiService');
 
 // Helper functions
 function getCookies(res: request.Response): string[] {
@@ -100,7 +101,7 @@ describe('POST /api/generations/:id/edit', () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   describe('Authentication', () => {
@@ -124,8 +125,8 @@ describe('POST /api/generations/:id/edit', () => {
 
   describe('Authorization', () => {
     it('returns 404 for non-existent generation', async () => {
-      jest.spyOn(imageStorageService, 'initialize').mockResolvedValue();
-      jest.spyOn(imageStorageService, 'getGeneration').mockResolvedValue(null);
+      vi.spyOn(imageStorageService, 'initialize').mockResolvedValue();
+      vi.spyOn(imageStorageService, 'getGeneration').mockResolvedValue(null);
 
       const res = await request(app)
         .post('/api/generations/nonexistent-id/edit')
@@ -137,8 +138,8 @@ describe('POST /api/generations/:id/edit', () => {
     });
 
     it('returns 403 for other user\'s generation', async () => {
-      jest.spyOn(imageStorageService, 'initialize').mockResolvedValue();
-      jest.spyOn(imageStorageService, 'getGeneration').mockResolvedValue({
+      vi.spyOn(imageStorageService, 'initialize').mockResolvedValue();
+      vi.spyOn(imageStorageService, 'getGeneration').mockResolvedValue({
         ...mockExistingGeneration,
         userId: 'different-user-id',
       });
@@ -177,21 +178,21 @@ describe('POST /api/generations/:id/edit', () => {
 
   describe('Successful Edit', () => {
     beforeEach(() => {
-      jest.spyOn(imageStorageService, 'initialize').mockResolvedValue();
-      jest.spyOn(imageStorageService, 'getGeneration').mockResolvedValue(mockExistingGeneration);
+      vi.spyOn(imageStorageService, 'initialize').mockResolvedValue();
+      vi.spyOn(imageStorageService, 'getGeneration').mockResolvedValue(mockExistingGeneration);
     });
 
     it('returns 201 with valid edit', async () => {
-      const mockContinueConversation = jest.fn().mockResolvedValue({
+      const mockContinueConversation = vi.fn().mockResolvedValue({
         imageBase64: 'newBase64Data',
         conversationHistory: [...mockExistingGeneration.conversationHistory],
         model: 'gemini-2.0-flash-exp'
       });
-      (GeminiService as jest.MockedClass<typeof GeminiService>).mockImplementation(() => ({
+      (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => ({
         continueConversation: mockContinueConversation,
       } as any));
 
-      jest.spyOn(imageStorageService, 'saveEdit').mockResolvedValue({
+      vi.spyOn(imageStorageService, 'saveEdit').mockResolvedValue({
         ...mockExistingGeneration,
         id: 'new-edited-id',
         parentGenerationId: 'existing-gen-id',
@@ -209,16 +210,16 @@ describe('POST /api/generations/:id/edit', () => {
     });
 
     it('returns new generationId in response', async () => {
-      const mockContinueConversation = jest.fn().mockResolvedValue({
+      const mockContinueConversation = vi.fn().mockResolvedValue({
         imageBase64: 'newBase64Data',
         conversationHistory: [],
         model: 'gemini-2.0-flash-exp'
       });
-      (GeminiService as jest.MockedClass<typeof GeminiService>).mockImplementation(() => ({
+      (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => ({
         continueConversation: mockContinueConversation,
       } as any));
 
-      jest.spyOn(imageStorageService, 'saveEdit').mockResolvedValue({
+      vi.spyOn(imageStorageService, 'saveEdit').mockResolvedValue({
         ...mockExistingGeneration,
         id: 'new-edited-id',
         parentGenerationId: 'existing-gen-id',
@@ -236,16 +237,16 @@ describe('POST /api/generations/:id/edit', () => {
     });
 
     it('returns parentId in response', async () => {
-      const mockContinueConversation = jest.fn().mockResolvedValue({
+      const mockContinueConversation = vi.fn().mockResolvedValue({
         imageBase64: 'newBase64Data',
         conversationHistory: [],
         model: 'gemini-2.0-flash-exp'
       });
-      (GeminiService as jest.MockedClass<typeof GeminiService>).mockImplementation(() => ({
+      (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => ({
         continueConversation: mockContinueConversation,
       } as any));
 
-      jest.spyOn(imageStorageService, 'saveEdit').mockResolvedValue({
+      vi.spyOn(imageStorageService, 'saveEdit').mockResolvedValue({
         ...mockExistingGeneration,
         id: 'new-edited-id',
         parentGenerationId: 'existing-gen-id',
@@ -260,16 +261,16 @@ describe('POST /api/generations/:id/edit', () => {
     });
 
     it('returns canEdit: true in response', async () => {
-      const mockContinueConversation = jest.fn().mockResolvedValue({
+      const mockContinueConversation = vi.fn().mockResolvedValue({
         imageBase64: 'newBase64Data',
         conversationHistory: [],
         model: 'gemini-2.0-flash-exp'
       });
-      (GeminiService as jest.MockedClass<typeof GeminiService>).mockImplementation(() => ({
+      (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => ({
         continueConversation: mockContinueConversation,
       } as any));
 
-      jest.spyOn(imageStorageService, 'saveEdit').mockResolvedValue({
+      vi.spyOn(imageStorageService, 'saveEdit').mockResolvedValue({
         ...mockExistingGeneration,
         id: 'new-edited-id',
       });
@@ -284,16 +285,16 @@ describe('POST /api/generations/:id/edit', () => {
     });
 
     it('calls GeminiService.continueConversation with history and prompt', async () => {
-      const mockContinueConversation = jest.fn().mockResolvedValue({
+      const mockContinueConversation = vi.fn().mockResolvedValue({
         imageBase64: 'newBase64Data',
         conversationHistory: [],
         model: 'gemini-2.0-flash-exp'
       });
-      (GeminiService as jest.MockedClass<typeof GeminiService>).mockImplementation(() => ({
+      (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => ({
         continueConversation: mockContinueConversation,
       } as any));
 
-      jest.spyOn(imageStorageService, 'saveEdit').mockResolvedValue({
+      vi.spyOn(imageStorageService, 'saveEdit').mockResolvedValue({
         ...mockExistingGeneration,
         id: 'new-edited-id',
       });
@@ -310,16 +311,16 @@ describe('POST /api/generations/:id/edit', () => {
     });
 
     it('calls saveEdit with correct parameters', async () => {
-      const mockContinueConversation = jest.fn().mockResolvedValue({
+      const mockContinueConversation = vi.fn().mockResolvedValue({
         imageBase64: 'newBase64Data',
         conversationHistory: [{ role: 'user', parts: [{ text: 'Make it warmer' }] }],
         model: 'gemini-2.0-flash-exp'
       });
-      (GeminiService as jest.MockedClass<typeof GeminiService>).mockImplementation(() => ({
+      (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => ({
         continueConversation: mockContinueConversation,
       } as any));
 
-      const mockSaveEdit = jest.spyOn(imageStorageService, 'saveEdit').mockResolvedValue({
+      const mockSaveEdit = vi.spyOn(imageStorageService, 'saveEdit').mockResolvedValue({
         ...mockExistingGeneration,
         id: 'new-edited-id',
       });
@@ -345,13 +346,13 @@ describe('POST /api/generations/:id/edit', () => {
 
   describe('Error Handling', () => {
     beforeEach(() => {
-      jest.spyOn(imageStorageService, 'initialize').mockResolvedValue();
-      jest.spyOn(imageStorageService, 'getGeneration').mockResolvedValue(mockExistingGeneration);
+      vi.spyOn(imageStorageService, 'initialize').mockResolvedValue();
+      vi.spyOn(imageStorageService, 'getGeneration').mockResolvedValue(mockExistingGeneration);
     });
 
     it('returns 500 for GeminiAuthError', async () => {
-      const mockContinueConversation = jest.fn().mockRejectedValue(new MockGeminiAuthError());
-      (GeminiService as jest.MockedClass<typeof GeminiService>).mockImplementation(() => ({
+      const mockContinueConversation = vi.fn().mockRejectedValue(new MockGeminiAuthError());
+      (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => ({
         continueConversation: mockContinueConversation,
       } as any));
 
@@ -365,8 +366,8 @@ describe('POST /api/generations/:id/edit', () => {
     });
 
     it('returns 429 for GeminiRateLimitError', async () => {
-      const mockContinueConversation = jest.fn().mockRejectedValue(new MockGeminiRateLimitError());
-      (GeminiService as jest.MockedClass<typeof GeminiService>).mockImplementation(() => ({
+      const mockContinueConversation = vi.fn().mockRejectedValue(new MockGeminiRateLimitError());
+      (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => ({
         continueConversation: mockContinueConversation,
       } as any));
 
@@ -380,8 +381,8 @@ describe('POST /api/generations/:id/edit', () => {
     });
 
     it('returns 400 for GeminiContentError', async () => {
-      const mockContinueConversation = jest.fn().mockRejectedValue(new MockGeminiContentError());
-      (GeminiService as jest.MockedClass<typeof GeminiService>).mockImplementation(() => ({
+      const mockContinueConversation = vi.fn().mockRejectedValue(new MockGeminiContentError());
+      (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => ({
         continueConversation: mockContinueConversation,
       } as any));
 
@@ -395,8 +396,8 @@ describe('POST /api/generations/:id/edit', () => {
     });
 
     it('returns 504 for GeminiTimeoutError', async () => {
-      const mockContinueConversation = jest.fn().mockRejectedValue(new MockGeminiTimeoutError());
-      (GeminiService as jest.MockedClass<typeof GeminiService>).mockImplementation(() => ({
+      const mockContinueConversation = vi.fn().mockRejectedValue(new MockGeminiTimeoutError());
+      (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => ({
         continueConversation: mockContinueConversation,
       } as any));
 
@@ -410,16 +411,16 @@ describe('POST /api/generations/:id/edit', () => {
     });
 
     it('returns 500 for storage error', async () => {
-      const mockContinueConversation = jest.fn().mockResolvedValue({
+      const mockContinueConversation = vi.fn().mockResolvedValue({
         imageBase64: 'newBase64Data',
         conversationHistory: [],
         model: 'gemini-2.0-flash-exp'
       });
-      (GeminiService as jest.MockedClass<typeof GeminiService>).mockImplementation(() => ({
+      (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => ({
         continueConversation: mockContinueConversation,
       } as any));
 
-      jest.spyOn(imageStorageService, 'saveEdit').mockRejectedValue(new Error('Database error'));
+      vi.spyOn(imageStorageService, 'saveEdit').mockRejectedValue(new Error('Database error'));
 
       const res = await request(app)
         .post('/api/generations/existing-gen-id/edit')
