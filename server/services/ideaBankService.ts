@@ -27,8 +27,8 @@ import type { Product, AdSceneTemplate, BrandProfile } from "@shared/schema";
 // LLM model for reasoning
 const REASONING_MODEL = process.env.GEMINI_REASONING_MODEL || "gemini-2.0-flash-exp";
 
-// Initialize Gemini client
-const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+// Initialize Gemini client (fallback to GOOGLE_API_KEY for compatibility)
+const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "" });
 
 // Rate limiting for suggest endpoint
 const userSuggestCount = new Map<string, { count: number; resetAt: number }>();

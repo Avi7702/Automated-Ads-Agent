@@ -1575,10 +1575,11 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
     }
   });
 
-  // Generate idea bank suggestions
-  app.post("/api/idea-bank/suggest", requireAuth, async (req, res) => {
+  // Generate idea bank suggestions (optional auth for single-tenant mode)
+  app.post("/api/idea-bank/suggest", async (req, res) => {
     try {
-      const userId = (req.session as any).userId;
+      // Use authenticated userId or default system user for single-tenant mode
+      const userId = (req.session as any)?.userId || "system-user";
       const { productId, productIds, userGoal, enableWebSearch, maxSuggestions } = req.body;
 
       // Support both single productId and multiple productIds
