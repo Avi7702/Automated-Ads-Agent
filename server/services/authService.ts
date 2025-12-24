@@ -124,23 +124,9 @@ export async function loginUser(email: string, password: string): Promise<AuthRe
   };
 }
 
-export async function logoutUser(_sessionId: string): Promise<void> {
-  // Session management not implemented - no-op for now
-}
-
-export async function validateSession(sessionId: string): Promise<AuthResult> {
-  if (!sessionId) {
-    return { success: false, error: 'Authentication required', statusCode: 401 };
-  }
-
-  // For now, we don't have session storage, so this is a placeholder
-  // In production, you would look up the session and validate it
-  return { success: false, error: 'Session validation not implemented', statusCode: 401 };
-}
-
-export async function getCurrentUser(sessionId: string): Promise<AuthResult> {
-  return validateSession(sessionId);
-}
+// Note: Session management is now handled by express-session with Redis store
+// The validateSession() function has been removed as it's no longer needed
+// Session validation is done via req.session.userId in the auth middleware
 
 // Password hashing helper
 export async function hashPassword(password: string): Promise<string> {
@@ -189,9 +175,6 @@ export function clearFailedLogins(email: string): void {
 export const authService = {
   registerUser,
   loginUser,
-  logoutUser,
-  validateSession,
-  getCurrentUser,
   hashPassword,
   comparePassword,
   isLockedOut,

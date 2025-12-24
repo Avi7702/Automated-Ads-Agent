@@ -2,6 +2,8 @@ import { type Server } from "node:http";
 
 import express, { type Express, type Request, Response, NextFunction } from "express";
 import session from "express-session";
+import RedisStore from "connect-redis";
+import { getRedisClient } from "./lib/redis";
 import { registerRoutes } from "./routes";
 
 export function log(message: string, source = "express") {
@@ -29,16 +31,23 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: false }));
 
-// Session middleware for authentication
+// Session middleware for authentication with Redis store
+const redisStore = new RedisStore({
+  client: getRedisClient(),
+  prefix: 'sess:',
+});
+
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'product-content-studio-secret',
+  store: redisStore,
+  secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
   resave: false,
   saveUninitialized: false,
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  }
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    sameSite: 'lax',
+  },
 }));
 
 app.use((req, res, next) => {
