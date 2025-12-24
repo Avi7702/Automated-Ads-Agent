@@ -7,14 +7,20 @@ import {
   type InsertPromptTemplate,
   type User,
   type InsertUser,
+  type Session,
+  type InsertSession,
+  type AdCopy,
+  type InsertAdCopy,
   generations,
   products,
   promptTemplates,
-  users
+  users,
+  sessions,
+  adCopy
 } from "@shared/schema";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
-import { eq, desc, ilike } from "drizzle-orm";
+import { eq, desc, and, gt } from "drizzle-orm";
 
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL must be set");
@@ -44,9 +50,24 @@ export interface IStorage {
   deletePromptTemplate(id: string): Promise<void>;
   
   // User CRUD operations
-  createUser(user: InsertUser): Promise<User>;
+  createUser(email: string, passwordHash: string): Promise<User>;
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserById(id: string): Promise<User | undefined>;
+  updateUserBrandVoice(userId: string, brandVoice: any): Promise<User | undefined>;
+  incrementFailedAttempts(userId: string): Promise<void>;
+  resetFailedAttempts(userId: string): Promise<void>;
+  
+  // Session CRUD operations
+  createSession(userId: string, sessionId: string, expiresAt: Date): Promise<Session>;
+  getSession(sessionId: string): Promise<Session | undefined>;
+  deleteSession(sessionId: string): Promise<void>;
+  deleteAllUserSessions(userId: string): Promise<void>;
+  
+  // Ad Copy CRUD operations
+  saveAdCopy(copy: InsertAdCopy): Promise<AdCopy>;
+  getAdCopyByGenerationId(generationId: string): Promise<AdCopy[]>;
+  getAdCopyById(id: string): Promise<AdCopy | undefined>;
+  deleteAdCopy(id: string): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -167,10 +188,10 @@ export class DbStorage implements IStorage {
     return history.reverse(); // Oldest first
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
+  async createUser(email: string, passwordHash: string): Promise<User> {
     const [user] = await db
       .insert(users)
-      .values(insertUser)
+      .values({ email, passwordHash })
       .returning();
     return user;
   }
@@ -189,6 +210,92 @@ export class DbStorage implements IStorage {
       .from(users)
       .where(eq(users.id, id));
     return user;
+  }
+
+  async updateUserBrandVoice(userId: string, brandVoice: any): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ brandVoice })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async incrementFailedAttempts(userId: string): Promise<void> {
+    const user = await this.getUserById(userId);
+    if (!user) return;
+    
+    const newAttempts = (user.failedAttempts || 0) + 1;
+    const MAX_FAILED_ATTEMPTS = 5;
+    const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
+    
+    const lockedUntil = newAttempts >= MAX_FAILED_ATTEMPTS 
+      ? new Date(Date.now() + LOCKOUT_DURATION_MS) 
+      : null;
+    
+    await db
+      .update(users)
+      .set({ failedAttempts: newAttempts, lockedUntil })
+      .where(eq(users.id, userId));
+  }
+
+  async resetFailedAttempts(userId: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ failedAttempts: 0, lockedUntil: null })
+      .where(eq(users.id, userId));
+  }
+
+  async createSession(userId: string, sessionId: string, expiresAt: Date): Promise<Session> {
+    const [session] = await db
+      .insert(sessions)
+      .values({ id: sessionId, userId, expiresAt })
+      .returning();
+    return session;
+  }
+
+  async getSession(sessionId: string): Promise<Session | undefined> {
+    const [session] = await db
+      .select()
+      .from(sessions)
+      .where(and(eq(sessions.id, sessionId), gt(sessions.expiresAt, new Date())));
+    return session;
+  }
+
+  async deleteSession(sessionId: string): Promise<void> {
+    await db.delete(sessions).where(eq(sessions.id, sessionId));
+  }
+
+  async deleteAllUserSessions(userId: string): Promise<void> {
+    await db.delete(sessions).where(eq(sessions.userId, userId));
+  }
+
+  async saveAdCopy(insertCopy: InsertAdCopy): Promise<AdCopy> {
+    const [copy] = await db
+      .insert(adCopy)
+      .values(insertCopy)
+      .returning();
+    return copy;
+  }
+
+  async getAdCopyByGenerationId(generationId: string): Promise<AdCopy[]> {
+    return await db
+      .select()
+      .from(adCopy)
+      .where(eq(adCopy.generationId, generationId))
+      .orderBy(desc(adCopy.createdAt));
+  }
+
+  async getAdCopyById(id: string): Promise<AdCopy | undefined> {
+    const [copy] = await db
+      .select()
+      .from(adCopy)
+      .where(eq(adCopy.id, id));
+    return copy;
+  }
+
+  async deleteAdCopy(id: string): Promise<void> {
+    await db.delete(adCopy).where(eq(adCopy.id, id));
   }
 }
 
