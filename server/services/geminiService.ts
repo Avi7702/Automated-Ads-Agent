@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import { telemetry } from '../instrumentation';
 
 export interface ConversationMessage {
@@ -24,7 +24,7 @@ export interface GenerateOptions {
 }
 
 export class GeminiService {
-  private readonly genAI: GoogleGenerativeAI;
+  private readonly genAI: GoogleGenAI;
   private readonly modelName = 'gemini-3-pro-image-preview';
 
   constructor() {
@@ -32,7 +32,7 @@ export class GeminiService {
     if (!apiKey) {
       throw new Error('GEMINI_API_KEY is not set in environment variables');
     }
-    this.genAI = new GoogleGenerativeAI(apiKey);
+    this.genAI = new GoogleGenAI({ apiKey });
   }
 
   async generateImage(prompt: string, options?: GenerateOptions, userId?: string): Promise<GenerateResult> {

@@ -1,4 +1,4 @@
-import type { Express } from "express";
+﻿import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
@@ -12,6 +12,7 @@ import { authService } from "./services/authService";
 import { requireAuth } from "./middleware/auth";
 import { createRateLimiter } from "./middleware/rateLimit";
 import { telemetry } from "./instrumentation";
+import { computeAdaptiveEstimate, estimateGenerationCostMicros, normalizeResolution } from "./services/pricingEstimator";
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -41,12 +42,14 @@ if (isCloudinaryConfigured) {
 }
 
 // Validate and initialize Gemini client using direct Google API
-if (!process.env.GOOGLE_API_KEY) {
-  throw new Error("[Gemini] Missing GOOGLE_API_KEY");
+// Using GEMINI_API_KEY with fallback to GOOGLE_API_KEY for backward compatibility
+const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+if (!apiKey) {
+  throw new Error("[Gemini] Missing GEMINI_API_KEY (or GOOGLE_API_KEY)");
 }
 
 const genai = new GoogleGenAI({
-  apiKey: process.env.GOOGLE_API_KEY,
+  apiKey,
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -195,6 +198,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ===== END AUTH ROUTES =====
+  // Price estimator (adaptive, based on generation history)
+  app.get("/api/pricing/estimate", async (req, res) => {
+    try {
+      const brandId = (req as any).session?.userId || 'anonymous';
+
+      const resolution = normalizeResolution(req.query.resolution) || '2K';
+      const operation = (req.query.operation === 'edit' ? 'edit' : 'generate') as 'generate' | 'edit';
+      const inputImagesCount = Math.max(0, Math.min(6, parseInt(String(req.query.inputImagesCount || '0'), 10) || 0));
+      const promptChars = Math.max(0, Math.min(20000, parseInt(String(req.query.promptChars || '0'), 10) || 0));
+
+      const prior = estimateGenerationCostMicros({
+        resolution,
+        inputImagesCount,
+        promptChars,
+      });
+
+      const rows = await storage.getGenerationUsageRows({
+        brandId,
+        operation,
+        resolution,
+        inputImagesCount,
+        limit: 300,
+      });
+
+      const estimate = computeAdaptiveEstimate({
+        rows,
+        priorMeanMicros: prior.estimatedCostMicros,
+        priorStrength: 10,
+        halfLifeDays: 7,
+      });
+
+      const microsToUsd = (micros: number) => Math.round(micros) / 1_000_000;
+
+      res.json({
+        currency: 'USD',
+        estimatedCost: microsToUsd(estimate.estimatedCostMicros),
+        p50: microsToUsd(estimate.p50Micros),
+        p90: microsToUsd(estimate.p90Micros),
+        sampleCount: estimate.sampleCount,
+        effectiveSampleCount: estimate.effectiveSampleCount,
+        lastUpdatedAt: estimate.lastUpdatedAt,
+        usedFallback: estimate.usedFallback,
+      });
+    } catch (error: any) {
+      console.error('[Pricing Estimate] Error:', error);
+      res.status(500).json({ error: 'Failed to estimate price' });
+    }
+  });
   
   // Image transformation endpoint (supports both image transformation and text-only generation)
   app.post("/api/transform", upload.array("images", 6), async (req, res) => {
@@ -205,13 +256,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       const files = req.files as Express.Multer.File[];
-      const { prompt } = req.body;
+      const { prompt, resolution } = req.body;
       
       if (!prompt) {
         return res.status(400).json({ error: "No prompt provided" });
       }
 
       const hasFiles = files && files.length > 0;
+
+      const selectedResolution = normalizeResolution(resolution) || '2K';
       console.log(`[Transform] Processing ${hasFiles ? files.length : 0} image(s) with prompt: "${prompt.substring(0, 100)}..."`);
 
       // Build the prompt for transformation or generation
@@ -274,6 +327,10 @@ Guidelines:
       });
       
       console.log(`[Transform] Model response - modelVersion: ${result.modelVersion}, candidates: ${result.candidates?.length}`);
+      const usageMetadata = (result as any).usageMetadata;
+      if (usageMetadata) {
+        console.log(`[Transform] Captured usageMetadata: ${JSON.stringify(usageMetadata)}`);
+      }
 
       // Check if we got an image back
       if (!result.candidates?.[0]?.content?.parts?.[0]) {
@@ -312,13 +369,40 @@ Guidelines:
           prompt,
           originalImagePaths,
           generatedImagePath,
-          resolution: "2K",
+          resolution: selectedResolution,
           conversationHistory,  // Pass as object, Drizzle handles JSONB
           parentGenerationId: null,
           editPrompt: null,
         });
 
         console.log(`[Transform] Saved generation ${generation.id} with conversation history`);
+        // Persist usage/cost estimate for adaptive pricing
+        try {
+          const durationMsForUsage = Date.now() - startTime;
+          const cost = estimateGenerationCostMicros({
+            resolution: selectedResolution,
+            inputImagesCount: hasFiles ? files.length : 0,
+            promptChars: String(prompt).length,
+            usageMetadata: (typeof usageMetadata === "object" ? usageMetadata : null),
+          });
+
+          await storage.saveGenerationUsage({
+            generationId: generation.id,
+            brandId: userId || "anonymous",
+            model: modelName,
+            operation: "generate",
+            resolution: selectedResolution,
+            inputImagesCount: hasFiles ? files.length : 0,
+            promptChars: String(prompt).length,
+            durationMs: durationMsForUsage,
+            inputTokens: cost.inputTokens,
+            outputTokens: cost.outputTokens,
+            estimatedCostMicros: cost.estimatedCostMicros,
+            estimationSource: cost.estimationSource,
+          });
+        } catch (e) {
+          console.warn("[Transform] Failed to persist generation usage (run db:push?):", e);
+        }
         
         success = true;
         
@@ -525,6 +609,10 @@ Guidelines:
       });
       
       console.log(`[Edit] Model response - modelVersion: ${result.modelVersion}, candidates: ${result.candidates?.length}`);
+      const usageMetadata = (result as any).usageMetadata;
+      if (usageMetadata) {
+        console.log(`[Edit] Captured usageMetadata: ${JSON.stringify(usageMetadata)}`);
+      }
 
       // Extract the new image
       if (!result.candidates?.[0]?.content?.parts) {
@@ -566,6 +654,36 @@ Guidelines:
       });
 
       console.log(`[Edit] Created new generation ${newGeneration.id} from parent ${id}`);
+      // Persist usage/cost estimate for adaptive pricing
+      try {
+        const durationMsForUsage = Date.now() - startTime;
+        const resolution = normalizeResolution(parentGeneration.resolution) || '2K';
+        const inputImagesCount = Array.isArray(parentGeneration.originalImagePaths) ? parentGeneration.originalImagePaths.length : 0;
+
+        const cost = estimateGenerationCostMicros({
+          resolution,
+          inputImagesCount,
+          promptChars: String(editPrompt).length,
+          usageMetadata: (typeof usageMetadata === "object" ? usageMetadata : null),
+        });
+
+        await storage.saveGenerationUsage({
+          generationId: newGeneration.id,
+          brandId: userId || "anonymous",
+          model: modelName,
+          operation: "edit",
+          resolution,
+          inputImagesCount,
+          promptChars: String(editPrompt).length,
+          durationMs: durationMsForUsage,
+          inputTokens: cost.inputTokens,
+          outputTokens: cost.outputTokens,
+          estimatedCostMicros: cost.estimatedCostMicros,
+          estimationSource: cost.estimationSource,
+        });
+      } catch (e) {
+        console.warn("[Edit] Failed to persist generation usage (run db:push?):", e);
+      }
 
       success = true;
 
@@ -1152,3 +1270,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   const httpServer = createServer(app);
   return httpServer;
 }
+
+
+
+

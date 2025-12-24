@@ -13,19 +13,56 @@
  * Docs: https://ai.google.dev/gemini-api/docs/file-search
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import fs from 'fs/promises';
 import path from 'path';
+import { telemetry } from '../instrumentation';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 if (!GEMINI_API_KEY) {
   throw new Error('GEMINI_API_KEY environment variable is required');
 }
 
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const genAI = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 // File Search Store configuration
 const FILE_SEARCH_STORE_NAME = 'nds-copywriting-rag';
+
+// Allowed file types for File Search (Google supports 100+ formats)
+const ALLOWED_FILE_EXTENSIONS = [
+  '.pdf', '.docx', '.doc', '.txt', '.md', '.csv', '.xlsx', '.xls',
+  '.pptx', '.ppt', '.json', '.xml', '.yaml', '.yml', '.html', '.htm'
+];
+
+const MAX_FILE_SIZE_MB = 100; // Google File Search limit
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
+/**
+ * Validate file before upload
+ */
+function validateFile(filePath: string, stats: { size: number }): void {
+  const ext = path.extname(filePath).toLowerCase();
+
+  // Check file extension
+  if (!ALLOWED_FILE_EXTENSIONS.includes(ext)) {
+    throw new Error(
+      `Unsupported file type: ${ext}. Allowed types: ${ALLOWED_FILE_EXTENSIONS.join(', ')}`
+    );
+  }
+
+  // Check file size
+  if (stats.size > MAX_FILE_SIZE_BYTES) {
+    throw new Error(
+      `File too large: ${(stats.size / 1024 / 1024).toFixed(2)}MB (max: ${MAX_FILE_SIZE_MB}MB)`
+    );
+  }
+
+  // Block executable files for security
+  const dangerousExtensions = ['.exe', '.sh', '.bat', '.cmd', '.ps1'];
+  if (dangerousExtensions.includes(ext)) {
+    throw new Error(`Dangerous file type blocked: ${ext}`);
+  }
+}
 
 /**
  * File categories for organization
@@ -81,8 +118,15 @@ export async function uploadReferenceFile(params: {
   metadata?: Record<string, string | number>;
 }) {
   const { filePath, category, description, metadata = {} } = params;
+  const startTime = Date.now();
+  let success = false;
+  let errorType: string | undefined;
 
   try {
+    // Validate file before upload
+    const stats = await fs.stat(filePath);
+    validateFile(filePath, stats);
+
     // Get or create store
     const store = await initializeFileSearchStore();
 
@@ -127,6 +171,8 @@ export async function uploadReferenceFile(params: {
     const result = await operation.result();
     console.log(`✅ Uploaded ${fileName}:`, result.name);
 
+    success = true;
+
     return {
       fileName,
       fileId: result.name,
@@ -135,8 +181,19 @@ export async function uploadReferenceFile(params: {
       metadata,
     };
   } catch (error) {
+    success = false;
+    errorType = error instanceof Error ? error.name : 'UnknownError';
     console.error(`❌ Error uploading file ${filePath}:`, error);
     throw error;
+  } finally {
+    // Track upload metrics
+    const durationMs = Date.now() - startTime;
+    telemetry.trackFileSearchUpload({
+      category,
+      success,
+      durationMs,
+      errorType,
+    });
   }
 }
 
@@ -195,6 +252,10 @@ export async function queryFileSearchStore(params: {
   maxResults?: number;
 }) {
   const { query, category, maxResults = 5 } = params;
+  const startTime = Date.now();
+  let success = false;
+  let errorType: string | undefined;
+  let resultsCount = 0;
 
   try {
     const store = await initializeFileSearchStore();
@@ -218,13 +279,29 @@ export async function queryFileSearchStore(params: {
     });
 
     const response = await result.response;
+    const citations = (response as any).citations || [];
+    resultsCount = citations.length;
+    success = true;
+
     return {
       context: response.text(),
-      citations: (response as any).citations || [],
+      citations,
     };
   } catch (error) {
+    success = false;
+    errorType = error instanceof Error ? error.name : 'UnknownError';
     console.error('❌ Error querying File Search Store:', error);
     throw error;
+  } finally {
+    // Track query metrics
+    const durationMs = Date.now() - startTime;
+    telemetry.trackFileSearchQuery({
+      category,
+      success,
+      durationMs,
+      resultsCount,
+      errorType,
+    });
   }
 }
 

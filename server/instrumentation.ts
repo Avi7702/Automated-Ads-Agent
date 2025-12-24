@@ -79,6 +79,12 @@ let rateLimitHitsCounter: ReturnType<typeof appMeter.createCounter>;
 // Storage Metrics
 let storageUsageGauge: ReturnType<typeof appMeter.createUpDownCounter>;
 
+// File Search (RAG) Metrics
+let fileSearchUploadsCounter: ReturnType<typeof appMeter.createCounter>;
+let fileSearchQueriesCounter: ReturnType<typeof appMeter.createCounter>;
+let fileSearchErrorsCounter: ReturnType<typeof appMeter.createCounter>;
+let fileSearchLatencyHistogram: ReturnType<typeof appMeter.createHistogram>;
+
 /**
  * Initialize custom metrics after SDK is ready
  */
@@ -143,6 +149,27 @@ function initializeCustomMetrics() {
   storageUsageGauge = appMeter.createUpDownCounter('storage.usage.bytes', {
     description: 'Current storage usage in bytes',
     unit: 'bytes',
+  });
+
+  // ===== File Search (RAG) Tracking =====
+  fileSearchUploadsCounter = appMeter.createCounter('filesearch.uploads.total', {
+    description: 'Total files uploaded to File Search Store',
+    unit: 'files',
+  });
+
+  fileSearchQueriesCounter = appMeter.createCounter('filesearch.queries.total', {
+    description: 'Total File Search queries executed',
+    unit: 'queries',
+  });
+
+  fileSearchErrorsCounter = appMeter.createCounter('filesearch.errors.total', {
+    description: 'Total File Search operation errors',
+    unit: 'errors',
+  });
+
+  fileSearchLatencyHistogram = appMeter.createHistogram('filesearch.latency.ms', {
+    description: 'File Search operation latency in milliseconds',
+    unit: 'ms',
   });
 }
 
@@ -306,6 +333,71 @@ export const telemetry = {
     if (!OTEL_ENABLED || !activeUsersGauge) return;
 
     activeUsersGauge.add(action === 'start' ? 1 : -1, {});
+  },
+
+  /**
+   * Track File Search file uploads
+   */
+  trackFileSearchUpload(params: {
+    category: string;
+    success: boolean;
+    durationMs: number;
+    errorType?: string;
+  }) {
+    if (!OTEL_ENABLED || !fileSearchUploadsCounter) return;
+
+    const { category, success, durationMs, errorType } = params;
+
+    fileSearchUploadsCounter.add(1, {
+      category,
+      success: String(success),
+    });
+
+    fileSearchLatencyHistogram.record(durationMs, {
+      operation: 'upload',
+      category,
+      success: String(success),
+    });
+
+    if (!success && errorType) {
+      fileSearchErrorsCounter.add(1, {
+        operation: 'upload',
+        error_type: errorType,
+      });
+    }
+  },
+
+  /**
+   * Track File Search queries
+   */
+  trackFileSearchQuery(params: {
+    category?: string;
+    success: boolean;
+    durationMs: number;
+    resultsCount?: number;
+    errorType?: string;
+  }) {
+    if (!OTEL_ENABLED || !fileSearchQueriesCounter) return;
+
+    const { category, success, durationMs, errorType } = params;
+
+    fileSearchQueriesCounter.add(1, {
+      category: category || 'all',
+      success: String(success),
+    });
+
+    fileSearchLatencyHistogram.record(durationMs, {
+      operation: 'query',
+      category: category || 'all',
+      success: String(success),
+    });
+
+    if (!success && errorType) {
+      fileSearchErrorsCounter.add(1, {
+        operation: 'query',
+        error_type: errorType,
+      });
+    }
   },
 };
 
