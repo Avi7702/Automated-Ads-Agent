@@ -27,9 +27,9 @@ export class GeminiService {
   private readonly modelName = 'gemini-3-pro-image-preview';
 
   constructor() {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      throw new Error('GEMINI_API_KEY is not set in environment variables');
+      throw new Error('GOOGLE_API_KEY is not set in environment variables');
     }
     this.genAI = new GoogleGenerativeAI(apiKey);
   }
