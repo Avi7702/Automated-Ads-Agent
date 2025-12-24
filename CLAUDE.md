@@ -95,6 +95,38 @@ This document contains:
 - Schema changes, type definitions, API endpoints
 - Frontend React components with CSS
 
+## Claude Code Plugins (Enabled)
+
+The following plugins from the anthropics/claude-code marketplace are enabled:
+
+| Plugin | Purpose | Usage |
+|--------|---------|-------|
+| **code-review** | Multi-agent PR review with confidence scoring | `/code-review` or `/code-review --comment` |
+| **commit-commands** | Streamlined git commit workflow | `/commit` |
+| **pr-review-toolkit** | Enhanced PR review capabilities | `/review-pr [PR#]` |
+| **frontend-design** | Distinctive UI design, avoids generic AI aesthetics | Auto-activates for frontend work |
+| **security-guidance** | PreToolUse hook monitoring security patterns | Auto-activates on file edits |
+
+### Security Patterns Monitored (via security-guidance)
+
+- GitHub Actions workflow injection
+- Child process execution vulnerabilities
+- Dynamic code evaluation (eval, Function)
+- XSS vectors (innerHTML, dangerouslySetInnerHTML)
+- Unsafe serialization (pickle)
+- OS command injection
+
+### Existing Hookify Rules (local)
+
+Located in `.claude/hookify.*.local.md`:
+- `console-log` - Prevents console.log in production
+- `no-secrets` - Blocks hardcoded secrets
+- `no-eval` - Prevents eval() usage
+- `no-force-push` - Blocks git push --force
+- `dangerous-rm` - Warns on dangerous rm commands
+- `require-tests` - Requires tests for new code
+- `sensitive-files` - Protects sensitive files
+
 ## Agent Handoff Protocol
 
 When completing a task, update this file with:
