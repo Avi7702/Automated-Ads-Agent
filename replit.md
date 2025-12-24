@@ -45,6 +45,7 @@ Preferred communication style: Simple, everyday language.
 - Quick edit presets: Warmer lighting, Cooler tones, Add shadows, Softer look, More contrast, Blur background
 - Edit lineage tracking: see which generation an edit was based on
 - One-click download of generated marketing images
+- **Ask AI**: Chat with the AI about any generated image to understand the transformation and get prompt improvement suggestions (uses Gemini 2.0 Flash for analysis)
 - **AI Ad Copywriting**: Generate platform-optimized ad copy for generated images with:
   - 5 social platforms: Instagram, LinkedIn, Twitter/X, Facebook, TikTok
   - 6 tone options: Professional, Casual, Fun, Luxury, Minimal, Authentic
@@ -83,6 +84,7 @@ Preferred communication style: Simple, everyday language.
 - `GET /api/copy/generation/:id` - Get all copy variations for a generation
 - `GET /api/copy/:id` - Get specific copy by ID
 - `DELETE /api/copy/:id` - Delete copy
+- `POST /api/generations/:id/analyze` - Ask AI about a generation (sends images to Gemini 2.0 Flash for analysis)
 - Static file serving from `/attached_assets` via Express static middleware
 
 **Security Middleware**:
