@@ -40,12 +40,13 @@ if (isCloudinaryConfigured) {
 }
 
 // Validate and initialize Gemini client using direct Google API
-if (!process.env.GOOGLE_API_KEY) {
+const geminiApiKey = process.env.GOOGLE_API_KEY_TEST || process.env.GOOGLE_API_KEY;
+if (!geminiApiKey) {
   throw new Error("[Gemini] Missing GOOGLE_API_KEY");
 }
 
 const genai = new GoogleGenAI({
-  apiKey: process.env.GOOGLE_API_KEY,
+  apiKey: geminiApiKey,
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {

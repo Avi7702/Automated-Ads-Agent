@@ -27,7 +27,7 @@ export class GeminiService {
   private readonly modelName = 'gemini-3-pro-image-preview';
 
   constructor() {
-    const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GOOGLE_API_KEY_TEST || process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new Error('GOOGLE_API_KEY is not set in environment variables');
     }
@@ -38,9 +38,8 @@ export class GeminiService {
     const model = this.genAI.getGenerativeModel({
       model: this.modelName,
       generationConfig: {
-        // @ts-expect-error - responseModalities is valid for image models
         responseModalities: ['TEXT', 'IMAGE']
-      }
+      } as any
     });
 
     // Build the user message parts
@@ -123,9 +122,8 @@ export class GeminiService {
     const model = this.genAI.getGenerativeModel({
       model: this.modelName,
       generationConfig: {
-        // @ts-expect-error - responseModalities is valid for image models
         responseModalities: ['TEXT', 'IMAGE']
-      }
+      } as any
     });
 
     // Create new history with the edit prompt

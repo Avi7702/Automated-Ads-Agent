@@ -2,11 +2,12 @@ import { GoogleGenAI } from "@google/genai";
 import { storage } from "../storage";
 import type { InsertAdCopy, AdCopy } from "@shared/schema";
 
-if (!process.env.GOOGLE_API_KEY) {
+const copywritingApiKey = process.env.GOOGLE_API_KEY_TEST || process.env.GOOGLE_API_KEY;
+if (!copywritingApiKey) {
   console.warn("[Copywriting] Missing GOOGLE_API_KEY - copywriting features disabled");
 }
 
-const genai = process.env.GOOGLE_API_KEY ? new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY }) : null;
+const genai = copywritingApiKey ? new GoogleGenAI({ apiKey: copywritingApiKey }) : null;
 
 export const PLATFORMS = ["instagram", "linkedin", "twitter", "facebook", "tiktok"] as const;
 export type Platform = typeof PLATFORMS[number];
