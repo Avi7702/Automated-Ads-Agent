@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { PromptInput } from "@/components/PromptInput";
 import { IntentVisualizer } from "@/components/IntentVisualizer";
+import { IdeaBankPanel } from "@/components/IdeaBankPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowRight, RefreshCw, Download, Check, Image, Sparkles, History, Package, X, Search, Filter } from "lucide-react";
@@ -30,10 +31,16 @@ export default function Home() {
   // Gallery filters
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  
-  // AI Prompt Suggestions
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+
+  // Adaptive price estimate
+  const [priceEstimate, setPriceEstimate] = useState<null | {
+    currency: string;
+    estimatedCost: number;
+    p90: number;
+    sampleCount: number;
+    usedFallback: boolean;
+  }>(null);
+  const [loadingPriceEstimate, setLoadingPriceEstimate] = useState(false);
 
   // Fetch all products from Cloudinary
   const { data: products = [] } = useQuery<Product[]>({
@@ -83,43 +90,49 @@ export default function Home() {
 
   }, [products]);
 
-  // Fetch AI prompt suggestions when products are selected
-  const fetchSuggestions = async () => {
-    if (selectedProducts.length === 0) return;
-    
-    setLoadingSuggestions(true);
-    try {
-      const productNames = selectedProducts.map(p => p.name).join(", ");
-      const categories = Array.from(new Set(selectedProducts.map(p => p.category).filter(Boolean)));
-      
-      const res = await fetch("/api/prompt-suggestions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productName: productNames,
-          category: categories[0] || undefined,
-        }),
-      });
-      
-      if (res.ok) {
-        const data = await res.json();
-        setSuggestions(data.suggestions || []);
-      }
-    } catch (error) {
-      console.error("Failed to fetch suggestions:", error);
-    } finally {
-      setLoadingSuggestions(false);
-    }
-  };
-
-  // Auto-fetch suggestions when products are selected or changed
+  // Fetch adaptive price estimate
   useEffect(() => {
-    if (selectedProducts.length > 0) {
-      fetchSuggestions();
-    } else {
-      setSuggestions([]);
+    if (selectedProducts.length === 0) {
+      setPriceEstimate(null);
+      return;
     }
-  }, [selectedProducts.map(p => p.id).join(",")]);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(async () => {
+      try {
+        setLoadingPriceEstimate(true);
+        const url = new URL('/api/pricing/estimate', window.location.origin);
+        url.searchParams.set('resolution', resolution);
+        url.searchParams.set('operation', 'generate');
+        url.searchParams.set('inputImagesCount', String(selectedProducts.length));
+        url.searchParams.set('promptChars', String(prompt.length));
+
+        const res = await fetch(url.toString().replace(window.location.origin, ''), {
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error('Failed to fetch estimate');
+        const data = await res.json();
+        setPriceEstimate({
+          currency: data.currency || 'USD',
+          estimatedCost: Number(data.estimatedCost || 0),
+          p90: Number(data.p90 || 0),
+          sampleCount: Number(data.sampleCount || 0),
+          usedFallback: Boolean(data.usedFallback),
+        });
+      } catch (e) {
+        if ((e as any)?.name !== 'AbortError') {
+          setPriceEstimate(null);
+        }
+      } finally {
+        setLoadingPriceEstimate(false);
+      }
+    }, 300);
+
+    return () => {
+      clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [resolution, prompt.length, selectedProducts.map(p => p.id).join(',')]);
 
   // Toggle product selection
   const toggleProductSelection = (product: Product) => {
@@ -240,8 +253,14 @@ export default function Home() {
             <Link href="/prompts" className="hover:text-foreground cursor-pointer transition-colors" data-testid="link-prompts-header">
               Prompts
             </Link>
+            <Link href="/templates" className="hover:text-foreground cursor-pointer transition-colors" data-testid="link-templates-header">
+              Templates
+            </Link>
             <Link href="/gallery" className="hover:text-foreground cursor-pointer transition-colors" data-testid="link-gallery-header">
               Gallery
+            </Link>
+            <Link href="/brand-profile" className="hover:text-foreground cursor-pointer transition-colors" data-testid="link-brand-profile-header">
+              Brand
             </Link>
           </nav>
         </div>
@@ -333,7 +352,7 @@ export default function Home() {
                 </div>
                 <div className="p-4 rounded-2xl bg-card border border-white/5">
                   <h4 className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Resolution</h4>
-                  <span className="text-sm">{resolution === "1K" ? "1024×1024" : resolution === "2K" ? "2048×2048" : "4096×4096"}</span>
+                  <span className="text-sm">{resolution === "1K" ? "1024Ã—1024" : resolution === "2K" ? "2048Ã—2048" : "4096Ã—4096"}</span>
                 </div>
               </div>
             </motion.div>
@@ -428,6 +447,27 @@ export default function Home() {
                     </Select>
                   </div>
 
+
+                  {/* Cost estimate */}
+                  {selectedProducts.length > 0 && (
+                    <div className="text-xs text-muted-foreground">
+                      {loadingPriceEstimate ? (
+                        <span>Estimating cost...</span>
+                      ) : priceEstimate ? (
+                        <span>
+                          Estimated cost: ~${priceEstimate.estimatedCost.toFixed(2)}{' '}
+                          {priceEstimate.usedFallback ? (
+                            <span>(baseline)</span>
+                          ) : (
+                            <span>(based on {priceEstimate.sampleCount} similar generations, p90 ~${priceEstimate.p90.toFixed(2)})</span>
+                          )}
+                        </span>
+                      ) : (
+                        <span>Estimated cost: unavailable</span>
+                      )}
+                    </div>
+                  )}
+
                   {/* Generate Button */}
                   <Button
                     onClick={handleGenerate}
@@ -440,57 +480,11 @@ export default function Home() {
                   </Button>
                 </div>
 
-                {/* Idea Bank - Context Aware */}
-                {selectedProducts.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="p-6 rounded-2xl border border-white/10 bg-gradient-to-br from-primary/5 to-purple-500/5 space-y-4"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="w-5 h-5 text-primary" />
-                        <h3 className="font-medium">Idea Bank</h3>
-                        <span className="text-xs text-muted-foreground">
-                          {suggestions.length > 0 ? `${suggestions.length} ideas for your products` : 'Loading ideas...'}
-                        </span>
-                      </div>
-                      <button
-                        onClick={fetchSuggestions}
-                        disabled={loadingSuggestions}
-                        className="p-2 rounded-lg hover:bg-white/5 transition-colors disabled:opacity-50"
-                        data-testid="button-refresh-suggestions"
-                      >
-                        <RefreshCw className={cn("w-4 h-4", loadingSuggestions && "animate-spin")} />
-                      </button>
-                    </div>
-
-                    {loadingSuggestions ? (
-                      <div className="flex items-center justify-center py-8">
-                        <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
-                      </div>
-                    ) : suggestions.length > 0 ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {suggestions.map((suggestion, index) => (
-                          <button
-                            key={index}
-                            onClick={() => setPrompt(suggestion)}
-                            className="p-4 rounded-xl border border-white/10 bg-card/50 hover:bg-card hover:border-primary/30 transition-all text-left group"
-                            data-testid={`button-suggestion-${index}`}
-                          >
-                            <p className="text-sm text-foreground/90 group-hover:text-foreground transition-colors">
-                              {suggestion}
-                            </p>
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground text-center py-4">
-                        No suggestions available. Click refresh to try again.
-                      </p>
-                    )}
-                  </motion.div>
-                )}
+                {/* Enhanced Idea Bank with standardized response handling */}
+                <IdeaBankPanel
+                  selectedProducts={selectedProducts}
+                  onSelectPrompt={setPrompt}
+                />
               </div>
 
               {/* Product Gallery */}
@@ -499,7 +493,7 @@ export default function Home() {
                   <div>
                     <h2 className="text-2xl font-display font-semibold">Product Library</h2>
                     <p className="text-sm text-muted-foreground">
-                      {products.length} products • Select up to 6 for generation
+                      {products.length} products â€¢ Select up to 6 for generation
                     </p>
                   </div>
                   <Link href="/library">
@@ -596,3 +590,6 @@ export default function Home() {
     </div>
   );
 }
+
+
+

@@ -1,9 +1,10 @@
+import { describe, it, expect, beforeEach, afterEach, vi, MockedClass } from 'vitest';
 import request from 'supertest';
 import { app } from '../app';
 import { GeminiService } from '../services/geminiService';
 import { imageStorageService } from '../services/imageStorage';
 
-// Create mock error classes that preserve properties across Jest boundaries
+// Create mock error classes that preserve properties across Vitest boundaries
 class MockGeminiAuthError extends Error {
   code = 'AUTH_ERROR';
   constructor() {
@@ -37,7 +38,7 @@ class MockGeminiTimeoutError extends Error {
 }
 
 // Mock GeminiService
-jest.mock('../services/geminiService');
+vi.mock('../services/geminiService');
 
 // Helper to get session cookie
 function getCookies(res: request.Response): string[] {
@@ -84,7 +85,7 @@ describe('POST /api/transform', () => {
 
   afterEach(() => {
     // Restore all spies
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   describe('Authentication', () => {
@@ -153,7 +154,7 @@ describe('POST /api/transform', () => {
   describe('Successful Generation', () => {
     it('should generate image and return saved generation', async () => {
       // Mock GeminiService - prevent constructor from running
-      const mockGenerateImage = jest.fn().mockResolvedValue({
+      const mockGenerateImage = vi.fn().mockResolvedValue({
         imageBase64: 'base64ImageData123',
         conversationHistory: [
           { role: 'user', parts: [{ text: 'A beautiful landscape' }] },
@@ -161,15 +162,15 @@ describe('POST /api/transform', () => {
         ],
         model: 'gemini-2.0-flash-exp'
       });
-      (GeminiService as jest.MockedClass<typeof GeminiService>).mockImplementation(() => {
+      (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => {
         return {
           generateImage: mockGenerateImage,
         } as any;
       });
 
       // Mock imageStorageService
-      jest.spyOn(imageStorageService, 'initialize').mockResolvedValue();
-      const mockSaveGeneration = jest.spyOn(imageStorageService, 'saveGeneration').mockResolvedValue({
+      vi.spyOn(imageStorageService, 'initialize').mockResolvedValue();
+      const mockSaveGeneration = vi.spyOn(imageStorageService, 'saveGeneration').mockResolvedValue({
         id: 'test-generation-id',
         userId,
         prompt: 'A beautiful landscape',
@@ -214,7 +215,7 @@ describe('POST /api/transform', () => {
     });
 
     it('should pass referenceImages to GeminiService', async () => {
-      const mockGenerateImage = jest.fn().mockResolvedValue({
+      const mockGenerateImage = vi.fn().mockResolvedValue({
         imageBase64: 'base64ImageData123',
         conversationHistory: [
           { role: 'user', parts: [{ text: 'A beautiful landscape' }] },
@@ -222,12 +223,12 @@ describe('POST /api/transform', () => {
         ],
         model: 'gemini-2.0-flash-exp'
       });
-      (GeminiService as jest.MockedClass<typeof GeminiService>).mockImplementation(() => ({
+      (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => ({
         generateImage: mockGenerateImage,
       } as any));
 
-      jest.spyOn(imageStorageService, 'initialize').mockResolvedValue();
-      jest.spyOn(imageStorageService, 'saveGeneration').mockResolvedValue({
+      vi.spyOn(imageStorageService, 'initialize').mockResolvedValue();
+      vi.spyOn(imageStorageService, 'saveGeneration').mockResolvedValue({
         id: 'test-generation-id',
         userId,
         prompt: 'A beautiful landscape',
@@ -263,17 +264,17 @@ describe('POST /api/transform', () => {
     });
 
     it('should use default aspect ratio 1:1 if not provided', async () => {
-      const mockGenerateImage = jest.fn().mockResolvedValue({
+      const mockGenerateImage = vi.fn().mockResolvedValue({
         imageBase64: 'base64ImageData123',
         conversationHistory: [],
         model: 'gemini-2.0-flash-exp'
       });
-      (GeminiService as jest.MockedClass<typeof GeminiService>).mockImplementation(() => ({
+      (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => ({
         generateImage: mockGenerateImage,
       } as any));
 
-      jest.spyOn(imageStorageService, 'initialize').mockResolvedValue();
-      const mockSaveGeneration = jest.spyOn(imageStorageService, 'saveGeneration').mockResolvedValue({
+      vi.spyOn(imageStorageService, 'initialize').mockResolvedValue();
+      const mockSaveGeneration = vi.spyOn(imageStorageService, 'saveGeneration').mockResolvedValue({
         id: 'test-generation-id',
         userId,
         prompt: 'A beautiful landscape',
@@ -305,12 +306,12 @@ describe('POST /api/transform', () => {
   describe('Gemini Error Handling', () => {
     it('should return 500 for GeminiAuthError', async () => {
       // Mock storage initialize (required before Gemini call)
-      jest.spyOn(imageStorageService, 'initialize').mockResolvedValue();
+      vi.spyOn(imageStorageService, 'initialize').mockResolvedValue();
 
       // Use mockRejectedValue with error that has preserved properties
       const authError = new MockGeminiAuthError();
-      const mockGenerateImage = jest.fn().mockRejectedValue(authError);
-      (GeminiService as jest.MockedClass<typeof GeminiService>).mockImplementation(() => ({
+      const mockGenerateImage = vi.fn().mockRejectedValue(authError);
+      (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => ({
         generateImage: mockGenerateImage,
       } as any));
 
@@ -324,11 +325,11 @@ describe('POST /api/transform', () => {
     });
 
     it('should return 429 for GeminiRateLimitError', async () => {
-      jest.spyOn(imageStorageService, 'initialize').mockResolvedValue();
+      vi.spyOn(imageStorageService, 'initialize').mockResolvedValue();
 
       const rateLimitError = new MockGeminiRateLimitError();
-      const mockGenerateImage = jest.fn().mockRejectedValue(rateLimitError);
-      (GeminiService as jest.MockedClass<typeof GeminiService>).mockImplementation(() => ({
+      const mockGenerateImage = vi.fn().mockRejectedValue(rateLimitError);
+      (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => ({
         generateImage: mockGenerateImage,
       } as any));
 
@@ -342,11 +343,11 @@ describe('POST /api/transform', () => {
     });
 
     it('should return 400 for GeminiContentError', async () => {
-      jest.spyOn(imageStorageService, 'initialize').mockResolvedValue();
+      vi.spyOn(imageStorageService, 'initialize').mockResolvedValue();
 
       const contentError = new MockGeminiContentError();
-      const mockGenerateImage = jest.fn().mockRejectedValue(contentError);
-      (GeminiService as jest.MockedClass<typeof GeminiService>).mockImplementation(() => ({
+      const mockGenerateImage = vi.fn().mockRejectedValue(contentError);
+      (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => ({
         generateImage: mockGenerateImage,
       } as any));
 
@@ -360,11 +361,11 @@ describe('POST /api/transform', () => {
     });
 
     it('should return 504 for GeminiTimeoutError', async () => {
-      jest.spyOn(imageStorageService, 'initialize').mockResolvedValue();
+      vi.spyOn(imageStorageService, 'initialize').mockResolvedValue();
 
       const timeoutError = new MockGeminiTimeoutError();
-      const mockGenerateImage = jest.fn().mockRejectedValue(timeoutError);
-      (GeminiService as jest.MockedClass<typeof GeminiService>).mockImplementation(() => ({
+      const mockGenerateImage = vi.fn().mockRejectedValue(timeoutError);
+      (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => ({
         generateImage: mockGenerateImage,
       } as any));
 
@@ -380,17 +381,17 @@ describe('POST /api/transform', () => {
 
   describe('Storage Error Handling', () => {
     it('should return 500 when storage fails', async () => {
-      const mockGenerateImage = jest.fn().mockResolvedValue({
+      const mockGenerateImage = vi.fn().mockResolvedValue({
         imageBase64: 'base64ImageData123',
         conversationHistory: [],
         model: 'gemini-2.0-flash-exp'
       });
-      (GeminiService as jest.MockedClass<typeof GeminiService>).mockImplementation(() => ({
+      (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => ({
         generateImage: mockGenerateImage,
       } as any));
 
-      jest.spyOn(imageStorageService, 'initialize').mockResolvedValue();
-      jest.spyOn(imageStorageService, 'saveGeneration').mockRejectedValue(new Error('Database connection failed'));
+      vi.spyOn(imageStorageService, 'initialize').mockResolvedValue();
+      vi.spyOn(imageStorageService, 'saveGeneration').mockRejectedValue(new Error('Database connection failed'));
 
       const res = await request(app)
         .post('/api/transform')
@@ -402,12 +403,12 @@ describe('POST /api/transform', () => {
     });
 
     it('should not expose internal error details to client', async () => {
-      const mockGenerateImage = jest.fn().mockRejectedValue(new Error('Internal database connection string: postgres://user:password@host'));
-      (GeminiService as jest.MockedClass<typeof GeminiService>).mockImplementation(() => ({
+      const mockGenerateImage = vi.fn().mockRejectedValue(new Error('Internal database connection string: postgres://user:password@host'));
+      (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => ({
         generateImage: mockGenerateImage,
       } as any));
 
-      jest.spyOn(imageStorageService, 'initialize').mockResolvedValue();
+      vi.spyOn(imageStorageService, 'initialize').mockResolvedValue();
 
       const res = await request(app)
         .post('/api/transform')
@@ -425,17 +426,17 @@ describe('POST /api/transform', () => {
 
   describe('Response Format', () => {
     it('should return canEdit: true in response', async () => {
-      const mockGenerateImage = jest.fn().mockResolvedValue({
+      const mockGenerateImage = vi.fn().mockResolvedValue({
         imageBase64: 'base64ImageData123',
         conversationHistory: [],
         model: 'gemini-2.0-flash-exp'
       });
-      (GeminiService as jest.MockedClass<typeof GeminiService>).mockImplementation(() => ({
+      (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => ({
         generateImage: mockGenerateImage,
       } as any));
 
-      jest.spyOn(imageStorageService, 'initialize').mockResolvedValue();
-      jest.spyOn(imageStorageService, 'saveGeneration').mockResolvedValue({
+      vi.spyOn(imageStorageService, 'initialize').mockResolvedValue();
+      vi.spyOn(imageStorageService, 'saveGeneration').mockResolvedValue({
         id: 'test-generation-id',
         userId,
         prompt: 'A beautiful landscape',

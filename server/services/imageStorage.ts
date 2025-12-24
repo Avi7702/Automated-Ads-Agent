@@ -168,6 +168,8 @@ class ImageStorageService {
           userId: metadata.userId,
           prompt: metadata.prompt,
           imagePath: filename,
+          originalImagePaths: [], // No original images for new generations
+          generatedImagePath: filename,
           conversationHistory: metadata.conversationHistory,
           model: metadata.model,
           aspectRatio: metadata.aspectRatio,
@@ -336,6 +338,8 @@ class ImageStorageService {
           userId: metadata.userId,
           prompt: metadata.prompt,
           imagePath: filename,
+          originalImagePaths: parent.imagePath ? [parent.imagePath] : [],
+          generatedImagePath: filename,
           conversationHistory: metadata.conversationHistory,
           model: metadata.model,
           aspectRatio: metadata.aspectRatio,

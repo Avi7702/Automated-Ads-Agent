@@ -1,24 +1,35 @@
-import { 
-  type Generation, 
-  type InsertGeneration, 
+﻿import {
+  type Generation,
+  type InsertGeneration,
   type Product,
   type InsertProduct,
   type PromptTemplate,
   type InsertPromptTemplate,
   type User,
   type InsertUser,
+<<<<<<< HEAD
   type Session,
   type InsertSession,
   type AdCopy,
   type InsertAdCopy,
+=======
+  type AdCopy,
+  type InsertAdCopy,
+  type GenerationUsage,
+  type InsertGenerationUsage,
+  type AdSceneTemplate,
+  type InsertAdSceneTemplate,
+>>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
   type BrandProfile,
   type InsertBrandProfile,
   type ProductAnalysis,
   type InsertProductAnalysis,
   generations,
+  generationUsage,
   products,
   promptTemplates,
   users,
+<<<<<<< HEAD
   sessions,
   adCopy,
   brandProfiles,
@@ -27,6 +38,16 @@ import {
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import { eq, desc, and, gt, inArray } from "drizzle-orm";
+=======
+  adCopy,
+  adSceneTemplates,
+  brandProfiles,
+  productAnalyses,
+} from "@shared/schema";
+import { neon } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-http";
+import { and, eq, desc, ilike } from "drizzle-orm";
+>>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
 
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL must be set");
@@ -59,6 +80,7 @@ export interface IStorage {
   createUser(email: string, passwordHash: string): Promise<User>;
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserById(id: string): Promise<User | undefined>;
+<<<<<<< HEAD
   updateUserBrandVoice(userId: string, brandVoice: any): Promise<User | undefined>;
   incrementFailedAttempts(userId: string): Promise<void>;
   resetFailedAttempts(userId: string): Promise<void>;
@@ -70,10 +92,16 @@ export interface IStorage {
   deleteAllUserSessions(userId: string): Promise<void>;
   
   // Ad Copy CRUD operations
+=======
+  updateUserBrandVoice(userId: string, brandVoice: any): Promise<User>;
+
+  // AdCopy CRUD operations
+>>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
   saveAdCopy(copy: InsertAdCopy): Promise<AdCopy>;
   getAdCopyByGenerationId(generationId: string): Promise<AdCopy[]>;
   getAdCopyById(id: string): Promise<AdCopy | undefined>;
   deleteAdCopy(id: string): Promise<void>;
+<<<<<<< HEAD
   
   // Brand Profile CRUD operations
   saveBrandProfile(profile: InsertBrandProfile): Promise<BrandProfile>;
@@ -87,6 +115,47 @@ export interface IStorage {
   saveProductAnalysis(analysis: InsertProductAnalysis): Promise<ProductAnalysis>;
   getProductAnalysisByProductId(productId: string): Promise<ProductAnalysis | undefined>;
   getProductAnalysesByProductIds(productIds: string[]): Promise<ProductAnalysis[]>;
+=======
+  getCopyVariations(parentCopyId: string): Promise<AdCopy[]>;
+
+  // Generation usage/cost tracking
+  saveGenerationUsage(usage: InsertGenerationUsage): Promise<GenerationUsage>;
+  getGenerationUsageRows(params: {
+    brandId: string;
+    operation: string;
+    resolution: string;
+    inputImagesCount: number;
+    limit?: number;
+  }): Promise<{ estimatedCostMicros: number; createdAt: Date }[]>;
+
+  // ============================================
+  // INTELLIGENT IDEA BANK OPERATIONS
+  // ============================================
+
+  // Ad Scene Template CRUD operations
+  saveAdSceneTemplate(template: InsertAdSceneTemplate): Promise<AdSceneTemplate>;
+  getAdSceneTemplates(filters?: {
+    category?: string;
+    isGlobal?: boolean;
+    createdBy?: string;
+  }): Promise<AdSceneTemplate[]>;
+  getAdSceneTemplateById(id: string): Promise<AdSceneTemplate | undefined>;
+  updateAdSceneTemplate(id: string, updates: Partial<InsertAdSceneTemplate>): Promise<AdSceneTemplate>;
+  deleteAdSceneTemplate(id: string): Promise<void>;
+  searchAdSceneTemplates(query: string): Promise<AdSceneTemplate[]>;
+
+  // Brand Profile CRUD operations
+  saveBrandProfile(profile: InsertBrandProfile): Promise<BrandProfile>;
+  getBrandProfileByUserId(userId: string): Promise<BrandProfile | undefined>;
+  updateBrandProfile(userId: string, updates: Partial<InsertBrandProfile>): Promise<BrandProfile>;
+  deleteBrandProfile(userId: string): Promise<void>;
+
+  // Product Analysis CRUD operations
+  saveProductAnalysis(analysis: InsertProductAnalysis): Promise<ProductAnalysis>;
+  getProductAnalysisByProductId(productId: string): Promise<ProductAnalysis | undefined>;
+  getProductAnalysisByFingerprint(fingerprint: string): Promise<ProductAnalysis | undefined>;
+  updateProductAnalysis(productId: string, updates: Partial<InsertProductAnalysis>): Promise<ProductAnalysis>;
+>>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
   deleteProductAnalysis(productId: string): Promise<void>;
 }
 
@@ -235,7 +304,11 @@ export class DbStorage implements IStorage {
     return user;
   }
 
+<<<<<<< HEAD
   async updateUserBrandVoice(userId: string, brandVoice: any): Promise<User | undefined> {
+=======
+  async updateUserBrandVoice(userId: string, brandVoice: any): Promise<User> {
+>>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
     const [user] = await db
       .update(users)
       .set({ brandVoice })
@@ -244,6 +317,7 @@ export class DbStorage implements IStorage {
     return user;
   }
 
+<<<<<<< HEAD
   async incrementFailedAttempts(userId: string): Promise<void> {
     const user = await this.getUserById(userId);
     if (!user) return;
@@ -293,6 +367,8 @@ export class DbStorage implements IStorage {
     await db.delete(sessions).where(eq(sessions.userId, userId));
   }
 
+=======
+>>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
   async saveAdCopy(insertCopy: InsertAdCopy): Promise<AdCopy> {
     const [copy] = await db
       .insert(adCopy)
@@ -321,7 +397,133 @@ export class DbStorage implements IStorage {
     await db.delete(adCopy).where(eq(adCopy.id, id));
   }
 
+<<<<<<< HEAD
   // Brand Profile CRUD
+=======
+  async getCopyVariations(parentCopyId: string): Promise<AdCopy[]> {
+    return await db
+      .select()
+      .from(adCopy)
+      .where(eq(adCopy.parentCopyId, parentCopyId))
+      .orderBy(adCopy.variationNumber);
+  }
+
+  async saveGenerationUsage(insertUsage: InsertGenerationUsage): Promise<GenerationUsage> {
+    const [usage] = await db
+      .insert(generationUsage)
+      .values(insertUsage)
+      .returning();
+    return usage;
+  }
+
+  async getGenerationUsageRows(params: {
+    brandId: string;
+    operation: string;
+    resolution: string;
+    inputImagesCount: number;
+    limit?: number;
+  }): Promise<{ estimatedCostMicros: number; createdAt: Date }[]> {
+    const { brandId, operation, resolution, inputImagesCount, limit = 200 } = params;
+
+    return await db
+      .select({
+        estimatedCostMicros: generationUsage.estimatedCostMicros,
+        createdAt: generationUsage.createdAt,
+      })
+      .from(generationUsage)
+      .where(
+        and(
+          eq(generationUsage.brandId, brandId),
+          eq(generationUsage.operation, operation),
+          eq(generationUsage.resolution, resolution),
+          eq(generationUsage.inputImagesCount, inputImagesCount),
+        ),
+      )
+      .orderBy(desc(generationUsage.createdAt))
+      .limit(limit);
+  }
+
+  // ============================================
+  // AD SCENE TEMPLATE OPERATIONS
+  // ============================================
+
+  async saveAdSceneTemplate(insertTemplate: InsertAdSceneTemplate): Promise<AdSceneTemplate> {
+    const [template] = await db
+      .insert(adSceneTemplates)
+      .values(insertTemplate)
+      .returning();
+    return template;
+  }
+
+  async getAdSceneTemplates(filters?: {
+    category?: string;
+    isGlobal?: boolean;
+    createdBy?: string;
+  }): Promise<AdSceneTemplate[]> {
+    const conditions = [];
+
+    if (filters?.category) {
+      conditions.push(eq(adSceneTemplates.category, filters.category));
+    }
+    if (filters?.isGlobal !== undefined) {
+      conditions.push(eq(adSceneTemplates.isGlobal, filters.isGlobal));
+    }
+    if (filters?.createdBy) {
+      conditions.push(eq(adSceneTemplates.createdBy, filters.createdBy));
+    }
+
+    if (conditions.length > 0) {
+      return await db
+        .select()
+        .from(adSceneTemplates)
+        .where(and(...conditions))
+        .orderBy(desc(adSceneTemplates.createdAt));
+    }
+
+    return await db
+      .select()
+      .from(adSceneTemplates)
+      .orderBy(desc(adSceneTemplates.createdAt));
+  }
+
+  async getAdSceneTemplateById(id: string): Promise<AdSceneTemplate | undefined> {
+    const [template] = await db
+      .select()
+      .from(adSceneTemplates)
+      .where(eq(adSceneTemplates.id, id));
+    return template;
+  }
+
+  async updateAdSceneTemplate(id: string, updates: Partial<InsertAdSceneTemplate>): Promise<AdSceneTemplate> {
+    const [template] = await db
+      .update(adSceneTemplates)
+      .set(updates)
+      .where(eq(adSceneTemplates.id, id))
+      .returning();
+    return template;
+  }
+
+  async deleteAdSceneTemplate(id: string): Promise<void> {
+    await db.delete(adSceneTemplates).where(eq(adSceneTemplates.id, id));
+  }
+
+  async searchAdSceneTemplates(query: string): Promise<AdSceneTemplate[]> {
+    // Search in title, description, and tags
+    const searchTerm = `%${query.toLowerCase()}%`;
+    return await db
+      .select()
+      .from(adSceneTemplates)
+      .where(
+        ilike(adSceneTemplates.title, searchTerm)
+      )
+      .orderBy(desc(adSceneTemplates.createdAt));
+  }
+
+  // ============================================
+  // BRAND PROFILE OPERATIONS
+  // ============================================
+
+>>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
   async saveBrandProfile(insertProfile: InsertBrandProfile): Promise<BrandProfile> {
     const [profile] = await db
       .insert(brandProfiles)
@@ -330,6 +532,7 @@ export class DbStorage implements IStorage {
     return profile;
   }
 
+<<<<<<< HEAD
   async getBrandProfiles(): Promise<BrandProfile[]> {
     return await db
       .select()
@@ -358,10 +561,26 @@ export class DbStorage implements IStorage {
       .update(brandProfiles)
       .set({ ...updates, updatedAt: new Date() })
       .where(eq(brandProfiles.id, id))
+=======
+  async getBrandProfileByUserId(userId: string): Promise<BrandProfile | undefined> {
+    const [profile] = await db
+      .select()
+      .from(brandProfiles)
+      .where(eq(brandProfiles.userId, userId));
+    return profile;
+  }
+
+  async updateBrandProfile(userId: string, updates: Partial<InsertBrandProfile>): Promise<BrandProfile> {
+    const [profile] = await db
+      .update(brandProfiles)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(brandProfiles.userId, userId))
+>>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
       .returning();
     return profile;
   }
 
+<<<<<<< HEAD
   async deleteBrandProfile(id: string): Promise<void> {
     await db.delete(brandProfiles).where(eq(brandProfiles.id, id));
   }
@@ -372,6 +591,19 @@ export class DbStorage implements IStorage {
     await db.delete(productAnalysis).where(eq(productAnalysis.productId, insertAnalysis.productId));
     const [analysis] = await db
       .insert(productAnalysis)
+=======
+  async deleteBrandProfile(userId: string): Promise<void> {
+    await db.delete(brandProfiles).where(eq(brandProfiles.userId, userId));
+  }
+
+  // ============================================
+  // PRODUCT ANALYSIS OPERATIONS
+  // ============================================
+
+  async saveProductAnalysis(insertAnalysis: InsertProductAnalysis): Promise<ProductAnalysis> {
+    const [analysis] = await db
+      .insert(productAnalyses)
+>>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
       .values(insertAnalysis)
       .returning();
     return analysis;
@@ -380,6 +612,7 @@ export class DbStorage implements IStorage {
   async getProductAnalysisByProductId(productId: string): Promise<ProductAnalysis | undefined> {
     const [analysis] = await db
       .select()
+<<<<<<< HEAD
       .from(productAnalysis)
       .where(eq(productAnalysis.productId, productId));
     return analysis;
@@ -395,7 +628,38 @@ export class DbStorage implements IStorage {
 
   async deleteProductAnalysis(productId: string): Promise<void> {
     await db.delete(productAnalysis).where(eq(productAnalysis.productId, productId));
+=======
+      .from(productAnalyses)
+      .where(eq(productAnalyses.productId, productId));
+    return analysis;
+  }
+
+  async getProductAnalysisByFingerprint(fingerprint: string): Promise<ProductAnalysis | undefined> {
+    const [analysis] = await db
+      .select()
+      .from(productAnalyses)
+      .where(eq(productAnalyses.imageFingerprint, fingerprint));
+    return analysis;
+  }
+
+  async updateProductAnalysis(productId: string, updates: Partial<InsertProductAnalysis>): Promise<ProductAnalysis> {
+    const [analysis] = await db
+      .update(productAnalyses)
+      .set({ ...updates, analyzedAt: new Date() })
+      .where(eq(productAnalyses.productId, productId))
+      .returning();
+    return analysis;
+  }
+
+  async deleteProductAnalysis(productId: string): Promise<void> {
+    await db.delete(productAnalyses).where(eq(productAnalyses.productId, productId));
+>>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
   }
 }
 
 export const storage = new DbStorage();
+
+
+
+
+

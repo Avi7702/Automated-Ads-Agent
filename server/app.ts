@@ -29,16 +29,36 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: false }));
 
-// Session middleware for authentication
+// Session middleware - uses Redis if available, falls back to memory store
+let sessionStore: session.Store | undefined;
+
+if (process.env.REDIS_URL) {
+  try {
+    const RedisStore = require('connect-redis').default;
+    const { getRedisClient } = require('./lib/redis');
+    sessionStore = new RedisStore({
+      client: getRedisClient(),
+      prefix: 'sess:',
+    });
+    log('Using Redis session store', 'session');
+  } catch (error) {
+    log('Redis not available, using memory session store', 'session');
+  }
+} else {
+  log('REDIS_URL not set, using memory session store (sessions will not persist across restarts)', 'session');
+}
+
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'product-content-studio-secret',
+  store: sessionStore, // undefined = default memory store
+  secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
   resave: false,
   saveUninitialized: false,
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  }
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    sameSite: 'lax',
+  },
 }));
 
 app.use((req, res, next) => {

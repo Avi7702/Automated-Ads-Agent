@@ -11,6 +11,8 @@ import { v2 as cloudinary } from "cloudinary";
 import { authService } from "./services/authService";
 import { requireAuth } from "./middleware/auth";
 import { createRateLimiter } from "./middleware/rateLimit";
+import { telemetry } from "./instrumentation";
+import { computeAdaptiveEstimate, estimateGenerationCostMicros, normalizeResolution } from "./services/pricingEstimator";
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -40,6 +42,7 @@ if (isCloudinaryConfigured) {
 }
 
 // Validate and initialize Gemini client using direct Google API
+<<<<<<< HEAD
 const geminiApiKey = process.env.GOOGLE_API_KEY_TEST;
 if (!geminiApiKey) {
   throw new Error("[Gemini] Missing GOOGLE_API_KEY");
@@ -47,6 +50,16 @@ if (!geminiApiKey) {
 
 const genai = new GoogleGenAI({
   apiKey: geminiApiKey,
+=======
+// Using GEMINI_API_KEY with fallback to GOOGLE_API_KEY for backward compatibility
+const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+if (!apiKey) {
+  throw new Error("[Gemini] Missing GEMINI_API_KEY (or GOOGLE_API_KEY)");
+}
+
+const genai = new GoogleGenAI({
+  apiKey,
+>>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -55,9 +68,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Apply rate limiting to API routes
   const rateLimiter = createRateLimiter({
+    prefix: 'api',
     windowMs: 15 * 60 * 1000, // 15 minutes
-    maxRequests: 100,
-    useRedis: process.env.USE_REDIS === 'true'
+    max: 100,
+    message: 'Too many requests, please try again later'
   });
   app.use("/api/", rateLimiter);
 
@@ -85,9 +99,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.createUser(email, hashedPassword);
 
       (req as any).session.userId = user.id;
+      
+      telemetry.trackAuth({
+        action: 'register',
+        success: true,
+        userId: user.id,
+      });
+      
       res.json({ id: user.id, email: user.email });
     } catch (error: any) {
       console.error("[Auth Register] Error:", error);
+      
+      telemetry.trackAuth({
+        action: 'register',
+        success: false,
+        reason: error.message,
+      });
+      
       res.status(500).json({ error: "Registration failed" });
     }
   });
@@ -113,20 +141,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUserByEmail(email);
       if (!user) {
         authService.recordFailedLogin(email);
+        telemetry.trackAuth({
+          action: 'login',
+          success: false,
+          reason: 'user_not_found',
+        });
         return res.status(401).json({ error: "Invalid credentials" });
       }
 
       const valid = await authService.comparePassword(password, user.passwordHash);
       if (!valid) {
         authService.recordFailedLogin(email);
+        telemetry.trackAuth({
+          action: 'login',
+          success: false,
+          reason: 'invalid_password',
+        });
         return res.status(401).json({ error: "Invalid credentials" });
       }
 
       authService.clearFailedLogins(email);
       (req as any).session.userId = user.id;
+      
+      telemetry.trackAuth({
+        action: 'login',
+        success: true,
+        userId: user.id,
+      });
+      
       res.json({ id: user.id, email: user.email });
     } catch (error: any) {
       console.error("[Auth Login] Error:", error);
+      
+      telemetry.trackAuth({
+        action: 'login',
+        success: false,
+        reason: error.message,
+      });
+      
       res.status(500).json({ error: "Login failed" });
     }
   });
@@ -157,26 +209,177 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ===== END AUTH ROUTES =====
+  // Price estimator (adaptive, based on generation history)
+  app.get("/api/pricing/estimate", async (req, res) => {
+    try {
+      const brandId = (req as any).session?.userId || 'anonymous';
+
+      const resolution = normalizeResolution(req.query.resolution) || '2K';
+      const operation = (req.query.operation === 'edit' ? 'edit' : 'generate') as 'generate' | 'edit';
+      const inputImagesCount = Math.max(0, Math.min(6, parseInt(String(req.query.inputImagesCount || '0'), 10) || 0));
+      const promptChars = Math.max(0, Math.min(20000, parseInt(String(req.query.promptChars || '0'), 10) || 0));
+
+      const prior = estimateGenerationCostMicros({
+        resolution,
+        inputImagesCount,
+        promptChars,
+      });
+
+      const rows = await storage.getGenerationUsageRows({
+        brandId,
+        operation,
+        resolution,
+        inputImagesCount,
+        limit: 300,
+      });
+
+      const estimate = computeAdaptiveEstimate({
+        rows,
+        priorMeanMicros: prior.estimatedCostMicros,
+        priorStrength: 10,
+        halfLifeDays: 7,
+      });
+
+      const microsToUsd = (micros: number) => Math.round(micros) / 1_000_000;
+
+      res.json({
+        currency: 'USD',
+        estimatedCost: microsToUsd(estimate.estimatedCostMicros),
+        p50: microsToUsd(estimate.p50Micros),
+        p90: microsToUsd(estimate.p90Micros),
+        sampleCount: estimate.sampleCount,
+        effectiveSampleCount: estimate.effectiveSampleCount,
+        lastUpdatedAt: estimate.lastUpdatedAt,
+        usedFallback: estimate.usedFallback,
+      });
+    } catch (error: any) {
+      console.error('[Pricing Estimate] Error:', error);
+      res.status(500).json({ error: 'Failed to estimate price' });
+    }
+  });
   
   // Image transformation endpoint (supports both image transformation and text-only generation)
   app.post("/api/transform", upload.array("images", 6), async (req, res) => {
+    const startTime = Date.now();
+    const userId = (req as any).session?.userId;
+    let success = false;
+    let errorType: string | undefined;
+
     try {
       const files = req.files as Express.Multer.File[];
-      const { prompt } = req.body;
-      
+      const { prompt, resolution, mode, templateId, templateReferenceUrls } = req.body;
+
       if (!prompt) {
         return res.status(400).json({ error: "No prompt provided" });
       }
 
       const hasFiles = files && files.length > 0;
-      console.log(`[Transform] Processing ${hasFiles ? files.length : 0} image(s) with prompt: "${prompt.substring(0, 100)}..."`);
 
-      // Build the prompt for transformation or generation
+      // Parse and validate generation mode
+      const generationMode = mode || 'standard';
+      const validModes = ['standard', 'exact_insert', 'inspiration'];
+      if (!validModes.includes(generationMode)) {
+        return res.status(400).json({ error: `Invalid mode. Must be one of: ${validModes.join(', ')}` });
+      }
+
+      // Validate template-related parameters
+      if ((generationMode === 'exact_insert' || generationMode === 'inspiration') && !templateId) {
+        return res.status(400).json({ error: `templateId is required for ${generationMode} mode` });
+      }
+
+      const selectedResolution = normalizeResolution(resolution) || '2K';
+      console.log(`[Transform] Processing ${hasFiles ? files.length : 0} image(s) with prompt: "${prompt.substring(0, 100)}..." [Mode: ${generationMode}]`);
+
+      // Fetch template if using template-based mode
+      let template = null;
+      if (templateId) {
+        template = await storage.getAdSceneTemplateById(templateId);
+        if (!template) {
+          return res.status(404).json({ error: "Template not found" });
+        }
+      }
+
+      // Build the prompt for transformation or generation based on mode
       let enhancedPrompt = prompt;
-      
-      if (hasFiles) {
-        if (files.length === 1) {
-          enhancedPrompt = `Transform this product photo based on the following instructions: ${prompt}
+
+      if (generationMode === 'exact_insert' && template) {
+        // EXACT_INSERT MODE: Product must be inserted into template scene with quality constraints
+        if (hasFiles) {
+          enhancedPrompt = `Insert this product into the following scene template while maintaining exact quality standards.
+
+Template Scene: ${template.promptBlueprint}
+
+User Instructions: ${prompt}
+
+CRITICAL QUALITY CONSTRAINTS:
+- Product must be clearly visible and recognizable as the main subject
+- Product lighting must match the template scene's lighting style exactly
+- Product placement must follow the template's placement hints: ${JSON.stringify(template.placementHints || {})}
+- Maintain professional photography quality
+- Scene environment should match template exactly: ${template.environment || 'as described'}
+- Overall mood must match template mood: ${template.mood || 'as described'}
+- Do not add text or watermarks
+- Product must look natural and integrated into the scene, not pasted on
+
+If multiple products provided, arrange them according to the template's composition while maintaining all quality constraints.`;
+        } else {
+          enhancedPrompt = `Generate an image following this scene template exactly.
+
+Template Scene: ${template.promptBlueprint}
+
+User Instructions: ${prompt}
+
+QUALITY CONSTRAINTS:
+- Follow the template's scene description precisely
+- Match lighting style: ${template.lightingStyle || 'as described in template'}
+- Match environment: ${template.environment || 'as described'}
+- Match mood: ${template.mood || 'as described'}
+- Professional photography quality
+- Do not add text or watermarks`;
+        }
+      } else if (generationMode === 'inspiration' && template) {
+        // INSPIRATION MODE: Use template as style guide, but create new scene
+        if (hasFiles) {
+          enhancedPrompt = `Transform this product photo inspired by the following template style, but create a unique scene.
+
+Template Inspiration:
+- Category: ${template.category}
+- Mood: ${template.mood || 'not specified'}
+- Lighting Style: ${template.lightingStyle || 'not specified'}
+- Environment Type: ${template.environment || 'not specified'}
+- General Vibe: ${template.promptBlueprint.slice(0, 200)}
+
+User Instructions: ${prompt}
+
+Guidelines:
+- Keep the product as the hero/focus
+- Capture the template's mood and style, but create a NEW unique scene
+- Maintain professional photography quality
+- Ensure the product is clearly visible and recognizable
+- Do not copy the template scene exactly - be creative while maintaining the aesthetic
+- Do not add text or watermarks`;
+        } else {
+          enhancedPrompt = `Generate an image inspired by this template style, creating a unique scene.
+
+Template Inspiration:
+- Category: ${template.category}
+- Mood: ${template.mood || 'not specified'}
+- Lighting Style: ${template.lightingStyle || 'not specified'}
+- Environment: ${template.environment || 'not specified'}
+
+User Instructions: ${prompt}
+
+Guidelines:
+- Capture the template's aesthetic and mood
+- Create a unique scene, don't copy the template exactly
+- Professional photography quality
+- Do not add text or watermarks`;
+        }
+      } else {
+        // STANDARD MODE: Original behavior
+        if (hasFiles) {
+          if (files.length === 1) {
+            enhancedPrompt = `Transform this product photo based on the following instructions: ${prompt}
 
 Guidelines:
 - Keep the product as the hero/focus
@@ -184,8 +387,8 @@ Guidelines:
 - Ensure the product is clearly visible and recognizable
 - Apply the requested scene, lighting, and style changes
 - Do not add text or watermarks`;
-        } else {
-          enhancedPrompt = `Transform these ${files.length} product photos based on the following instructions: ${prompt}
+          } else {
+            enhancedPrompt = `Transform these ${files.length} product photos based on the following instructions: ${prompt}
 
 Guidelines:
 - Combine/arrange all products in a cohesive scene
@@ -194,14 +397,35 @@ Guidelines:
 - Apply the requested scene, lighting, and style changes
 - Show how the products work together or as a collection
 - Do not add text or watermarks`;
+          }
         }
+        // If no files in standard mode, use prompt as-is for text-only generation
       }
-      // If no files, use prompt as-is for text-only generation
 
       // Build user message parts
       const userParts: any[] = [];
-      
-      // Add all images first (if provided)
+
+      // Add template reference images first (for exact_insert mode)
+      if (generationMode === 'exact_insert' && templateReferenceUrls && Array.isArray(templateReferenceUrls)) {
+        for (const refUrl of templateReferenceUrls.slice(0, 3)) { // Max 3 reference images
+          try {
+            const response = await fetch(refUrl);
+            if (response.ok) {
+              const buffer = await response.arrayBuffer();
+              userParts.push({
+                inlineData: {
+                  mimeType: 'image/jpeg',
+                  data: Buffer.from(buffer).toString('base64'),
+                },
+              });
+            }
+          } catch (err) {
+            console.warn(`[Transform] Failed to fetch template reference image: ${refUrl}`, err);
+          }
+        }
+      }
+
+      // Add product images (if provided)
       if (hasFiles) {
         files.forEach((file, index) => {
           userParts.push({
@@ -212,7 +436,7 @@ Guidelines:
           });
         });
       }
-      
+
       // Then add the prompt
       userParts.push({ text: enhancedPrompt });
 
@@ -239,6 +463,7 @@ Guidelines:
         }
       });
       
+<<<<<<< HEAD
       // Extract usage metadata for cost tracking
       const usageMetadata = result.usageMetadata;
       const inputTokens = usageMetadata?.promptTokenCount || 0;
@@ -248,6 +473,13 @@ Guidelines:
       const calculatedCost = (outputTokens / 1_000_000) * costPerMillionTokens;
       
       console.log(`[Transform] Model response - modelVersion: ${result.modelVersion}, candidates: ${result.candidates?.length}, inputTokens: ${inputTokens}, outputTokens: ${outputTokens}, cost: $${calculatedCost.toFixed(4)}`);
+=======
+      console.log(`[Transform] Model response - modelVersion: ${result.modelVersion}, candidates: ${result.candidates?.length}`);
+      const usageMetadata = (result as any).usageMetadata;
+      if (usageMetadata) {
+        console.log(`[Transform] Captured usageMetadata: ${JSON.stringify(usageMetadata)}`);
+      }
+>>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
 
       // Check if we got an image back
       if (!result.candidates?.[0]?.content?.parts?.[0]) {
@@ -286,37 +518,98 @@ Guidelines:
           prompt,
           originalImagePaths,
           generatedImagePath,
+<<<<<<< HEAD
           resolution: requestedResolution,
           cost: calculatedCost,
           inputTokens,
           outputTokens,
+=======
+          resolution: selectedResolution,
+>>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
           conversationHistory,  // Pass as object, Drizzle handles JSONB
           parentGenerationId: null,
           editPrompt: null,
         });
 
         console.log(`[Transform] Saved generation ${generation.id} with conversation history`);
+        // Persist usage/cost estimate for adaptive pricing
+        try {
+          const durationMsForUsage = Date.now() - startTime;
+          const cost = estimateGenerationCostMicros({
+            resolution: selectedResolution,
+            inputImagesCount: hasFiles ? files.length : 0,
+            promptChars: String(prompt).length,
+            usageMetadata: (typeof usageMetadata === "object" ? usageMetadata : null),
+          });
+
+          await storage.saveGenerationUsage({
+            generationId: generation.id,
+            brandId: userId || "anonymous",
+            model: modelName,
+            operation: "generate",
+            resolution: selectedResolution,
+            inputImagesCount: hasFiles ? files.length : 0,
+            promptChars: String(prompt).length,
+            durationMs: durationMsForUsage,
+            inputTokens: cost.inputTokens,
+            outputTokens: cost.outputTokens,
+            estimatedCostMicros: cost.estimatedCostMicros,
+            estimationSource: cost.estimationSource,
+          });
+        } catch (e) {
+          console.warn("[Transform] Failed to persist generation usage (run db:push?):", e);
+        }
         
+        success = true;
+
         // Return the file path for the frontend to use
-        res.json({ 
+        res.json({
           success: true,
           imageUrl: `/${generatedImagePath}`,
           generationId: generation.id,
           prompt: prompt,
           canEdit: true,
+<<<<<<< HEAD
           cost: calculatedCost,
           inputTokens,
           outputTokens
+=======
+          mode: generationMode,
+          templateId: templateId || null
+>>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
         });
       } else {
+        errorType = 'no_image_content';
         throw new Error("Generated content was not an image");
       }
 
     } catch (error: any) {
       console.error("[Transform] Error:", error);
+      errorType = errorType || (error.name || 'unknown');
+      
+      telemetry.trackError({
+        endpoint: '/api/transform',
+        errorType: errorType || 'unknown',
+        statusCode: 500,
+        userId,
+      });
+      
       res.status(500).json({ 
         error: "Failed to transform image",
         details: error.message 
+      });
+    } finally {
+      // Track Gemini API usage and cost
+      const durationMs = Date.now() - startTime;
+      telemetry.trackGeminiUsage({
+        model: 'gemini-3-pro-image-preview',
+        operation: 'generate',
+        inputTokens: (req.body.prompt?.length || 0) * 0.25, // Rough estimate
+        outputTokens: 0,
+        durationMs,
+        userId,
+        success,
+        errorType,
       });
     }
   });
@@ -400,6 +693,11 @@ Guidelines:
 
   // Edit generation - Multi-turn image editing using stored conversation history
   app.post("/api/generations/:id/edit", async (req, res) => {
+    const startTime = Date.now();
+    const userId = (req as any).session?.userId;
+    let success = false;
+    let errorType: string | undefined;
+
     try {
       const { id } = req.params;
       const { editPrompt } = req.body;
@@ -474,6 +772,7 @@ Guidelines:
         contents: history,
       });
       
+<<<<<<< HEAD
       // Extract usage metadata for cost tracking
       const usageMetadata = result.usageMetadata;
       const inputTokens = usageMetadata?.promptTokenCount || 0;
@@ -482,6 +781,13 @@ Guidelines:
       const calculatedCost = (outputTokens / 1_000_000) * costPerMillionTokens;
       
       console.log(`[Edit] Model response - modelVersion: ${result.modelVersion}, candidates: ${result.candidates?.length}, inputTokens: ${inputTokens}, outputTokens: ${outputTokens}, cost: $${calculatedCost.toFixed(4)}`);
+=======
+      console.log(`[Edit] Model response - modelVersion: ${result.modelVersion}, candidates: ${result.candidates?.length}`);
+      const usageMetadata = (result as any).usageMetadata;
+      if (usageMetadata) {
+        console.log(`[Edit] Captured usageMetadata: ${JSON.stringify(usageMetadata)}`);
+      }
+>>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
 
       // Extract the new image
       if (!result.candidates?.[0]?.content?.parts) {
@@ -526,6 +832,38 @@ Guidelines:
       });
 
       console.log(`[Edit] Created new generation ${newGeneration.id} from parent ${id}`);
+      // Persist usage/cost estimate for adaptive pricing
+      try {
+        const durationMsForUsage = Date.now() - startTime;
+        const resolution = normalizeResolution(parentGeneration.resolution) || '2K';
+        const inputImagesCount = Array.isArray(parentGeneration.originalImagePaths) ? parentGeneration.originalImagePaths.length : 0;
+
+        const cost = estimateGenerationCostMicros({
+          resolution,
+          inputImagesCount,
+          promptChars: String(editPrompt).length,
+          usageMetadata: (typeof usageMetadata === "object" ? usageMetadata : null),
+        });
+
+        await storage.saveGenerationUsage({
+          generationId: newGeneration.id,
+          brandId: userId || "anonymous",
+          model: modelName,
+          operation: "edit",
+          resolution,
+          inputImagesCount,
+          promptChars: String(editPrompt).length,
+          durationMs: durationMsForUsage,
+          inputTokens: cost.inputTokens,
+          outputTokens: cost.outputTokens,
+          estimatedCostMicros: cost.estimatedCostMicros,
+          estimationSource: cost.estimationSource,
+        });
+      } catch (e) {
+        console.warn("[Edit] Failed to persist generation usage (run db:push?):", e);
+      }
+
+      success = true;
 
       return res.json({
         success: true,
@@ -537,9 +875,31 @@ Guidelines:
 
     } catch (error: any) {
       console.error("[Edit] Error:", error);
+      errorType = errorType || (error.name || 'unknown');
+      
+      telemetry.trackError({
+        endpoint: '/api/generations/:id/edit',
+        errorType: errorType || 'unknown',
+        statusCode: 500,
+        userId,
+      });
+      
       return res.status(500).json({ 
         success: false, 
         error: error.message || "Failed to edit image" 
+      });
+    } finally {
+      // Track Gemini API usage and cost
+      const durationMs = Date.now() - startTime;
+      telemetry.trackGeminiUsage({
+        model: 'gemini-3-pro-image-preview',
+        operation: 'edit',
+        inputTokens: (req.body.editPrompt?.length || 0) * 0.25,
+        outputTokens: 0,
+        durationMs,
+        userId,
+        success,
+        errorType,
       });
     }
   });
@@ -966,6 +1326,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
     }
   });
 
+<<<<<<< HEAD
   // ===== COPYWRITING ROUTES (Phase 4) =====
 
   // Generate ad copy for a generation
@@ -1016,10 +1377,29 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       }
 
       const generation = await storage.getGenerationById(generationId);
+=======
+  // COPYWRITING ENDPOINTS
+
+  // Generate ad copy with multiple variations
+  app.post("/api/copy/generate", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      // Validate request
+      const { generateCopySchema } = await import("./validation/schemas");
+      const validatedData = generateCopySchema.parse(req.body);
+
+      // Verify generation exists
+      const generation = await storage.getGenerationById(validatedData.generationId);
+>>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
       if (!generation) {
         return res.status(404).json({ error: "Generation not found" });
       }
 
+<<<<<<< HEAD
       console.log(`[Copywriting] Generating ${variations} variations for generation ${generationId}`);
 
       const result = await generateCopy({
@@ -1047,10 +1427,71 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       res.json({ success: true, copies: result.copies });
     } catch (error: any) {
       console.error("[Copywriting Generate] Error:", error);
+=======
+      // Get user's brand voice if not provided
+      let brandVoice = validatedData.brandVoice;
+      if (!brandVoice) {
+        const user = await storage.getUserById(userId);
+        if (user?.brandVoice) {
+          brandVoice = user.brandVoice as any;
+        }
+      }
+
+      // Generate copy variations
+      const { copywritingService } = await import("./services/copywritingService");
+      const variations = await copywritingService.generateCopy({
+        ...validatedData,
+        brandVoice,
+      });
+
+      // Save all variations to database
+      const savedCopies = await Promise.all(
+        variations.map((variation, index) =>
+          storage.saveAdCopy({
+            generationId: validatedData.generationId,
+            userId,
+            headline: variation.headline,
+            hook: variation.hook,
+            bodyText: variation.bodyText,
+            cta: variation.cta,
+            caption: variation.caption,
+            hashtags: variation.hashtags,
+            platform: validatedData.platform,
+            tone: validatedData.tone,
+            framework: variation.framework.toLowerCase(),
+            campaignObjective: validatedData.campaignObjective,
+            productName: validatedData.productName,
+            productDescription: validatedData.productDescription,
+            productBenefits: validatedData.productBenefits,
+            uniqueValueProp: validatedData.uniqueValueProp,
+            industry: validatedData.industry,
+            targetAudience: validatedData.targetAudience,
+            brandVoice: brandVoice,
+            socialProof: validatedData.socialProof,
+            qualityScore: variation.qualityScore,
+            characterCounts: variation.characterCounts,
+            variationNumber: index + 1,
+            parentCopyId: null,
+          })
+        )
+      );
+
+      res.json({
+        success: true,
+        copies: savedCopies,
+        recommended: 0, // First variation is recommended
+      });
+    } catch (error: any) {
+      console.error("[Generate Copy] Error:", error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({ error: "Validation failed", details: error.errors });
+      }
+>>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
       res.status(500).json({ error: "Failed to generate copy", details: error.message });
     }
   });
 
+<<<<<<< HEAD
   // Get all copy for a generation
   app.get("/api/copy/generation/:id", async (req, res) => {
     try {
@@ -1059,11 +1500,21 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       res.json(copies);
     } catch (error: any) {
       console.error("[Copywriting Get By Generation] Error:", error);
+=======
+  // Get copy by generation ID
+  app.get("/api/copy/generation/:generationId", requireAuth, async (req, res) => {
+    try {
+      const copies = await storage.getAdCopyByGenerationId(req.params.generationId);
+      res.json({ copies });
+    } catch (error: any) {
+      console.error("[Get Copy by Generation] Error:", error);
+>>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
       res.status(500).json({ error: "Failed to fetch copy" });
     }
   });
 
   // Get specific copy by ID
+<<<<<<< HEAD
   app.get("/api/copy/:id", async (req, res) => {
     try {
       const { getCopyById } = await import("./services/copywritingService");
@@ -1074,11 +1525,23 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       res.json(copy);
     } catch (error: any) {
       console.error("[Copywriting Get By ID] Error:", error);
+=======
+  app.get("/api/copy/:id", requireAuth, async (req, res) => {
+    try {
+      const copy = await storage.getAdCopyById(req.params.id);
+      if (!copy) {
+        return res.status(404).json({ error: "Copy not found" });
+      }
+      res.json({ copy });
+    } catch (error: any) {
+      console.error("[Get Copy] Error:", error);
+>>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
       res.status(500).json({ error: "Failed to fetch copy" });
     }
   });
 
   // Delete copy
+<<<<<<< HEAD
   app.delete("/api/copy/:id", async (req, res) => {
     try {
       const { deleteCopy, getCopyById } = await import("./services/copywritingService");
@@ -1090,10 +1553,19 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       res.json({ success: true });
     } catch (error: any) {
       console.error("[Copywriting Delete] Error:", error);
+=======
+  app.delete("/api/copy/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteAdCopy(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[Delete Copy] Error:", error);
+>>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
       res.status(500).json({ error: "Failed to delete copy" });
     }
   });
 
+<<<<<<< HEAD
   // Update user brand voice
   app.put("/api/user/brand-voice", requireAuth, async (req, res) => {
     try {
@@ -1114,14 +1586,490 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       }
 
       res.json({ success: true });
+=======
+  // Update user's brand voice
+  app.put("/api/user/brand-voice", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { brandVoice } = req.body;
+      if (!brandVoice || !brandVoice.principles || !Array.isArray(brandVoice.principles)) {
+        return res.status(400).json({ error: "Invalid brand voice data" });
+      }
+
+      const updatedUser = await storage.updateUserBrandVoice(userId, brandVoice);
+      res.json({ success: true, brandVoice: updatedUser.brandVoice });
+>>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
     } catch (error: any) {
       console.error("[Update Brand Voice] Error:", error);
       res.status(500).json({ error: "Failed to update brand voice" });
     }
   });
 
+<<<<<<< HEAD
   // ===== END COPYWRITING ROUTES =====
+=======
+  // =============================================================================
+  // File Search RAG Endpoints
+  // =============================================================================
+
+  // Initialize File Search Store
+  app.post("/api/file-search/initialize", requireAuth, async (req, res) => {
+    try {
+      const { initializeFileSearchStore } = await import('./services/fileSearchService');
+      const store = await initializeFileSearchStore();
+      res.json({ success: true, store: { name: store.name, displayName: store.config?.displayName } });
+    } catch (error: any) {
+      console.error("[Initialize File Search] Error:", error);
+      res.status(500).json({ error: "Failed to initialize File Search Store" });
+    }
+  });
+
+  // Upload reference file
+  app.post("/api/file-search/upload", upload.single("file"), requireAuth, async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      const { category, description, metadata } = req.body;
+      if (!category) {
+        return res.status(400).json({ error: "Category is required" });
+      }
+
+      const { uploadReferenceFile } = await import('./services/fileSearchService');
+      const result = await uploadReferenceFile({
+        filePath: req.file.path,
+        category,
+        description,
+        metadata: metadata ? JSON.parse(metadata) : {},
+      });
+
+      res.json({ success: true, file: result });
+    } catch (error: any) {
+      console.error("[Upload Reference File] Error:", error);
+      res.status(500).json({ error: "Failed to upload file" });
+    }
+  });
+
+  // Upload directory of reference files
+  app.post("/api/file-search/upload-directory", requireAuth, async (req, res) => {
+    try {
+      const { directoryPath, category, description } = req.body;
+      if (!directoryPath || !category) {
+        return res.status(400).json({ error: "Directory path and category are required" });
+      }
+
+      const { uploadDirectoryToFileSearch } = await import('./services/fileSearchService');
+      const results = await uploadDirectoryToFileSearch({
+        directoryPath,
+        category,
+        description,
+      });
+
+      res.json({ success: true, files: results, count: results.length });
+    } catch (error: any) {
+      console.error("[Upload Directory] Error:", error);
+      res.status(500).json({ error: "Failed to upload directory" });
+    }
+  });
+
+  // List reference files
+  app.get("/api/file-search/files", requireAuth, async (req, res) => {
+    try {
+      const { category } = req.query;
+      const { listReferenceFiles, FileCategory } = await import('./services/fileSearchService');
+
+      const files = await listReferenceFiles(category as any);
+      res.json({ success: true, files, count: files.length });
+    } catch (error: any) {
+      console.error("[List Reference Files] Error:", error);
+      res.status(500).json({ error: "Failed to list files" });
+    }
+  });
+
+  // Delete reference file
+  app.delete("/api/file-search/files/:fileId", requireAuth, async (req, res) => {
+    try {
+      const { fileId } = req.params;
+      const { deleteReferenceFile } = await import('./services/fileSearchService');
+
+      await deleteReferenceFile(fileId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[Delete Reference File] Error:", error);
+      res.status(500).json({ error: "Failed to delete file" });
+    }
+  });
+
+  // Seed File Search Store with initial structure
+  app.post("/api/file-search/seed", requireAuth, async (req, res) => {
+    try {
+      const { seedFileSearchStore } = await import('./services/fileSearchService');
+      const result = await seedFileSearchStore();
+      res.json(result);
+    } catch (error: any) {
+      console.error("[Seed File Search] Error:", error);
+      res.status(500).json({ error: "Failed to seed File Search Store" });
+    }
+  });
+
+  // ============================================
+  // INTELLIGENT IDEA BANK ENDPOINTS
+  // ============================================
+
+  // Analyze a product image (vision analysis)
+  app.post("/api/products/:productId/analyze", requireAuth, async (req, res) => {
+    try {
+      const { productId } = req.params;
+      const userId = (req.session as any).userId;
+      const { forceRefresh } = req.body || {};
+
+      const { visionAnalysisService } = await import('./services/visionAnalysisService');
+      const product = await storage.getProductById(productId);
+
+      if (!product) {
+        return res.status(404).json({ error: "Product not found" });
+      }
+
+      const result = await visionAnalysisService.analyzeProductImage(product, userId, forceRefresh);
+
+      if (!result.success) {
+        const statusCode = result.error.code === "RATE_LIMITED" ? 429 : 500;
+        return res.status(statusCode).json({ error: result.error.message, code: result.error.code });
+      }
+
+      res.json({
+        analysis: result.analysis,
+        fromCache: !forceRefresh,
+      });
+    } catch (error: any) {
+      console.error("[Product Analyze] Error:", error);
+      res.status(500).json({ error: "Failed to analyze product" });
+    }
+  });
+
+  // Get cached analysis for a product
+  app.get("/api/products/:productId/analysis", requireAuth, async (req, res) => {
+    try {
+      const { productId } = req.params;
+      const { visionAnalysisService } = await import('./services/visionAnalysisService');
+
+      const analysis = await visionAnalysisService.getCachedAnalysis(productId);
+
+      if (!analysis) {
+        return res.status(404).json({ error: "No analysis found for this product" });
+      }
+
+      res.json({ analysis });
+    } catch (error: any) {
+      console.error("[Product Analysis Get] Error:", error);
+      res.status(500).json({ error: "Failed to get product analysis" });
+    }
+  });
+
+  // Generate idea bank suggestions
+  app.post("/api/idea-bank/suggest", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const { productId, productIds, userGoal, enableWebSearch, maxSuggestions } = req.body;
+
+      // Support both single productId and multiple productIds
+      const ids = productIds || (productId ? [productId] : []);
+
+      if (ids.length === 0) {
+        return res.status(400).json({ error: "productId or productIds is required" });
+      }
+
+      const { ideaBankService } = await import('./services/ideaBankService');
+
+      // For multiple products, aggregate suggestions from each
+      if (ids.length > 1) {
+        const results = await Promise.all(
+          ids.slice(0, 6).map((id: string) => // Limit to 6 products max
+            ideaBankService.generateSuggestions({
+              productId: id,
+              userId,
+              userGoal,
+              enableWebSearch: enableWebSearch || false,
+              maxSuggestions: 2, // Fewer per product when multiple
+            })
+          )
+        );
+
+        // Filter successful results and aggregate
+        const successfulResults = results.filter(r => r.success);
+        if (successfulResults.length === 0) {
+          return res.status(500).json({ error: "Failed to generate suggestions for all products" });
+        }
+
+        // Merge suggestions and aggregate analysis status
+        const allSuggestions: any[] = [];
+        const aggregateStatus = {
+          visionComplete: false,
+          kbQueried: false,
+          templatesMatched: 0,
+          webSearchUsed: false,
+        };
+
+        for (const result of successfulResults) {
+          if (result.success) {
+            allSuggestions.push(...result.response.suggestions);
+            aggregateStatus.visionComplete = aggregateStatus.visionComplete || result.response.analysisStatus.visionComplete;
+            aggregateStatus.kbQueried = aggregateStatus.kbQueried || result.response.analysisStatus.kbQueried;
+            aggregateStatus.templatesMatched += result.response.analysisStatus.templatesMatched;
+            aggregateStatus.webSearchUsed = aggregateStatus.webSearchUsed || result.response.analysisStatus.webSearchUsed;
+          }
+        }
+
+        // Sort by confidence and limit
+        const sortedSuggestions = allSuggestions
+          .sort((a, b) => b.confidence - a.confidence)
+          .slice(0, Math.min(maxSuggestions || 6, 10));
+
+        return res.json({
+          suggestions: sortedSuggestions,
+          analysisStatus: aggregateStatus,
+        });
+      }
+
+      // Single product flow
+      const result = await ideaBankService.generateSuggestions({
+        productId: ids[0],
+        userId,
+        userGoal,
+        enableWebSearch: enableWebSearch || false,
+        maxSuggestions: Math.min(maxSuggestions || 3, 5),
+      });
+
+      if (!result.success) {
+        const statusCode = result.error.code === "RATE_LIMITED" ? 429 :
+                          result.error.code === "PRODUCT_NOT_FOUND" ? 404 : 500;
+        return res.status(statusCode).json({ error: result.error.message, code: result.error.code });
+      }
+
+      res.json(result.response);
+    } catch (error: any) {
+      console.error("[Idea Bank Suggest] Error:", error);
+      res.status(500).json({ error: "Failed to generate suggestions" });
+    }
+  });
+
+  // Get matched templates for a product
+  app.get("/api/idea-bank/templates/:productId", requireAuth, async (req, res) => {
+    try {
+      const { productId } = req.params;
+      const userId = (req.session as any).userId;
+
+      const { ideaBankService } = await import('./services/ideaBankService');
+
+      const result = await ideaBankService.getMatchedTemplates(productId, userId);
+
+      if (!result) {
+        return res.status(404).json({ error: "Product not found or analysis failed" });
+      }
+
+      res.json({
+        templates: result.templates,
+        productAnalysis: result.analysis,
+      });
+    } catch (error: any) {
+      console.error("[Idea Bank Templates] Error:", error);
+      res.status(500).json({ error: "Failed to get matched templates" });
+    }
+  });
+
+  // ============================================
+  // AD SCENE TEMPLATE ENDPOINTS
+  // ============================================
+
+  // List all templates (with optional filters)
+  app.get("/api/templates", requireAuth, async (req, res) => {
+    try {
+      const { category, isGlobal } = req.query;
+
+      const templates = await storage.getAdSceneTemplates({
+        category: category as string | undefined,
+        isGlobal: isGlobal === "true" ? true : isGlobal === "false" ? false : undefined,
+      });
+
+      res.json({ templates, total: templates.length });
+    } catch (error: any) {
+      console.error("[Templates List] Error:", error);
+      res.status(500).json({ error: "Failed to list templates" });
+    }
+  });
+
+  // Get a single template
+  app.get("/api/templates/:id", requireAuth, async (req, res) => {
+    try {
+      const template = await storage.getAdSceneTemplateById(req.params.id);
+
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+
+      res.json(template);
+    } catch (error: any) {
+      console.error("[Template Get] Error:", error);
+      res.status(500).json({ error: "Failed to get template" });
+    }
+  });
+
+  // Search templates
+  app.get("/api/templates/search", requireAuth, async (req, res) => {
+    try {
+      const { q } = req.query;
+
+      if (!q || typeof q !== "string") {
+        return res.status(400).json({ error: "Query parameter 'q' is required" });
+      }
+
+      const templates = await storage.searchAdSceneTemplates(q);
+      res.json({ templates, total: templates.length });
+    } catch (error: any) {
+      console.error("[Templates Search] Error:", error);
+      res.status(500).json({ error: "Failed to search templates" });
+    }
+  });
+
+  // Create a new template (admin only for now - TODO: add admin check)
+  app.post("/api/templates", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+
+      // TODO: Add admin role check here
+      // if (!await isUserAdmin(userId)) {
+      //   return res.status(403).json({ error: "Admin access required" });
+      // }
+
+      const templateData = {
+        ...req.body,
+        createdBy: userId,
+        isGlobal: req.body.isGlobal ?? true,
+      };
+
+      const template = await storage.saveAdSceneTemplate(templateData);
+      res.status(201).json(template);
+    } catch (error: any) {
+      console.error("[Template Create] Error:", error);
+      res.status(500).json({ error: "Failed to create template" });
+    }
+  });
+
+  // Update a template
+  app.patch("/api/templates/:id", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const template = await storage.getAdSceneTemplateById(req.params.id);
+
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+
+      // Only creator or admin can update
+      // TODO: Add admin check
+      if (template.createdBy !== userId) {
+        return res.status(403).json({ error: "Not authorized to update this template" });
+      }
+
+      const updated = await storage.updateAdSceneTemplate(req.params.id, req.body);
+      res.json(updated);
+    } catch (error: any) {
+      console.error("[Template Update] Error:", error);
+      res.status(500).json({ error: "Failed to update template" });
+    }
+  });
+
+  // Delete a template
+  app.delete("/api/templates/:id", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const template = await storage.getAdSceneTemplateById(req.params.id);
+
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+
+      // Only creator or admin can delete
+      // TODO: Add admin check
+      if (template.createdBy !== userId) {
+        return res.status(403).json({ error: "Not authorized to delete this template" });
+      }
+
+      await storage.deleteAdSceneTemplate(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[Template Delete] Error:", error);
+      res.status(500).json({ error: "Failed to delete template" });
+    }
+  });
+
+  // ============================================
+  // BRAND PROFILE ENDPOINTS
+  // ============================================
+
+  // Get current user's brand profile
+  app.get("/api/brand-profile", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const profile = await storage.getBrandProfileByUserId(userId);
+
+      if (!profile) {
+        return res.status(404).json({ error: "Brand profile not found" });
+      }
+
+      res.json(profile);
+    } catch (error: any) {
+      console.error("[Brand Profile Get] Error:", error);
+      res.status(500).json({ error: "Failed to get brand profile" });
+    }
+  });
+
+  // Create or update brand profile
+  app.put("/api/brand-profile", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+
+      const existing = await storage.getBrandProfileByUserId(userId);
+
+      if (existing) {
+        const updated = await storage.updateBrandProfile(userId, req.body);
+        res.json(updated);
+      } else {
+        const created = await storage.saveBrandProfile({
+          userId,
+          ...req.body,
+        });
+        res.status(201).json(created);
+      }
+    } catch (error: any) {
+      console.error("[Brand Profile Update] Error:", error);
+      res.status(500).json({ error: "Failed to update brand profile" });
+    }
+  });
+
+  // Delete brand profile
+  app.delete("/api/brand-profile", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      await storage.deleteBrandProfile(userId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[Brand Profile Delete] Error:", error);
+      res.status(500).json({ error: "Failed to delete brand profile" });
+    }
+  });
+>>>>>>> 154999650a04bb9973c5cddeae01dd5ce52ab181
 
   const httpServer = createServer(app);
   return httpServer;
 }
+
+
+
+
+

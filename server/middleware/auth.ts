@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { validateSession } from '../services/authService';
+import { storage } from '../storage';
+import type { User } from '../../shared/schema';
 
 // Extend Express Request type to include user
 declare global {
@@ -8,14 +9,23 @@ declare global {
       user?: {
         id: string;
         email: string;
-        failedLoginAttempts: number;
+        failedAttempts: number | null;
         lockedUntil: Date | null;
         createdAt: Date;
-        updatedAt: Date;
       };
-      sessionId?: string;
     }
   }
+}
+
+// Sanitize user object to remove sensitive fields
+function sanitizeUser(user: User): Express.Request['user'] {
+  return {
+    id: user.id,
+    email: user.email,
+    failedAttempts: user.failedAttempts,
+    lockedUntil: user.lockedUntil,
+    createdAt: user.createdAt,
+  };
 }
 
 export async function requireAuth(
@@ -23,22 +33,22 @@ export async function requireAuth(
   res: Response,
   next: NextFunction
 ): Promise<void> {
-  const sessionId = req.cookies?.sessionId;
+  const userId = req.session?.userId;
 
-  if (!sessionId) {
+  if (!userId) {
     res.status(401).json({ error: 'Authentication required' });
     return;
   }
 
-  const result = await validateSession(sessionId);
-
-  if (!result.success) {
-    res.status(result.statusCode || 401).json({ error: result.error });
+  const user = await storage.getUserById(userId);
+  if (!user) {
+    // Session refers to non-existent user, destroy it
+    req.session.destroy(() => {});
+    res.status(401).json({ error: 'Session expired' });
     return;
   }
 
-  req.user = result.user as Express.Request['user'];
-  req.sessionId = sessionId;
+  req.user = sanitizeUser(user);
   next();
 }
 
@@ -47,13 +57,12 @@ export async function optionalAuth(
   res: Response,
   next: NextFunction
 ): Promise<void> {
-  const sessionId = req.cookies?.sessionId;
+  const userId = req.session?.userId;
 
-  if (sessionId) {
-    const result = await validateSession(sessionId);
-    if (result.success) {
-      req.user = result.user as Express.Request['user'];
-      req.sessionId = sessionId;
+  if (userId) {
+    const user = await storage.getUserById(userId);
+    if (user) {
+      req.user = sanitizeUser(user);
     }
   }
 

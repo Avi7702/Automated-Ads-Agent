@@ -2,63 +2,78 @@
  * Image Storage Service Tests
  * Tests file storage, database persistence, and error handling
  */
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 
-// Mock file system before imports
-const mockMkdir = jest.fn().mockResolvedValue(undefined);
-const mockWriteFile = jest.fn().mockResolvedValue(undefined);
-const mockUnlink = jest.fn().mockResolvedValue(undefined);
-const mockReaddir = jest.fn().mockResolvedValue([]);
-const mockExistsSync = jest.fn().mockReturnValue(true);
+// Use vi.hoisted to define mocks that will be available to vi.mock factories
+const {
+  mockMkdir, mockWriteFile, mockUnlink, mockReaddir, mockExistsSync,
+  mockRandomBytes, mockInsert, mockSelect, mockDelete, mockValues,
+  mockReturning, mockFrom, mockWhere, mockDb, mockPoolEnd, mockPool
+} = vi.hoisted(() => {
+  const mockMkdir = vi.fn().mockResolvedValue(undefined);
+  const mockWriteFile = vi.fn().mockResolvedValue(undefined);
+  const mockUnlink = vi.fn().mockResolvedValue(undefined);
+  const mockReaddir = vi.fn().mockResolvedValue([]);
+  const mockExistsSync = vi.fn().mockReturnValue(true);
 
-jest.mock('fs/promises', () => ({
+  const mockRandomBytes = vi.fn().mockReturnValue({
+    toString: () => 'abc123def456'
+  });
+
+  const mockInsert = vi.fn();
+  const mockSelect = vi.fn();
+  const mockDelete = vi.fn();
+  const mockValues = vi.fn();
+  const mockReturning = vi.fn();
+  const mockFrom = vi.fn();
+  const mockWhere = vi.fn();
+
+  const mockDb = {
+    insert: mockInsert,
+    select: mockSelect,
+    delete: mockDelete,
+  };
+
+  const mockPoolEnd = vi.fn().mockResolvedValue(undefined);
+  const mockPool = {
+    end: mockPoolEnd,
+  };
+
+  return {
+    mockMkdir, mockWriteFile, mockUnlink, mockReaddir, mockExistsSync,
+    mockRandomBytes, mockInsert, mockSelect, mockDelete, mockValues,
+    mockReturning, mockFrom, mockWhere, mockDb, mockPoolEnd, mockPool
+  };
+});
+
+// Mock file system
+vi.mock('fs/promises', () => ({
   mkdir: mockMkdir,
   writeFile: mockWriteFile,
   unlink: mockUnlink,
   readdir: mockReaddir,
 }));
 
-jest.mock('fs', () => ({
+vi.mock('fs', () => ({
   existsSync: mockExistsSync,
 }));
 
 // Mock crypto
-const mockRandomBytes = jest.fn().mockReturnValue({
-  toString: () => 'abc123def456'
-});
-jest.mock('crypto', () => ({
+vi.mock('crypto', () => ({
   randomBytes: mockRandomBytes,
 }));
 
 // Mock database
-const mockInsert = jest.fn();
-const mockSelect = jest.fn();
-const mockDelete = jest.fn();
-const mockValues = jest.fn();
-const mockReturning = jest.fn();
-const mockFrom = jest.fn();
-const mockWhere = jest.fn();
-
-const mockDb = {
-  insert: mockInsert,
-  select: mockSelect,
-  delete: mockDelete,
-};
-
-const mockPoolEnd = jest.fn().mockResolvedValue(undefined);
-const mockPool = {
-  end: mockPoolEnd,
-};
-
-jest.mock('drizzle-orm/node-postgres', () => ({
-  drizzle: jest.fn(() => mockDb),
+vi.mock('drizzle-orm/node-postgres', () => ({
+  drizzle: vi.fn(() => mockDb),
 }));
 
-jest.mock('pg', () => ({
-  Pool: jest.fn(() => mockPool),
+vi.mock('pg', () => ({
+  Pool: vi.fn(() => mockPool),
 }));
 
-jest.mock('drizzle-orm', () => ({
-  eq: jest.fn((field, value) => ({ field, value })),
+vi.mock('drizzle-orm', () => ({
+  eq: vi.fn((field, value) => ({ field, value })),
 }));
 
 // Import after mocks
@@ -102,9 +117,8 @@ describe('ImageStorageService', () => {
     process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test';
   });
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    jest.resetModules();
+  beforeEach(async () => {
+    vi.clearAllMocks();
 
     // Reset mock chains
     mockInsert.mockReturnValue({ values: mockValues });
@@ -115,12 +129,13 @@ describe('ImageStorageService', () => {
     mockFrom.mockReturnValue({ where: mockWhere });
     mockWhere.mockResolvedValue([mockDbGeneration]);
 
-    mockDelete.mockReturnValue({ where: jest.fn().mockResolvedValue(undefined) });
+    mockDelete.mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) });
     mockDelete.mockResolvedValue(undefined);
 
-    // Re-import to get fresh instance
-    const { imageStorageService: freshService } = require('../services/imageStorage');
-    imageStorageService = freshService;
+    // Reset modules and re-import to get fresh instance
+    vi.resetModules();
+    const module = await import('../services/imageStorage');
+    imageStorageService = module.imageStorageService;
   });
 
   describe('Initialization', () => {
@@ -133,8 +148,9 @@ describe('ImageStorageService', () => {
       const originalUrl = process.env.DATABASE_URL;
       delete process.env.DATABASE_URL;
 
-      jest.resetModules();
-      const { imageStorageService: freshService } = require('../services/imageStorage');
+      vi.resetModules();
+      const module = await import('../services/imageStorage');
+      const freshService = module.imageStorageService;
 
       await expect(freshService.initialize())
         .rejects.toThrow('DATABASE_URL environment variable is required');
@@ -147,8 +163,8 @@ describe('ImageStorageService', () => {
       await imageStorageService.initialize();
 
       // Pool constructor should only be called once per instance
-      const { Pool } = require('pg');
-      expect(Pool).toHaveBeenCalledTimes(1);
+      const pgModule = await import('pg');
+      expect(pgModule.Pool).toHaveBeenCalledTimes(1);
     });
 
     it('can close and reinitialize', async () => {
@@ -275,24 +291,27 @@ describe('ImageStorageService', () => {
 
   describe('Error Handling', () => {
     it('throws if saveGeneration called before initialize', async () => {
-      jest.resetModules();
-      const { imageStorageService: freshService } = require('../services/imageStorage');
+      vi.resetModules();
+      const module = await import('../services/imageStorage');
+      const freshService = module.imageStorageService;
 
       await expect(freshService.saveGeneration(mockGenerationData))
         .rejects.toThrow('not initialized');
     });
 
     it('throws if getGeneration called before initialize', async () => {
-      jest.resetModules();
-      const { imageStorageService: freshService } = require('../services/imageStorage');
+      vi.resetModules();
+      const module = await import('../services/imageStorage');
+      const freshService = module.imageStorageService;
 
       await expect(freshService.getGeneration('any-id'))
         .rejects.toThrow('not initialized');
     });
 
     it('throws if clearAll called before initialize', async () => {
-      jest.resetModules();
-      const { imageStorageService: freshService } = require('../services/imageStorage');
+      vi.resetModules();
+      const module = await import('../services/imageStorage');
+      const freshService = module.imageStorageService;
 
       await expect(freshService.clearAll())
         .rejects.toThrow('not initialized');

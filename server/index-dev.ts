@@ -1,3 +1,6 @@
+// OpenTelemetry MUST be imported before any other modules
+import './instrumentation';
+
 import fs from "node:fs";
 import { type Server } from "node:http";
 import path from "node:path";
