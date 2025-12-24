@@ -53,7 +53,7 @@ jobs:
         run: npm ci
       
       - name: Run tests
-        run: npm test -- --coverage --passWithNoTests
+        run: npm test --if-present -- --coverage --passWithNoTests
       
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -118,5 +118,6 @@ jobs:
       
       - name: Build
         run: npm run build --if-present
+
 
 

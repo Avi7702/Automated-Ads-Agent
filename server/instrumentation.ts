@@ -29,11 +29,11 @@ import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentation
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-proto';
 import { PeriodicExportingMetricReader, MeterProvider } from '@opentelemetry/sdk-metrics';
-import { Resource } from '@opentelemetry/resources';
+import { defaultResource, resourceFromAttributes } from '@opentelemetry/resources';
 import {
-  ATTR_SERVICE_NAME,
-  ATTR_SERVICE_VERSION,
-  ATTR_DEPLOYMENT_ENVIRONMENT,
+  SEMRESATTRS_SERVICE_NAME,
+  SEMRESATTRS_SERVICE_VERSION,
+  SEMRESATTRS_DEPLOYMENT_ENVIRONMENT,
 } from '@opentelemetry/semantic-conventions';
 import { metrics } from '@opentelemetry/api';
 
@@ -310,11 +310,11 @@ export const telemetry = {
 // =============================================================================
 
 if (OTEL_ENABLED) {
-  const resource = new Resource({
-    [ATTR_SERVICE_NAME]: SERVICE_NAME,
-    [ATTR_SERVICE_VERSION]: SERVICE_VERSION,
-    [ATTR_DEPLOYMENT_ENVIRONMENT]: DEPLOYMENT_ENV,
-  });
+  const resource = defaultResource().merge(resourceFromAttributes({
+    [SEMRESATTRS_SERVICE_NAME]: SERVICE_NAME,
+    [SEMRESATTRS_SERVICE_VERSION]: SERVICE_VERSION,
+    [SEMRESATTRS_DEPLOYMENT_ENVIRONMENT]: DEPLOYMENT_ENV,
+  }));
 
   // Parse headers for authentication (e.g., Grafana Cloud, New Relic)
   const headers: Record<string, string> = {};
@@ -403,5 +403,6 @@ if (OTEL_ENABLED) {
 }
 
 export {};
+
 
 
