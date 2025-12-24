@@ -41,18 +41,27 @@ if (isCloudinaryConfigured) {
   });
 }
 
-// Validate and initialize Gemini client
-// Priority: Replit AI Integrations > GEMINI_API_KEY > GOOGLE_API_KEY
-const apiKey = process.env.AI_INTEGRATIONS_GEMINI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+// Initialize TWO Gemini clients:
+// 1. genaiText - for text operations (uses Replit AI Integrations for better quotas)
+// 2. genaiImage - for image generation (uses direct Google API as Replit doesn't support image models)
+
+const textApiKey = process.env.AI_INTEGRATIONS_GEMINI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+const imageApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY; // Direct API for images
 const isReplitAI = !!process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
-if (!apiKey) {
-  throw new Error("[Gemini] Missing API key (AI_INTEGRATIONS_GEMINI_API_KEY, GEMINI_API_KEY, or GOOGLE_API_KEY)");
+
+if (!textApiKey) {
+  throw new Error("[Gemini] Missing API key for text operations");
+}
+if (!imageApiKey) {
+  console.warn("[Gemini] No direct API key for image generation - image features may be limited");
 }
 
-console.log(`[Gemini] Using ${isReplitAI ? 'Replit AI Integrations' : 'direct API'} key`);
+console.log(`[Gemini Text] Using ${isReplitAI ? 'Replit AI Integrations' : 'direct API'} key`);
+console.log(`[Gemini Image] Using ${imageApiKey ? 'direct Google API' : 'NO KEY AVAILABLE'} key`);
 
-const genai = new GoogleGenAI({
-  apiKey,
+// Text client - uses Replit AI Integrations for better quotas on text models
+const genaiText = new GoogleGenAI({
+  apiKey: textApiKey,
   ...(isReplitAI && {
     httpOptions: {
       baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
@@ -60,6 +69,14 @@ const genai = new GoogleGenAI({
     },
   }),
 });
+
+// Image client - uses direct Google API for image generation models
+const genaiImage = imageApiKey ? new GoogleGenAI({
+  apiKey: imageApiKey,
+}) : null;
+
+// Legacy alias for backward compatibility
+const genai = genaiText;
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Serve static files from attached_assets directory
