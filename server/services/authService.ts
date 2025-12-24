@@ -168,3 +168,47 @@ export async function validateSession(sessionId: string): Promise<AuthResult> {
 export async function getCurrentUser(sessionId: string): Promise<AuthResult> {
   return validateSession(sessionId);
 }
+
+const failedLoginAttempts: Map<string, { count: number; lockUntil: number | null }> = new Map();
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
+
+export const authService = {
+  async hashPassword(password: string): Promise<string> {
+    return bcrypt.hash(password, BCRYPT_ROUNDS);
+  },
+
+  async comparePassword(password: string, hash: string): Promise<boolean> {
+    return bcrypt.compare(password, hash);
+  },
+
+  isLockedOut(email: string): boolean {
+    const record = failedLoginAttempts.get(email);
+    if (!record || !record.lockUntil) return false;
+    if (Date.now() > record.lockUntil) {
+      failedLoginAttempts.delete(email);
+      return false;
+    }
+    return true;
+  },
+
+  getLockoutTimeRemaining(email: string): number {
+    const record = failedLoginAttempts.get(email);
+    if (!record || !record.lockUntil) return 0;
+    const remaining = record.lockUntil - Date.now();
+    return remaining > 0 ? Math.ceil(remaining / 1000) : 0;
+  },
+
+  recordFailedLogin(email: string): void {
+    const record = failedLoginAttempts.get(email) || { count: 0, lockUntil: null };
+    record.count++;
+    if (record.count >= MAX_LOGIN_ATTEMPTS) {
+      record.lockUntil = Date.now() + LOCKOUT_DURATION_MS;
+    }
+    failedLoginAttempts.set(email, record);
+  },
+
+  clearFailedLogins(email: string): void {
+    failedLoginAttempts.delete(email);
+  }
+};

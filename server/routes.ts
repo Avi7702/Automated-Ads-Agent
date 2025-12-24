@@ -81,7 +81,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const hashedPassword = await authService.hashPassword(password);
-      const user = await storage.createUser({ email, password: hashedPassword });
+      const user = await storage.createUser(email, hashedPassword);
 
       (req as any).session.userId = user.id;
       res.json({ id: user.id, email: user.email });
@@ -115,7 +115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Invalid credentials" });
       }
 
-      const valid = await authService.comparePassword(password, user.password);
+      const valid = await authService.comparePassword(password, user.passwordHash);
       if (!valid) {
         authService.recordFailedLogin(email);
         return res.status(401).json({ error: "Invalid credentials" });
@@ -806,6 +806,164 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       res.status(500).json({ error: "Failed to delete prompt template" });
     }
   });
+
+  // ===== COPYWRITING ROUTES (Phase 4) =====
+
+  // Generate ad copy for a generation
+  app.post("/api/copy/generate", requireAuth, async (req, res) => {
+    try {
+      const { 
+        generateCopy, 
+        PLATFORMS, 
+        TONES 
+      } = await import("./services/copywritingService");
+      
+      const userId = (req as any).session?.userId || (req as any).user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const { 
+        generationId, 
+        platform, 
+        tone, 
+        productName, 
+        productDescription, 
+        industry,
+        framework,
+        campaignObjective,
+        productBenefits,
+        uniqueValueProp,
+        targetAudience,
+        brandVoice,
+        socialProof,
+        variations = 3
+      } = req.body;
+
+      if (!generationId || !platform || !tone || !productName || !productDescription || !industry) {
+        return res.status(400).json({ 
+          error: "Missing required fields: generationId, platform, tone, productName, productDescription, industry" 
+        });
+      }
+
+      if (!PLATFORMS.includes(platform)) {
+        return res.status(400).json({ 
+          error: `Platform must be one of: ${PLATFORMS.join(", ")}` 
+        });
+      }
+
+      if (!TONES.includes(tone)) {
+        return res.status(400).json({ 
+          error: `Tone must be one of: ${TONES.join(", ")}` 
+        });
+      }
+
+      const generation = await storage.getGenerationById(generationId);
+      if (!generation) {
+        return res.status(404).json({ error: "Generation not found" });
+      }
+
+      console.log(`[Copywriting] Generating ${variations} variations for generation ${generationId}`);
+
+      const result = await generateCopy({
+        generationId,
+        userId,
+        platform,
+        tone,
+        productName,
+        productDescription,
+        industry,
+        framework,
+        campaignObjective,
+        productBenefits,
+        uniqueValueProp,
+        targetAudience,
+        brandVoice,
+        socialProof,
+        variations: Math.min(5, Math.max(1, variations))
+      });
+
+      if (!result.success) {
+        return res.status(500).json({ error: result.error });
+      }
+
+      res.json({ success: true, copies: result.copies });
+    } catch (error: any) {
+      console.error("[Copywriting Generate] Error:", error);
+      res.status(500).json({ error: "Failed to generate copy", details: error.message });
+    }
+  });
+
+  // Get all copy for a generation
+  app.get("/api/copy/generation/:id", async (req, res) => {
+    try {
+      const { getCopyByGenerationId } = await import("./services/copywritingService");
+      const copies = await getCopyByGenerationId(req.params.id);
+      res.json(copies);
+    } catch (error: any) {
+      console.error("[Copywriting Get By Generation] Error:", error);
+      res.status(500).json({ error: "Failed to fetch copy" });
+    }
+  });
+
+  // Get specific copy by ID
+  app.get("/api/copy/:id", async (req, res) => {
+    try {
+      const { getCopyById } = await import("./services/copywritingService");
+      const copy = await getCopyById(req.params.id);
+      if (!copy) {
+        return res.status(404).json({ error: "Copy not found" });
+      }
+      res.json(copy);
+    } catch (error: any) {
+      console.error("[Copywriting Get By ID] Error:", error);
+      res.status(500).json({ error: "Failed to fetch copy" });
+    }
+  });
+
+  // Delete copy
+  app.delete("/api/copy/:id", requireAuth, async (req, res) => {
+    try {
+      const { deleteCopy, getCopyById } = await import("./services/copywritingService");
+      const copy = await getCopyById(req.params.id);
+      if (!copy) {
+        return res.status(404).json({ error: "Copy not found" });
+      }
+      await deleteCopy(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[Copywriting Delete] Error:", error);
+      res.status(500).json({ error: "Failed to delete copy" });
+    }
+  });
+
+  // Update user brand voice
+  app.put("/api/user/brand-voice", requireAuth, async (req, res) => {
+    try {
+      const { updateBrandVoice } = await import("./services/copywritingService");
+      const userId = (req as any).session?.userId || (req as any).user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const { brandVoice } = req.body;
+      if (!brandVoice) {
+        return res.status(400).json({ error: "Brand voice data required" });
+      }
+
+      const success = await updateBrandVoice(userId, brandVoice);
+      if (!success) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[Update Brand Voice] Error:", error);
+      res.status(500).json({ error: "Failed to update brand voice" });
+    }
+  });
+
+  // ===== END COPYWRITING ROUTES =====
 
   const httpServer = createServer(app);
   return httpServer;
