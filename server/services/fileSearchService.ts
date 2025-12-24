@@ -82,11 +82,25 @@ export enum FileCategory {
 
 /**
  * Initialize or get existing File Search Store
+ * Note: File Search is not supported by Replit AI integrations
+ * Returns null if not available
  */
-export async function initializeFileSearchStore() {
+export async function initializeFileSearchStore(): Promise<any | null> {
+  // File Search Store is not supported by Replit AI integrations
+  // Return null to gracefully disable this feature
+  if (!genAI || process.env.AI_INTEGRATIONS_GEMINI_BASE_URL) {
+    console.log('[FileSearch] File Search Store disabled - using Replit AI integrations');
+    return null;
+  }
+  
   try {
     // Check if store already exists
-    const stores = await (genAI as any).fileSearchStores.list();
+    const stores = await (genAI as any).fileSearchStores?.list?.();
+    if (!stores || !Array.isArray(stores)) {
+      console.log('[FileSearch] File Search Store API not available');
+      return null;
+    }
+    
     const existingStore = stores.find(
       (store: any) => store.config?.displayName === FILE_SEARCH_STORE_NAME
     );
@@ -108,7 +122,7 @@ export async function initializeFileSearchStore() {
     return newStore;
   } catch (error) {
     console.error('❌ Error initializing File Search Store:', error);
-    throw error;
+    return null;
   }
 }
 
@@ -252,7 +266,7 @@ export async function queryFileSearchStore(params: {
   query: string;
   category?: FileCategory;
   maxResults?: number;
-}) {
+}): Promise<{ context: string; citations: any[] } | null> {
   const { query, category, maxResults = 5 } = params;
   const startTime = Date.now();
   let success = false;
@@ -261,6 +275,11 @@ export async function queryFileSearchStore(params: {
 
   try {
     const store = await initializeFileSearchStore();
+    
+    // Return null if file search is not available
+    if (!store) {
+      return null;
+    }
 
     // Build metadata filter if category specified
     const metadataFilter = category ? `category="${category}"` : undefined;

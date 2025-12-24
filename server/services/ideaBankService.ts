@@ -24,11 +24,20 @@ import type {
 } from "@shared/types/ideaBank";
 import type { Product, AdSceneTemplate, BrandProfile } from "@shared/schema";
 
-// LLM model for reasoning
-const REASONING_MODEL = process.env.GEMINI_REASONING_MODEL || "gemini-2.0-flash-exp";
+// LLM model for reasoning - use Replit AI integrations supported model
+const REASONING_MODEL = process.env.GEMINI_REASONING_MODEL || "gemini-2.5-flash";
 
-// Initialize Gemini client (fallback to GOOGLE_API_KEY for compatibility)
-const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "" });
+// Initialize Gemini client - prefer Replit AI integrations for better quota
+const GEMINI_API_KEY = process.env.AI_INTEGRATIONS_GEMINI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
+const genai = new GoogleGenAI({ 
+  apiKey: GEMINI_API_KEY,
+  ...(process.env.AI_INTEGRATIONS_GEMINI_BASE_URL && {
+    httpOptions: {
+      baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
+      apiVersion: ''
+    }
+  })
+});
 
 // Rate limiting for suggest endpoint
 const userSuggestCount = new Map<string, { count: number; resetAt: number }>();
@@ -311,19 +320,55 @@ async function generateLLMSuggestions(params: {
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     config: {
       temperature: 0.7,
-      maxOutputTokens: 2000,
+      maxOutputTokens: 8000,
     },
   });
 
   const text = response.text || "";
+  console.log("[IdeaBank] LLM raw response length:", text.length);
 
-  // Parse JSON response
-  const jsonMatch = text.match(/\[[\s\S]*\]/);
-  if (!jsonMatch) {
+  // Parse JSON response - try multiple patterns
+  let jsonContent: string | null = null;
+  
+  // Try extracting from code block if wrapped
+  const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (codeBlockMatch) {
+    jsonContent = codeBlockMatch[1].trim();
+  } else {
+    // Try to find raw JSON array
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      jsonContent = jsonMatch[0];
+    }
+  }
+  
+  if (!jsonContent || !jsonContent.startsWith('[')) {
+    console.error("[IdeaBank] Failed to parse response. Full text:", text);
     throw new Error("Failed to parse suggestions response");
   }
+  
+  // Try to fix truncated JSON by closing incomplete objects
+  let fixedJson = jsonContent;
+  try {
+    JSON.parse(fixedJson);
+  } catch {
+    // Try to close truncated JSON
+    const openBrackets = (fixedJson.match(/\[/g) || []).length;
+    const closeBrackets = (fixedJson.match(/\]/g) || []).length;
+    const openBraces = (fixedJson.match(/\{/g) || []).length;
+    const closeBraces = (fixedJson.match(/\}/g) || []).length;
+    
+    // Close any open braces and brackets
+    fixedJson = fixedJson.replace(/,\s*$/, ''); // Remove trailing comma
+    for (let i = 0; i < openBraces - closeBraces; i++) {
+      fixedJson += '}';
+    }
+    for (let i = 0; i < openBrackets - closeBrackets; i++) {
+      fixedJson += ']';
+    }
+  }
 
-  const rawSuggestions = JSON.parse(jsonMatch[0]) as Array<{
+  const rawSuggestions = JSON.parse(fixedJson) as Array<{
     prompt: string;
     mode: string;
     templateId?: string;

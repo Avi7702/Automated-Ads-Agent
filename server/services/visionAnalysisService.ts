@@ -20,11 +20,20 @@ const userAnalysisCount = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 10;
 
-// Vision analysis model
-const VISION_MODEL = process.env.GEMINI_VISION_MODEL || "gemini-2.0-flash-exp";
+// Vision analysis model - use Replit AI integrations supported model
+const VISION_MODEL = process.env.GEMINI_VISION_MODEL || "gemini-2.5-flash";
 
-// Initialize Gemini client (fallback to GOOGLE_API_KEY for compatibility)
-const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "" });
+// Initialize Gemini client - prefer Replit AI integrations for better quota
+const GEMINI_API_KEY = process.env.AI_INTEGRATIONS_GEMINI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
+const genai = new GoogleGenAI({ 
+  apiKey: GEMINI_API_KEY,
+  ...(process.env.AI_INTEGRATIONS_GEMINI_BASE_URL && {
+    httpOptions: {
+      baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
+      apiVersion: ''
+    }
+  })
+});
 
 export interface VisionAnalysisResult {
   category: string;
