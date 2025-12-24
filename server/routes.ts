@@ -58,10 +58,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Apply rate limiting to API routes
   const rateLimiter = createRateLimiter({
-    prefix: 'api',
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100,
-    message: 'Too many requests, please try again later'
+    maxRequests: 100,
   });
   app.use("/api/", rateLimiter);
 
@@ -1711,8 +1709,8 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   // AD SCENE TEMPLATE ENDPOINTS
   // ============================================
 
-  // List all templates (with optional filters)
-  app.get("/api/templates", requireAuth, async (req, res) => {
+  // List all templates (with optional filters) - Public endpoint
+  app.get("/api/templates", async (req, res) => {
     try {
       const { category, isGlobal } = req.query;
 
@@ -1728,8 +1726,8 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
     }
   });
 
-  // Get a single template
-  app.get("/api/templates/:id", requireAuth, async (req, res) => {
+  // Get a single template - Public endpoint
+  app.get("/api/templates/:id", async (req, res) => {
     try {
       const template = await storage.getAdSceneTemplateById(req.params.id);
 
@@ -1744,8 +1742,8 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
     }
   });
 
-  // Search templates
-  app.get("/api/templates/search", requireAuth, async (req, res) => {
+  // Search templates - Public endpoint
+  app.get("/api/templates/search", async (req, res) => {
     try {
       const { q } = req.query;
 

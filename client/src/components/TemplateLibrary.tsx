@@ -55,7 +55,9 @@ export function TemplateLibrary({
       if (!res.ok) {
         throw new Error("Failed to fetch templates");
       }
-      return res.json();
+      const data = await res.json();
+      // API returns { templates: [...], total: N }
+      return data.templates || [];
     },
   });
 
