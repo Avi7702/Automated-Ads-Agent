@@ -421,9 +421,9 @@ export default function Home() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="1K">1K (Fast)</SelectItem>
-                        <SelectItem value="2K">2K (Balanced)</SelectItem>
-                        <SelectItem value="4K">4K (Premium)</SelectItem>
+                        <SelectItem value="1K">1K — $0.134</SelectItem>
+                        <SelectItem value="2K">2K — $0.134</SelectItem>
+                        <SelectItem value="4K">4K — $0.24</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
