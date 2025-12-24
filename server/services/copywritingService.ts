@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import type { GenerateCopyInput } from '../validation/schemas';
+import { getFileSearchStoreForGeneration, queryFileSearchStore, FileCategory } from './fileSearchService';
 
 // Platform character limits (2025 standards)
 interface PlatformLimits {
@@ -96,12 +97,40 @@ class CopywritingService {
   }
 
   /**
-   * Generate a single copy variation
+   * Generate a single copy variation with RAG enhancement
    */
   private async generateSingleCopy(
     request: GenerateCopyInput,
     variationNumber: number
   ): Promise<GeneratedCopy> {
+    // STEP 1: Retrieve relevant context from File Search Store (RAG)
+    let ragContext = '';
+    let citations: any[] = [];
+
+    try {
+      const fileSearchStore = await getFileSearchStoreForGeneration();
+
+      // Query for ad examples matching the product/platform
+      const contextQuery = `${request.platform} ad examples for ${request.productName} ${request.industry} ${request.productDescription}`;
+      const searchResult = await queryFileSearchStore({
+        query: contextQuery,
+        category: FileCategory.AD_EXAMPLES,
+        maxResults: 3,
+      });
+
+      ragContext = searchResult.context;
+      citations = searchResult.citations || [];
+
+      console.log(`📚 Retrieved RAG context (${ragContext.length} chars) with ${citations.length} citations`);
+    } catch (error) {
+      console.warn('⚠️ File Search not available, continuing without RAG context:', error);
+      // Continue without RAG if File Search fails - graceful degradation
+    }
+
+    // STEP 2: Build enhanced prompt with RAG context
+    const prompt = this.buildPTCFPromptWithRAG(request, variationNumber, ragContext);
+
+    // STEP 3: Generate with File Search tool enabled
     const model = this.genAI.getGenerativeModel({
       model: 'gemini-3-pro-image-preview',
       generationConfig: {
@@ -110,7 +139,20 @@ class CopywritingService {
       },
     });
 
-    const prompt = this.buildPTCFPrompt(request, variationNumber);
+    // Configure with File Search tool if available
+    let tools = undefined;
+    try {
+      const fileSearchStore = await getFileSearchStoreForGeneration();
+      tools = [
+        {
+          fileSearch: {
+            fileSearchStoreNames: [fileSearchStore],
+          },
+        },
+      ];
+    } catch (error) {
+      // No File Search available, continue without tools
+    }
 
     const result = await model.generateContent({
       contents: [
@@ -119,6 +161,7 @@ class CopywritingService {
           parts: [{ text: prompt }],
         },
       ],
+      ...(tools && { tools }),
     });
 
     const response = await result.response;
@@ -214,6 +257,91 @@ ${variationNumber === 3 ? '- Focus on urgency and scarcity' : ''}
 
     // FORMAT
     return `${persona}\n\n${task}\n\n${context}\n\nIMPORTANT: Return ONLY valid JSON matching the schema. No markdown, no explanations.`;
+  }
+
+  /**
+   * Build PTCF prompt with RAG context (enhanced version)
+   */
+  private buildPTCFPromptWithRAG(
+    request: GenerateCopyInput,
+    variationNumber: number,
+    ragContext: string
+  ): string {
+    const limits = PLATFORM_LIMITS[request.platform];
+
+    // PERSONA
+    const persona = `You are an expert social media ad copywriter specializing in ${request.platform} advertising. You have 10+ years of experience writing conversion-focused copy for ${request.industry} brands. You understand platform algorithms, user behavior, and what drives engagement.`;
+
+    // TASK
+    const framework = request.framework === 'auto' || !request.framework ?
+      'the most effective copywriting framework for this campaign' :
+      request.framework.toUpperCase();
+
+    const task = `Write compelling ad copy variation #${variationNumber} for a ${request.platform} advertisement using ${framework} framework. This copy must grab attention in 3-8 seconds, resonate with the target audience, and drive them to take action.`;
+
+    // RAG CONTEXT (NEW!)
+    const ragSection = ragContext ? `
+📚 REFERENCE MATERIALS FROM KNOWLEDGE BASE:
+${ragContext}
+
+IMPORTANT: Use these reference materials as inspiration and context, but do NOT copy them directly. Adapt the successful patterns, hooks, and approaches to match THIS specific product and audience.
+` : '';
+
+    // CONTEXT (same as before)
+    const context = `
+PRODUCT INFORMATION:
+- Name: ${request.productName}
+- Description: ${request.productDescription}
+${request.productBenefits ? `- Key Benefits: ${request.productBenefits.join(', ')}` : ''}
+${request.uniqueValueProp ? `- Unique Value: ${request.uniqueValueProp}` : ''}
+- Industry: ${request.industry}
+
+${request.campaignObjective ? `CAMPAIGN GOAL: ${request.campaignObjective.toUpperCase()}` : ''}
+
+TARGET AUDIENCE:
+${request.targetAudience ? `
+- Demographics: ${request.targetAudience.demographics}
+- Psychographics: ${request.targetAudience.psychographics}
+- Pain Points: ${request.targetAudience.painPoints.join(', ')}
+` : 'General audience - use broad appeal messaging'}
+
+BRAND VOICE & TONE:
+${request.brandVoice ? `
+- Core Principles: ${request.brandVoice.principles.join(', ')}
+- Words to USE: ${request.brandVoice.wordsToUse?.join(', ') || 'N/A'}
+- Words to AVOID: ${request.brandVoice.wordsToAvoid?.join(', ') || 'N/A'}
+` : `Tone: ${request.tone.charAt(0).toUpperCase() + request.tone.slice(1)}`}
+
+${request.socialProof ? `
+SOCIAL PROOF (incorporate if relevant):
+${request.socialProof.testimonial || ''}
+${request.socialProof.stats || ''}
+` : ''}
+
+PLATFORM REQUIREMENTS (${request.platform.toUpperCase()}):
+${this.getPlatformRequirements(request.platform)}
+
+CHARACTER LIMITS (STRICT):
+- Headline: max ${limits.headline.max} characters (optimal: ${limits.headline.optimal})
+- Hook: max ${limits.hook.max} characters (optimal: ${limits.hook.optimal})
+- Body Text: max ${limits.primaryText.max} characters (optimal: ${limits.primaryText.optimal})
+- Caption: max ${limits.caption.max} characters (optimal: ${limits.caption.optimal})
+
+COPYWRITING FRAMEWORK:
+${this.getFrameworkGuidance(request.framework || 'auto', request.campaignObjective)}
+
+HOOK REQUIREMENTS:
+${this.getHookGuidance(request.platform, request.campaignObjective)}
+
+VARIATION REQUIREMENTS:
+This is variation #${variationNumber}. Make it distinct from other variations while maintaining brand consistency.
+${variationNumber === 1 ? '- Focus on emotional appeal' : ''}
+${variationNumber === 2 ? '- Focus on logical benefits and proof' : ''}
+${variationNumber === 3 ? '- Focus on urgency and scarcity' : ''}
+`;
+
+    // FORMAT
+    return `${persona}\n\n${task}\n\n${ragSection}\n${context}\n\nIMPORTANT: Return ONLY valid JSON matching the schema. No markdown, no explanations.`;
   }
 
   /**

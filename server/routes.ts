@@ -1044,6 +1044,111 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
     }
   });
 
+  // =============================================================================
+  // File Search RAG Endpoints
+  // =============================================================================
+
+  // Initialize File Search Store
+  app.post("/api/file-search/initialize", requireAuth, async (req, res) => {
+    try {
+      const { initializeFileSearchStore } = await import('./services/fileSearchService');
+      const store = await initializeFileSearchStore();
+      res.json({ success: true, store: { name: store.name, displayName: store.config?.displayName } });
+    } catch (error: any) {
+      console.error("[Initialize File Search] Error:", error);
+      res.status(500).json({ error: "Failed to initialize File Search Store" });
+    }
+  });
+
+  // Upload reference file
+  app.post("/api/file-search/upload", upload.single("file"), requireAuth, async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      const { category, description, metadata } = req.body;
+      if (!category) {
+        return res.status(400).json({ error: "Category is required" });
+      }
+
+      const { uploadReferenceFile } = await import('./services/fileSearchService');
+      const result = await uploadReferenceFile({
+        filePath: req.file.path,
+        category,
+        description,
+        metadata: metadata ? JSON.parse(metadata) : {},
+      });
+
+      res.json({ success: true, file: result });
+    } catch (error: any) {
+      console.error("[Upload Reference File] Error:", error);
+      res.status(500).json({ error: "Failed to upload file" });
+    }
+  });
+
+  // Upload directory of reference files
+  app.post("/api/file-search/upload-directory", requireAuth, async (req, res) => {
+    try {
+      const { directoryPath, category, description } = req.body;
+      if (!directoryPath || !category) {
+        return res.status(400).json({ error: "Directory path and category are required" });
+      }
+
+      const { uploadDirectoryToFileSearch } = await import('./services/fileSearchService');
+      const results = await uploadDirectoryToFileSearch({
+        directoryPath,
+        category,
+        description,
+      });
+
+      res.json({ success: true, files: results, count: results.length });
+    } catch (error: any) {
+      console.error("[Upload Directory] Error:", error);
+      res.status(500).json({ error: "Failed to upload directory" });
+    }
+  });
+
+  // List reference files
+  app.get("/api/file-search/files", requireAuth, async (req, res) => {
+    try {
+      const { category } = req.query;
+      const { listReferenceFiles, FileCategory } = await import('./services/fileSearchService');
+
+      const files = await listReferenceFiles(category as any);
+      res.json({ success: true, files, count: files.length });
+    } catch (error: any) {
+      console.error("[List Reference Files] Error:", error);
+      res.status(500).json({ error: "Failed to list files" });
+    }
+  });
+
+  // Delete reference file
+  app.delete("/api/file-search/files/:fileId", requireAuth, async (req, res) => {
+    try {
+      const { fileId } = req.params;
+      const { deleteReferenceFile } = await import('./services/fileSearchService');
+
+      await deleteReferenceFile(fileId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[Delete Reference File] Error:", error);
+      res.status(500).json({ error: "Failed to delete file" });
+    }
+  });
+
+  // Seed File Search Store with initial structure
+  app.post("/api/file-search/seed", requireAuth, async (req, res) => {
+    try {
+      const { seedFileSearchStore } = await import('./services/fileSearchService');
+      const result = await seedFileSearchStore();
+      res.json(result);
+    } catch (error: any) {
+      console.error("[Seed File Search] Error:", error);
+      res.status(500).json({ error: "Failed to seed File Search Store" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
