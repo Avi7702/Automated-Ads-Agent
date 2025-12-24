@@ -544,6 +544,131 @@ Guidelines:
     }
   });
 
+  // Analyze generation - Ask AI about the transformation
+  app.post("/api/generations/:id/analyze", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { question } = req.body;
+
+      if (!question || question.trim().length === 0) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Question is required" 
+        });
+      }
+
+      const generation = await storage.getGenerationById(id);
+      if (!generation) {
+        return res.status(404).json({ 
+          success: false, 
+          error: "Generation not found" 
+        });
+      }
+
+      console.log(`[Analyze] Analyzing generation ${id} with question: "${question}"`);
+
+      // Helper to get MIME type from file path
+      const getMimeType = (filePath: string): string => {
+        const ext = filePath.toLowerCase().split('.').pop();
+        const mimeTypes: Record<string, string> = {
+          'jpg': 'image/jpeg',
+          'jpeg': 'image/jpeg',
+          'png': 'image/png',
+          'gif': 'image/gif',
+          'webp': 'image/webp',
+        };
+        return mimeTypes[ext || ''] || 'image/png';
+      };
+
+      // Load original images as base64
+      const fs = await import('fs/promises');
+      const pathModule = await import('path');
+      
+      const originalImages: { data: string; mimeType: string }[] = [];
+      for (const imagePath of generation.originalImagePaths) {
+        try {
+          const fullPath = pathModule.join(process.cwd(), imagePath);
+          const imageBuffer = await fs.readFile(fullPath);
+          originalImages.push({
+            data: imageBuffer.toString('base64'),
+            mimeType: getMimeType(imagePath)
+          });
+        } catch (e) {
+          console.warn(`[Analyze] Could not load original image: ${imagePath}`);
+        }
+      }
+
+      // Load generated image as base64
+      const generatedPath = pathModule.join(process.cwd(), generation.generatedImagePath);
+      const generatedBuffer = await fs.readFile(generatedPath);
+      const generatedImageBase64 = generatedBuffer.toString('base64');
+      const generatedMimeType = getMimeType(generation.generatedImagePath);
+
+      // Call Gemini text model to analyze
+      const analysisPrompt = `You are an AI assistant helping users understand image transformations.
+
+Looking at the transformation:
+- Original product image(s): [attached]
+- Generated marketing image: [attached]  
+- Original prompt used: "${generation.prompt}"
+
+User question: ${question}
+
+Provide a helpful, specific answer. If suggesting prompt improvements, give concrete examples. Keep your response concise but informative.`;
+
+      const modelName = "gemini-2.0-flash";
+      
+      // Build multipart content with images
+      const parts: any[] = [{ text: analysisPrompt }];
+      
+      // Add original images with correct MIME types
+      for (const img of originalImages) {
+        parts.push({
+          inlineData: {
+            mimeType: img.mimeType,
+            data: img.data
+          }
+        });
+      }
+      
+      // Add generated image with correct MIME type
+      parts.push({
+        inlineData: {
+          mimeType: generatedMimeType,
+          data: generatedImageBase64
+        }
+      });
+
+      const result = await genai.models.generateContent({
+        model: modelName,
+        contents: [{ role: 'user', parts }],
+      });
+
+      const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+      
+      if (!responseText) {
+        return res.status(500).json({
+          success: false,
+          error: "AI did not return a response"
+        });
+      }
+
+      console.log(`[Analyze] Response generated (${responseText.length} chars)`);
+
+      return res.json({
+        success: true,
+        answer: responseText
+      });
+
+    } catch (error: any) {
+      console.error("[Analyze] Error:", error);
+      return res.status(500).json({ 
+        success: false, 
+        error: error.message || "Failed to analyze image" 
+      });
+    }
+  });
+
   // Product routes - Upload product to Cloudinary and save to DB
   app.post("/api/products", upload.single("image"), async (req, res) => {
     try {

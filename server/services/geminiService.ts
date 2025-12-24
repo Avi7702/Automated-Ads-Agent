@@ -177,4 +177,66 @@ export class GeminiService {
       model: this.modelName
     };
   }
+
+  async analyzeGeneration(
+    originalImageBase64: string[],
+    generatedImageBase64: string,
+    originalPrompt: string,
+    userQuestion: string
+  ): Promise<string> {
+    const model = this.genAI.getGenerativeModel({
+      model: 'gemini-2.0-flash',
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 1024,
+      }
+    });
+
+    const systemContext = `You are an AI assistant helping users understand image transformations. 
+You are looking at:
+1. Original product image(s)
+2. A transformed/generated marketing image
+3. The prompt that was used: "${originalPrompt}"
+
+The user wants to understand what happened during the transformation and get guidance on how to improve their prompts.
+Be helpful, specific, and give actionable advice. Keep responses concise but informative.`;
+
+    const parts: any[] = [
+      { text: systemContext + "\n\nOriginal image(s):" }
+    ];
+
+    // Add original images
+    for (const imgData of originalImageBase64) {
+      parts.push({
+        inlineData: {
+          mimeType: 'image/png',
+          data: imgData
+        }
+      });
+    }
+
+    // Add generated image
+    parts.push({ text: "\n\nTransformed/generated image:" });
+    parts.push({
+      inlineData: {
+        mimeType: 'image/png',
+        data: generatedImageBase64
+      }
+    });
+
+    // Add user question
+    parts.push({ text: `\n\nUser question: ${userQuestion}` });
+
+    const result = await model.generateContent(parts);
+    const response = result.response;
+    const text = response.text();
+
+    if (!text) {
+      throw new Error('No text response from analysis');
+    }
+
+    return text;
+  }
 }
+
+export const geminiService = new GeminiService();

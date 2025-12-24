@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useRoute, useLocation } from "wouter";
-import { ArrowLeft, Download, Pencil, X, Loader2, History } from "lucide-react";
+import { ArrowLeft, Download, Pencil, X, Loader2, History, MessageCircle, Send, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import { useState } from "react";
 import { CopywritingPanel } from "@/components/CopywritingPanel";
@@ -14,6 +15,13 @@ const QUICK_EDITS = [
   { label: "Softer look", prompt: "Make the image softer and more diffused" },
   { label: "More contrast", prompt: "Increase the contrast for a punchier look" },
   { label: "Blur background", prompt: "Blur the background to focus on the main subject" },
+];
+
+const SUGGESTED_QUESTIONS = [
+  "What changes did you make to the original image?",
+  "How can I improve my prompt to get better results?",
+  "Why does the lighting look this way?",
+  "What would make this image more professional?",
 ];
 
 interface Generation {
@@ -39,6 +47,13 @@ export default function GenerationDetail() {
   const [editPrompt, setEditPrompt] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  
+  // Ask AI state
+  const [isAskAIOpen, setIsAskAIOpen] = useState(false);
+  const [askAIQuestion, setAskAIQuestion] = useState("");
+  const [askAIResponse, setAskAIResponse] = useState<string | null>(null);
+  const [isAskingAI, setIsAskingAI] = useState(false);
+  const [askAIError, setAskAIError] = useState<string | null>(null);
 
   const { data: generation, isLoading } = useQuery<Generation>({
     queryKey: ["generation", params?.id],
@@ -100,6 +115,44 @@ export default function GenerationDetail() {
     setEditError(null);
   };
 
+  const handleAskAI = async (question?: string) => {
+    const q = question || askAIQuestion;
+    if (!q.trim() || !generation) return;
+
+    setIsAskingAI(true);
+    setAskAIError(null);
+    setAskAIResponse(null);
+
+    try {
+      const response = await fetch(`/api/generations/${generation.id}/analyze`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: q.trim() }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Failed to get response");
+      }
+
+      setAskAIResponse(data.answer);
+      setAskAIQuestion("");
+    } catch (error: any) {
+      console.error("Ask AI error:", error);
+      setAskAIError(error.message || "Something went wrong. Please try again.");
+    } finally {
+      setIsAskingAI(false);
+    }
+  };
+
+  const handleCloseAskAI = () => {
+    setIsAskAIOpen(false);
+    setAskAIQuestion("");
+    setAskAIResponse(null);
+    setAskAIError(null);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -134,6 +187,15 @@ export default function GenerationDetail() {
             <span className="font-medium">Gallery</span>
           </Link>
           <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsAskAIOpen(true)}
+              disabled={isAskAIOpen}
+              data-testid="button-ask-ai"
+            >
+              <MessageCircle className="w-4 h-4 mr-2" />
+              Ask AI
+            </Button>
             {canEdit && (
               <Button
                 variant="outline"
@@ -277,6 +339,85 @@ export default function GenerationDetail() {
 
               <p className="text-xs text-muted-foreground">
                 Tip: Short, specific prompts work best. The AI remembers your image and will only change what you ask for.
+              </p>
+            </div>
+          )}
+
+          {isAskAIOpen && (
+            <div className="border rounded-2xl p-6 bg-card/50 backdrop-blur-sm space-y-5" data-testid="ask-ai-panel">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                  <h3 className="font-semibold text-lg">Ask AI about this image</h3>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleCloseAskAI}
+                  disabled={isAskingAI}
+                  data-testid="button-close-ask-ai"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">Quick questions:</p>
+                <div className="flex flex-wrap gap-2">
+                  {SUGGESTED_QUESTIONS.map((question, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleAskAI(question)}
+                      disabled={isAskingAI}
+                      className="px-3 py-1.5 text-sm rounded-full border bg-background hover:bg-muted border-border transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      data-testid={`button-suggested-question-${idx}`}
+                    >
+                      {question}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">Or ask your own question:</p>
+                <div className="flex gap-2">
+                  <Input
+                    value={askAIQuestion}
+                    onChange={(e) => setAskAIQuestion(e.target.value)}
+                    placeholder="e.g., 'Why is there a reflection?' or 'How can I make it look more natural?'"
+                    disabled={isAskingAI}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAskAI()}
+                    data-testid="input-ask-ai-question"
+                  />
+                  <Button
+                    onClick={() => handleAskAI()}
+                    disabled={!askAIQuestion.trim() || isAskingAI}
+                    data-testid="button-send-question"
+                  >
+                    {isAskingAI ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {askAIError && (
+                <div className="text-sm text-destructive bg-destructive/10 px-4 py-2 rounded-lg" data-testid="text-ask-ai-error">
+                  {askAIError}
+                </div>
+              )}
+
+              {askAIResponse && (
+                <div className="bg-muted/50 rounded-xl p-4 space-y-2" data-testid="ask-ai-response">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">AI Response</p>
+                  <p className="text-sm whitespace-pre-wrap leading-relaxed">{askAIResponse}</p>
+                </div>
+              )}
+
+              <p className="text-xs text-muted-foreground">
+                AI analyzes both the original and generated images to help you understand the transformation.
               </p>
             </div>
           )}
