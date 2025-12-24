@@ -1,16 +1,19 @@
-import { 
-  type Generation, 
-  type InsertGeneration, 
+import {
+  type Generation,
+  type InsertGeneration,
   type Product,
   type InsertProduct,
   type PromptTemplate,
   type InsertPromptTemplate,
   type User,
   type InsertUser,
+  type AdCopy,
+  type InsertAdCopy,
   generations,
   products,
   promptTemplates,
-  users
+  users,
+  adCopy
 } from "@shared/schema";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
@@ -47,6 +50,14 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserById(id: string): Promise<User | undefined>;
+  updateUserBrandVoice(userId: string, brandVoice: any): Promise<User>;
+
+  // AdCopy CRUD operations
+  saveAdCopy(copy: InsertAdCopy): Promise<AdCopy>;
+  getAdCopyByGenerationId(generationId: string): Promise<AdCopy[]>;
+  getAdCopyById(id: string): Promise<AdCopy | undefined>;
+  deleteAdCopy(id: string): Promise<void>;
+  getCopyVariations(parentCopyId: string): Promise<AdCopy[]>;
 }
 
 export class DbStorage implements IStorage {
@@ -189,6 +200,51 @@ export class DbStorage implements IStorage {
       .from(users)
       .where(eq(users.id, id));
     return user;
+  }
+
+  async updateUserBrandVoice(userId: string, brandVoice: any): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ brandVoice })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async saveAdCopy(insertCopy: InsertAdCopy): Promise<AdCopy> {
+    const [copy] = await db
+      .insert(adCopy)
+      .values(insertCopy)
+      .returning();
+    return copy;
+  }
+
+  async getAdCopyByGenerationId(generationId: string): Promise<AdCopy[]> {
+    return await db
+      .select()
+      .from(adCopy)
+      .where(eq(adCopy.generationId, generationId))
+      .orderBy(desc(adCopy.createdAt));
+  }
+
+  async getAdCopyById(id: string): Promise<AdCopy | undefined> {
+    const [copy] = await db
+      .select()
+      .from(adCopy)
+      .where(eq(adCopy.id, id));
+    return copy;
+  }
+
+  async deleteAdCopy(id: string): Promise<void> {
+    await db.delete(adCopy).where(eq(adCopy.id, id));
+  }
+
+  async getCopyVariations(parentCopyId: string): Promise<AdCopy[]> {
+    return await db
+      .select()
+      .from(adCopy)
+      .where(eq(adCopy.parentCopyId, parentCopyId))
+      .orderBy(adCopy.variationNumber);
   }
 }
 

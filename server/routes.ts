@@ -11,6 +11,7 @@ import { v2 as cloudinary } from "cloudinary";
 import { authService } from "./services/authService";
 import { requireAuth } from "./middleware/auth";
 import { createRateLimiter } from "./middleware/rateLimit";
+import { telemetry } from "./instrumentation";
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -84,9 +85,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.createUser({ email, password: hashedPassword });
 
       (req as any).session.userId = user.id;
+      
+      telemetry.trackAuth({
+        action: 'register',
+        success: true,
+        userId: user.id,
+      });
+      
       res.json({ id: user.id, email: user.email });
     } catch (error: any) {
       console.error("[Auth Register] Error:", error);
+      
+      telemetry.trackAuth({
+        action: 'register',
+        success: false,
+        reason: error.message,
+      });
+      
       res.status(500).json({ error: "Registration failed" });
     }
   });
@@ -112,20 +127,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUserByEmail(email);
       if (!user) {
         authService.recordFailedLogin(email);
+        telemetry.trackAuth({
+          action: 'login',
+          success: false,
+          reason: 'user_not_found',
+        });
         return res.status(401).json({ error: "Invalid credentials" });
       }
 
       const valid = await authService.comparePassword(password, user.password);
       if (!valid) {
         authService.recordFailedLogin(email);
+        telemetry.trackAuth({
+          action: 'login',
+          success: false,
+          reason: 'invalid_password',
+        });
         return res.status(401).json({ error: "Invalid credentials" });
       }
 
       authService.clearFailedLogins(email);
       (req as any).session.userId = user.id;
+      
+      telemetry.trackAuth({
+        action: 'login',
+        success: true,
+        userId: user.id,
+      });
+      
       res.json({ id: user.id, email: user.email });
     } catch (error: any) {
       console.error("[Auth Login] Error:", error);
+      
+      telemetry.trackAuth({
+        action: 'login',
+        success: false,
+        reason: error.message,
+      });
+      
       res.status(500).json({ error: "Login failed" });
     }
   });
@@ -159,6 +198,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Image transformation endpoint (supports both image transformation and text-only generation)
   app.post("/api/transform", upload.array("images", 6), async (req, res) => {
+    const startTime = Date.now();
+    const userId = (req as any).session?.userId;
+    let success = false;
+    let errorType: string | undefined;
+
     try {
       const files = req.files as Express.Multer.File[];
       const { prompt } = req.body;
@@ -276,6 +320,8 @@ Guidelines:
 
         console.log(`[Transform] Saved generation ${generation.id} with conversation history`);
         
+        success = true;
+        
         // Return the file path for the frontend to use
         res.json({ 
           success: true,
@@ -285,14 +331,37 @@ Guidelines:
           canEdit: true
         });
       } else {
+        errorType = 'no_image_content';
         throw new Error("Generated content was not an image");
       }
 
     } catch (error: any) {
       console.error("[Transform] Error:", error);
+      errorType = errorType || (error.name || 'unknown');
+      
+      telemetry.trackError({
+        endpoint: '/api/transform',
+        errorType: errorType,
+        statusCode: 500,
+        userId,
+      });
+      
       res.status(500).json({ 
         error: "Failed to transform image",
         details: error.message 
+      });
+    } finally {
+      // Track Gemini API usage and cost
+      const durationMs = Date.now() - startTime;
+      telemetry.trackGeminiUsage({
+        model: 'gemini-3-pro-image-preview',
+        operation: 'generate',
+        inputTokens: (req.body.prompt?.length || 0) * 0.25, // Rough estimate
+        outputTokens: 0,
+        durationMs,
+        userId,
+        success,
+        errorType,
       });
     }
   });
@@ -376,6 +445,11 @@ Guidelines:
 
   // Edit generation - Multi-turn image editing using stored conversation history
   app.post("/api/generations/:id/edit", async (req, res) => {
+    const startTime = Date.now();
+    const userId = (req as any).session?.userId;
+    let success = false;
+    let errorType: string | undefined;
+
     try {
       const { id } = req.params;
       const { editPrompt } = req.body;
@@ -493,6 +567,8 @@ Guidelines:
 
       console.log(`[Edit] Created new generation ${newGeneration.id} from parent ${id}`);
 
+      success = true;
+
       return res.json({
         success: true,
         generationId: newGeneration.id,
@@ -503,9 +579,31 @@ Guidelines:
 
     } catch (error: any) {
       console.error("[Edit] Error:", error);
+      errorType = errorType || (error.name || 'unknown');
+      
+      telemetry.trackError({
+        endpoint: '/api/generations/:id/edit',
+        errorType: errorType,
+        statusCode: 500,
+        userId,
+      });
+      
       return res.status(500).json({ 
         success: false, 
         error: error.message || "Failed to edit image" 
+      });
+    } finally {
+      // Track Gemini API usage and cost
+      const durationMs = Date.now() - startTime;
+      telemetry.trackGeminiUsage({
+        model: 'gemini-3-pro-image-preview',
+        operation: 'edit',
+        inputTokens: (req.body.editPrompt?.length || 0) * 0.25,
+        outputTokens: 0,
+        durationMs,
+        userId,
+        success,
+        errorType,
       });
     }
   });
@@ -804,6 +902,145 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
     } catch (error: any) {
       console.error("[Delete Prompt Template] Error:", error);
       res.status(500).json({ error: "Failed to delete prompt template" });
+    }
+  });
+
+  // COPYWRITING ENDPOINTS
+
+  // Generate ad copy with multiple variations
+  app.post("/api/copy/generate", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      // Validate request
+      const { generateCopySchema } = await import("./validation/schemas");
+      const validatedData = generateCopySchema.parse(req.body);
+
+      // Verify generation exists
+      const generation = await storage.getGenerationById(validatedData.generationId);
+      if (!generation) {
+        return res.status(404).json({ error: "Generation not found" });
+      }
+
+      // Get user's brand voice if not provided
+      let brandVoice = validatedData.brandVoice;
+      if (!brandVoice) {
+        const user = await storage.getUserById(userId);
+        if (user?.brandVoice) {
+          brandVoice = user.brandVoice as any;
+        }
+      }
+
+      // Generate copy variations
+      const { copywritingService } = await import("./services/copywritingService");
+      const variations = await copywritingService.generateCopy({
+        ...validatedData,
+        brandVoice,
+      });
+
+      // Save all variations to database
+      const savedCopies = await Promise.all(
+        variations.map((variation, index) =>
+          storage.saveAdCopy({
+            generationId: validatedData.generationId,
+            userId,
+            headline: variation.headline,
+            hook: variation.hook,
+            bodyText: variation.bodyText,
+            cta: variation.cta,
+            caption: variation.caption,
+            hashtags: variation.hashtags,
+            platform: validatedData.platform,
+            tone: validatedData.tone,
+            framework: variation.framework.toLowerCase(),
+            campaignObjective: validatedData.campaignObjective,
+            productName: validatedData.productName,
+            productDescription: validatedData.productDescription,
+            productBenefits: validatedData.productBenefits,
+            uniqueValueProp: validatedData.uniqueValueProp,
+            industry: validatedData.industry,
+            targetAudience: validatedData.targetAudience,
+            brandVoice: brandVoice,
+            socialProof: validatedData.socialProof,
+            qualityScore: variation.qualityScore,
+            characterCounts: variation.characterCounts,
+            variationNumber: index + 1,
+            parentCopyId: null,
+          })
+        )
+      );
+
+      res.json({
+        success: true,
+        copies: savedCopies,
+        recommended: 0, // First variation is recommended
+      });
+    } catch (error: any) {
+      console.error("[Generate Copy] Error:", error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({ error: "Validation failed", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to generate copy", details: error.message });
+    }
+  });
+
+  // Get copy by generation ID
+  app.get("/api/copy/generation/:generationId", requireAuth, async (req, res) => {
+    try {
+      const copies = await storage.getAdCopyByGenerationId(req.params.generationId);
+      res.json({ copies });
+    } catch (error: any) {
+      console.error("[Get Copy by Generation] Error:", error);
+      res.status(500).json({ error: "Failed to fetch copy" });
+    }
+  });
+
+  // Get specific copy by ID
+  app.get("/api/copy/:id", requireAuth, async (req, res) => {
+    try {
+      const copy = await storage.getAdCopyById(req.params.id);
+      if (!copy) {
+        return res.status(404).json({ error: "Copy not found" });
+      }
+      res.json({ copy });
+    } catch (error: any) {
+      console.error("[Get Copy] Error:", error);
+      res.status(500).json({ error: "Failed to fetch copy" });
+    }
+  });
+
+  // Delete copy
+  app.delete("/api/copy/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteAdCopy(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[Delete Copy] Error:", error);
+      res.status(500).json({ error: "Failed to delete copy" });
+    }
+  });
+
+  // Update user's brand voice
+  app.put("/api/user/brand-voice", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { brandVoice } = req.body;
+      if (!brandVoice || !brandVoice.principles || !Array.isArray(brandVoice.principles)) {
+        return res.status(400).json({ error: "Invalid brand voice data" });
+      }
+
+      const updatedUser = await storage.updateUserBrandVoice(userId, brandVoice);
+      res.json({ success: true, brandVoice: updatedUser.brandVoice });
+    } catch (error: any) {
+      console.error("[Update Brand Voice] Error:", error);
+      res.status(500).json({ error: "Failed to update brand voice" });
     }
   });
 
