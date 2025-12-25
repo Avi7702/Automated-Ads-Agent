@@ -24,19 +24,13 @@ import type {
 } from "@shared/types/ideaBank";
 import type { Product, AdSceneTemplate, BrandProfile } from "@shared/schema";
 
-// LLM model for reasoning - use Replit AI integrations supported model
-const REASONING_MODEL = process.env.GEMINI_REASONING_MODEL || "gemini-2.5-flash-preview-05-20";
+// LLM model for reasoning - use Gemini 3 Flash for speed
+const REASONING_MODEL = process.env.GEMINI_REASONING_MODEL || "gemini-3-flash-preview";
 
-// Initialize Gemini client - prefer Replit AI integrations for better quota
-const GEMINI_API_KEY = process.env.AI_INTEGRATIONS_GEMINI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
+// Initialize Gemini client - use direct Google API key for Gemini 3 Flash support
+const GEMINI_API_KEY = process.env.GOOGLE_API_KEY_TEST || process.env.GOOGLE_API_KEY || "";
 const genai = new GoogleGenAI({ 
-  apiKey: GEMINI_API_KEY,
-  ...(process.env.AI_INTEGRATIONS_GEMINI_BASE_URL && {
-    httpOptions: {
-      baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
-      apiVersion: ''
-    }
-  })
+  apiKey: GEMINI_API_KEY
 });
 
 // Rate limiting for suggest endpoint
