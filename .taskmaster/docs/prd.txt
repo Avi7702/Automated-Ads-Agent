@@ -1,0 +1,213 @@
+# Intelligent Idea Bank + Visual Templates System PRD
+
+## Project Overview
+Re-architect the template system from simple text prompts into a Visual Ad Template Library with an Intelligent Idea Bank Agent that understands products via vision analysis, leverages the existing RAG/KB system, and supports two generation modes: Exact Insertion and Inspiration/Regenerate.
+
+## Current State
+- prompt_templates table exists (text-only)
+- /api/prompt-suggestions endpoint exists (basic, no vision)
+- File Search RAG exists in fileSearchService.ts
+- users.brandVoice exists
+- Products + Cloudinary integration works
+- Gemini SDK @google/genai v1.30.0 is installed
+- Generation endpoint /api/transform exists
+
+## Goals
+1. Visual Ad Template Library - Browse and select curated scene templates
+2. Two Generation Modes - Exact Insertion (put product into scene) & Inspiration (create variations)
+3. Intelligent Idea Bank - Vision analysis + KB retrieval + reasoning explanations
+
+## Technical Requirements
+
+### Database Schema (3 new tables)
+
+#### Table 1: ad_scene_templates
+- id (UUID primary key)
+- title (text, required)
+- description (text)
+- previewImageUrl (text, Cloudinary URL)
+- previewPublicId (text, Cloudinary ID)
+- referenceImages (jsonb array)
+- category (varchar 50, required) - lifestyle, professional, outdoor, luxury, seasonal
+- tags (text array)
+- platformHints (text array) - instagram, linkedin, etc
+- aspectRatioHints (text array) - 1:1, 9:16, 16:9
+- promptBlueprint (text, required)
+- placementHints (jsonb)
+- lightingStyle (varchar 50)
+- isGlobal (boolean, default true)
+- createdBy (references users.id)
+- createdAt (timestamp)
+
+#### Table 2: brand_profiles
+- id (UUID primary key)
+- userId (references users.id, unique, cascade delete)
+- brandName (text)
+- industry (varchar 100)
+- brandValues (text array)
+- targetAudience (jsonb) - demographics, psychographics, painPoints
+- preferredStyles (text array)
+- colorPreferences (text array)
+- voice (jsonb) - principles, wordsToUse, wordsToAvoid
+- kbTags (text array)
+- createdAt (timestamp)
+- updatedAt (timestamp)
+
+#### Table 3: product_analyses
+- id (UUID primary key)
+- productId (references products.id, cascade delete)
+- imageFingerprint (text, required) - cloudinaryPublicId + version
+- category (varchar 100)
+- subcategory (varchar 100)
+- materials (text array)
+- colors (text array)
+- style (varchar 50)
+- usageContext (text)
+- targetDemographic (text)
+- detectedText (text)
+- confidence (integer, default 80)
+- modelVersion (varchar 50)
+- analyzedAt (timestamp)
+- createdAt (timestamp)
+
+### Backend Services
+
+#### Service 1: visionAnalysisService.ts
+Purpose: Analyze product images using Gemini Vision, cache results
+Methods:
+- analyzeProduct(productId: string): Promise<ProductAnalysis> - checks cache first
+- analyzeProducts(productIds: string[]): Promise<ProductAnalysis[]> - batch parallel
+- reanalyzeProduct(productId: string): Promise<ProductAnalysis> - force refresh
+- performVisionAnalysis(imageUrl: string): Promise<AnalysisResult> - private
+
+#### Service 2: ideaBankService.ts
+Purpose: Orchestrate the full suggestion pipeline
+Methods:
+- generateSuggestions(params): Promise<IdeaBankSuggestion[]>
+- gatherVisionContext(productIds): Promise<VisionContext[]> - private
+- gatherKBContext(categories, userId): Promise<string> - private, uses fileSearchService
+- gatherBrandContext(userId): Promise<BrandContext> - private
+- performWebResearch(query): Promise<string> - private, optional
+- generateWithReasoning(context): Promise<Suggestion[]> - private
+
+#### Service 3: templateLibraryService.ts
+Purpose: Manage visual templates
+Methods:
+- createTemplate(template): Promise<AdSceneTemplate>
+- getTemplates(filters?): Promise<AdSceneTemplate[]>
+- getTemplateById(id): Promise<AdSceneTemplate>
+- deleteTemplate(id): Promise<void>
+- recommendTemplates(productAnalysis[], limit?): Promise<AdSceneTemplate[]>
+
+### API Endpoints
+
+#### Template Library
+- GET /api/ad-templates - List templates with filters
+- GET /api/ad-templates/:id - Get single template
+- POST /api/ad-templates - Create template (admin)
+- DELETE /api/ad-templates/:id - Delete template (admin)
+
+#### Product Analysis
+- POST /api/products/:id/analyze - Analyze product
+- GET /api/products/:id/analysis - Get cached analysis
+- POST /api/products/:id/reanalyze - Force re-analysis
+- POST /api/products/analyze-batch - Batch analyze
+
+#### Idea Bank (replaces /api/prompt-suggestions)
+- POST /api/idea-bank/suggest
+  - Request: productIds[], platform?, templateCategory?, useWebSearch?, maxSuggestions?
+  - Response: suggestions[] with prompt, mode, templateIds, reasoning, confidence, sourcesUsed
+
+#### Brand Profile
+- GET /api/brand-profile - Get user's profile
+- POST /api/brand-profile - Create/update
+- PUT /api/brand-profile - Update
+
+#### Generation Modes (extend /api/transform)
+- Add mode parameter: 'standard' | 'exact_insert' | 'inspiration'
+- Add templateId parameter
+- Add templateReferenceUrls[] parameter
+
+### Frontend Components
+
+#### Component 1: Template Library Page/Modal
+- Grid of template cards (thumbnail + title + category)
+- Filters by category, platform, aspect ratio
+- Click template opens preview modal
+- Mode selector (Exact Insert / Inspiration)
+- "Use Template" button
+
+#### Component 2: Enhanced Idea Bank (Home page)
+- Replace current 4-button grid
+- Suggestion cards with:
+  - Prompt text
+  - Mode badge (exact_insert / inspiration)
+  - Confidence percentage
+  - Expandable "Why this works" reasoning panel
+  - Sources used indicators
+  - "Use Prompt" and "Generate Now" buttons
+
+#### Component 3: Brand Profile Settings
+- Brand name, industry inputs
+- Target audience section (demographics, psychographics)
+- Visual style preferences (checkboxes)
+- Sync with existing brandVoice
+
+## Implementation Phases
+
+### Phase 1: Database + Templates Foundation
+- Add ad_scene_templates table schema
+- Add brand_profiles table schema
+- Add product_analyses table schema
+- Create storage layer CRUD methods
+- Create templateLibraryService.ts
+- Add template CRUD endpoints
+
+### Phase 2: Vision Analysis
+- Create visionAnalysisService.ts
+- Implement Gemini Vision analysis
+- Add caching with fingerprint
+- Add product analysis endpoints
+
+### Phase 3: Intelligent Idea Bank
+- Create ideaBankService.ts
+- Implement pipeline: vision → KB → brand → suggest
+- Integrate with fileSearchService for RAG
+- Add /api/idea-bank/suggest endpoint
+- Add reasoning generation
+
+### Phase 4: Generation Modes
+- Extend /api/transform for mode parameter
+- Implement exact insertion prompt strategy
+- Implement inspiration mode
+- Accept template reference images
+
+### Phase 5: Frontend Template Library
+- Build template grid component
+- Add filters
+- Template preview modal
+- Mode selection UI
+
+### Phase 6: Frontend Idea Bank
+- Replace current grid
+- Build suggestion cards with reasoning
+- Expandable panels
+- Loading states
+
+### Phase 7: Brand Profile UI
+- Brand setup form in Settings
+- Sync with brandVoice
+
+## Success Criteria
+1. Users can browse visual templates and select for generation
+2. Two modes work: Exact Insertion and Inspiration
+3. Idea Bank shows suggestions with "Why this works" reasoning
+4. Suggestions informed by vision + brand + KB
+5. Vision analysis cached
+6. Old prompt_templates available as fallback
+7. Response time < 3 seconds for cached products
+
+## User Decisions
+- Template sourcing: Manual upload only via admin UI
+- Web search: KB-first, web as fallback when low confidence
+- Implementation priority: Full system in parallel

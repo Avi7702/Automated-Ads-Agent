@@ -1,0 +1,40 @@
+services:
+  # Web Service (The Node.js App)
+  - type: web
+    name: automated-ads-agent
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: automated-ads-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: automated-ads-redis
+          property: connectionString
+      # USER MUST PROVIDE THIS IN DASHBOARD
+      - key: GOOGLE_API_KEY
+        sync: false
+    autoDeploy: true
+
+  # Managed PostgreSQL
+  - type: psql
+    name: automated-ads-db
+    env: docker
+    plan: free
+    databaseName: automated_ads
+    user: postgres
+
+  # Managed Redis
+  - type: redis
+    name: automated-ads-redis
+    plan: free
+    ipAllowList: [] # Only internal services can access

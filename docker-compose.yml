@@ -1,4 +1,25 @@
 services:
+  # Main Application
+  app:
+    build: .
+    container_name: automated-ads-app
+    ports:
+      - "5000:5000"
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/automated_ads
+      - REDIS_URL=redis://redis:6379
+      - NODE_ENV=production
+      - SESSION_SECRET=dev-secret-change-me
+      # Pass through the API key from host .env
+      - AI_INTEGRATIONS_GEMINI_API_KEY=${AI_INTEGRATIONS_GEMINI_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./attached_assets:/app/attached_assets
+
   # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
@@ -12,7 +33,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d automated_ads"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d automated_ads" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -27,7 +48,7 @@ services:
       - redis_data:/data
     command: redis-server --appendonly yes
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -38,12 +59,11 @@ services:
     image: jaegertracing/all-in-one:latest
     container_name: automated-ads-jaeger
     ports:
-      - "16686:16686"  # Jaeger UI
-      - "4317:4317"    # OTLP gRPC
-      - "4318:4318"    # OTLP HTTP
+      - "16686:16686" # Jaeger UI
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
     environment:
       - COLLECTOR_OTLP_ENABLED=true
-
   # OpenTelemetry Collector (optional - for more complex setups)
   # Uncomment if you need to route telemetry to multiple backends
   # otel-collector:
@@ -62,6 +82,5 @@ services:
 volumes:
   postgres_data:
   redis_data:
-
 
 

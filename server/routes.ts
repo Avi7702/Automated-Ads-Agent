@@ -46,7 +46,7 @@ if (isCloudinaryConfigured) {
 // 2. genaiImage - for image generation (uses direct Google API as Replit doesn't support image models)
 
 const textApiKey = process.env.AI_INTEGRATIONS_GEMINI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-const imageApiKey = process.env.GOOGLE_API_KEY_TEST; // Direct API for images (working key)
+const imageApiKey = process.env.GOOGLE_API_KEY_TEST || process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY; // Allow standard keys
 const isReplitAI = !!process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
 
 if (!textApiKey) {
