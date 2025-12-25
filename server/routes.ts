@@ -1314,12 +1314,10 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   // COPYWRITING ENDPOINTS
 
   // Generate ad copy with multiple variations
-  app.post("/api/copy/generate", requireAuth, async (req, res) => {
+  app.post("/api/copy/generate", async (req, res) => {
     try {
-      const userId = req.session.userId;
-      if (!userId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
+      // Use session userId if available, otherwise use a default for demo
+      const userId = req.session?.userId || "demo-user";
 
       // Validate request
       const { generateCopySchema } = await import("./validation/schemas");
@@ -1394,7 +1392,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   });
 
   // Get copy by generation ID
-  app.get("/api/copy/generation/:generationId", requireAuth, async (req, res) => {
+  app.get("/api/copy/generation/:generationId", async (req, res) => {
     try {
       const copies = await storage.getAdCopyByGenerationId(req.params.generationId);
       res.json({ copies });
@@ -1405,7 +1403,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   });
 
   // Get specific copy by ID
-  app.get("/api/copy/:id", requireAuth, async (req, res) => {
+  app.get("/api/copy/:id", async (req, res) => {
     try {
       const copy = await storage.getAdCopyById(req.params.id);
       if (!copy) {
@@ -1419,7 +1417,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   });
 
   // Delete copy
-  app.delete("/api/copy/:id", requireAuth, async (req, res) => {
+  app.delete("/api/copy/:id", async (req, res) => {
     try {
       await storage.deleteAdCopy(req.params.id);
       res.json({ success: true });
