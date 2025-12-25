@@ -984,7 +984,7 @@ User question: ${question}
 
 Provide a helpful, specific answer. If suggesting prompt improvements, give concrete examples. Keep your response concise but informative.`;
 
-      const modelName = "gemini-2.0-flash";
+      const modelName = "gemini-1.5-flash";
       
       // Build multipart content with images
       const parts: any[] = [{ text: analysisPrompt }];

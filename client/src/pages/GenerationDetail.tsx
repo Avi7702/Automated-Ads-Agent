@@ -184,37 +184,62 @@ export default function GenerationDetail() {
       </div>
 
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-background/50 backdrop-blur-md">
-        <div className="container max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/gallery" className="flex items-center gap-3 text-muted-foreground hover:text-foreground transition-colors" data-testid="link-gallery">
-            <ArrowLeft className="w-5 h-5" />
-            <span className="font-medium">Gallery</span>
-          </Link>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setIsAskAIOpen(true)}
-              disabled={isAskAIOpen}
-              data-testid="button-ask-ai"
-            >
-              <MessageCircle className="w-4 h-4 mr-2" />
-              Ask AI
-            </Button>
-            {canEdit && (
+        <div className="container max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+              V3
+            </div>
+            <span className="font-display font-medium tracking-tight">Product Content Studio</span>
+          </div>
+          <nav className="flex items-center gap-6 text-sm font-medium text-muted-foreground">
+            <Link href="/" className="hover:text-foreground cursor-pointer transition-colors">
+              Generate
+            </Link>
+            <Link href="/library" className="hover:text-foreground cursor-pointer transition-colors">
+              Library
+            </Link>
+            <Link href="/prompts" className="hover:text-foreground cursor-pointer transition-colors">
+              Prompts
+            </Link>
+            <Link href="/templates" className="hover:text-foreground cursor-pointer transition-colors">
+              Templates
+            </Link>
+            <Link href="/gallery" className="hover:text-foreground cursor-pointer transition-colors">
+              Gallery
+            </Link>
+            <Link href="/brand-profile" className="hover:text-foreground cursor-pointer transition-colors">
+              Brand
+            </Link>
+            <div className="border-l border-white/10 h-5 mx-2" />
+            <div className="flex gap-2">
               <Button
                 variant="outline"
-                onClick={() => setIsEditPanelOpen(true)}
-                disabled={isEditPanelOpen}
-                data-testid="button-edit"
+                size="sm"
+                onClick={() => setIsAskAIOpen(true)}
+                disabled={isAskAIOpen}
+                data-testid="button-ask-ai"
               >
-                <Pencil className="w-4 h-4 mr-2" />
-                Edit
+                <MessageCircle className="w-4 h-4 mr-1" />
+                Ask AI
               </Button>
-            )}
-            <Button onClick={handleDownload} data-testid="button-download">
-              <Download className="w-4 h-4 mr-2" />
-              Download
-            </Button>
-          </div>
+              {canEdit && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditPanelOpen(true)}
+                  disabled={isEditPanelOpen}
+                  data-testid="button-edit"
+                >
+                  <Pencil className="w-4 h-4 mr-1" />
+                  Edit
+                </Button>
+              )}
+              <Button size="sm" onClick={handleDownload} data-testid="button-download">
+                <Download className="w-4 h-4 mr-1" />
+                Download
+              </Button>
+            </div>
+          </nav>
         </div>
       </header>
 
