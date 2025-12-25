@@ -984,7 +984,7 @@ User question: ${question}
 
 Provide a helpful, specific answer. If suggesting prompt improvements, give concrete examples. Keep your response concise but informative.`;
 
-      const modelName = "gemini-3-flash-preview";
+      const modelName = "gemini-2.5-flash-preview-05-20";
       
       // Build multipart content with images
       const parts: any[] = [{ text: analysisPrompt }];
@@ -1289,7 +1289,7 @@ Each suggestion should be a concise, vivid description (max 15 words) of a marke
 Return ONLY a JSON array of 4 strings, nothing else. Example format:
 ["professional desk setup with morning sunlight", "outdoor adventure scene in mountains", "minimalist lifestyle flat lay", "urban street photography aesthetic"]`;
 
-      const modelName = "gemini-3-flash-preview";
+      const modelName = "gemini-2.5-flash-preview-05-20";
       console.log(`[Prompt Suggestions] Using model: ${modelName}`);
       
       const result = await genai.models.generateContent({

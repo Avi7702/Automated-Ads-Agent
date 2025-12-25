@@ -25,7 +25,7 @@ import type {
 import type { Product, AdSceneTemplate, BrandProfile } from "@shared/schema";
 
 // LLM model for reasoning - use Replit AI integrations supported model
-const REASONING_MODEL = process.env.GEMINI_REASONING_MODEL || "gemini-3-flash-preview";
+const REASONING_MODEL = process.env.GEMINI_REASONING_MODEL || "gemini-2.5-flash-preview-05-20";
 
 // Initialize Gemini client - prefer Replit AI integrations for better quota
 const GEMINI_API_KEY = process.env.AI_INTEGRATIONS_GEMINI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
