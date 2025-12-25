@@ -26,6 +26,10 @@ export async function serveStatic(app: Express, server: Server) {
   });
 }
 
+import { pushSchema } from "./migrate";
+
 (async () => {
+  // Ensure DB schema is up to date before starting
+  await pushSchema();
   await runApp(serveStatic);
 })();
