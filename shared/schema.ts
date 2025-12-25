@@ -307,3 +307,14 @@ export type BrandProfile = typeof brandProfiles.$inferSelect;
 
 export type InsertProductAnalysis = z.infer<typeof insertProductAnalysisSchema>;
 export type ProductAnalysis = typeof productAnalyses.$inferSelect;
+
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = typeof users.$inferSelect;
+
+export const insertSessionSchema = createInsertSchema(sessions);
+export type InsertSession = z.infer<typeof insertSessionSchema>;
+export type Session = typeof sessions.$inferSelect;

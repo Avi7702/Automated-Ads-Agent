@@ -27,16 +27,8 @@ import {
   brandProfiles,
   productAnalyses,
 } from "@shared/schema";
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import { db } from "./db";
 import { and, eq, desc, ilike } from "drizzle-orm";
-
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL must be set");
-}
-
-const sql = neon(process.env.DATABASE_URL);
-const db = drizzle(sql);
 
 export interface IStorage {
   // Generation CRUD operations
@@ -45,19 +37,19 @@ export interface IStorage {
   getGenerationById(id: string): Promise<Generation | undefined>;
   deleteGeneration(id: string): Promise<void>;
   getEditHistory(generationId: string): Promise<Generation[]>;
-  
+
   // Product CRUD operations
   saveProduct(product: InsertProduct): Promise<Product>;
   getProducts(): Promise<Product[]>;
   getProductById(id: string): Promise<Product | undefined>;
   deleteProduct(id: string): Promise<void>;
-  
+
   // Prompt Template CRUD operations
   savePromptTemplate(template: InsertPromptTemplate): Promise<PromptTemplate>;
   getPromptTemplates(category?: string): Promise<PromptTemplate[]>;
   getPromptTemplateById(id: string): Promise<PromptTemplate | undefined>;
   deletePromptTemplate(id: string): Promise<void>;
-  
+
   // User CRUD operations
   createUser(email: string, passwordHash: string): Promise<User>;
   getUserByEmail(email: string): Promise<User | undefined>;
@@ -143,7 +135,7 @@ export class DbStorage implements IStorage {
       .from(generations)
       .orderBy(desc(generations.createdAt))
       .limit(limit);
-    
+
     // Return with null conversationHistory (not needed for gallery view)
     return results.map(r => ({ ...r, conversationHistory: null })) as Generation[];
   }
@@ -239,7 +231,7 @@ export class DbStorage implements IStorage {
   async createUser(email: string, passwordHash: string): Promise<User> {
     const [user] = await db
       .insert(users)
-      .values({ email, passwordHash })
+      .values({ email, password: passwordHash, passwordHash })
       .returning();
     return user;
   }
