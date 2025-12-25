@@ -125,16 +125,20 @@ export class DbStorage implements IStorage {
     const results = await db
       .select({
         id: generations.id,
+        userId: generations.userId,
         prompt: generations.prompt,
         originalImagePaths: generations.originalImagePaths,
         generatedImagePath: generations.generatedImagePath,
+        imagePath: generations.imagePath,
         resolution: generations.resolution,
-        cost: generations.cost,
-        inputTokens: generations.inputTokens,
-        outputTokens: generations.outputTokens,
+        model: generations.model,
+        aspectRatio: generations.aspectRatio,
+        status: generations.status,
         parentGenerationId: generations.parentGenerationId,
         editPrompt: generations.editPrompt,
+        editCount: generations.editCount,
         createdAt: generations.createdAt,
+        updatedAt: generations.updatedAt,
       })
       .from(generations)
       .orderBy(desc(generations.createdAt))
