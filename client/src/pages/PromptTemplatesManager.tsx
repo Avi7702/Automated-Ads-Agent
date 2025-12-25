@@ -88,15 +88,39 @@ export default function PromptTemplatesManager() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 text-white">
       <div className="container mx-auto px-4 py-8 max-w-5xl">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        {/* Navigation Header */}
+        <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-background/50 backdrop-blur-md">
+          <div className="container max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                V3
+              </div>
+              <span className="font-display font-medium tracking-tight">Product Content Studio</span>
+            </div>
+            <nav className="flex items-center gap-6 text-sm font-medium text-muted-foreground">
+              <Link href="/" className="hover:text-foreground cursor-pointer transition-colors">
+                Generate
+              </Link>
+              <Link href="/library" className="hover:text-foreground cursor-pointer transition-colors">
+                Library
+              </Link>
+              <span className="text-foreground">Prompts</span>
+              <Link href="/templates" className="hover:text-foreground cursor-pointer transition-colors">
+                Templates
+              </Link>
+              <Link href="/gallery" className="hover:text-foreground cursor-pointer transition-colors">
+                Gallery
+              </Link>
+              <Link href="/brand-profile" className="hover:text-foreground cursor-pointer transition-colors">
+                Brand
+              </Link>
+            </nav>
+          </div>
+        </header>
+
+        {/* Page Header */}
+        <div className="flex items-center justify-between mb-8 pt-20">
           <div>
-            <Link href="/">
-              <Button variant="ghost" className="mb-4" data-testid="button-back-home">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Studio
-              </Button>
-            </Link>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
               Prompt Templates Manager
             </h1>
