@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
-import { GoogleGenAI } from "@google/genai";
+
 import { saveOriginalFile, saveGeneratedImage, deleteFile } from "./fileStorage";
 import { insertGenerationSchema, insertProductSchema, insertPromptTemplateSchema } from "@shared/schema";
 import express from "express";
@@ -14,9 +14,9 @@ import { createRateLimiter } from "./middleware/rateLimit";
 import { telemetry } from "./instrumentation";
 import { computeAdaptiveEstimate, estimateGenerationCostMicros, normalizeResolution } from "./services/pricingEstimator";
 
-const upload = multer({ 
+const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { 
+  limits: {
     fileSize: 10 * 1024 * 1024, // 10MB per file
     files: 6 // Max 6 files
   }
@@ -45,35 +45,12 @@ if (isCloudinaryConfigured) {
 // 1. genaiText - for text operations (uses Replit AI Integrations for better quotas)
 // 2. genaiImage - for image generation (uses direct Google API as Replit doesn't support image models)
 
-const textApiKey = process.env.AI_INTEGRATIONS_GEMINI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-const imageApiKey = process.env.GOOGLE_API_KEY_TEST || process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY; // Allow standard keys
-const isReplitAI = !!process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
+import { genAI } from "./lib/gemini";
 
-if (!textApiKey) {
-  throw new Error("[Gemini] Missing API key for text operations");
-}
-if (!imageApiKey) {
-  console.warn("[Gemini] No direct API key for image generation - image features may be limited");
-}
+// Use the shared client for all operations
+const genaiText = genAI;
+const genaiImage = genAI;
 
-console.log(`[Gemini Text] Using ${isReplitAI ? 'Replit AI Integrations' : 'direct API'} key`);
-console.log(`[Gemini Image] Using ${imageApiKey ? 'direct Google API' : 'NO KEY AVAILABLE'} key`);
-
-// Text client - uses Replit AI Integrations for better quotas on text models
-const genaiText = new GoogleGenAI({
-  apiKey: textApiKey,
-  ...(isReplitAI && {
-    httpOptions: {
-      baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
-      apiVersion: '',
-    },
-  }),
-});
-
-// Image client - uses direct Google API for image generation models
-const genaiImage = imageApiKey ? new GoogleGenAI({
-  apiKey: imageApiKey,
-}) : null;
 
 // Legacy alias for backward compatibility
 const genai = genaiText;
@@ -81,7 +58,7 @@ const genai = genaiText;
 export async function registerRoutes(app: Express): Promise<Server> {
   // Serve static files from attached_assets directory
   app.use("/attached_assets", express.static(path.join(process.cwd(), "attached_assets")));
-  
+
   // Apply rate limiting to API routes
   const rateLimiter = createRateLimiter({
     windowMs: 15 * 60 * 1000, // 15 minutes
@@ -90,7 +67,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/", rateLimiter);
 
   // ===== AUTH ROUTES =====
-  
+
   // POST /api/auth/register
   app.post("/api/auth/register", async (req, res) => {
     try {
@@ -113,23 +90,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.createUser(email, hashedPassword);
 
       (req as any).session.userId = user.id;
-      
+
       telemetry.trackAuth({
         action: 'register',
         success: true,
         userId: user.id,
       });
-      
+
       res.json({ id: user.id, email: user.email });
     } catch (error: any) {
       console.error("[Auth Register] Error:", error);
-      
+
       telemetry.trackAuth({
         action: 'register',
         success: false,
         reason: error.message,
       });
-      
+
       res.status(500).json({ error: "Registration failed" });
     }
   });
@@ -146,7 +123,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check lockout
       if (authService.isLockedOut(email)) {
         const remaining = authService.getLockoutTimeRemaining(email);
-        return res.status(429).json({ 
+        return res.status(429).json({
           error: "Too many failed attempts. Try again later.",
           retryAfter: remaining
         });
@@ -163,7 +140,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Invalid credentials" });
       }
 
-      const valid = await authService.comparePassword(password, user.passwordHash);
+      const valid = await authService.comparePassword(password, user.passwordHash || "");
       if (!valid) {
         authService.recordFailedLogin(email);
         telemetry.trackAuth({
@@ -176,23 +153,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       authService.clearFailedLogins(email);
       (req as any).session.userId = user.id;
-      
+
       telemetry.trackAuth({
         action: 'login',
         success: true,
         userId: user.id,
       });
-      
+
       res.json({ id: user.id, email: user.email });
     } catch (error: any) {
       console.error("[Auth Login] Error:", error);
-      
+
       telemetry.trackAuth({
         action: 'login',
         success: false,
         reason: error.message,
       });
-      
+
       res.status(500).json({ error: "Login failed" });
     }
   });
@@ -227,13 +204,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const demoEmail = "demo@company.com";
       let user = await storage.getUserByEmail(demoEmail);
-      
+
       if (!user) {
         // Create demo user if doesn't exist
         const hashedPassword = await authService.hashPassword("demo123");
         user = await storage.createUser(demoEmail, hashedPassword);
       }
-      
+
       (req as any).session.userId = user.id;
       res.json({ id: user.id, email: user.email, isDemo: true });
     } catch (error: any) {
@@ -291,7 +268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to estimate price' });
     }
   });
-  
+
   // Image transformation endpoint (supports both image transformation and text-only generation)
   app.post("/api/transform", upload.array("images", 6), async (req, res) => {
     const startTime = Date.now();
@@ -484,14 +461,14 @@ Guidelines:
       if (!genaiImage) {
         throw new Error("Image generation requires GEMINI_API_KEY or GOOGLE_API_KEY (direct API, not AI Integrations)");
       }
-      
+
       const modelName = "gemini-3-pro-image-preview";
       const validResolutions = ["1K", "2K", "4K"];
-      const requestedResolution = validResolutions.includes(req.body.resolution) 
-        ? req.body.resolution 
+      const requestedResolution = validResolutions.includes(req.body.resolution)
+        ? req.body.resolution
         : "2K";
       console.log(`[Transform] Using model: ${modelName}, resolution: ${requestedResolution} (direct Google API)`);
-      
+
       const result = await genaiImage.models.generateContent({
         model: modelName,
         contents,
@@ -501,7 +478,7 @@ Guidelines:
           }
         }
       });
-      
+
       console.log(`[Transform] Model response - modelVersion: ${result.modelVersion}, candidates: ${result.candidates?.length}`);
       const usageMetadata = (result as any).usageMetadata;
       if (usageMetadata) {
@@ -515,7 +492,7 @@ Guidelines:
 
       const modelResponse = result.candidates[0].content;
       const imagePart = modelResponse.parts?.find((p: any) => p.inlineData);
-      
+
       if (imagePart && imagePart.inlineData && imagePart.inlineData.data) {
         // Save uploaded files to disk (if any were provided)
         const originalImagePaths: string[] = [];
@@ -579,7 +556,7 @@ Guidelines:
         } catch (e) {
           console.warn("[Transform] Failed to persist generation usage (run db:push?):", e);
         }
-        
+
         success = true;
 
         // Return the file path for the frontend to use
@@ -600,17 +577,17 @@ Guidelines:
     } catch (error: any) {
       console.error("[Transform] Error:", error);
       errorType = errorType || (error.name || 'unknown');
-      
+
       telemetry.trackError({
         endpoint: '/api/transform',
         errorType: errorType || 'unknown',
         statusCode: 500,
         userId,
       });
-      
-      res.status(500).json({ 
+
+      res.status(500).json({
         error: "Failed to transform image",
-        details: error.message 
+        details: error.message
       });
     } finally {
       // Track Gemini API usage and cost
@@ -718,9 +695,9 @@ Guidelines:
 
       // Validate input
       if (!editPrompt || editPrompt.trim().length === 0) {
-        return res.status(400).json({ 
-          success: false, 
-          error: "Edit prompt is required" 
+        return res.status(400).json({
+          success: false,
+          error: "Edit prompt is required"
         });
       }
 
@@ -728,17 +705,17 @@ Guidelines:
       const parentGeneration = await storage.getGenerationById(id);
 
       if (!parentGeneration) {
-        return res.status(404).json({ 
-          success: false, 
-          error: "Generation not found" 
+        return res.status(404).json({
+          success: false,
+          error: "Generation not found"
         });
       }
 
       // Check if this generation supports editing
       if (!parentGeneration.conversationHistory) {
-        return res.status(400).json({ 
-          success: false, 
-          error: "This generation does not support editing. It was created before the edit feature was available." 
+        return res.status(400).json({
+          success: false,
+          error: "This generation does not support editing. It was created before the edit feature was available."
         });
       }
 
@@ -746,24 +723,24 @@ Guidelines:
       // JSONB column returns parsed object directly, no need to JSON.parse
       let history: any[];
       const storedHistory = parentGeneration.conversationHistory;
-      
+
       if (typeof storedHistory === 'string') {
         // Handle legacy data that might be double-stringified
         try {
           history = JSON.parse(storedHistory);
         } catch (e) {
-          return res.status(500).json({ 
-            success: false, 
-            error: "Failed to parse conversation history" 
+          return res.status(500).json({
+            success: false,
+            error: "Failed to parse conversation history"
           });
         }
       } else if (Array.isArray(storedHistory)) {
         // JSONB returns parsed array directly
         history = storedHistory;
       } else {
-        return res.status(500).json({ 
-          success: false, 
-          error: "Invalid conversation history format" 
+        return res.status(500).json({
+          success: false,
+          error: "Invalid conversation history format"
         });
       }
 
@@ -780,20 +757,20 @@ Guidelines:
       // The thought signatures in the history allow Gemini to "remember" the image
       // MUST use genaiImage (direct Google API) - Replit AI Integrations doesn't support image models
       if (!genaiImage) {
-        return res.status(500).json({ 
-          success: false, 
-          error: "Image editing requires GEMINI_API_KEY or GOOGLE_API_KEY (direct API)" 
+        return res.status(500).json({
+          success: false,
+          error: "Image editing requires GEMINI_API_KEY or GOOGLE_API_KEY (direct API)"
         });
       }
-      
+
       const modelName = "gemini-3-pro-image-preview";
       console.log(`[Edit] Using model: ${modelName} (direct Google API)`);
-      
+
       const result = await genaiImage.models.generateContent({
         model: modelName,
         contents: history,
       });
-      
+
       console.log(`[Edit] Model response - modelVersion: ${result.modelVersion}, candidates: ${result.candidates?.length}`);
       const usageMetadata = (result as any).usageMetadata;
       if (usageMetadata) {
@@ -802,9 +779,9 @@ Guidelines:
 
       // Extract the new image
       if (!result.candidates?.[0]?.content?.parts) {
-        return res.status(500).json({ 
-          success: false, 
-          error: "Gemini did not return a valid response. Try a different edit prompt." 
+        return res.status(500).json({
+          success: false,
+          error: "Gemini did not return a valid response. Try a different edit prompt."
         });
       }
 
@@ -812,9 +789,9 @@ Guidelines:
       const imagePart = modelResponse.parts?.find((p: any) => p.inlineData);
 
       if (!imagePart || !imagePart.inlineData || !imagePart.inlineData.data) {
-        return res.status(500).json({ 
-          success: false, 
-          error: "Gemini did not return an image. Try a different edit prompt." 
+        return res.status(500).json({
+          success: false,
+          error: "Gemini did not return an image. Try a different edit prompt."
         });
       }
 
@@ -884,17 +861,17 @@ Guidelines:
     } catch (error: any) {
       console.error("[Edit] Error:", error);
       errorType = errorType || (error.name || 'unknown');
-      
+
       telemetry.trackError({
         endpoint: '/api/generations/:id/edit',
         errorType: errorType || 'unknown',
         statusCode: 500,
         userId,
       });
-      
-      return res.status(500).json({ 
-        success: false, 
-        error: error.message || "Failed to edit image" 
+
+      return res.status(500).json({
+        success: false,
+        error: error.message || "Failed to edit image"
       });
     } finally {
       // Track Gemini API usage and cost
@@ -919,17 +896,17 @@ Guidelines:
       const { question } = req.body;
 
       if (!question || question.trim().length === 0) {
-        return res.status(400).json({ 
-          success: false, 
-          error: "Question is required" 
+        return res.status(400).json({
+          success: false,
+          error: "Question is required"
         });
       }
 
       const generation = await storage.getGenerationById(id);
       if (!generation) {
-        return res.status(404).json({ 
-          success: false, 
-          error: "Generation not found" 
+        return res.status(404).json({
+          success: false,
+          error: "Generation not found"
         });
       }
 
@@ -951,7 +928,7 @@ Guidelines:
       // Load original images as base64
       const fs = await import('fs/promises');
       const pathModule = await import('path');
-      
+
       const originalImages: { data: string; mimeType: string }[] = [];
       for (const imagePath of generation.originalImagePaths) {
         try {
@@ -985,10 +962,10 @@ User question: ${question}
 Provide a helpful, specific answer. If suggesting prompt improvements, give concrete examples. Keep your response concise but informative.`;
 
       const modelName = "gemini-2.5-flash-preview-05-20";
-      
+
       // Build multipart content with images
       const parts: any[] = [{ text: analysisPrompt }];
-      
+
       // Add original images with correct MIME types
       for (const img of originalImages) {
         parts.push({
@@ -998,7 +975,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
           }
         });
       }
-      
+
       // Add generated image with correct MIME type
       parts.push({
         inlineData: {
@@ -1013,7 +990,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       });
 
       const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-      
+
       if (!responseText) {
         return res.status(500).json({
           success: false,
@@ -1030,9 +1007,9 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
 
     } catch (error: any) {
       console.error("[Analyze] Error:", error);
-      return res.status(500).json({ 
-        success: false, 
-        error: error.message || "Failed to analyze image" 
+      return res.status(500).json({
+        success: false,
+        error: error.message || "Failed to analyze image"
       });
     }
   });
@@ -1149,7 +1126,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   app.delete("/api/products", async (req, res) => {
     try {
       const products = await storage.getProducts();
-      
+
       for (const product of products) {
         await storage.deleteProduct(product.id);
       }
@@ -1263,25 +1240,25 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   app.post("/api/prompt-suggestions", async (req, res) => {
     try {
       const { productName, category } = req.body;
-      
+
       // Input validation
       if (!productName || typeof productName !== 'string') {
         return res.status(400).json({ error: "Product name is required" });
       }
-      
+
       // Sanitize product name to prevent injection
       const sanitizedProductName = productName.replace(/[^\w\s-]/g, '').slice(0, 100);
-      
+
       // Get curated templates for the category (or all if no category)
       const templates = await storage.getPromptTemplates(category);
-      
+
       if (templates.length === 0) {
         return res.json([]);
       }
 
       // Use Gemini to generate variations of the curated prompts
       const templateExamples = templates.slice(0, 5).map(t => `"${t.prompt}"`).join(", ");
-      
+
       const suggestionPrompt = `You are a creative marketing prompt generator. Given a product called "${sanitizedProductName}", generate 4 creative, professional marketing scene ideas similar to these examples: ${templateExamples}.
 
 Each suggestion should be a concise, vivid description (max 15 words) of a marketing scene or lifestyle context for the product.
@@ -1291,16 +1268,16 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       const modelName = "gemini-2.5-flash-preview-05-20";
       console.log(`[Prompt Suggestions] Using model: ${modelName}`);
-      
+
       const result = await genai.models.generateContent({
         model: modelName,
         contents: suggestionPrompt,
       });
-      
+
       console.log(`[Prompt Suggestions] Model response - modelVersion: ${result.modelVersion}`);
 
       const responseText = result.text || "[]";
-      
+
       // Parse the JSON response
       let suggestions: string[] = [];
       try {
@@ -1709,7 +1686,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       if (!result.success) {
         const statusCode = result.error.code === "RATE_LIMITED" ? 429 :
-                          result.error.code === "PRODUCT_NOT_FOUND" ? 404 : 500;
+          result.error.code === "PRODUCT_NOT_FOUND" ? 404 : 500;
         return res.status(statusCode).json({ error: result.error.message, code: result.error.code });
       }
 

@@ -20,24 +20,21 @@ const sdkCalls = vi.hoisted(() => ({
 }));
 
 // Mock GoogleGenAI SDK - must be done before import
-vi.mock('@google/genai', () => {
-  class MockGoogleGenAI {
-    fileSearchStores = {
+// Mock ../lib/gemini - must be done before import
+vi.mock('../lib/gemini', () => ({
+  genAI: {
+    fileSearchStores: {
       list: sdkCalls.listStores,
       create: sdkCalls.createStore,
       uploadToFileSearchStore: sdkCalls.uploadToFileSearchStore,
       listFiles: sdkCalls.listFiles,
       deleteFile: sdkCalls.deleteFile,
-    };
-    models = {
+    },
+    models: {
       generateContent: sdkCalls.generateContent,
-    };
+    }
   }
-
-  return {
-    GoogleGenAI: MockGoogleGenAI,
-  };
-});
+}));
 
 // Helper to set up default mock implementations
 function setupDefaultMocks() {
@@ -447,6 +444,8 @@ describe('File Search Service Integration', () => {
         query: 'test query',
       });
 
+      expect(result).not.toBeNull();
+      if (!result) return;
       expect(result.context).toBe('Retrieved context from knowledge base');
     });
 
@@ -455,6 +454,8 @@ describe('File Search Service Integration', () => {
         query: 'test query',
       });
 
+      expect(result).not.toBeNull();
+      if (!result) return;
       expect(result.citations).toHaveLength(1);
       expect(result.citations[0]).toEqual({
         source: 'test-doc-1',

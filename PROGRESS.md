@@ -30,6 +30,9 @@
 ✅ **Cloud Deployment Ready**
 - `render.yaml` - Render.com Blueprint
 - `DEPLOY_TO_RENDER.md` - Step-by-step guide
+- **Database Migration**: Auto-runs on startup (handles empty productions DBs)
+- **Drivers**: Switched to `pg` (standard TCP) for Railway compatibility
+
 
 > [!NOTE]
 > To deploy, you need a **Google Gemini API Key** from [Google AI Studio](https://aistudio.google.com/).

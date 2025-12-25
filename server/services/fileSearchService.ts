@@ -13,18 +13,10 @@
  * Docs: https://ai.google.dev/gemini-api/docs/file-search
  */
 
-import { GoogleGenAI } from '@google/genai';
+import { genAI } from '../lib/gemini';
 import fs from 'fs/promises';
 import path from 'path';
 import { telemetry } from '../instrumentation';
-
-// Fallback to GOOGLE_API_KEY for backward compatibility
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-if (!GEMINI_API_KEY) {
-  console.warn('[FileSearch] No GEMINI_API_KEY or GOOGLE_API_KEY found - File Search features disabled');
-}
-
-const genAI = GEMINI_API_KEY ? new GoogleGenAI({ apiKey: GEMINI_API_KEY }) : null;
 
 // File Search Store configuration
 const FILE_SEARCH_STORE_NAME = 'nds-copywriting-rag';
@@ -86,13 +78,6 @@ export enum FileCategory {
  * Returns null if not available
  */
 export async function initializeFileSearchStore(): Promise<any | null> {
-  // File Search Store is not supported by Replit AI integrations
-  // Return null to gracefully disable this feature
-  if (!genAI || process.env.AI_INTEGRATIONS_GEMINI_BASE_URL) {
-    console.log('[FileSearch] File Search Store disabled - using Replit AI integrations');
-    return null;
-  }
-  
   try {
     // Check if store already exists
     const stores = await (genAI as any).fileSearchStores?.list?.();
@@ -100,7 +85,7 @@ export async function initializeFileSearchStore(): Promise<any | null> {
       console.log('[FileSearch] File Search Store API not available');
       return null;
     }
-    
+
     const existingStore = stores.find(
       (store: any) => store.config?.displayName === FILE_SEARCH_STORE_NAME
     );
@@ -275,7 +260,7 @@ export async function queryFileSearchStore(params: {
 
   try {
     const store = await initializeFileSearchStore();
-    
+
     // Return null if file search is not available
     if (!store) {
       return null;

@@ -11,7 +11,7 @@
  * Implements caching via productAnalyses table to avoid redundant API calls.
  */
 
-import { GoogleGenAI } from "@google/genai";
+import { genAI } from "../lib/gemini";
 import { storage } from "../storage";
 import type { ProductAnalysis, InsertProductAnalysis, Product } from "@shared/schema";
 
@@ -20,20 +20,9 @@ const userAnalysisCount = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 10;
 
-// Vision analysis model - use Replit AI integrations supported model
+// Vision analysis model
 const VISION_MODEL = process.env.GEMINI_VISION_MODEL || "gemini-3-flash-preview";
 
-// Initialize Gemini client - prefer Replit AI integrations for better quota
-const GEMINI_API_KEY = process.env.AI_INTEGRATIONS_GEMINI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
-const genai = new GoogleGenAI({ 
-  apiKey: GEMINI_API_KEY,
-  ...(process.env.AI_INTEGRATIONS_GEMINI_BASE_URL && {
-    httpOptions: {
-      baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
-      apiVersion: ''
-    }
-  })
-});
 
 export interface VisionAnalysisResult {
   category: string;
@@ -175,7 +164,8 @@ export async function analyzeProductImage(
  * Call Gemini Vision API to analyze a product image
  */
 async function callGeminiVision(imageUrl: string, productName: string): Promise<VisionAnalysisResult> {
-  const model = genai.models.generateContent;
+  // Use the shared client
+  const model = genAI.models.generateContent;
 
   const prompt = `Analyze this product image for an advertising platform. The product is named "${productName}".
 
@@ -194,7 +184,7 @@ Extract the following information in JSON format:
 
 Be accurate and specific. If uncertain about a field, use your best judgment but lower the confidence score.`;
 
-  const response = await genai.models.generateContent({
+  const response = await genAI.models.generateContent({
     model: VISION_MODEL,
     contents: [
       {

@@ -6,16 +6,13 @@ const { mockGenerateContent } = vi.hoisted(() => {
   return { mockGenerateContent };
 });
 
-vi.mock('@google/genai', () => {
-  return {
-    GoogleGenAI: class MockGoogleGenAI {
-      models = {
-        generateContent: mockGenerateContent
-      };
-      constructor() {}
+vi.mock('../lib/gemini', () => ({
+  genAI: {
+    models: {
+      generateContent: mockGenerateContent
     }
-  };
-});
+  }
+}));
 
 // Mock telemetry
 vi.mock('../instrumentation', () => ({
@@ -49,7 +46,7 @@ describe('GeminiService', () => {
   };
 
   beforeAll(() => {
-    process.env.GEMINI_API_KEY = 'test-api-key';
+    // process.env.GEMINI_API_KEY no longer needed here as it's handled in the lib import which we mock
   });
 
   beforeEach(() => {
@@ -201,20 +198,6 @@ describe('GeminiService', () => {
   });
 
   describe('config', () => {
-    it('throws if GEMINI_API_KEY not set', () => {
-      // This test verifies the constructor throws when API key is missing
-      // We test this by saving/restoring the key and creating a new instance
-      const originalKey = process.env.GEMINI_API_KEY;
-      delete process.env.GEMINI_API_KEY;
-
-      try {
-        // The service should throw when instantiated without API key
-        expect(() => new GeminiService()).toThrow('GEMINI_API_KEY is not set');
-      } finally {
-        process.env.GEMINI_API_KEY = originalKey;
-      }
-    });
-
     it('uses correct model version', async () => {
       const prompt = 'Test prompt';
 

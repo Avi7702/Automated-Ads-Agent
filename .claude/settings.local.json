@@ -53,7 +53,9 @@
       "Bash(rimraf:*)",
       "Bash(grep:*)",
       "Bash(npx vitest:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(tree:*)",
+      "Bash(wc:*)"
     ]
   }
 }

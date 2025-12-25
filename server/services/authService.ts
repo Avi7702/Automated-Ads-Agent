@@ -84,7 +84,7 @@ export async function registerUser(email: string, password: string): Promise<Aut
   const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
   // Create user
-  const user = await storage.createUser({ email, password: hashedPassword });
+  const user = await storage.createUser(email, hashedPassword);
 
   return {
     success: true,

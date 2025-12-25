@@ -12,7 +12,7 @@
  * Security: KB-first policy, web search disabled by default
  */
 
-import { GoogleGenAI } from "@google/genai";
+import { genAI } from "../lib/gemini";
 import { storage } from "../storage";
 import { visionAnalysisService, type VisionAnalysisResult } from "./visionAnalysisService";
 import { queryFileSearchStore } from "./fileSearchService";
@@ -27,11 +27,6 @@ import type { Product, AdSceneTemplate, BrandProfile } from "@shared/schema";
 // LLM model for reasoning - use Gemini 3 Flash for speed
 const REASONING_MODEL = process.env.GEMINI_REASONING_MODEL || "gemini-3-flash-preview";
 
-// Initialize Gemini client - use direct Google API key for Gemini 3 Flash support
-const GEMINI_API_KEY = process.env.GOOGLE_API_KEY_TEST || process.env.GOOGLE_API_KEY || "";
-const genai = new GoogleGenAI({ 
-  apiKey: GEMINI_API_KEY
-});
 
 // Rate limiting for suggest endpoint
 const userSuggestCount = new Map<string, { count: number; resetAt: number }>();
@@ -309,7 +304,7 @@ async function generateLLMSuggestions(params: {
     maxSuggestions,
   });
 
-  const response = await genai.models.generateContent({
+  const response = await genAI.models.generateContent({
     model: REASONING_MODEL,
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     config: {
@@ -323,7 +318,7 @@ async function generateLLMSuggestions(params: {
 
   // Parse JSON response - try multiple patterns
   let jsonContent: string | null = null;
-  
+
   // Try extracting from code block if wrapped
   const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (codeBlockMatch) {
@@ -335,12 +330,12 @@ async function generateLLMSuggestions(params: {
       jsonContent = jsonMatch[0];
     }
   }
-  
+
   if (!jsonContent || !jsonContent.startsWith('[')) {
     console.error("[IdeaBank] Failed to parse response. Full text:", text);
     throw new Error("Failed to parse suggestions response");
   }
-  
+
   // Try to fix truncated JSON by closing incomplete objects
   let fixedJson = jsonContent;
   try {
@@ -351,7 +346,7 @@ async function generateLLMSuggestions(params: {
     const closeBrackets = (fixedJson.match(/\]/g) || []).length;
     const openBraces = (fixedJson.match(/\{/g) || []).length;
     const closeBraces = (fixedJson.match(/\}/g) || []).length;
-    
+
     // Close any open braces and brackets
     fixedJson = fixedJson.replace(/,\s*$/, ''); // Remove trailing comma
     for (let i = 0; i < openBraces - closeBraces; i++) {

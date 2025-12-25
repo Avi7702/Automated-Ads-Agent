@@ -1,4 +1,4 @@
-import { GoogleGenAI } from '@google/genai';
+import { genAI } from '../lib/gemini';
 import type { GenerateCopyInput } from '../validation/schemas';
 import { getFileSearchStoreForGeneration, queryFileSearchStore, FileCategory } from './fileSearchService';
 
@@ -72,15 +72,7 @@ interface GeneratedCopy {
 }
 
 class CopywritingService {
-  private genAI: GoogleGenAI;
-
-  constructor() {
-    const apiKey = process.env.GOOGLE_API_KEY;
-    if (!apiKey) {
-      throw new Error('GOOGLE_API_KEY environment variable is not set');
-    }
-    this.genAI = new GoogleGenAI({ apiKey });
-  }
+  // No constructor needed - uses shared client
 
   /**
    * Generate ad copy with multiple variations using PTCF prompt framework
@@ -118,10 +110,13 @@ class CopywritingService {
         maxResults: 3,
       });
 
-      ragContext = searchResult.context;
-      citations = searchResult.citations || [];
-
-      console.log(`📚 Retrieved RAG context (${ragContext.length} chars) with ${citations.length} citations`);
+      if (searchResult) {
+        ragContext = searchResult.context;
+        citations = searchResult.citations || [];
+        console.log(`📚 Retrieved RAG context (${ragContext.length} chars) with ${citations.length} citations`);
+      } else {
+        console.log('ℹ️ No RAG context found for this query');
+      }
     } catch (error) {
       console.warn('⚠️ File Search not available, continuing without RAG context:', error);
       // Continue without RAG if File Search fails - graceful degradation
@@ -146,7 +141,7 @@ class CopywritingService {
       // No File Search available, continue without tools
     }
 
-    const response = await this.genAI.models.generateContent({
+    const response = await genAI.models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: [
         {

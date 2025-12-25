@@ -1,4 +1,4 @@
-import { GoogleGenAI } from '@google/genai';
+import { genAI } from '../lib/gemini';
 import { telemetry } from '../instrumentation';
 
 export interface ConversationMessage {
@@ -29,16 +29,8 @@ export interface GenerateOptions {
 }
 
 export class GeminiService {
-  private readonly genAI: GoogleGenAI;
   private readonly modelName = 'gemini-3-pro-preview';
 
-  constructor() {
-    const apiKey = process.env.GOOGLE_API_KEY_TEST;
-    if (!apiKey) {
-      throw new Error('GOOGLE_API_KEY is not set in environment variables');
-    }
-    this.genAI = new GoogleGenAI({ apiKey });
-  }
 
   async generateImage(prompt: string, options?: GenerateOptions, userId?: string): Promise<GenerateResult> {
     const startTime = Date.now();
@@ -77,7 +69,7 @@ export class GeminiService {
       ];
 
       // Generate content using the new SDK pattern
-      const response = await this.genAI.models.generateContent({
+      const response = await genAI.models.generateContent({
         model: this.modelName,
         contents: parts,
         config: {
@@ -172,7 +164,7 @@ export class GeminiService {
       }));
 
       // Generate content using the new SDK pattern
-      const response = await this.genAI.models.generateContent({
+      const response = await genAI.models.generateContent({
         model: this.modelName,
         contents,
         config: {
