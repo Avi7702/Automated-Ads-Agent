@@ -27,6 +27,10 @@ RUN npm ci --omit=dev
 # Copy built assets from builder
 COPY --from=builder /app/dist ./dist
 
+# Copy drizzle config and schema for migration script
+COPY drizzle.config.ts ./
+COPY --from=builder /app/shared ./shared
+
 # Create uploads directory if it doesn't exist (for attached_assets volume)
 RUN mkdir -p attached_assets
 
