@@ -30,7 +30,7 @@ export interface GenerateOptions {
 
 export class GeminiService {
   private readonly genAI: GoogleGenAI;
-  private readonly modelName = 'gemini-2.0-flash-exp';
+  private readonly modelName = 'gemini-3-pro-preview';
 
   constructor() {
     const apiKey = process.env.GOOGLE_API_KEY_TEST;

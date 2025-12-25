@@ -21,7 +21,7 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 10;
 
 // Vision analysis model - use Replit AI integrations supported model
-const VISION_MODEL = process.env.GEMINI_VISION_MODEL || "gemini-2.5-flash";
+const VISION_MODEL = process.env.GEMINI_VISION_MODEL || "gemini-3-pro-preview";
 
 // Initialize Gemini client - prefer Replit AI integrations for better quota
 const GEMINI_API_KEY = process.env.AI_INTEGRATIONS_GEMINI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";

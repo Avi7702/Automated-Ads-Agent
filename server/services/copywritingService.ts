@@ -147,7 +147,7 @@ class CopywritingService {
     }
 
     const response = await this.genAI.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
+      model: 'gemini-3-pro-preview',
       contents: [
         {
           role: 'user',
