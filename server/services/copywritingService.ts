@@ -142,7 +142,7 @@ class CopywritingService {
     }
 
     const response = await genAI.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-1.5-pro-latest',
       contents: [
         {
           role: 'user',

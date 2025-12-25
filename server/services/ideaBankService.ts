@@ -25,7 +25,7 @@ import type {
 import type { Product, AdSceneTemplate, BrandProfile } from "@shared/schema";
 
 // LLM model for reasoning - use Gemini 3 Flash for speed
-const REASONING_MODEL = process.env.GEMINI_REASONING_MODEL || "gemini-3-flash-preview";
+const REASONING_MODEL = process.env.GEMINI_REASONING_MODEL || "gemini-1.5-flash";
 
 
 // Rate limiting for suggest endpoint

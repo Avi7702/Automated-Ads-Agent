@@ -21,7 +21,7 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 10;
 
 // Vision analysis model
-const VISION_MODEL = process.env.GEMINI_VISION_MODEL || "gemini-3-flash-preview";
+const VISION_MODEL = process.env.GEMINI_VISION_MODEL || "gemini-1.5-flash-latest";
 
 
 export interface VisionAnalysisResult {

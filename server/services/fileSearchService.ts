@@ -272,7 +272,7 @@ export async function queryFileSearchStore(params: {
     // Use Gemini's File Search tool with new SDK pattern
     // Note: File Search tools may not be fully typed in the SDK yet
     const response = await (genAI.models.generateContent as any)({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-1.5-flash',
       contents: [{ role: 'user', parts: [{ text: query }] }],
       tools: [
         {
