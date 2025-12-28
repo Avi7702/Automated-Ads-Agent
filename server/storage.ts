@@ -17,6 +17,13 @@ import {
   type InsertBrandProfile,
   type ProductAnalysis,
   type InsertProductAnalysis,
+  // Phase 0.5: Product Knowledge types
+  type InstallationScenario,
+  type InsertInstallationScenario,
+  type ProductRelationship,
+  type InsertProductRelationship,
+  type BrandImage,
+  type InsertBrandImage,
   generations,
   generationUsage,
   products,
@@ -26,9 +33,13 @@ import {
   adSceneTemplates,
   brandProfiles,
   productAnalyses,
+  // Phase 0.5: Product Knowledge tables
+  installationScenarios,
+  productRelationships,
+  brandImages,
 } from "@shared/schema";
 import { db } from "./db";
-import { and, eq, desc, ilike } from "drizzle-orm";
+import { and, eq, desc, ilike, inArray, or, arrayContains } from "drizzle-orm";
 
 export interface IStorage {
   // Generation CRUD operations
@@ -101,6 +112,36 @@ export interface IStorage {
   getProductAnalysisByFingerprint(fingerprint: string): Promise<ProductAnalysis | undefined>;
   updateProductAnalysis(productId: string, updates: Partial<InsertProductAnalysis>): Promise<ProductAnalysis>;
   deleteProductAnalysis(productId: string): Promise<void>;
+
+  // ============================================
+  // PHASE 0.5: PRODUCT KNOWLEDGE OPERATIONS
+  // ============================================
+
+  // Enhanced Product operations
+  updateProduct(id: string, updates: Partial<InsertProduct>): Promise<Product>;
+  getProductsByIds(ids: string[]): Promise<Product[]>;
+  searchProductsByTag(tag: string): Promise<Product[]>;
+
+  // Installation Scenario CRUD operations
+  createInstallationScenario(scenario: InsertInstallationScenario): Promise<InstallationScenario>;
+  getInstallationScenarioById(id: string): Promise<InstallationScenario | undefined>;
+  getInstallationScenariosForProducts(productIds: string[]): Promise<InstallationScenario[]>;
+  getScenariosByRoomType(roomType: string): Promise<InstallationScenario[]>;
+  updateInstallationScenario(id: string, updates: Partial<InsertInstallationScenario>): Promise<InstallationScenario>;
+  deleteInstallationScenario(id: string): Promise<void>;
+
+  // Product Relationship CRUD operations
+  createProductRelationship(relationship: InsertProductRelationship): Promise<ProductRelationship>;
+  getProductRelationships(productIds: string[]): Promise<ProductRelationship[]>;
+  getProductRelationshipsByType(productId: string, relationshipType: string): Promise<ProductRelationship[]>;
+  deleteProductRelationship(id: string): Promise<void>;
+
+  // Brand Image CRUD operations
+  createBrandImage(image: InsertBrandImage): Promise<BrandImage>;
+  getBrandImagesForProducts(productIds: string[], userId: string): Promise<BrandImage[]>;
+  getBrandImagesByCategory(userId: string, category: string): Promise<BrandImage[]>;
+  updateBrandImage(id: string, updates: Partial<InsertBrandImage>): Promise<BrandImage>;
+  deleteBrandImage(id: string): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -480,6 +521,200 @@ export class DbStorage implements IStorage {
 
   async deleteProductAnalysis(productId: string): Promise<void> {
     await db.delete(productAnalyses).where(eq(productAnalyses.productId, productId));
+  }
+
+  // ============================================
+  // PHASE 0.5: ENHANCED PRODUCT OPERATIONS
+  // ============================================
+
+  async updateProduct(id: string, updates: Partial<InsertProduct>): Promise<Product> {
+    const [product] = await db
+      .update(products)
+      .set(updates)
+      .where(eq(products.id, id))
+      .returning();
+    return product;
+  }
+
+  async getProductsByIds(ids: string[]): Promise<Product[]> {
+    if (ids.length === 0) return [];
+    return await db
+      .select()
+      .from(products)
+      .where(inArray(products.id, ids));
+  }
+
+  async searchProductsByTag(tag: string): Promise<Product[]> {
+    return await db
+      .select()
+      .from(products)
+      .where(arrayContains(products.tags, [tag]))
+      .orderBy(desc(products.createdAt));
+  }
+
+  // ============================================
+  // INSTALLATION SCENARIO OPERATIONS
+  // ============================================
+
+  async createInstallationScenario(insertScenario: InsertInstallationScenario): Promise<InstallationScenario> {
+    const [scenario] = await db
+      .insert(installationScenarios)
+      .values(insertScenario)
+      .returning();
+    return scenario;
+  }
+
+  async getInstallationScenarioById(id: string): Promise<InstallationScenario | undefined> {
+    const [scenario] = await db
+      .select()
+      .from(installationScenarios)
+      .where(eq(installationScenarios.id, id));
+    return scenario;
+  }
+
+  async getInstallationScenariosForProducts(productIds: string[]): Promise<InstallationScenario[]> {
+    if (productIds.length === 0) return [];
+
+    // Get scenarios where any of the productIds is the primary product
+    // or is in the secondary products array
+    return await db
+      .select()
+      .from(installationScenarios)
+      .where(
+        and(
+          eq(installationScenarios.isActive, true),
+          or(
+            inArray(installationScenarios.primaryProductId, productIds),
+            // For secondary products, we need to check array overlap
+            // This is a simplified version - might need SQL function for full overlap check
+          )
+        )
+      )
+      .orderBy(desc(installationScenarios.createdAt));
+  }
+
+  async getScenariosByRoomType(roomType: string): Promise<InstallationScenario[]> {
+    return await db
+      .select()
+      .from(installationScenarios)
+      .where(
+        and(
+          eq(installationScenarios.isActive, true),
+          arrayContains(installationScenarios.roomTypes, [roomType])
+        )
+      )
+      .orderBy(desc(installationScenarios.createdAt));
+  }
+
+  async updateInstallationScenario(id: string, updates: Partial<InsertInstallationScenario>): Promise<InstallationScenario> {
+    const [scenario] = await db
+      .update(installationScenarios)
+      .set(updates)
+      .where(eq(installationScenarios.id, id))
+      .returning();
+    return scenario;
+  }
+
+  async deleteInstallationScenario(id: string): Promise<void> {
+    await db.delete(installationScenarios).where(eq(installationScenarios.id, id));
+  }
+
+  // ============================================
+  // PRODUCT RELATIONSHIP OPERATIONS
+  // ============================================
+
+  async createProductRelationship(insertRelationship: InsertProductRelationship): Promise<ProductRelationship> {
+    const [relationship] = await db
+      .insert(productRelationships)
+      .values(insertRelationship)
+      .returning();
+    return relationship;
+  }
+
+  async getProductRelationships(productIds: string[]): Promise<ProductRelationship[]> {
+    if (productIds.length === 0) return [];
+    return await db
+      .select()
+      .from(productRelationships)
+      .where(
+        or(
+          inArray(productRelationships.sourceProductId, productIds),
+          inArray(productRelationships.targetProductId, productIds)
+        )
+      )
+      .orderBy(productRelationships.displayOrder);
+  }
+
+  async getProductRelationshipsByType(productId: string, relationshipType: string): Promise<ProductRelationship[]> {
+    return await db
+      .select()
+      .from(productRelationships)
+      .where(
+        and(
+          eq(productRelationships.sourceProductId, productId),
+          eq(productRelationships.relationshipType, relationshipType)
+        )
+      )
+      .orderBy(productRelationships.displayOrder);
+  }
+
+  async deleteProductRelationship(id: string): Promise<void> {
+    await db.delete(productRelationships).where(eq(productRelationships.id, id));
+  }
+
+  // ============================================
+  // BRAND IMAGE OPERATIONS
+  // ============================================
+
+  async createBrandImage(insertImage: InsertBrandImage): Promise<BrandImage> {
+    const [image] = await db
+      .insert(brandImages)
+      .values(insertImage)
+      .returning();
+    return image;
+  }
+
+  async getBrandImagesForProducts(productIds: string[], userId: string): Promise<BrandImage[]> {
+    if (productIds.length === 0) return [];
+
+    // Get images that have any of the productIds in their productIds array
+    // and belong to the specified user
+    const allImages = await db
+      .select()
+      .from(brandImages)
+      .where(eq(brandImages.userId, userId))
+      .orderBy(desc(brandImages.createdAt));
+
+    // Filter images that contain any of the requested productIds
+    return allImages.filter(img =>
+      img.productIds?.some(pid => productIds.includes(pid))
+    );
+  }
+
+  async getBrandImagesByCategory(userId: string, category: string): Promise<BrandImage[]> {
+    return await db
+      .select()
+      .from(brandImages)
+      .where(
+        and(
+          eq(brandImages.userId, userId),
+          eq(brandImages.category, category)
+        )
+      )
+      .orderBy(desc(brandImages.createdAt));
+  }
+
+  async updateBrandImage(id: string, updates: Partial<InsertBrandImage>): Promise<BrandImage> {
+    const [image] = await db
+      .update(brandImages)
+      .set(updates)
+      .where(eq(brandImages.id, id))
+      .returning();
+    return image;
+  }
+
+  async deleteBrandImage(id: string): Promise<void> {
+    await db.delete(brandImages).where(eq(brandImages.id, id));
   }
 }
 

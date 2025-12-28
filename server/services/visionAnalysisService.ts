@@ -20,8 +20,9 @@ const userAnalysisCount = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 10;
 
-// Vision analysis model
-const VISION_MODEL = process.env.GEMINI_VISION_MODEL || "gemini-3-flash-preview";
+// Vision analysis model - Gemini 3 Pro is #1 on LMArena Vision leaderboard (Dec 2025)
+// Superior spatial reasoning and OCR for understanding product details
+const VISION_MODEL = process.env.GEMINI_VISION_MODEL || "gemini-3-pro-preview";
 
 
 export interface VisionAnalysisResult {

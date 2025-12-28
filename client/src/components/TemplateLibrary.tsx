@@ -50,14 +50,13 @@ export function TemplateLibrary({
         params.set("isGlobal", "true");
       }
 
-      const url = `/api/templates${params.toString() ? `?${params.toString()}` : ""}`;
+      const url = `/api/ad-templates${params.toString() ? `?${params.toString()}` : ""}`;
       const res = await fetch(url);
       if (!res.ok) {
         throw new Error("Failed to fetch templates");
       }
-      const data = await res.json();
-      // API returns { templates: [...], total: N }
-      return data.templates || [];
+      // API returns array directly
+      return await res.json();
     },
   });
 

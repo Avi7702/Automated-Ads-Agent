@@ -1,0 +1,418 @@
+/**
+ * Product Knowledge Service
+ *
+ * Phase 0.5: Builds enhanced context from product data to ground AI responses.
+ * This service aggregates product details, relationships, installation scenarios,
+ * and brand images to provide rich context for idea generation.
+ *
+ * Key capabilities:
+ * 1. Build enhanced context from product metadata
+ * 2. Retrieve related products and their relationships
+ * 3. Get installation scenarios for products
+ * 4. Access brand images for visual context
+ * 5. Format context for LLM consumption
+ */
+
+import { storage } from "../storage";
+import type {
+  Product,
+  ProductRelationship,
+  InstallationScenario,
+  BrandImage,
+} from "@shared/schema";
+
+// ============================================
+// TYPES
+// ============================================
+
+export interface EnhancedProductContext {
+  /** Primary product info */
+  product: ProductInfo;
+  /** Related products with relationship context */
+  relatedProducts: RelatedProductInfo[];
+  /** Installation scenarios featuring this product */
+  installationScenarios: InstallationScenarioInfo[];
+  /** Brand images that can be used for reference */
+  brandImages: BrandImageInfo[];
+  /** Combined context string for LLM prompts */
+  formattedContext: string;
+}
+
+export interface ProductInfo {
+  id: string;
+  name: string;
+  description?: string;
+  features?: Record<string, unknown>;
+  benefits?: string[];
+  specifications?: Record<string, unknown>;
+  tags?: string[];
+  sku?: string;
+  category?: string;
+  cloudinaryUrl: string;
+}
+
+export interface RelatedProductInfo {
+  product: ProductInfo;
+  relationshipType: string;
+  relationshipDescription?: string;
+  isRequired?: boolean;
+}
+
+export interface InstallationScenarioInfo {
+  id: string;
+  title: string;
+  description: string;
+  scenarioType: string;
+  roomTypes?: string[];
+  styleTags?: string[];
+  installationSteps?: string[];
+  requiredAccessories?: string[];
+  referenceImages?: Array<{
+    cloudinaryUrl: string;
+    publicId: string;
+    caption?: string;
+  }>;
+}
+
+export interface BrandImageInfo {
+  id: string;
+  cloudinaryUrl: string;
+  category: string;
+  tags?: string[];
+  description?: string;
+  suggestedUse?: string[];
+}
+
+// ============================================
+// MAIN SERVICE
+// ============================================
+
+/**
+ * Build enhanced context for a single product
+ */
+export async function buildEnhancedContext(
+  productId: string,
+  userId: string
+): Promise<EnhancedProductContext | null> {
+  // 1. Fetch primary product
+  const product = await storage.getProductById(productId);
+  if (!product) {
+    return null;
+  }
+
+  // 2. Fetch related data in parallel
+  const [relationships, scenarios, brandImages] = await Promise.all([
+    storage.getProductRelationships([productId]),
+    storage.getInstallationScenariosForProducts([productId]),
+    storage.getBrandImagesForProducts([productId], userId),
+  ]);
+
+  // 3. Fetch related product details
+  const relatedProductIds = relationships.map((r) =>
+    r.sourceProductId === productId ? r.targetProductId : r.sourceProductId
+  );
+  const relatedProducts = relatedProductIds.length > 0
+    ? await storage.getProductsByIds(relatedProductIds)
+    : [];
+
+  // 4. Build product info
+  const productInfo = mapProductToInfo(product);
+
+  // 5. Build related products with relationship context
+  const relatedProductsInfo = buildRelatedProductsInfo(
+    relationships,
+    relatedProducts,
+    productId
+  );
+
+  // 6. Map installation scenarios
+  const installationScenariosInfo = scenarios.map(mapScenarioToInfo);
+
+  // 7. Map brand images
+  const brandImagesInfo = brandImages.map(mapBrandImageToInfo);
+
+  // 8. Format combined context for LLM
+  const formattedContext = formatContextForLLM({
+    product: productInfo,
+    relatedProducts: relatedProductsInfo,
+    installationScenarios: installationScenariosInfo,
+    brandImages: brandImagesInfo,
+  });
+
+  return {
+    product: productInfo,
+    relatedProducts: relatedProductsInfo,
+    installationScenarios: installationScenariosInfo,
+    brandImages: brandImagesInfo,
+    formattedContext,
+  };
+}
+
+/**
+ * Build enhanced context for multiple products
+ */
+export async function buildMultiProductContext(
+  productIds: string[],
+  userId: string
+): Promise<EnhancedProductContext[]> {
+  const contexts = await Promise.all(
+    productIds.map((id) => buildEnhancedContext(id, userId))
+  );
+  return contexts.filter((c): c is EnhancedProductContext => c !== null);
+}
+
+/**
+ * Get product relationships formatted for display
+ */
+export async function getFormattedRelationships(
+  productId: string
+): Promise<{
+  pairsWith: RelatedProductInfo[];
+  requires: RelatedProductInfo[];
+  completes: RelatedProductInfo[];
+  upgrades: RelatedProductInfo[];
+}> {
+  const relationships = await storage.getProductRelationships([productId]);
+  const relatedIds = relationships.map((r) =>
+    r.sourceProductId === productId ? r.targetProductId : r.sourceProductId
+  );
+  const relatedProducts = relatedIds.length > 0
+    ? await storage.getProductsByIds(relatedIds)
+    : [];
+
+  const relatedInfo = buildRelatedProductsInfo(relationships, relatedProducts, productId);
+
+  return {
+    pairsWith: relatedInfo.filter((r) => r.relationshipType === "pairs_with"),
+    requires: relatedInfo.filter((r) => r.relationshipType === "requires"),
+    completes: relatedInfo.filter((r) => r.relationshipType === "completes"),
+    upgrades: relatedInfo.filter((r) => r.relationshipType === "upgrades"),
+  };
+}
+
+/**
+ * Search products by tag and return enhanced context
+ */
+export async function searchProductsByTagWithContext(
+  tag: string,
+  userId: string
+): Promise<EnhancedProductContext[]> {
+  const products = await storage.searchProductsByTag(tag);
+  const productIds = products.map((p) => p.id);
+  return buildMultiProductContext(productIds, userId);
+}
+
+/**
+ * Get installation scenarios for a room type
+ */
+export async function getScenariosByRoomType(
+  roomType: string
+): Promise<InstallationScenarioInfo[]> {
+  const scenarios = await storage.getScenariosByRoomType(roomType);
+  return scenarios.map(mapScenarioToInfo);
+}
+
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+function mapProductToInfo(product: Product): ProductInfo {
+  return {
+    id: product.id,
+    name: product.name,
+    description: product.description || undefined,
+    features: product.features as Record<string, unknown> | undefined,
+    benefits: product.benefits || undefined,
+    specifications: product.specifications as Record<string, unknown> | undefined,
+    tags: product.tags || undefined,
+    sku: product.sku || undefined,
+    category: product.category || undefined,
+    cloudinaryUrl: product.cloudinaryUrl,
+  };
+}
+
+function buildRelatedProductsInfo(
+  relationships: ProductRelationship[],
+  relatedProducts: Product[],
+  primaryProductId: string
+): RelatedProductInfo[] {
+  const productMap = new Map(relatedProducts.map((p) => [p.id, p]));
+
+  return relationships.map((rel) => {
+    const relatedId =
+      rel.sourceProductId === primaryProductId
+        ? rel.targetProductId
+        : rel.sourceProductId;
+    const product = productMap.get(relatedId);
+
+    return {
+      product: product ? mapProductToInfo(product) : {
+        id: relatedId,
+        name: "Unknown Product",
+        cloudinaryUrl: "",
+      },
+      relationshipType: rel.relationshipType,
+      relationshipDescription: rel.description || undefined,
+      isRequired: rel.isRequired || false,
+    };
+  });
+}
+
+function mapScenarioToInfo(scenario: InstallationScenario): InstallationScenarioInfo {
+  return {
+    id: scenario.id,
+    title: scenario.title,
+    description: scenario.description,
+    scenarioType: scenario.scenarioType,
+    roomTypes: scenario.roomTypes || undefined,
+    styleTags: scenario.styleTags || undefined,
+    installationSteps: scenario.installationSteps || undefined,
+    requiredAccessories: scenario.requiredAccessories || undefined,
+    referenceImages: scenario.referenceImages as Array<{
+      cloudinaryUrl: string;
+      publicId: string;
+      caption?: string;
+    }> | undefined,
+  };
+}
+
+function mapBrandImageToInfo(image: BrandImage): BrandImageInfo {
+  return {
+    id: image.id,
+    cloudinaryUrl: image.cloudinaryUrl,
+    category: image.category,
+    tags: image.tags || undefined,
+    description: image.description || undefined,
+    suggestedUse: image.suggestedUse || undefined,
+  };
+}
+
+/**
+ * Format context into a string optimized for LLM consumption
+ */
+function formatContextForLLM(context: {
+  product: ProductInfo;
+  relatedProducts: RelatedProductInfo[];
+  installationScenarios: InstallationScenarioInfo[];
+  brandImages: BrandImageInfo[];
+}): string {
+  const { product, relatedProducts, installationScenarios, brandImages } = context;
+  const parts: string[] = [];
+
+  // Product details
+  parts.push(`## Product: ${product.name}`);
+  if (product.sku) parts.push(`SKU: ${product.sku}`);
+  if (product.category) parts.push(`Category: ${product.category}`);
+  if (product.description) parts.push(`Description: ${product.description}`);
+
+  // Features
+  if (product.features && Object.keys(product.features).length > 0) {
+    parts.push("\n### Features:");
+    for (const [key, value] of Object.entries(product.features)) {
+      parts.push(`- ${key}: ${value}`);
+    }
+  }
+
+  // Benefits
+  if (product.benefits && product.benefits.length > 0) {
+    parts.push("\n### Benefits:");
+    product.benefits.forEach((b) => parts.push(`- ${b}`));
+  }
+
+  // Specifications
+  if (product.specifications && Object.keys(product.specifications).length > 0) {
+    parts.push("\n### Specifications:");
+    for (const [key, value] of Object.entries(product.specifications)) {
+      parts.push(`- ${key}: ${value}`);
+    }
+  }
+
+  // Tags
+  if (product.tags && product.tags.length > 0) {
+    parts.push(`\nTags: ${product.tags.join(", ")}`);
+  }
+
+  // Related products
+  if (relatedProducts.length > 0) {
+    parts.push("\n## Related Products:");
+    relatedProducts.forEach((rp) => {
+      const typeLabel = formatRelationshipType(rp.relationshipType);
+      parts.push(`- ${rp.product.name} (${typeLabel})`);
+      if (rp.relationshipDescription) {
+        parts.push(`  ${rp.relationshipDescription}`);
+      }
+    });
+  }
+
+  // Installation scenarios
+  if (installationScenarios.length > 0) {
+    parts.push("\n## Installation Scenarios:");
+    installationScenarios.forEach((scenario) => {
+      parts.push(`\n### ${scenario.title}`);
+      parts.push(scenario.description);
+      if (scenario.roomTypes && scenario.roomTypes.length > 0) {
+        parts.push(`Room types: ${scenario.roomTypes.join(", ")}`);
+      }
+      if (scenario.styleTags && scenario.styleTags.length > 0) {
+        parts.push(`Style: ${scenario.styleTags.join(", ")}`);
+      }
+      if (scenario.requiredAccessories && scenario.requiredAccessories.length > 0) {
+        parts.push(`Required accessories: ${scenario.requiredAccessories.join(", ")}`);
+      }
+    });
+  }
+
+  // Brand images reference
+  if (brandImages.length > 0) {
+    parts.push("\n## Available Brand Images:");
+    const groupedByCategory = groupBy(brandImages, "category");
+    for (const [category, images] of Object.entries(groupedByCategory)) {
+      parts.push(`- ${formatCategory(category)}: ${images.length} images`);
+    }
+  }
+
+  return parts.join("\n");
+}
+
+function formatRelationshipType(type: string): string {
+  const labels: Record<string, string> = {
+    pairs_with: "pairs with",
+    requires: "requires",
+    replaces: "replaces",
+    matches: "matches",
+    completes: "completes",
+    upgrades: "upgrades to",
+  };
+  return labels[type] || type;
+}
+
+function formatCategory(category: string): string {
+  return category
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function groupBy<T>(arr: T[], key: keyof T): Record<string, T[]> {
+  return arr.reduce(
+    (acc, item) => {
+      const k = String(item[key]);
+      if (!acc[k]) acc[k] = [];
+      acc[k].push(item);
+      return acc;
+    },
+    {} as Record<string, T[]>
+  );
+}
+
+// ============================================
+// EXPORTS
+// ============================================
+
+export const productKnowledgeService = {
+  buildEnhancedContext,
+  buildMultiProductContext,
+  getFormattedRelationships,
+  searchProductsByTagWithContext,
+  getScenariosByRoomType,
+};

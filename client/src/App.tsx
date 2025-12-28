@@ -11,6 +11,7 @@ import ProductLibrary from "@/pages/ProductLibrary";
 import PromptTemplatesManager from "@/pages/PromptTemplatesManager";
 import BrandProfile from "@/pages/BrandProfile";
 import Templates from "@/pages/Templates";
+import TemplateAdmin from "@/pages/TemplateAdmin";
 
 function Router() {
   return (
@@ -19,6 +20,7 @@ function Router() {
       <Route path="/library" component={ProductLibrary} />
       <Route path="/prompts" component={PromptTemplatesManager} />
       <Route path="/templates" component={Templates} />
+      <Route path="/admin/templates" component={TemplateAdmin} />
       <Route path="/gallery" component={Gallery} />
       <Route path="/brand-profile" component={BrandProfile} />
       <Route path="/generation/:id" component={GenerationDetail} />

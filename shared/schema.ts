@@ -46,6 +46,21 @@ export const products = pgTable("products", {
   cloudinaryUrl: text("cloudinary_url").notNull(),
   cloudinaryPublicId: text("cloudinary_public_id").notNull(),
   category: varchar("category", { length: 100 }),
+
+  // Phase 0.5: Product Knowledge Fields
+  description: text("description"), // What the product is, how it's used
+  features: jsonb("features"), // { width: '5 inches', thickness: '5/8 inch', installation: ['glue', 'nail', 'float'] }
+  benefits: text("benefits").array(), // ['Durable', 'Easy to maintain', 'Works with radiant heat']
+  specifications: jsonb("specifications"), // { boxCoverage: '20 sq ft', planksPerBox: 8 }
+  tags: text("tags").array().default(sql`ARRAY[]::text[]`), // ['oak', 'engineered', 'hardwood']
+  sku: varchar("sku", { length: 100 }), // Product SKU for inventory reference
+
+  // Product Enrichment Workflow
+  enrichmentStatus: varchar("enrichment_status", { length: 20 }).default("pending"), // pending | draft | verified | complete
+  enrichmentDraft: jsonb("enrichment_draft"), // AI-generated draft awaiting user verification
+  enrichmentVerifiedAt: timestamp("enrichment_verified_at"), // When user verified the data
+  enrichmentSource: varchar("enrichment_source", { length: 50 }), // ai_vision | ai_search | user_manual | imported
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -210,6 +225,96 @@ export const productAnalyses = pgTable("product_analyses", {
 
 
 // ============================================
+// PHASE 0.5: PRODUCT KNOWLEDGE TABLES
+// ============================================
+
+/**
+ * Installation Scenarios - Real-world usage contexts for products
+ * Helps AI understand how products are installed and used together
+ */
+export const installationScenarios = pgTable("installation_scenarios", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+
+  // Scenario definition
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  scenarioType: varchar("scenario_type", { length: 50 }).notNull(), // room_type, application, before_after
+
+  // Products involved
+  primaryProductId: varchar("primary_product_id").references(() => products.id, { onDelete: "set null" }),
+  secondaryProductIds: text("secondary_product_ids").array(), // Related products
+
+  // Visual references
+  referenceImages: jsonb("reference_images"), // [{ cloudinaryUrl, publicId, caption }]
+
+  // Installation details
+  installationSteps: text("installation_steps").array(),
+  requiredAccessories: text("required_accessories").array(), // underlayment, trim, adhesive, etc.
+
+  // Targeting
+  roomTypes: text("room_types").array(), // living room, bedroom, kitchen, commercial
+  styleTags: text("style_tags").array(), // modern, rustic, traditional
+
+  // Status
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+/**
+ * Product Relationships - How products relate to each other
+ * Helps AI understand product ecosystem and pairings
+ */
+export const productRelationships = pgTable("product_relationships", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+
+  // Relationship definition
+  sourceProductId: varchar("source_product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  targetProductId: varchar("target_product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  relationshipType: varchar("relationship_type", { length: 50 }).notNull(), // pairs_with, requires, replaces, matches, completes, upgrades
+
+  // Relationship metadata
+  description: text("description"),
+  isRequired: boolean("is_required").default(false),
+  displayOrder: integer("display_order").default(0),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  // Unique constraint to prevent duplicate relationships
+  uniqueRelationship: unique().on(table.sourceProductId, table.targetProductId, table.relationshipType),
+}));
+
+/**
+ * Brand Images - Categorized images for AI reference
+ * Provides visual context for style matching and ad generation
+ */
+export const brandImages = pgTable("brand_images", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+
+  // Image storage
+  cloudinaryUrl: text("cloudinary_url").notNull(),
+  cloudinaryPublicId: text("cloudinary_public_id").notNull(),
+
+  // Categorization
+  category: varchar("category", { length: 50 }).notNull(), // historical_ad, product_hero, installation, detail, lifestyle, comparison
+  tags: text("tags").array().default(sql`ARRAY[]::text[]`),
+  description: text("description"),
+
+  // Associations
+  productIds: text("product_ids").array(), // Products shown in this image
+  scenarioId: varchar("scenario_id").references(() => installationScenarios.id, { onDelete: "set null" }),
+
+  // Usage hints
+  suggestedUse: text("suggested_use").array(), // hero, detail, comparison, installation, social_media
+  aspectRatio: varchar("aspect_ratio", { length: 10 }), // 1:1, 16:9, 4:5, 9:16
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+
+// ============================================
 // GENERATION USAGE (COST ESTIMATION)
 // ============================================
 
@@ -307,6 +412,45 @@ export type BrandProfile = typeof brandProfiles.$inferSelect;
 
 export type InsertProductAnalysis = z.infer<typeof insertProductAnalysisSchema>;
 export type ProductAnalysis = typeof productAnalyses.$inferSelect;
+
+// ============================================
+// PHASE 0.5: PRODUCT KNOWLEDGE SCHEMAS & TYPES
+// ============================================
+
+// Validation schemas with enum constraints
+const scenarioTypeEnum = z.enum(['room_type', 'application', 'before_after']);
+const relationshipTypeEnum = z.enum(['pairs_with', 'requires', 'replaces', 'matches', 'completes', 'upgrades']);
+const brandImageCategoryEnum = z.enum(['historical_ad', 'product_hero', 'installation', 'detail', 'lifestyle', 'comparison']);
+
+export const insertInstallationScenarioSchema = createInsertSchema(installationScenarios, {
+  scenarioType: scenarioTypeEnum,
+}).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertProductRelationshipSchema = createInsertSchema(productRelationships, {
+  relationshipType: relationshipTypeEnum,
+}).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertBrandImageSchema = createInsertSchema(brandImages, {
+  category: brandImageCategoryEnum,
+}).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertInstallationScenario = z.infer<typeof insertInstallationScenarioSchema>;
+export type InstallationScenario = typeof installationScenarios.$inferSelect;
+
+export type InsertProductRelationship = z.infer<typeof insertProductRelationshipSchema>;
+export type ProductRelationship = typeof productRelationships.$inferSelect;
+
+export type InsertBrandImage = z.infer<typeof insertBrandImageSchema>;
+export type BrandImage = typeof brandImages.$inferSelect;
 
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
