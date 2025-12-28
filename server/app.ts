@@ -48,9 +48,15 @@ if (process.env.REDIS_URL) {
   log('REDIS_URL not set, using memory session store (sessions will not persist across restarts)', 'session');
 }
 
+// Validate session secret in production
+const sessionSecret = process.env.SESSION_SECRET;
+if (process.env.NODE_ENV === 'production' && !sessionSecret) {
+  throw new Error('SESSION_SECRET environment variable is required in production');
+}
+
 app.use(session({
   store: sessionStore, // undefined = default memory store
-  secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
+  secret: sessionSecret || 'dev-secret-for-local-development-only',
   resave: false,
   saveUninitialized: false,
   cookie: {

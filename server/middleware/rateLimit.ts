@@ -1,7 +1,12 @@
 import type { Request, Response, NextFunction } from 'express';
 
+interface RateLimitEntry {
+  count: number;
+  resetTime: number;
+}
+
 interface RateLimitStore {
-  [key: string]: { count: number; resetTime: number };
+  [key: string]: RateLimitEntry;
 }
 
 interface RateLimiterOptions {
@@ -12,11 +17,29 @@ interface RateLimiterOptions {
 
 const stores: { [name: string]: RateLimitStore } = {};
 
+// Cleanup interval - runs every 5 minutes to remove expired entries
+const CLEANUP_INTERVAL = 5 * 60 * 1000;
+
+function cleanupExpiredEntries() {
+  const now = Date.now();
+  for (const storeName of Object.keys(stores)) {
+    const store = stores[storeName];
+    for (const key of Object.keys(store)) {
+      if (store[key].resetTime < now) {
+        delete store[key];
+      }
+    }
+  }
+}
+
+// Start cleanup interval
+setInterval(cleanupExpiredEntries, CLEANUP_INTERVAL);
+
 export function createRateLimiter(options: RateLimiterOptions = {}) {
   const windowMs = options.windowMs || 15 * 60 * 1000;
   const maxRequests = options.maxRequests || 100;
   const storeName = `limiter_${windowMs}_${maxRequests}`;
-  
+
   if (!stores[storeName]) {
     stores[storeName] = {};
   }

@@ -12,6 +12,25 @@ async function ensureDirectories() {
 }
 
 /**
+ * Validate that a path doesn't escape the allowed directory (path traversal protection)
+ */
+function isPathSafe(basePath: string, targetPath: string): boolean {
+  const resolvedBase = path.resolve(basePath);
+  const resolvedTarget = path.resolve(targetPath);
+  return resolvedTarget.startsWith(resolvedBase + path.sep) || resolvedTarget === resolvedBase;
+}
+
+/**
+ * Sanitize a filename to prevent path traversal
+ */
+function sanitizeFilename(filename: string): string {
+  // Remove any directory components and only keep the base filename
+  const basename = path.basename(filename);
+  // Remove any potentially dangerous characters
+  return basename.replace(/[^a-zA-Z0-9._-]/g, '_');
+}
+
+/**
  * Save an uploaded file to disk
  * @returns Relative path to the saved file
  */
@@ -20,13 +39,20 @@ export async function saveOriginalFile(
   originalFilename: string
 ): Promise<string> {
   await ensureDirectories();
-  
-  const ext = path.extname(originalFilename);
+
+  // Sanitize the extension from the original filename
+  const sanitized = sanitizeFilename(originalFilename);
+  const ext = path.extname(sanitized) || '.bin';
   const filename = `${randomUUID()}${ext}`;
   const filepath = path.join(ORIGINALS_DIR, filename);
-  
+
+  // Verify the path is safe
+  if (!isPathSafe(ORIGINALS_DIR, filepath)) {
+    throw new Error('Invalid file path');
+  }
+
   await fs.writeFile(filepath, fileBuffer);
-  
+
   // Return relative path from project root
   return path.join("attached_assets", "generations", "originals", filename);
 }
@@ -40,16 +66,23 @@ export async function saveGeneratedImage(
   format: string = "png"
 ): Promise<string> {
   await ensureDirectories();
-  
-  const filename = `${randomUUID()}.${format}`;
+
+  // Sanitize format to prevent injection
+  const safeFormat = format.replace(/[^a-zA-Z0-9]/g, '');
+  const filename = `${randomUUID()}.${safeFormat || 'png'}`;
   const filepath = path.join(RESULTS_DIR, filename);
-  
+
+  // Verify the path is safe
+  if (!isPathSafe(RESULTS_DIR, filepath)) {
+    throw new Error('Invalid file path');
+  }
+
   // Remove data URL prefix if present
   const base64Image = base64Data.replace(/^data:image\/\w+;base64,/, "");
   const buffer = Buffer.from(base64Image, "base64");
-  
+
   await fs.writeFile(filepath, buffer);
-  
+
   // Return relative path from project root
   return path.join("attached_assets", "generations", "results", filename);
 }
@@ -59,6 +92,13 @@ export async function saveGeneratedImage(
  */
 export async function deleteFile(relativePath: string): Promise<void> {
   const filepath = path.join(process.cwd(), relativePath);
+
+  // Verify the path is within the storage directory
+  if (!isPathSafe(STORAGE_BASE, filepath)) {
+    console.error(`[fileStorage] Attempted path traversal: ${relativePath}`);
+    throw new Error('Invalid file path');
+  }
+
   try {
     await fs.unlink(filepath);
   } catch (error) {
@@ -71,5 +111,11 @@ export async function deleteFile(relativePath: string): Promise<void> {
  */
 export async function readFile(relativePath: string): Promise<Buffer> {
   const filepath = path.join(process.cwd(), relativePath);
+
+  // Verify the path is within the storage directory
+  if (!isPathSafe(STORAGE_BASE, filepath)) {
+    throw new Error('Invalid file path');
+  }
+
   return await fs.readFile(filepath);
 }
