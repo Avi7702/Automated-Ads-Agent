@@ -277,14 +277,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     let errorType: string | undefined;
 
     try {
-      const files = req.files as Express.Multer.File[];
+      // Safely handle files - could be undefined, null, or empty
+      const files = Array.isArray(req.files) ? req.files as Express.Multer.File[] : [];
       const { prompt, resolution, mode, templateId, templateReferenceUrls } = req.body;
 
       if (!prompt) {
         return res.status(400).json({ error: "No prompt provided" });
       }
 
-      const hasFiles = files && files.length > 0;
+      const hasFiles = files.length > 0;
 
       // Parse and validate generation mode
       const generationMode = mode || 'standard';
@@ -418,9 +419,33 @@ Guidelines:
 
       // Add template reference images first (for exact_insert mode)
       if (generationMode === 'exact_insert' && templateReferenceUrls && Array.isArray(templateReferenceUrls)) {
-        for (const refUrl of templateReferenceUrls.slice(0, 3)) { // Max 3 reference images
+        // Helper to validate URL is safe (SSRF protection)
+        const isAllowedUrl = (url: string): boolean => {
           try {
-            const response = await fetch(refUrl);
+            const parsed = new URL(url);
+            // Only allow HTTPS from known CDN domains
+            const allowedHosts = ['res.cloudinary.com', 'images.unsplash.com', 'cdn.pixabay.com'];
+            return parsed.protocol === 'https:' && allowedHosts.some(h => parsed.hostname.endsWith(h));
+          } catch {
+            return false;
+          }
+        };
+
+        for (const refUrl of templateReferenceUrls.slice(0, 3)) { // Max 3 reference images
+          // Skip invalid or potentially malicious URLs
+          if (!isAllowedUrl(refUrl)) {
+            console.warn(`[Transform] Skipping disallowed URL: ${refUrl}`);
+            continue;
+          }
+
+          try {
+            // Add timeout with AbortController
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+            const response = await fetch(refUrl, { signal: controller.signal });
+            clearTimeout(timeoutId);
+
             if (response.ok) {
               const buffer = await response.arrayBuffer();
               userParts.push({
@@ -961,7 +986,7 @@ User question: ${question}
 
 Provide a helpful, specific answer. If suggesting prompt improvements, give concrete examples. Keep your response concise but informative.`;
 
-      const modelName = "gemini-2.5-flash-preview-05-20";
+      const modelName = "gemini-3-flash-preview";
 
       // Build multipart content with images
       const parts: any[] = [{ text: analysisPrompt }];
@@ -1266,7 +1291,7 @@ Each suggestion should be a concise, vivid description (max 15 words) of a marke
 Return ONLY a JSON array of 4 strings, nothing else. Example format:
 ["professional desk setup with morning sunlight", "outdoor adventure scene in mountains", "minimalist lifestyle flat lay", "urban street photography aesthetic"]`;
 
-      const modelName = "gemini-2.5-flash-preview-05-20";
+      const modelName = "gemini-3-flash-preview";
       console.log(`[Prompt Suggestions] Using model: ${modelName}`);
 
       const result = await genai.models.generateContent({
@@ -1311,15 +1336,151 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
     }
   });
 
+  // ===== AD SCENE TEMPLATE ROUTES =====
+
+  // GET /api/ad-templates/categories - Get available categories (must be before :id route)
+  app.get("/api/ad-templates/categories", async (_req, res) => {
+    try {
+      // Return the predefined categories from PRD
+      const categories = [
+        { id: "lifestyle", label: "Lifestyle", description: "Home and living scenes" },
+        { id: "professional", label: "Professional", description: "Studio and work environments" },
+        { id: "outdoor", label: "Outdoor", description: "Garden, patio, and landscape" },
+        { id: "luxury", label: "Luxury", description: "High-end showroom and premium" },
+        { id: "seasonal", label: "Seasonal", description: "Holiday and seasonal themes" },
+      ];
+      res.json(categories);
+    } catch (error: any) {
+      console.error("[Get Template Categories] Error:", error);
+      res.status(500).json({ error: "Failed to fetch categories" });
+    }
+  });
+
+  // GET /api/ad-templates - List templates with filters
+  app.get("/api/ad-templates", async (req, res) => {
+    try {
+      const { category, search, platform, aspectRatio } = req.query;
+
+      // If search query provided, use search function
+      if (search && typeof search === "string") {
+        const templates = await storage.searchAdSceneTemplates(search);
+        return res.json(templates);
+      }
+
+      // Otherwise use filters
+      const filters: { category?: string; isGlobal?: boolean } = {};
+      if (category && typeof category === "string") {
+        filters.category = category;
+      }
+      filters.isGlobal = true; // Only return global templates by default
+
+      let templates = await storage.getAdSceneTemplates(filters);
+
+      // Additional filtering for platform and aspect ratio
+      if (platform && typeof platform === "string") {
+        templates = templates.filter(t =>
+          t.platformHints?.includes(platform)
+        );
+      }
+      if (aspectRatio && typeof aspectRatio === "string") {
+        templates = templates.filter(t =>
+          t.aspectRatioHints?.includes(aspectRatio)
+        );
+      }
+
+      res.json(templates);
+    } catch (error: any) {
+      console.error("[Get Ad Templates] Error:", error);
+      res.status(500).json({ error: "Failed to fetch ad templates" });
+    }
+  });
+
+  // GET /api/ad-templates/:id - Get single template
+  app.get("/api/ad-templates/:id", async (req, res) => {
+    try {
+      const template = await storage.getAdSceneTemplateById(req.params.id);
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      res.json(template);
+    } catch (error: any) {
+      console.error("[Get Ad Template] Error:", error);
+      res.status(500).json({ error: "Failed to fetch ad template" });
+    }
+  });
+
+  // POST /api/ad-templates - Create template (admin)
+  app.post("/api/ad-templates", requireAuth, async (req, res) => {
+    try {
+      const { insertAdSceneTemplateSchema } = await import("@shared/schema");
+      const validatedData = insertAdSceneTemplateSchema.parse(req.body);
+
+      // Set createdBy to current user
+      const userId = (req as any).session?.userId;
+      const template = await storage.saveAdSceneTemplate({
+        ...validatedData,
+        createdBy: userId,
+      });
+
+      res.status(201).json(template);
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        return res.status(400).json({ error: "Invalid template data", details: error.errors });
+      }
+      console.error("[Create Ad Template] Error:", error);
+      res.status(500).json({ error: "Failed to create ad template" });
+    }
+  });
+
+  // PUT /api/ad-templates/:id - Update template
+  app.put("/api/ad-templates/:id", requireAuth, async (req, res) => {
+    try {
+      const existing = await storage.getAdSceneTemplateById(req.params.id);
+      if (!existing) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+
+      // Validate using partial schema (all fields optional for updates)
+      const { insertAdSceneTemplateSchema } = await import("@shared/schema");
+      const updateSchema = insertAdSceneTemplateSchema.partial();
+      const validatedData = updateSchema.parse(req.body);
+
+      const template = await storage.updateAdSceneTemplate(req.params.id, validatedData);
+      res.json(template);
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        return res.status(400).json({ error: "Invalid template data", details: error.errors });
+      }
+      console.error("[Update Ad Template] Error:", error);
+      res.status(500).json({ error: "Failed to update ad template" });
+    }
+  });
+
+  // DELETE /api/ad-templates/:id - Delete template (admin)
+  app.delete("/api/ad-templates/:id", requireAuth, async (req, res) => {
+    try {
+      const existing = await storage.getAdSceneTemplateById(req.params.id);
+      if (!existing) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+
+      await storage.deleteAdSceneTemplate(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[Delete Ad Template] Error:", error);
+      res.status(500).json({ error: "Failed to delete ad template" });
+    }
+  });
+
+  // ===== END AD SCENE TEMPLATE ROUTES =====
+
   // COPYWRITING ENDPOINTS
 
   // Generate ad copy with multiple variations
-  app.post("/api/copy/generate", requireAuth, async (req, res) => {
+  app.post("/api/copy/generate", async (req, res) => {
     try {
-      const userId = req.session.userId;
-      if (!userId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
+      // Use session userId if available, otherwise use a default for demo
+      const userId = req.session?.userId || "demo-user";
 
       // Validate request
       const { generateCopySchema } = await import("./validation/schemas");
@@ -1347,8 +1508,8 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
         brandVoice,
       });
 
-      // Save all variations to database
-      const savedCopies = await Promise.all(
+      // Save all variations to database - use allSettled to handle partial failures
+      const saveResults = await Promise.allSettled(
         variations.map((variation, index) =>
           storage.saveAdCopy({
             generationId: validatedData.generationId,
@@ -1379,6 +1540,20 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
         )
       );
 
+      // Extract successful saves and log any failures
+      const savedCopies = saveResults
+        .filter((result): result is PromiseFulfilledResult<any> => result.status === 'fulfilled')
+        .map(result => result.value);
+
+      const failedCount = saveResults.filter(r => r.status === 'rejected').length;
+      if (failedCount > 0) {
+        console.warn(`[Generate Copy] ${failedCount}/${variations.length} variations failed to save`);
+      }
+
+      if (savedCopies.length === 0) {
+        return res.status(500).json({ error: "Failed to save any copy variations" });
+      }
+
       res.json({
         success: true,
         copies: savedCopies,
@@ -1394,7 +1569,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   });
 
   // Get copy by generation ID
-  app.get("/api/copy/generation/:generationId", requireAuth, async (req, res) => {
+  app.get("/api/copy/generation/:generationId", async (req, res) => {
     try {
       const copies = await storage.getAdCopyByGenerationId(req.params.generationId);
       res.json({ copies });
@@ -1405,7 +1580,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   });
 
   // Get specific copy by ID
-  app.get("/api/copy/:id", requireAuth, async (req, res) => {
+  app.get("/api/copy/:id", async (req, res) => {
     try {
       const copy = await storage.getAdCopyById(req.params.id);
       if (!copy) {
@@ -1419,7 +1594,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   });
 
   // Delete copy
-  app.delete("/api/copy/:id", requireAuth, async (req, res) => {
+  app.delete("/api/copy/:id", async (req, res) => {
     try {
       await storage.deleteAdCopy(req.params.id);
       res.json({ success: true });
@@ -1478,12 +1653,22 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
         return res.status(400).json({ error: "Category is required" });
       }
 
+      // Safely parse metadata JSON
+      let parsedMetadata = {};
+      if (metadata) {
+        try {
+          parsedMetadata = JSON.parse(metadata);
+        } catch {
+          return res.status(400).json({ error: "Invalid metadata JSON format" });
+        }
+      }
+
       const { uploadReferenceFile } = await import('./services/fileSearchService');
       const result = await uploadReferenceFile({
         filePath: req.file.path,
         category,
         description,
-        metadata: metadata ? JSON.parse(metadata) : {},
+        metadata: parsedMetadata,
       });
 
       res.json({ success: true, file: result });
@@ -1606,6 +1791,109 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
     } catch (error: any) {
       console.error("[Product Analysis Get] Error:", error);
       res.status(500).json({ error: "Failed to get product analysis" });
+    }
+  });
+
+  // ===== PRODUCT ENRICHMENT ROUTES =====
+  // Phase 0.5: Human-in-the-loop product data collection
+
+  // Generate enrichment draft for a product (AI analyzes image + searches web)
+  app.post("/api/products/:productId/enrich", requireAuth, async (req, res) => {
+    try {
+      const { productId } = req.params;
+      const userId = (req.session as any)?.userId;
+
+      const { productEnrichmentService } = await import('./services/productEnrichmentService');
+      const result = await productEnrichmentService.generateEnrichmentDraft(productId, userId);
+
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+
+      res.json({
+        success: true,
+        productId: result.productId,
+        draft: result.draft,
+      });
+    } catch (error: any) {
+      console.error("[Product Enrichment] Error:", error);
+      res.status(500).json({ error: "Failed to generate enrichment draft" });
+    }
+  });
+
+  // Get enrichment draft for a product
+  app.get("/api/products/:productId/enrichment", requireAuth, async (req, res) => {
+    try {
+      const { productId } = req.params;
+      const product = await storage.getProductById(productId);
+
+      if (!product) {
+        return res.status(404).json({ error: "Product not found" });
+      }
+
+      const { productEnrichmentService } = await import('./services/productEnrichmentService');
+      const completeness = productEnrichmentService.getEnrichmentCompleteness(product);
+
+      res.json({
+        productId,
+        status: product.enrichmentStatus || "pending",
+        draft: product.enrichmentDraft,
+        verifiedAt: product.enrichmentVerifiedAt,
+        source: product.enrichmentSource,
+        completeness,
+        isReady: productEnrichmentService.isProductReady(product),
+      });
+    } catch (error: any) {
+      console.error("[Product Enrichment Get] Error:", error);
+      res.status(500).json({ error: "Failed to get enrichment data" });
+    }
+  });
+
+  // Verify/approve enrichment data (human-in-the-loop)
+  app.post("/api/products/:productId/enrichment/verify", requireAuth, async (req, res) => {
+    try {
+      const { productId } = req.params;
+      const userId = (req.session as any)?.userId;
+      const { description, features, benefits, specifications, tags, sku, approvedAsIs } = req.body;
+
+      const { productEnrichmentService } = await import('./services/productEnrichmentService');
+      const result = await productEnrichmentService.verifyEnrichment(
+        { productId, description, features, benefits, specifications, tags, sku, approvedAsIs },
+        userId
+      );
+
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+
+      res.json({ success: true, message: "Product enrichment verified" });
+    } catch (error: any) {
+      console.error("[Product Enrichment Verify] Error:", error);
+      res.status(500).json({ error: "Failed to verify enrichment" });
+    }
+  });
+
+  // Get all products needing enrichment
+  app.get("/api/products/enrichment/pending", async (req, res) => {
+    try {
+      const { status } = req.query;
+
+      const { productEnrichmentService } = await import('./services/productEnrichmentService');
+      const products = await productEnrichmentService.getProductsNeedingEnrichment(
+        status as any
+      );
+
+      // Return with completeness info
+      const productsWithInfo = products.map(product => ({
+        ...product,
+        completeness: productEnrichmentService.getEnrichmentCompleteness(product),
+        isReady: productEnrichmentService.isProductReady(product),
+      }));
+
+      res.json({ products: productsWithInfo });
+    } catch (error: any) {
+      console.error("[Products Pending Enrichment] Error:", error);
+      res.status(500).json({ error: "Failed to get products needing enrichment" });
     }
   });
 

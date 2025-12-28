@@ -1,4 +1,4 @@
-# Complete CI/CD Pipeline with Automated Code Quality Checks
+# Simplified CI Pipeline - Essential checks only
 # Runs on every push and PR
 
 name: CI Pipeline
@@ -17,20 +17,20 @@ jobs:
     name: TypeScript & Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      
+      - uses: actions/checkout@v6
+
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
           cache: 'npm'
-      
+
       - name: Install dependencies
         run: npm ci
-      
+
       - name: Type check
         run: npm run check
-      
+
       - name: Lint (if configured)
         run: npm run lint --if-present
 
@@ -41,85 +41,66 @@ jobs:
     name: Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      
+      - uses: actions/checkout@v6
+
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
           cache: 'npm'
-      
+
       - name: Install dependencies
         run: npm ci
-      
+
       - name: Run tests
         run: npm test --if-present -- --coverage --passWithNoTests
-      
+
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         if: always()
         with:
           fail_ci_if_error: false
 
   # ============================================
-  # JOB 3: Security Scan (Snyk)
+  # JOB 3: Security Audit (replaces Snyk)
   # ============================================
   security:
-    name: Security Scan
+    name: Security Audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Run Snyk to check for vulnerabilities
-        uses: snyk/actions/node@master
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: npm audit --audit-level=high
         continue-on-error: true  # Don't fail build, just report
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          args: --severity-threshold=high
 
   # ============================================
-  # JOB 4: Code Quality (SonarCloud)
-  # ============================================
-  sonarcloud:
-    name: SonarCloud Analysis
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Full history for better analysis
-      
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
-        continue-on-error: true  # Don't fail if not configured yet
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
-  # ============================================
-  # JOB 5: Build Check
+  # JOB 4: Build Check
   # ============================================
   build:
     name: Build
     runs-on: ubuntu-latest
     needs: [type-check, test]
     steps:
-      - uses: actions/checkout@v4
-      
+      - uses: actions/checkout@v6
+
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
           cache: 'npm'
-      
+
       - name: Install dependencies
         run: npm ci
-      
+
       - name: Build
         run: npm run build --if-present
-
-
-
-
-

@@ -16,6 +16,10 @@ import { genAI } from "../lib/gemini";
 import { storage } from "../storage";
 import { visionAnalysisService, type VisionAnalysisResult } from "./visionAnalysisService";
 import { queryFileSearchStore } from "./fileSearchService";
+import {
+  productKnowledgeService,
+  type EnhancedProductContext,
+} from "./productKnowledgeService";
 import type {
   IdeaBankSuggestion,
   IdeaBankSuggestResponse,
@@ -113,6 +117,15 @@ export async function generateSuggestions(
   // 3. Fetch brand profile if exists
   const brandProfile = await storage.getBrandProfileByUserId(userId);
 
+  // 3.5 Build enhanced product context (Phase 0.5)
+  let enhancedContext: EnhancedProductContext | null = null;
+  try {
+    enhancedContext = await productKnowledgeService.buildEnhancedContext(productId, userId);
+  } catch (err) {
+    console.error("[IdeaBank] Failed to build enhanced context:", err);
+    // Continue without enhanced context - not a fatal error
+  }
+
   // 4. Query KB for relevant context
   let kbContext: string | null = null;
   let kbCitations: string[] = [];
@@ -136,6 +149,7 @@ export async function generateSuggestions(
     const suggestions = await generateLLMSuggestions({
       product,
       productAnalysis,
+      enhancedContext,
       brandProfile,
       kbContext,
       kbCitations,
@@ -153,6 +167,7 @@ export async function generateSuggestions(
         kbQueried: !!kbContext,
         templatesMatched: matchedTemplates.length,
         webSearchUsed: false, // Web search disabled for now
+        productKnowledgeUsed: !!enhancedContext, // Phase 0.5
       },
     };
 
@@ -274,6 +289,7 @@ function calculateTemplateScore(template: AdSceneTemplate, analysis: VisionAnaly
 async function generateLLMSuggestions(params: {
   product: Product;
   productAnalysis: VisionAnalysisResult;
+  enhancedContext: EnhancedProductContext | null;
   brandProfile: BrandProfile | undefined;
   kbContext: string | null;
   kbCitations: string[];
@@ -285,6 +301,7 @@ async function generateLLMSuggestions(params: {
   const {
     product,
     productAnalysis,
+    enhancedContext,
     brandProfile,
     kbContext,
     kbCitations,
@@ -297,6 +314,7 @@ async function generateLLMSuggestions(params: {
   const prompt = buildSuggestionPrompt({
     product,
     productAnalysis,
+    enhancedContext,
     brandProfile,
     kbContext,
     matchedTemplates,
@@ -392,13 +410,14 @@ async function generateLLMSuggestions(params: {
 function buildSuggestionPrompt(params: {
   product: Product;
   productAnalysis: VisionAnalysisResult;
+  enhancedContext: EnhancedProductContext | null;
   brandProfile: BrandProfile | undefined;
   kbContext: string | null;
   matchedTemplates: AdSceneTemplate[];
   userGoal?: string;
   maxSuggestions: number;
 }): string {
-  const { product, productAnalysis, brandProfile, kbContext, matchedTemplates, userGoal, maxSuggestions } =
+  const { product, productAnalysis, enhancedContext, brandProfile, kbContext, matchedTemplates, userGoal, maxSuggestions } =
     params;
 
   let prompt = `You are an expert advertising creative director. Generate ${maxSuggestions} distinct ad concept suggestions for this product.
@@ -412,6 +431,11 @@ function buildSuggestionPrompt(params: {
 - Usage Context: ${productAnalysis.usageContext}
 - Target Demographic: ${productAnalysis.targetDemographic}
 `;
+
+  // Add enhanced product knowledge context (Phase 0.5)
+  if (enhancedContext) {
+    prompt += `\n## Enhanced Product Knowledge\n${enhancedContext.formattedContext}\n`;
+  }
 
   if (userGoal) {
     prompt += `\n## User's Goal\n${sanitizeString(userGoal)}\n`;

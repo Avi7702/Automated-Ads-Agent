@@ -43,7 +43,15 @@ export async function requireAuth(
   const user = await storage.getUserById(userId);
   if (!user) {
     // Session refers to non-existent user, destroy it
-    req.session.destroy(() => {});
+    // Use promisified destroy to avoid race conditions
+    await new Promise<void>((resolve) => {
+      req.session.destroy((err) => {
+        if (err) {
+          console.error('[Auth] Failed to destroy session:', err);
+        }
+        resolve();
+      });
+    });
     res.status(401).json({ error: 'Session expired' });
     return;
   }

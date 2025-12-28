@@ -47,6 +47,7 @@ export interface AnalysisStatus {
   kbQueried: boolean;
   templatesMatched: number;
   webSearchUsed: boolean;
+  productKnowledgeUsed?: boolean; // Phase 0.5
 }
 
 export interface IdeaBankSuggestResponse {

@@ -6,9 +6,10 @@ import { IntentVisualizer } from "@/components/IntentVisualizer";
 import { IdeaBankPanel } from "@/components/IdeaBankPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowRight, RefreshCw, Download, Check, Image, Sparkles, History, Package, X, Search, Filter, User, LogOut } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { ArrowRight, RefreshCw, Download, Check, Image, Sparkles, History, Package, X, Search, Filter, User, LogOut, MessageCircle, Pencil, Send, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import type { Product } from "@shared/schema";
 import {
   Select,
@@ -28,7 +29,22 @@ export default function Home() {
   const [prompt, setPrompt] = useState("");
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [generationId, setGenerationId] = useState<string | null>(null);
-  
+  const [, setLocation] = useLocation();
+
+  // Ask AI state
+  const [isAskAIOpen, setIsAskAIOpen] = useState(false);
+  const [askAIQuestion, setAskAIQuestion] = useState("");
+  const [askAIResponse, setAskAIResponse] = useState<string | null>(null);
+  const [lastAskedQuestion, setLastAskedQuestion] = useState<string | null>(null);
+  const [isAskingAI, setIsAskingAI] = useState(false);
+  const [askAIError, setAskAIError] = useState<string | null>(null);
+
+  // Edit state
+  const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
+  const [editPrompt, setEditPrompt] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
   // Gallery filters
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -106,14 +122,14 @@ export default function Home() {
     const productUrl = localStorage.getItem("selectedProductUrl");
     const productName = localStorage.getItem("selectedProductName");
     const productId = localStorage.getItem("selectedProductId");
-    
+
     if (productUrl && productName && productId && products.length > 0) {
       // Find the product in the loaded products list
       const product = products.find(p => p.id === productId);
       if (product) {
         setSelectedProducts([product]);
       }
-      
+
       // Clear from localStorage
       localStorage.removeItem("selectedProductUrl");
       localStorage.removeItem("selectedProductName");
@@ -197,43 +213,43 @@ export default function Home() {
     }
 
     setState("generating");
-    
+
     try {
       const formData = new FormData();
-      
+
       // Fetch and convert selected products to File objects
       const filePromises = selectedProducts.map(async (product, index) => {
         const response = await fetch(product.cloudinaryUrl);
         const blob = await response.blob();
         return new File([blob], `${product.name}.jpg`, { type: blob.type });
       });
-      
+
       const files = await Promise.all(filePromises);
-      
+
       files.forEach(file => {
         formData.append("images", file);
       });
-      
+
       formData.append("prompt", prompt);
       formData.append("resolution", resolution);
-      
+
       const response = await fetch("/api/transform", {
         method: "POST",
         body: formData,
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || "Failed to transform image");
       }
-      
+
       const data = await response.json();
       setGeneratedImage(data.imageUrl);
       setGenerationId(data.generationId);
       setState("result");
-      
+
       localStorage.removeItem("promptDraft");
-      
+
     } catch (error: any) {
       console.error("Generation error:", error);
       alert(`Failed to generate image: ${error.message}`);
@@ -258,6 +274,101 @@ export default function Home() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const QUICK_EDITS = [
+    { label: "Warmer lighting", prompt: "Make the lighting warmer and more golden" },
+    { label: "Cooler tones", prompt: "Make the colors cooler with blue tones" },
+    { label: "Add shadows", prompt: "Add more dramatic shadows for depth" },
+    { label: "Softer look", prompt: "Make the image softer and more diffused" },
+    { label: "More contrast", prompt: "Increase the contrast for a punchier look" },
+    { label: "Blur background", prompt: "Blur the background to focus on the main subject" },
+  ];
+
+  const SUGGESTED_QUESTIONS = [
+    "What changes did you make to the original image?",
+    "How can I improve my prompt to get better results?",
+    "Why does the lighting look this way?",
+    "What would make this image more professional?",
+  ];
+
+  const handleAskAI = async (question?: string) => {
+    const q = question || askAIQuestion;
+    if (!q.trim() || !generationId) return;
+
+    setIsAskingAI(true);
+    setAskAIError(null);
+    setAskAIResponse(null);
+    setLastAskedQuestion(q.trim());
+
+    try {
+      const response = await fetch(`/api/generations/${generationId}/analyze`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: q.trim() }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Failed to get response");
+      }
+
+      setAskAIResponse(data.answer);
+      setAskAIQuestion("");
+    } catch (error: any) {
+      console.error("Ask AI error:", error);
+      setAskAIError(error.message || "Something went wrong. Please try again.");
+    } finally {
+      setIsAskingAI(false);
+    }
+  };
+
+  const handleCloseAskAI = () => {
+    setIsAskAIOpen(false);
+    setAskAIQuestion("");
+    setAskAIResponse(null);
+    setLastAskedQuestion(null);
+    setAskAIError(null);
+  };
+
+  const handleApplyEdit = async () => {
+    if (!editPrompt.trim() || !generationId) return;
+
+    setIsEditing(true);
+    setEditError(null);
+
+    try {
+      const response = await fetch(`/api/generations/${generationId}/edit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ editPrompt: editPrompt.trim() }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Edit failed");
+      }
+
+      // Navigate to the new generation
+      setLocation(`/generation/${data.generationId}`);
+    } catch (error: any) {
+      console.error("Edit error:", error);
+      setEditError(error.message || "Something went wrong. Please try again.");
+    } finally {
+      setIsEditing(false);
+    }
+  };
+
+  const handleQuickEdit = (prompt: string) => {
+    setEditPrompt(prompt);
+  };
+
+  const handleCloseEditPanel = () => {
+    setIsEditPanelOpen(false);
+    setEditPrompt("");
+    setEditError(null);
   };
 
   return (
@@ -298,9 +409,9 @@ export default function Home() {
             {authUser ? (
               <div className="flex items-center gap-3">
                 <span className="text-xs text-primary">{authUser.email}</span>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => logoutMutation.mutate()}
                   data-testid="button-logout"
                 >
@@ -308,9 +419,9 @@ export default function Home() {
                 </Button>
               </div>
             ) : (
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => demoLoginMutation.mutate()}
                 disabled={demoLoginMutation.isPending}
                 data-testid="button-demo-login"
@@ -341,18 +452,18 @@ export default function Home() {
                   <Sparkles className="w-12 h-12 text-primary" />
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <h2 className="text-2xl font-display font-medium">Generating content...</h2>
                 <div className="flex flex-col items-center gap-1 text-muted-foreground text-sm">
-                  <motion.span 
-                    animate={{ opacity: [0, 1, 0] }} 
+                  <motion.span
+                    animate={{ opacity: [0, 1, 0] }}
                     transition={{ duration: 2, repeat: Infinity }}
                   >
                     Analyzing lighting conditions...
                   </motion.span>
-                  <motion.span 
-                    animate={{ opacity: [0, 1, 0] }} 
+                  <motion.span
+                    animate={{ opacity: [0, 1, 0] }}
                     transition={{ duration: 2, delay: 1, repeat: Infinity }}
                   >
                     Composing lifestyle scene...
@@ -383,20 +494,42 @@ export default function Home() {
                     </Link>
                   )}
                 </div>
-                <Button variant="outline" size="sm" onClick={handleDownload} data-testid="button-download-result">
-                  <Download className="w-4 h-4 mr-2" />
-                  Download
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsAskAIOpen(true)}
+                    disabled={isAskAIOpen}
+                    data-testid="button-ask-ai-result"
+                  >
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    Ask AI
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsEditPanelOpen(true)}
+                    disabled={isEditPanelOpen}
+                    data-testid="button-edit-result"
+                  >
+                    <Pencil className="w-4 h-4 mr-2" />
+                    Edit
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleDownload} data-testid="button-download-result">
+                    <Download className="w-4 h-4 mr-2" />
+                    Download
+                  </Button>
+                </div>
               </div>
 
               <div className="relative aspect-square rounded-3xl overflow-hidden border border-white/10 bg-black group shadow-2xl">
-                <img 
-                  src={generatedImage} 
-                  alt="Generated" 
+                <img
+                  src={generatedImage}
+                  alt="Generated"
                   className="w-full h-full object-cover"
                   data-testid="img-generated-result"
                 />
-                
+
                 <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/90 to-transparent opacity-0 group-hover:opacity-100 transition-all translate-y-4 group-hover:translate-y-0">
                   <p className="text-white/90 text-sm line-clamp-2">{prompt}</p>
                 </div>
@@ -412,6 +545,198 @@ export default function Home() {
                   <span className="text-sm">{resolution === "1K" ? "1024Ã—1024" : resolution === "2K" ? "2048Ã—2048" : "4096Ã—4096"}</span>
                 </div>
               </div>
+
+              {/* Ask AI Panel */}
+              {isAskAIOpen && (
+                <div className="border rounded-2xl p-6 bg-card/50 backdrop-blur-sm space-y-5" data-testid="ask-ai-panel-result">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-primary" />
+                      <h3 className="font-semibold text-lg">Ask AI about this image</h3>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleCloseAskAI}
+                      disabled={isAskingAI}
+                      data-testid="button-close-ask-ai-result"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground">Quick questions:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {SUGGESTED_QUESTIONS.map((question, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => handleAskAI(question)}
+                          disabled={isAskingAI}
+                          className="px-3 py-1.5 text-sm rounded-full border bg-background hover:bg-muted border-border transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          data-testid={`button-suggested-question-result-${idx}`}
+                        >
+                          {question}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground">Or ask your own question:</p>
+                    <div className="flex gap-2">
+                      <Input
+                        value={askAIQuestion}
+                        onChange={(e) => setAskAIQuestion(e.target.value)}
+                        placeholder="e.g., 'Why is there a reflection?' or 'How can I make it look more natural?'"
+                        disabled={isAskingAI}
+                        onKeyDown={(e) => e.key === 'Enter' && handleAskAI()}
+                        data-testid="input-ask-ai-question-result"
+                      />
+                      <Button
+                        onClick={() => handleAskAI()}
+                        disabled={!askAIQuestion.trim() || isAskingAI}
+                        data-testid="button-send-question-result"
+                      >
+                        {isAskingAI ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Send className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {askAIError && (
+                    <div className="text-sm text-destructive bg-destructive/10 px-4 py-2 rounded-lg" data-testid="text-ask-ai-error-result">
+                      {askAIError}
+                    </div>
+                  )}
+
+                  {(askAIResponse || isAskingAI) && lastAskedQuestion && (
+                    <div className="space-y-3">
+                      <div className="bg-muted/30 rounded-lg p-3 border-l-2 border-muted-foreground/30">
+                        <p className="text-xs text-muted-foreground mb-1">You asked:</p>
+                        <p className="text-sm italic">"{lastAskedQuestion}"</p>
+                      </div>
+
+                      {isAskingAI && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Analyzing images and thinking...</span>
+                        </div>
+                      )}
+
+                      {askAIResponse && (
+                        <div className="bg-muted/50 rounded-xl p-4 space-y-2 border border-primary/20" data-testid="ask-ai-response-result">
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="w-4 h-4 text-primary" />
+                            <p className="text-xs font-medium text-primary uppercase tracking-wider">AI Response</p>
+                          </div>
+                          <div className="max-h-64 overflow-y-auto pr-2">
+                            <p className="text-sm whitespace-pre-wrap leading-relaxed">{askAIResponse}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <p className="text-xs text-muted-foreground">
+                    AI analyzes both the original and generated images to help you understand the transformation.
+                  </p>
+                </div>
+              )}
+
+              {/* Edit Panel */}
+              {isEditPanelOpen && (
+                <div className="border rounded-2xl p-6 bg-card/50 backdrop-blur-sm space-y-5" data-testid="edit-panel-result">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-lg">What would you like to change?</h3>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleCloseEditPanel}
+                      disabled={isEditing}
+                      data-testid="button-close-edit-panel-result"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground">Quick edits:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {QUICK_EDITS.map((preset) => (
+                        <button
+                          key={preset.label}
+                          onClick={() => handleQuickEdit(preset.prompt)}
+                          disabled={isEditing}
+                          className={`
+                            px-3 py-1.5 text-sm rounded-full border transition-colors
+                            ${editPrompt === preset.prompt
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-background hover:bg-muted border-border"
+                            }
+                            disabled:opacity-50 disabled:cursor-not-allowed
+                          `}
+                          data-testid={`button-quick-edit-result-${preset.label.toLowerCase().replace(/\s/g, "-")}`}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground">Or describe your edit:</p>
+                    <Textarea
+                      value={editPrompt}
+                      onChange={(e) => setEditPrompt(e.target.value)}
+                      placeholder="e.g., 'make the background darker' or 'add a subtle reflection on the floor'"
+                      rows={3}
+                      className="resize-none"
+                      disabled={isEditing}
+                      data-testid="input-edit-prompt-result"
+                    />
+                  </div>
+
+                  {editError && (
+                    <div className="text-sm text-destructive bg-destructive/10 px-4 py-2 rounded-lg" data-testid="text-edit-error-result">
+                      {editError}
+                    </div>
+                  )}
+
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={handleApplyEdit}
+                      disabled={!editPrompt.trim() || isEditing}
+                      className="flex-1"
+                      data-testid="button-apply-edit-result"
+                    >
+                      {isEditing ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Applying edit...
+                        </>
+                      ) : (
+                        "Apply Edit"
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleCloseEditPanel}
+                      disabled={isEditing}
+                      data-testid="button-cancel-edit-result"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground">
+                    Tip: Short, specific prompts work best. The AI remembers your image and will only change what you ask for.
+                  </p>
+                </div>
+              )}
             </motion.div>
           )}
 
@@ -481,10 +806,10 @@ export default function Home() {
 
                 {/* Prompt Input Area */}
                 <div className="space-y-4">
-                  <PromptInput 
-                    value={prompt} 
-                    onChange={setPrompt} 
-                    onSubmit={handleGenerate} 
+                  <PromptInput
+                    value={prompt}
+                    onChange={setPrompt}
+                    onSubmit={handleGenerate}
                     isGenerating={false}
                   />
                   <IntentVisualizer prompt={prompt} />
@@ -601,16 +926,16 @@ export default function Home() {
                           disabled={!isSelected && selectedProducts.length >= 6}
                           className={cn(
                             "relative group aspect-square rounded-xl overflow-hidden border-2 transition-all",
-                            isSelected 
-                              ? "border-primary ring-2 ring-primary/20 scale-95" 
+                            isSelected
+                              ? "border-primary ring-2 ring-primary/20 scale-95"
                               : "border-white/10 hover:border-white/30",
                             !isSelected && selectedProducts.length >= 6 && "opacity-50 cursor-not-allowed"
                           )}
                           data-testid={`button-product-${product.id}`}
                         >
-                          <img 
-                            src={product.cloudinaryUrl} 
-                            alt={product.name} 
+                          <img
+                            src={product.cloudinaryUrl}
+                            alt={product.name}
                             className="w-full h-full object-cover transition-transform group-hover:scale-105"
                           />
                           {isSelected && (

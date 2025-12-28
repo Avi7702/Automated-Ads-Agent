@@ -55,7 +55,25 @@
       "Bash(npx vitest:*)",
       "Bash(git reset:*)",
       "Bash(tree:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(railway variables:*)",
+      "Bash(railway login:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:VYtUsSExJERzegiSWssGmXHRKqwQzNyq@switchback.proxy.rlwy.net:34192/railway\" npm run db:push:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:VYtUsSExJERzegiSWssGmXHRKqwQzNyq@switchback.proxy.rlwy.net:34192/railway\" npx tsx -e:*)",
+      "Bash(npx task-master-ai:*)",
+      "Bash(mkdir:*)",
+      "Bash(task-master parse-prd:*)",
+      "Bash(findstr:*)",
+      "Bash(set GOOGLE_API_KEY=AIzaSyDQ63zIo1JeOYWzinc077npETNwB-evHcI)",
+      "Bash(task-master models:*)",
+      "Bash(task-master list:*)",
+      "Bash(task-master show:*)",
+      "Bash(task-master set-status:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:VYtUsSExJERzegiSWssGmXHRKqwQzNyq@switchback.proxy.rlwy.net:34192/railway\" npx tsx:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:VYtUsSExJERzegiSWssGmXHRKqwQzNyq@switchback.proxy.rlwy.net:34192/railway\" npx tsx -e \"import pkg from ''pg''; const { Pool } = pkg; const pool = new Pool\\({ connectionString: process.env.DATABASE_URL }\\); const result = await pool.query\\(\"\"SELECT tablename FROM pg_tables WHERE schemaname = ''public''\"\"\\); console.log\\(''Tables:''\\); result.rows.forEach\\(r => console.log\\(''-'', r.tablename\\)\\); await pool.end\\(\\);\")",
+      "Bash(DATABASE_URL=\"postgresql://postgres:VYtUsSExJERzegiSWssGmXHRKqwQzNyq@switchback.proxy.rlwy.net:34192/railway\" node -e:*)",
+      "Bash(find:*)",
+      "Bash(xargs:*)"
     ]
   }
 }

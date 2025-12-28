@@ -1,5 +1,74 @@
 # Automated Ads Agent - Claude Code Project Rules
 
+---
+
+## Core Principle: VERIFY, DON'T ASSUME
+
+You must verify information before responding. Never make assumptions about code, APIs, dates, versions, or any factual claims.
+
+---
+
+## Research & Current Information
+
+- **Always use web search** to check today's date and verify any time-sensitive information
+- Before answering questions about libraries, APIs, frameworks, or tools: search for the most recent documentation (prioritize info from the last 4-6 weeks)
+- If a user asks about "current" or "latest" anything, search first—do not rely on training data
+- When recommending packages or dependencies, verify they still exist and check their current version
+- If search results conflict with your training data, trust the search results
+
+---
+
+## Codebase Verification
+
+- **Read files before editing them**—never assume file contents
+- **Read files before answering questions** about how something works in this project
+- Check the actual implementation, don't guess based on file names or conventions
+- Before saying "this file probably contains X," open it and verify
+- When asked about project structure, use directory listings and file reads, not assumptions
+- If you're unsure which file contains something, search the codebase—don't guess
+
+---
+
+## Honesty About Uncertainty
+
+- If you don't know something, say so—then go find out
+- Clearly distinguish between "I verified this" vs "I'm assuming this"
+- If you cannot verify something, explicitly state that limitation
+- Don't fabricate error messages, API responses, or code behavior
+- If a search or file read fails, report that instead of guessing
+
+---
+
+## Before Making Changes
+
+- Read the existing code first
+- Understand the current patterns and conventions used in this project
+- Check for existing utilities/helpers before creating new ones
+- Verify import paths by checking actual file locations
+- Look at how similar things are done elsewhere in the codebase
+
+---
+
+## When Answering Questions
+
+- Show which files you checked
+- Quote relevant code snippets as evidence
+- Cite sources when using web search results
+- If you had to make any assumptions, list them explicitly
+- If multiple interpretations exist, ask for clarification instead of guessing
+
+---
+
+## Forbidden Behaviors
+
+- Do NOT invent function signatures, API endpoints, or library methods
+- Do NOT assume a package or feature exists without verification
+- Do NOT guess at configuration options—look them up
+- Do NOT assume file paths—verify they exist
+- Do NOT make up version numbers or release dates
+
+---
+
 ## MANDATORY: All Agents Must Follow These Rules
 
 ### Before Starting ANY Task
