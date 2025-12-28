@@ -32,10 +32,10 @@ export const generateCopySchema = z.object({
 
   // Required fields
   platform: z.enum(['instagram', 'linkedin', 'twitter', 'facebook', 'tiktok'], {
-    errorMap: () => ({ message: 'Platform must be one of: instagram, linkedin, twitter, facebook, tiktok' })
+    error: 'Platform must be one of: instagram, linkedin, twitter, facebook, tiktok'
   }),
   tone: z.enum(['professional', 'casual', 'fun', 'luxury', 'minimal', 'authentic'], {
-    errorMap: () => ({ message: 'Tone must be one of: professional, casual, fun, luxury, minimal, authentic' })
+    error: 'Tone must be one of: professional, casual, fun, luxury, minimal, authentic'
   }),
   productName: z.string().trim().min(1, 'Product name is required').max(100, 'Product name too long'),
   productDescription: z.string().trim().min(10, 'Product description must be at least 10 characters').max(500, 'Product description too long'),
