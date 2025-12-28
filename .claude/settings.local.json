@@ -73,7 +73,19 @@
       "Bash(DATABASE_URL=\"postgresql://postgres:VYtUsSExJERzegiSWssGmXHRKqwQzNyq@switchback.proxy.rlwy.net:34192/railway\" npx tsx -e \"import pkg from ''pg''; const { Pool } = pkg; const pool = new Pool\\({ connectionString: process.env.DATABASE_URL }\\); const result = await pool.query\\(\"\"SELECT tablename FROM pg_tables WHERE schemaname = ''public''\"\"\\); console.log\\(''Tables:''\\); result.rows.forEach\\(r => console.log\\(''-'', r.tablename\\)\\); await pool.end\\(\\);\")",
       "Bash(DATABASE_URL=\"postgresql://postgres:VYtUsSExJERzegiSWssGmXHRKqwQzNyq@switchback.proxy.rlwy.net:34192/railway\" node -e:*)",
       "Bash(find:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr checkout:*)",
+      "Bash(git fetch:*)",
+      "Bash(git merge:*)",
+      "Bash(git stash:*)",
+      "Bash(gh pr close:*)",
+      "Bash(railway logs:*)",
+      "Bash(npm ls:*)",
+      "Bash(cut:*)",
+      "Bash(for f in client/src/components/ui/*.tsx)",
+      "Bash(do)",
+      "Bash(if ! head:*)"
     ]
   }
 }
