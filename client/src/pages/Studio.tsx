@@ -286,8 +286,8 @@ export default function Studio() {
   const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [prompt, setPrompt] = useState("");
-  const [platform, setPlatform] = useState("Instagram");
-  const [aspectRatio, setAspectRatio] = useState("1:1");
+  const [platform, setPlatform] = useState("LinkedIn");
+  const [aspectRatio, setAspectRatio] = useState("1200x627");
   const [resolution, setResolution] = useState<"1K" | "2K" | "4K">("2K");
 
   // UI state
@@ -1006,7 +1006,7 @@ export default function Studio() {
               >
                 <div className="space-y-4">
                   <div className="flex flex-wrap gap-2">
-                    {["All", "Product Shots", "Social Media", "Banners", "Lifestyle"].map((cat) => (
+                    {["All", "Product Shots", "Social Media", "Banners", "Construction Site", "Technical"].map((cat) => (
                       <Button
                         key={cat}
                         variant={selectedTemplate === cat ? "default" : "outline"}
@@ -1072,7 +1072,7 @@ export default function Studio() {
                   <Textarea
                     value={prompt}
                     onChange={(e) => handlePromptChange(e.target.value)}
-                    placeholder="A summer lifestyle shot with soft morning light, products arranged on a wooden table..."
+                    placeholder="Professional construction site product shot, NDS drainage solutions installed in active trench work..."
                     rows={5}
                     className={cn(
                       "resize-none text-lg transition-all",
@@ -1102,25 +1102,26 @@ export default function Studio() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="LinkedIn">LinkedIn</SelectItem>
                         <SelectItem value="Instagram">Instagram</SelectItem>
                         <SelectItem value="Facebook">Facebook</SelectItem>
-                        <SelectItem value="LinkedIn">LinkedIn</SelectItem>
                         <SelectItem value="Twitter">Twitter/X</SelectItem>
                         <SelectItem value="TikTok">TikTok</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Aspect:</span>
+                    <span className="text-sm text-muted-foreground">Size:</span>
                     <Select value={aspectRatio} onValueChange={setAspectRatio}>
-                      <SelectTrigger className="w-[100px]">
+                      <SelectTrigger className="w-[180px]">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="1:1">1:1</SelectItem>
-                        <SelectItem value="4:5">4:5</SelectItem>
-                        <SelectItem value="16:9">16:9</SelectItem>
-                        <SelectItem value="9:16">9:16</SelectItem>
+                        <SelectItem value="1200x627">1200×627 (LinkedIn Post)</SelectItem>
+                        <SelectItem value="1200x1200">1200×1200 (Square)</SelectItem>
+                        <SelectItem value="1080x1350">1080×1350 (Portrait)</SelectItem>
+                        <SelectItem value="1920x1080">1920×1080 (Landscape HD)</SelectItem>
+                        <SelectItem value="1080x1920">1080×1920 (Story/Reel)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
