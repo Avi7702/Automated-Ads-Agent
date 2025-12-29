@@ -70,7 +70,7 @@ describe('POST /api/generations/:id/edit', () => {
     conversationHistory: [
       { role: 'user' as const, parts: [{ text: 'Original prompt' }] }
     ],
-    model: 'gemini-2.0-flash-exp',
+    model: 'gemini-3-pro-preview',
     aspectRatio: '1:1',
     createdAt: new Date(),
     parentGenerationId: null,
@@ -186,7 +186,7 @@ describe('POST /api/generations/:id/edit', () => {
       const mockContinueConversation = vi.fn().mockResolvedValue({
         imageBase64: 'newBase64Data',
         conversationHistory: [...mockExistingGeneration.conversationHistory],
-        model: 'gemini-2.0-flash-exp'
+        model: 'gemini-3-pro-preview'
       });
       (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => ({
         continueConversation: mockContinueConversation,
@@ -213,7 +213,7 @@ describe('POST /api/generations/:id/edit', () => {
       const mockContinueConversation = vi.fn().mockResolvedValue({
         imageBase64: 'newBase64Data',
         conversationHistory: [],
-        model: 'gemini-2.0-flash-exp'
+        model: 'gemini-3-pro-preview'
       });
       (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => ({
         continueConversation: mockContinueConversation,
@@ -240,7 +240,7 @@ describe('POST /api/generations/:id/edit', () => {
       const mockContinueConversation = vi.fn().mockResolvedValue({
         imageBase64: 'newBase64Data',
         conversationHistory: [],
-        model: 'gemini-2.0-flash-exp'
+        model: 'gemini-3-pro-preview'
       });
       (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => ({
         continueConversation: mockContinueConversation,
@@ -264,7 +264,7 @@ describe('POST /api/generations/:id/edit', () => {
       const mockContinueConversation = vi.fn().mockResolvedValue({
         imageBase64: 'newBase64Data',
         conversationHistory: [],
-        model: 'gemini-2.0-flash-exp'
+        model: 'gemini-3-pro-preview'
       });
       (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => ({
         continueConversation: mockContinueConversation,
@@ -288,7 +288,7 @@ describe('POST /api/generations/:id/edit', () => {
       const mockContinueConversation = vi.fn().mockResolvedValue({
         imageBase64: 'newBase64Data',
         conversationHistory: [],
-        model: 'gemini-2.0-flash-exp'
+        model: 'gemini-3-pro-preview'
       });
       (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => ({
         continueConversation: mockContinueConversation,
@@ -314,7 +314,7 @@ describe('POST /api/generations/:id/edit', () => {
       const mockContinueConversation = vi.fn().mockResolvedValue({
         imageBase64: 'newBase64Data',
         conversationHistory: [{ role: 'user', parts: [{ text: 'Make it warmer' }] }],
-        model: 'gemini-2.0-flash-exp'
+        model: 'gemini-3-pro-preview'
       });
       (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => ({
         continueConversation: mockContinueConversation,
@@ -337,7 +337,7 @@ describe('POST /api/generations/:id/edit', () => {
           userId,
           prompt: 'Original prompt [EDIT: Make it warmer]',
           imageBase64: 'newBase64Data',
-          model: 'gemini-2.0-flash-exp',
+          model: 'gemini-3-pro-preview',
           aspectRatio: '1:1'
         })
       );
@@ -414,7 +414,7 @@ describe('POST /api/generations/:id/edit', () => {
       const mockContinueConversation = vi.fn().mockResolvedValue({
         imageBase64: 'newBase64Data',
         conversationHistory: [],
-        model: 'gemini-2.0-flash-exp'
+        model: 'gemini-3-pro-preview'
       });
       (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => ({
         continueConversation: mockContinueConversation,

@@ -30,7 +30,7 @@ describe('GET /api/generations/:id/history', () => {
     imagePath: 'test.png',
     imageUrl: '/uploads/test.png',
     conversationHistory: [],
-    model: 'gemini-2.0-flash-exp',
+    model: 'gemini-3-pro-preview',
     aspectRatio: '1:1',
     createdAt: new Date('2024-01-01'),
     parentGenerationId: null,

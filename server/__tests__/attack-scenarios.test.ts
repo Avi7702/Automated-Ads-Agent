@@ -32,7 +32,7 @@ describe('Attack Scenario Tests (Real Security Validation)', () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.errors[0].message).toContain('required');
+        expect(result.error.issues[0].message).toContain('required');
       }
     });
 
@@ -68,7 +68,7 @@ describe('Attack Scenario Tests (Real Security Validation)', () => {
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.errors[0].message).toContain('too long');
+        expect(result.error.issues[0].message).toContain('too long');
       }
     });
 

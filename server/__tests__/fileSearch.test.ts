@@ -406,7 +406,7 @@ describe('File Search Service Integration', () => {
 
       expect(sdkCalls.generateContent).toHaveBeenCalledWith(
         expect.objectContaining({
-          model: 'gemini-2.0-flash-exp',
+          model: 'gemini-3-flash-preview',
           contents: [{ role: 'user', parts: [{ text: 'Instagram ad examples' }] }],
           tools: [
             expect.objectContaining({

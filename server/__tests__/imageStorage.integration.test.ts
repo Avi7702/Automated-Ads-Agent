@@ -32,7 +32,7 @@ const createTestMetadata = (overrides: Partial<GenerationMetadata> = {}): Genera
   conversationHistory: [
     { role: 'user' as const, parts: [{ text: 'Generate a sunset image' }] }
   ],
-  model: 'gemini-2.0-flash-exp',
+  model: 'gemini-3-pro-preview',
   aspectRatio: '16:9',
   ...overrides,
 });

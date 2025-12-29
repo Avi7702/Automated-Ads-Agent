@@ -93,7 +93,7 @@ describe('ImageStorageService', () => {
       { role: 'user' as const, parts: [{ text: 'A test image' }] },
       { role: 'model' as const, parts: [{ inlineData: { mimeType: 'image/png', data: 'base64data' } }] }
     ] as ConversationMessage[],
-    model: 'gemini-2.0-flash-exp',
+    model: 'gemini-3-pro-preview',
     aspectRatio: '1:1',
   };
 
@@ -103,7 +103,7 @@ describe('ImageStorageService', () => {
     prompt: 'A test image',
     imagePath: 'generation_123_abc123def456.png',
     conversationHistory: mockGenerationData.conversationHistory,
-    model: 'gemini-2.0-flash-exp',
+    model: 'gemini-3-pro-preview',
     aspectRatio: '1:1',
     status: 'completed',
     createdAt: new Date('2024-01-01'),

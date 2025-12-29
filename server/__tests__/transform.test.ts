@@ -160,7 +160,7 @@ describe('POST /api/transform', () => {
           { role: 'user', parts: [{ text: 'A beautiful landscape' }] },
           { role: 'model', parts: [{ inlineData: { mimeType: 'image/png', data: 'base64ImageData123' } }] }
         ],
-        model: 'gemini-2.0-flash-exp'
+        model: 'gemini-3-pro-preview'
       });
       (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => {
         return {
@@ -180,7 +180,7 @@ describe('POST /api/transform', () => {
           { role: 'user', parts: [{ text: 'A beautiful landscape' }] },
           { role: 'model', parts: [{ inlineData: { mimeType: 'image/png', data: 'base64ImageData123' } }] }
         ],
-        model: 'gemini-2.0-flash-exp',
+        model: 'gemini-3-pro-preview',
         aspectRatio: '1:1',
         createdAt: new Date()
       });
@@ -209,7 +209,7 @@ describe('POST /api/transform', () => {
         prompt: 'A beautiful landscape',
         imageBase64: 'base64ImageData123',
         conversationHistory: expect.any(Array),
-        model: 'gemini-2.0-flash-exp',
+        model: 'gemini-3-pro-preview',
         aspectRatio: '1:1'
       });
     });
@@ -221,7 +221,7 @@ describe('POST /api/transform', () => {
           { role: 'user', parts: [{ text: 'A beautiful landscape' }] },
           { role: 'model', parts: [{ inlineData: { mimeType: 'image/png', data: 'base64ImageData123' } }] }
         ],
-        model: 'gemini-2.0-flash-exp'
+        model: 'gemini-3-pro-preview'
       });
       (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => ({
         generateImage: mockGenerateImage,
@@ -235,7 +235,7 @@ describe('POST /api/transform', () => {
         imagePath: 'generation_123.png',
         imageUrl: '/uploads/generation_123.png',
         conversationHistory: [],
-        model: 'gemini-2.0-flash-exp',
+        model: 'gemini-3-pro-preview',
         aspectRatio: '16:9',
         createdAt: new Date()
       });
@@ -267,7 +267,7 @@ describe('POST /api/transform', () => {
       const mockGenerateImage = vi.fn().mockResolvedValue({
         imageBase64: 'base64ImageData123',
         conversationHistory: [],
-        model: 'gemini-2.0-flash-exp'
+        model: 'gemini-3-pro-preview'
       });
       (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => ({
         generateImage: mockGenerateImage,
@@ -281,7 +281,7 @@ describe('POST /api/transform', () => {
         imagePath: 'generation_123.png',
         imageUrl: '/uploads/generation_123.png',
         conversationHistory: [],
-        model: 'gemini-2.0-flash-exp',
+        model: 'gemini-3-pro-preview',
         aspectRatio: '1:1',
         createdAt: new Date()
       });
@@ -384,7 +384,7 @@ describe('POST /api/transform', () => {
       const mockGenerateImage = vi.fn().mockResolvedValue({
         imageBase64: 'base64ImageData123',
         conversationHistory: [],
-        model: 'gemini-2.0-flash-exp'
+        model: 'gemini-3-pro-preview'
       });
       (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => ({
         generateImage: mockGenerateImage,
@@ -429,7 +429,7 @@ describe('POST /api/transform', () => {
       const mockGenerateImage = vi.fn().mockResolvedValue({
         imageBase64: 'base64ImageData123',
         conversationHistory: [],
-        model: 'gemini-2.0-flash-exp'
+        model: 'gemini-3-pro-preview'
       });
       (GeminiService as MockedClass<typeof GeminiService>).mockImplementation(() => ({
         generateImage: mockGenerateImage,
@@ -443,7 +443,7 @@ describe('POST /api/transform', () => {
         imagePath: 'generation_123.png',
         imageUrl: '/uploads/generation_123.png',
         conversationHistory: [],
-        model: 'gemini-2.0-flash-exp',
+        model: 'gemini-3-pro-preview',
         aspectRatio: '1:1',
         createdAt: new Date()
       });

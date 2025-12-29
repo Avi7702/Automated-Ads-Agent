@@ -85,7 +85,10 @@
       "Bash(cut:*)",
       "Bash(for f in client/src/components/ui/*.tsx)",
       "Bash(do)",
-      "Bash(if ! head:*)"
+      "Bash(if ! head:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "Bash(gh run rerun:*)"
     ]
   }
 }
