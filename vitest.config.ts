@@ -22,6 +22,7 @@ export default defineConfig({
           '**/imageStorage.test.ts', // Mock issues with drizzle-orm
           '**/validation.test.ts', // Route tests need full app
           '**/rateLimit.test.ts', // Supertest integration tests
+          '**/productKnowledge.test.ts', // Requires database
         ]
       : ['node_modules/**', '**/node_modules/**'],
     coverage: {
