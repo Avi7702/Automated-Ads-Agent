@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Sparkles, Wand2, Image as ImageIcon } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import type { AdSceneTemplate } from "@shared/schema";
+import { Header } from "@/components/layout/Header";
 
 type GenerationMode = "exact_insert" | "inspiration";
 
@@ -42,32 +43,7 @@ export default function Templates() {
         <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-500/5 blur-[120px] rounded-full" />
       </div>
 
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-background/50 backdrop-blur-md">
-        <div className="container max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-              V3
-            </div>
-            <span className="font-display font-medium tracking-tight">Product Content Studio</span>
-          </div>
-          <nav className="flex items-center gap-6 text-sm font-medium text-muted-foreground">
-            <Link href="/" className="hover:text-foreground cursor-pointer transition-colors">
-              Generate
-            </Link>
-            <Link href="/library" className="hover:text-foreground cursor-pointer transition-colors">
-              Library
-            </Link>
-            <Link href="/prompts" className="hover:text-foreground cursor-pointer transition-colors">
-              Prompts
-            </Link>
-            <span className="text-foreground">Templates</span>
-            <Link href="/gallery" className="hover:text-foreground cursor-pointer transition-colors">
-              Gallery
-            </Link>
-          </nav>
-        </div>
-      </header>
+      <Header currentPage="templates" />
 
       <main className="container max-w-7xl mx-auto px-6 pt-24 pb-20 relative z-10">
         {/* Back Button */}
@@ -75,7 +51,7 @@ export default function Templates() {
           <Link href="/">
             <Button variant="ghost" size="sm" className="gap-2">
               <ArrowLeft className="w-4 h-4" />
-              Back to Generate
+              Back to Studio
             </Button>
           </Link>
         </div>

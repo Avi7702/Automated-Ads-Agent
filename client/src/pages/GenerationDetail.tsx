@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useRoute, useLocation } from "wouter";
-import { ArrowLeft, Download, Pencil, X, Loader2, History, MessageCircle, Send, Sparkles } from "lucide-react";
+import { Download, Pencil, X, Loader2, History, MessageCircle, Send, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import { useState } from "react";
 import { CopywritingPanel } from "@/components/CopywritingPanel";
+import { Header } from "@/components/layout/Header";
 
 const QUICK_EDITS = [
   { label: "Warmer lighting", prompt: "Make the lighting warmer and more golden" },
@@ -183,34 +184,15 @@ export default function GenerationDetail() {
         <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/5 blur-[120px] rounded-full" />
       </div>
 
-      <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-background/50 backdrop-blur-md">
-        <div className="container max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-              V3
-            </div>
-            <span className="font-display font-medium tracking-tight">Product Content Studio</span>
-          </div>
-          <nav className="flex items-center gap-6 text-sm font-medium text-muted-foreground">
-            <Link href="/" className="hover:text-foreground cursor-pointer transition-colors">
-              Generate
+      <Header currentPage="generation" />
+
+      <main className="container max-w-5xl mx-auto px-6 pt-24 pb-20 relative z-10">
+        <div className="space-y-6">
+          {/* Action Bar */}
+          <div className="flex items-center justify-between">
+            <Link href="/gallery" className="text-sm text-muted-foreground hover:text-foreground">
+              ← Back to Gallery
             </Link>
-            <Link href="/library" className="hover:text-foreground cursor-pointer transition-colors">
-              Library
-            </Link>
-            <Link href="/prompts" className="hover:text-foreground cursor-pointer transition-colors">
-              Prompts
-            </Link>
-            <Link href="/templates" className="hover:text-foreground cursor-pointer transition-colors">
-              Templates
-            </Link>
-            <Link href="/gallery" className="hover:text-foreground cursor-pointer transition-colors">
-              Gallery
-            </Link>
-            <Link href="/brand-profile" className="hover:text-foreground cursor-pointer transition-colors">
-              Brand
-            </Link>
-            <div className="border-l border-white/10 h-5 mx-2" />
             <div className="flex gap-2">
               <Button
                 variant="outline"
@@ -239,12 +221,8 @@ export default function GenerationDetail() {
                 Download
               </Button>
             </div>
-          </nav>
-        </div>
-      </header>
+          </div>
 
-      <main className="container max-w-5xl mx-auto px-6 pt-24 pb-20 relative z-10">
-        <div className="space-y-6">
           {generation.parentGenerationId && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-4 py-3 rounded-xl" data-testid="edit-lineage-info">
               <History className="w-4 h-4" />

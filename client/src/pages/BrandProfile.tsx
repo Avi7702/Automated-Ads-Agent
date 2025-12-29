@@ -2,6 +2,7 @@ import { BrandProfileForm } from "@/components/BrandProfileForm";
 import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Header } from "@/components/layout/Header";
 
 export default function BrandProfile() {
   return (
@@ -12,42 +13,14 @@ export default function BrandProfile() {
         <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-500/5 blur-[120px] rounded-full" />
       </div>
 
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-background/50 backdrop-blur-md">
-        <div className="container max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-              V3
-            </div>
-            <span className="font-display font-medium tracking-tight">Product Content Studio</span>
-          </div>
-          <nav className="flex items-center gap-6 text-sm font-medium text-muted-foreground">
-            <Link href="/" className="hover:text-foreground cursor-pointer transition-colors">
-              Generate
-            </Link>
-            <Link href="/library" className="hover:text-foreground cursor-pointer transition-colors">
-              Library
-            </Link>
-            <Link href="/prompts" className="hover:text-foreground cursor-pointer transition-colors">
-              Prompts
-            </Link>
-            <Link href="/templates" className="hover:text-foreground cursor-pointer transition-colors">
-              Templates
-            </Link>
-            <Link href="/gallery" className="hover:text-foreground cursor-pointer transition-colors">
-              Gallery
-            </Link>
-            <span className="text-foreground">Brand</span>
-          </nav>
-        </div>
-      </header>
+      <Header currentPage="settings" />
 
       <main className="container max-w-7xl mx-auto px-6 pt-24 pb-20 relative z-10">
         <div className="mb-6">
           <Link href="/">
             <Button variant="ghost" size="sm">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Home
+              Back to Studio
             </Button>
           </Link>
         </div>

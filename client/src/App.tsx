@@ -1,4 +1,4 @@
-import { Switch, Route, Redirect } from "wouter";
+import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -26,14 +26,6 @@ function Router() {
       {/* Settings pages */}
       <Route path="/settings" component={BrandProfile} />
       <Route path="/brand-profile" component={BrandProfile} />
-
-      {/* Legacy routes - redirect to Studio */}
-      <Route path="/library">
-        <Redirect to="/" />
-      </Route>
-      <Route path="/prompts">
-        <Redirect to="/" />
-      </Route>
 
       {/* Templates (still needed for template management) */}
       <Route path="/templates" component={Templates} />

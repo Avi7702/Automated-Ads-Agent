@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { ArrowLeft, Trash2, Download, Edit, Calendar } from "lucide-react";
+import { Trash2, Edit, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
+import { Header } from "@/components/layout/Header";
 
 interface Generation {
   id: string;
@@ -54,35 +54,7 @@ export default function Gallery() {
         <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-500/5 blur-[120px] rounded-full" />
       </div>
 
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-background/50 backdrop-blur-md">
-        <div className="container max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-              V3
-            </div>
-            <span className="font-display font-medium tracking-tight">Product Content Studio</span>
-          </div>
-          <nav className="flex items-center gap-6 text-sm font-medium text-muted-foreground">
-            <Link href="/" className="hover:text-foreground cursor-pointer transition-colors">
-              Generate
-            </Link>
-            <Link href="/library" className="hover:text-foreground cursor-pointer transition-colors">
-              Library
-            </Link>
-            <Link href="/prompts" className="hover:text-foreground cursor-pointer transition-colors">
-              Prompts
-            </Link>
-            <Link href="/templates" className="hover:text-foreground cursor-pointer transition-colors">
-              Templates
-            </Link>
-            <span className="text-foreground">Gallery</span>
-            <Link href="/brand-profile" className="hover:text-foreground cursor-pointer transition-colors">
-              Brand
-            </Link>
-          </nav>
-        </div>
-      </header>
+      <Header currentPage="gallery" />
 
       {/* Content */}
       <main className="container max-w-6xl mx-auto px-6 pt-24 pb-20 relative z-10">

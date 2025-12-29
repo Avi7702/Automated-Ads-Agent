@@ -17,6 +17,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import type { AdSceneTemplate } from "@shared/schema";
+import { Header } from "@/components/layout/Header";
 
 const categories = [
   { value: "lifestyle", label: "Lifestyle" },
@@ -258,9 +259,11 @@ export default function TemplateAdmin() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-background/50 backdrop-blur-md">
-        <div className="container max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <Header currentPage="templates" />
+
+      <main className="container max-w-7xl mx-auto px-6 pt-24 pb-20">
+        {/* Action Bar */}
+        <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <Link href="/templates">
               <Button variant="ghost" size="sm" className="gap-2">
@@ -288,9 +291,7 @@ export default function TemplateAdmin() {
             </Button>
           </div>
         </div>
-      </header>
 
-      <main className="container max-w-7xl mx-auto px-6 pt-24 pb-20">
         {/* Templates Table */}
         {!showForm && (
           <div className="rounded-xl border border-white/10 overflow-hidden">
