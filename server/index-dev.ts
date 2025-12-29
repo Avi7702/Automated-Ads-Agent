@@ -1,3 +1,6 @@
+// Load environment variables first
+import 'dotenv/config';
+
 // OpenTelemetry MUST be imported before any other modules
 import './instrumentation';
 

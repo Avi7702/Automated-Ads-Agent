@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, RefreshCw, Eye, Zap, Database, Globe, CheckCircle2, XCircle, Lightbulb, TrendingUp } from "lucide-react";
+import { Sparkles, RefreshCw, Eye, Zap, Database, Globe, CheckCircle2, XCircle, Lightbulb, TrendingUp, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { IdeaBankSuggestResponse, IdeaBankSuggestion, GenerationMode } from "@shared/types/ideaBank";
@@ -8,8 +8,9 @@ import type { Product } from "@shared/schema";
 
 interface IdeaBankPanelProps {
   selectedProducts: Product[];
-  onSelectPrompt: (prompt: string) => void;
+  onSelectPrompt: (prompt: string, id?: string, reasoning?: string) => void;
   className?: string;
+  selectedPromptId?: string;
 }
 
 // Badge component for mode display
@@ -68,11 +69,13 @@ function SourceIndicators({ suggestion }: { suggestion: IdeaBankSuggestion }) {
 function SuggestionCard({
   suggestion,
   onUse,
-  index
+  index,
+  isSelected,
 }: {
   suggestion: IdeaBankSuggestion;
-  onUse: (prompt: string) => void;
+  onUse: (prompt: string, id: string, reasoning?: string) => void;
   index: number;
+  isSelected: boolean;
 }) {
   const confidencePercentage = Math.round(suggestion.confidence * 100);
 
@@ -81,7 +84,13 @@ function SuggestionCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1 }}
-      className="p-4 rounded-xl border border-white/10 bg-card/50 hover:bg-card hover:border-primary/30 transition-all group"
+      className={cn(
+        "p-4 rounded-xl border-2 transition-all group cursor-pointer",
+        isSelected
+          ? "border-primary bg-primary/10 ring-2 ring-primary/20 scale-[1.02]"
+          : "border-white/10 bg-card/50 hover:bg-card hover:border-primary/30"
+      )}
+      onClick={() => onUse(suggestion.prompt, suggestion.id, suggestion.reasoning)}
     >
       <div className="space-y-3">
         {/* Header with mode and confidence */}
@@ -131,21 +140,33 @@ function SuggestionCard({
 
         {/* Use button */}
         <Button
-          onClick={() => onUse(suggestion.prompt)}
-          variant="outline"
+          onClick={(e) => {
+            e.stopPropagation();
+            onUse(suggestion.prompt, suggestion.id, suggestion.reasoning);
+          }}
+          variant={isSelected ? "default" : "outline"}
           size="sm"
           className="w-full mt-2"
           data-testid={`button-use-suggestion-${suggestion.id}`}
         >
-          <Sparkles className="w-3 h-3 mr-2" />
-          Use this suggestion
+          {isSelected ? (
+            <>
+              <Check className="w-3 h-3 mr-2" />
+              Selected
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-3 h-3 mr-2" />
+              Use this suggestion
+            </>
+          )}
         </Button>
       </div>
     </motion.div>
   );
 }
 
-export function IdeaBankPanel({ selectedProducts, onSelectPrompt, className }: IdeaBankPanelProps) {
+export function IdeaBankPanel({ selectedProducts, onSelectPrompt, className, selectedPromptId }: IdeaBankPanelProps) {
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<IdeaBankSuggestResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -355,6 +376,7 @@ export function IdeaBankPanel({ selectedProducts, onSelectPrompt, className }: I
                 suggestion={suggestion}
                 onUse={onSelectPrompt}
                 index={index}
+                isSelected={selectedPromptId === suggestion.id}
               />
             ))}
           </div>
