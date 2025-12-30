@@ -16,6 +16,7 @@
  */
 
 import { storage } from "../storage";
+import jwt from "jsonwebtoken";
 
 // Types for Cloud Monitoring API responses
 interface TimeSeriesPoint {
@@ -169,8 +170,6 @@ async function getAccessTokenFromServiceAccount(credentials: {
   private_key: string;
   token_uri?: string;
 }): Promise<string> {
-  const jwt = await import('jsonwebtoken');
-
   const now = Math.floor(Date.now() / 1000);
   const payload = {
     iss: credentials.client_email,
@@ -181,7 +180,7 @@ async function getAccessTokenFromServiceAccount(credentials: {
     scope: 'https://www.googleapis.com/auth/monitoring.read',
   };
 
-  const token = jwt.default.sign(payload, credentials.private_key, { algorithm: 'RS256' });
+  const token = jwt.sign(payload, credentials.private_key, { algorithm: 'RS256' });
 
   const response = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
