@@ -10,6 +10,7 @@ import GenerationDetail from "@/pages/GenerationDetail";
 import BrandProfile from "@/pages/BrandProfile";
 import Templates from "@/pages/Templates";
 import TemplateAdmin from "@/pages/TemplateAdmin";
+import QuotaDashboard from "@/pages/QuotaDashboard";
 
 function Router() {
   return (
@@ -22,6 +23,9 @@ function Router() {
 
       {/* Generation details (accessed from gallery or after generation) */}
       <Route path="/generation/:id" component={GenerationDetail} />
+
+      {/* Usage/Quota Dashboard */}
+      <Route path="/usage" component={QuotaDashboard} />
 
       {/* Settings pages */}
       <Route path="/settings" component={BrandProfile} />

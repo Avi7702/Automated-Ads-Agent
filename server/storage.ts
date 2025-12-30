@@ -24,6 +24,18 @@ import {
   type InsertProductRelationship,
   type BrandImage,
   type InsertBrandImage,
+  // Quota monitoring types
+  type GeminiQuotaMetrics,
+  type InsertGeminiQuotaMetrics,
+  type GeminiRateLimitEvent,
+  type InsertGeminiRateLimitEvent,
+  type GeminiQuotaAlert,
+  type InsertGeminiQuotaAlert,
+  // Google Cloud Monitoring sync types
+  type GoogleQuotaSnapshot,
+  type InsertGoogleQuotaSnapshot,
+  type GoogleQuotaSyncHistory,
+  type InsertGoogleQuotaSyncHistory,
   generations,
   generationUsage,
   products,
@@ -37,9 +49,16 @@ import {
   installationScenarios,
   productRelationships,
   brandImages,
+  // Quota monitoring tables
+  geminiQuotaMetrics,
+  geminiRateLimitEvents,
+  geminiQuotaAlerts,
+  // Google Cloud Monitoring sync tables
+  googleQuotaSnapshots,
+  googleQuotaSyncHistory,
 } from "@shared/schema";
 import { db } from "./db";
-import { and, eq, desc, ilike, inArray, or, arrayContains } from "drizzle-orm";
+import { and, eq, desc, ilike, inArray, or, arrayContains, gte, lte, sql } from "drizzle-orm";
 
 export interface IStorage {
   // Generation CRUD operations
@@ -142,6 +161,48 @@ export interface IStorage {
   getBrandImagesByCategory(userId: string, category: string): Promise<BrandImage[]>;
   updateBrandImage(id: string, updates: Partial<InsertBrandImage>): Promise<BrandImage>;
   deleteBrandImage(id: string): Promise<void>;
+
+  // ============================================
+  // GEMINI QUOTA MONITORING OPERATIONS
+  // ============================================
+
+  // Quota Metrics CRUD operations
+  upsertQuotaMetrics(metrics: InsertGeminiQuotaMetrics): Promise<GeminiQuotaMetrics>;
+  getQuotaMetrics(params: {
+    brandId: string;
+    windowType: string;
+    startDate: Date;
+    endDate: Date;
+  }): Promise<GeminiQuotaMetrics[]>;
+  getLatestQuotaMetric(brandId: string, windowType: string): Promise<GeminiQuotaMetrics | undefined>;
+
+  // Rate Limit Event operations
+  createRateLimitEvent(event: InsertGeminiRateLimitEvent): Promise<GeminiRateLimitEvent>;
+  getRecentRateLimitEvents(brandId: string, minutes: number): Promise<GeminiRateLimitEvent[]>;
+
+  // Quota Alert operations
+  getQuotaAlerts(brandId: string): Promise<GeminiQuotaAlert[]>;
+  upsertQuotaAlert(alert: InsertGeminiQuotaAlert): Promise<GeminiQuotaAlert>;
+  updateQuotaAlertTrigger(id: string): Promise<void>;
+
+  // ============================================
+  // GOOGLE CLOUD MONITORING SYNC OPERATIONS
+  // ============================================
+
+  // Google Quota Snapshot operations
+  saveGoogleQuotaSnapshot(snapshot: InsertGoogleQuotaSnapshot): Promise<GoogleQuotaSnapshot>;
+  getLatestGoogleQuotaSnapshot(brandId?: string): Promise<GoogleQuotaSnapshot | undefined>;
+  getGoogleQuotaSnapshotHistory(params: {
+    brandId?: string;
+    startDate: Date;
+    endDate: Date;
+    limit?: number;
+  }): Promise<GoogleQuotaSnapshot[]>;
+
+  // Sync History operations
+  createSyncHistoryEntry(entry: InsertGoogleQuotaSyncHistory): Promise<GoogleQuotaSyncHistory>;
+  updateSyncHistoryEntry(id: string, updates: Partial<InsertGoogleQuotaSyncHistory>): Promise<GoogleQuotaSyncHistory>;
+  getRecentSyncHistory(limit?: number): Promise<GoogleQuotaSyncHistory[]>;
 }
 
 export class DbStorage implements IStorage {
@@ -715,6 +776,237 @@ export class DbStorage implements IStorage {
 
   async deleteBrandImage(id: string): Promise<void> {
     await db.delete(brandImages).where(eq(brandImages.id, id));
+  }
+
+  // ============================================
+  // GEMINI QUOTA MONITORING IMPLEMENTATIONS
+  // ============================================
+
+  async upsertQuotaMetrics(metrics: InsertGeminiQuotaMetrics): Promise<GeminiQuotaMetrics> {
+    // Try to find existing metric for this window
+    const existing = await db
+      .select()
+      .from(geminiQuotaMetrics)
+      .where(
+        and(
+          eq(geminiQuotaMetrics.brandId, metrics.brandId),
+          eq(geminiQuotaMetrics.windowType, metrics.windowType),
+          eq(geminiQuotaMetrics.windowStart, metrics.windowStart)
+        )
+      )
+      .limit(1);
+
+    if (existing.length > 0) {
+      // Update existing metric by adding to counts
+      const [updated] = await db
+        .update(geminiQuotaMetrics)
+        .set({
+          requestCount: sql`${geminiQuotaMetrics.requestCount} + ${metrics.requestCount}`,
+          successCount: sql`${geminiQuotaMetrics.successCount} + ${metrics.successCount}`,
+          errorCount: sql`${geminiQuotaMetrics.errorCount} + ${metrics.errorCount}`,
+          rateLimitCount: sql`${geminiQuotaMetrics.rateLimitCount} + ${metrics.rateLimitCount}`,
+          inputTokensTotal: sql`${geminiQuotaMetrics.inputTokensTotal} + ${metrics.inputTokensTotal}`,
+          outputTokensTotal: sql`${geminiQuotaMetrics.outputTokensTotal} + ${metrics.outputTokensTotal}`,
+          estimatedCostMicros: sql`${geminiQuotaMetrics.estimatedCostMicros} + ${metrics.estimatedCostMicros}`,
+          generateCount: sql`${geminiQuotaMetrics.generateCount} + ${metrics.generateCount}`,
+          editCount: sql`${geminiQuotaMetrics.editCount} + ${metrics.editCount}`,
+          analyzeCount: sql`${geminiQuotaMetrics.analyzeCount} + ${metrics.analyzeCount}`,
+        })
+        .where(eq(geminiQuotaMetrics.id, existing[0].id))
+        .returning();
+      return updated;
+    }
+
+    // Insert new metric
+    const [inserted] = await db
+      .insert(geminiQuotaMetrics)
+      .values(metrics)
+      .returning();
+    return inserted;
+  }
+
+  async getQuotaMetrics(params: {
+    brandId: string;
+    windowType: string;
+    startDate: Date;
+    endDate: Date;
+  }): Promise<GeminiQuotaMetrics[]> {
+    return await db
+      .select()
+      .from(geminiQuotaMetrics)
+      .where(
+        and(
+          eq(geminiQuotaMetrics.brandId, params.brandId),
+          eq(geminiQuotaMetrics.windowType, params.windowType),
+          gte(geminiQuotaMetrics.windowStart, params.startDate),
+          lte(geminiQuotaMetrics.windowStart, params.endDate)
+        )
+      )
+      .orderBy(desc(geminiQuotaMetrics.windowStart));
+  }
+
+  async getLatestQuotaMetric(brandId: string, windowType: string): Promise<GeminiQuotaMetrics | undefined> {
+    const [metric] = await db
+      .select()
+      .from(geminiQuotaMetrics)
+      .where(
+        and(
+          eq(geminiQuotaMetrics.brandId, brandId),
+          eq(geminiQuotaMetrics.windowType, windowType)
+        )
+      )
+      .orderBy(desc(geminiQuotaMetrics.windowStart))
+      .limit(1);
+    return metric;
+  }
+
+  async createRateLimitEvent(event: InsertGeminiRateLimitEvent): Promise<GeminiRateLimitEvent> {
+    const [inserted] = await db
+      .insert(geminiRateLimitEvents)
+      .values(event)
+      .returning();
+    return inserted;
+  }
+
+  async getRecentRateLimitEvents(brandId: string, minutes: number): Promise<GeminiRateLimitEvent[]> {
+    const cutoff = new Date(Date.now() - minutes * 60 * 1000);
+    return await db
+      .select()
+      .from(geminiRateLimitEvents)
+      .where(
+        and(
+          eq(geminiRateLimitEvents.brandId, brandId),
+          gte(geminiRateLimitEvents.createdAt, cutoff)
+        )
+      )
+      .orderBy(desc(geminiRateLimitEvents.createdAt));
+  }
+
+  async getQuotaAlerts(brandId: string): Promise<GeminiQuotaAlert[]> {
+    return await db
+      .select()
+      .from(geminiQuotaAlerts)
+      .where(eq(geminiQuotaAlerts.brandId, brandId))
+      .orderBy(geminiQuotaAlerts.alertType);
+  }
+
+  async upsertQuotaAlert(alert: InsertGeminiQuotaAlert): Promise<GeminiQuotaAlert> {
+    // Check if alert exists for this brand and type
+    const existing = await db
+      .select()
+      .from(geminiQuotaAlerts)
+      .where(
+        and(
+          eq(geminiQuotaAlerts.brandId, alert.brandId),
+          eq(geminiQuotaAlerts.alertType, alert.alertType)
+        )
+      )
+      .limit(1);
+
+    if (existing.length > 0) {
+      const [updated] = await db
+        .update(geminiQuotaAlerts)
+        .set({
+          thresholdValue: alert.thresholdValue,
+          isEnabled: alert.isEnabled,
+          updatedAt: new Date(),
+        })
+        .where(eq(geminiQuotaAlerts.id, existing[0].id))
+        .returning();
+      return updated;
+    }
+
+    const [inserted] = await db
+      .insert(geminiQuotaAlerts)
+      .values(alert)
+      .returning();
+    return inserted;
+  }
+
+  async updateQuotaAlertTrigger(id: string): Promise<void> {
+    await db
+      .update(geminiQuotaAlerts)
+      .set({
+        lastTriggeredAt: new Date(),
+        triggerCount: sql`${geminiQuotaAlerts.triggerCount} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(geminiQuotaAlerts.id, id));
+  }
+
+  // ============================================
+  // GOOGLE CLOUD MONITORING SYNC OPERATIONS
+  // ============================================
+
+  async saveGoogleQuotaSnapshot(snapshot: InsertGoogleQuotaSnapshot): Promise<GoogleQuotaSnapshot> {
+    const [inserted] = await db
+      .insert(googleQuotaSnapshots)
+      .values(snapshot)
+      .returning();
+    return inserted;
+  }
+
+  async getLatestGoogleQuotaSnapshot(brandId?: string): Promise<GoogleQuotaSnapshot | undefined> {
+    const conditions = brandId
+      ? [eq(googleQuotaSnapshots.brandId, brandId)]
+      : [];
+
+    const [latest] = await db
+      .select()
+      .from(googleQuotaSnapshots)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(googleQuotaSnapshots.syncedAt))
+      .limit(1);
+
+    return latest;
+  }
+
+  async getGoogleQuotaSnapshotHistory(params: {
+    brandId?: string;
+    startDate: Date;
+    endDate: Date;
+    limit?: number;
+  }): Promise<GoogleQuotaSnapshot[]> {
+    const conditions = [
+      gte(googleQuotaSnapshots.syncedAt, params.startDate),
+      lte(googleQuotaSnapshots.syncedAt, params.endDate),
+    ];
+
+    if (params.brandId) {
+      conditions.push(eq(googleQuotaSnapshots.brandId, params.brandId));
+    }
+
+    return db
+      .select()
+      .from(googleQuotaSnapshots)
+      .where(and(...conditions))
+      .orderBy(desc(googleQuotaSnapshots.syncedAt))
+      .limit(params.limit || 100);
+  }
+
+  async createSyncHistoryEntry(entry: InsertGoogleQuotaSyncHistory): Promise<GoogleQuotaSyncHistory> {
+    const [inserted] = await db
+      .insert(googleQuotaSyncHistory)
+      .values(entry)
+      .returning();
+    return inserted;
+  }
+
+  async updateSyncHistoryEntry(id: string, updates: Partial<InsertGoogleQuotaSyncHistory>): Promise<GoogleQuotaSyncHistory> {
+    const [updated] = await db
+      .update(googleQuotaSyncHistory)
+      .set(updates)
+      .where(eq(googleQuotaSyncHistory.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getRecentSyncHistory(limit: number = 20): Promise<GoogleQuotaSyncHistory[]> {
+    return db
+      .select()
+      .from(googleQuotaSyncHistory)
+      .orderBy(desc(googleQuotaSyncHistory.startedAt))
+      .limit(limit);
   }
 }
 

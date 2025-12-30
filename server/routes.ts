@@ -14,6 +14,8 @@ import { requireAuth } from "./middleware/auth";
 import { createRateLimiter } from "./middleware/rateLimit";
 import { telemetry } from "./instrumentation";
 import { computeAdaptiveEstimate, estimateGenerationCostMicros, normalizeResolution } from "./services/pricingEstimator";
+import { quotaMonitoringService, parseRetryDelay, parseLimitType } from "./services/quotaMonitoringService";
+import { googleCloudMonitoringService } from "./services/googleCloudMonitoringService";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -634,16 +636,40 @@ Ensure the generated image aligns with these brand guidelines where possible.`;
     } finally {
       // Track Gemini API usage and cost
       const durationMs = Date.now() - startTime;
+      const inputTokensEstimate = Math.ceil((req.body.prompt?.length || 0) * 0.25);
+
       telemetry.trackGeminiUsage({
         model: 'gemini-3-pro-image-preview',
         operation: 'generate',
-        inputTokens: (req.body.prompt?.length || 0) * 0.25, // Rough estimate
+        inputTokens: inputTokensEstimate,
         outputTokens: 0,
         durationMs,
         userId,
         success,
         errorType,
       });
+
+      // Track for quota monitoring dashboard
+      try {
+        await quotaMonitoringService.trackApiCall({
+          brandId: userId || 'anonymous',
+          operation: 'generate',
+          model: 'gemini-3-pro-image-preview',
+          success,
+          durationMs,
+          inputTokens: inputTokensEstimate,
+          outputTokens: 0,
+          costMicros: success ? estimateGenerationCostMicros({
+            resolution: req.body.resolution || '2K',
+            inputImagesCount: Array.isArray(req.files) ? req.files.length : 0,
+            promptChars: String(req.body.prompt || '').length,
+          }).estimatedCostMicros : 0,
+          errorType,
+          isRateLimited: errorType === 'RESOURCE_EXHAUSTED' || errorType === 'rate_limit',
+        });
+      } catch (trackError) {
+        console.warn('[Transform] Failed to track quota:', trackError);
+      }
     }
   });
 
@@ -918,16 +944,40 @@ Ensure the generated image aligns with these brand guidelines where possible.`;
     } finally {
       // Track Gemini API usage and cost
       const durationMs = Date.now() - startTime;
+      const inputTokensEstimate = Math.ceil((req.body.editPrompt?.length || 0) * 0.25);
+
       telemetry.trackGeminiUsage({
         model: 'gemini-3-pro-image-preview',
         operation: 'edit',
-        inputTokens: (req.body.editPrompt?.length || 0) * 0.25,
+        inputTokens: inputTokensEstimate,
         outputTokens: 0,
         durationMs,
         userId,
         success,
         errorType,
       });
+
+      // Track for quota monitoring dashboard
+      try {
+        await quotaMonitoringService.trackApiCall({
+          brandId: userId || 'anonymous',
+          operation: 'edit',
+          model: 'gemini-3-pro-image-preview',
+          success,
+          durationMs,
+          inputTokens: inputTokensEstimate,
+          outputTokens: 0,
+          costMicros: success ? estimateGenerationCostMicros({
+            resolution: '2K', // Edits use same resolution as parent
+            inputImagesCount: 1,
+            promptChars: String(req.body.editPrompt || '').length,
+          }).estimatedCostMicros : 0,
+          errorType,
+          isRateLimited: errorType === 'RESOURCE_EXHAUSTED' || errorType === 'rate_limit',
+        });
+      } catch (trackError) {
+        console.warn('[Edit] Failed to track quota:', trackError);
+      }
     }
   });
 
@@ -2219,6 +2269,245 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       res.status(500).json({ error: "Failed to delete brand profile" });
     }
   });
+
+  // ============================================
+  // QUOTA MONITORING ENDPOINTS
+  // ============================================
+
+  // GET /api/quota/status - Real-time quota status
+  app.get("/api/quota/status", async (req, res) => {
+    try {
+      const brandId = (req.session as any)?.userId || "anonymous";
+      const status = await quotaMonitoringService.getQuotaStatus(brandId);
+      res.json(status);
+    } catch (error: any) {
+      console.error("[Quota Status] Error:", error);
+      res.status(500).json({ error: "Failed to get quota status" });
+    }
+  });
+
+  // GET /api/quota/history - Historical usage data
+  app.get("/api/quota/history", async (req, res) => {
+    try {
+      const brandId = (req.session as any)?.userId || "anonymous";
+      const { windowType, startDate, endDate } = req.query;
+
+      const history = await quotaMonitoringService.getUsageHistory({
+        brandId,
+        windowType: (windowType as 'minute' | 'hour' | 'day') || 'hour',
+        startDate: startDate ? new Date(startDate as string) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        endDate: endDate ? new Date(endDate as string) : new Date(),
+      });
+
+      res.json({ history });
+    } catch (error: any) {
+      console.error("[Quota History] Error:", error);
+      res.status(500).json({ error: "Failed to get quota history" });
+    }
+  });
+
+  // GET /api/quota/breakdown - Usage breakdown by category
+  app.get("/api/quota/breakdown", async (req, res) => {
+    try {
+      const brandId = (req.session as any)?.userId || "anonymous";
+      const { period } = req.query;
+
+      const breakdown = await quotaMonitoringService.getUsageBreakdown({
+        brandId,
+        period: (period as 'today' | 'week' | 'month') || 'today',
+      });
+
+      res.json(breakdown);
+    } catch (error: any) {
+      console.error("[Quota Breakdown] Error:", error);
+      res.status(500).json({ error: "Failed to get quota breakdown" });
+    }
+  });
+
+  // GET /api/quota/rate-limit-status - Check if currently rate limited
+  app.get("/api/quota/rate-limit-status", async (req, res) => {
+    try {
+      const brandId = (req.session as any)?.userId || "anonymous";
+      const status = await quotaMonitoringService.getRateLimitStatus(brandId);
+      res.json(status);
+    } catch (error: any) {
+      console.error("[Rate Limit Status] Error:", error);
+      res.status(500).json({ error: "Failed to get rate limit status" });
+    }
+  });
+
+  // GET /api/quota/alerts - Get alert configurations
+  app.get("/api/quota/alerts", requireAuth, async (req, res) => {
+    try {
+      const brandId = (req.session as any).userId;
+      const alerts = await quotaMonitoringService.getAlerts(brandId);
+      res.json({ alerts });
+    } catch (error: any) {
+      console.error("[Quota Alerts Get] Error:", error);
+      res.status(500).json({ error: "Failed to get quota alerts" });
+    }
+  });
+
+  // PUT /api/quota/alerts - Update or create alert configuration
+  app.put("/api/quota/alerts", requireAuth, async (req, res) => {
+    try {
+      const brandId = (req.session as any).userId;
+      const { alertType, thresholdValue, isEnabled } = req.body;
+
+      if (!alertType || thresholdValue === undefined) {
+        return res.status(400).json({ error: "alertType and thresholdValue are required" });
+      }
+
+      const alert = await quotaMonitoringService.setAlert({
+        brandId,
+        alertType,
+        thresholdValue,
+        isEnabled: isEnabled ?? true,
+      });
+
+      res.json(alert);
+    } catch (error: any) {
+      console.error("[Quota Alerts Update] Error:", error);
+      res.status(500).json({ error: "Failed to update quota alert" });
+    }
+  });
+
+  // GET /api/quota/check-alerts - Check triggered alerts
+  app.get("/api/quota/check-alerts", async (req, res) => {
+    try {
+      const brandId = (req.session as any)?.userId || "anonymous";
+      const triggered = await quotaMonitoringService.checkAlerts(brandId);
+      res.json({ triggered });
+    } catch (error: any) {
+      console.error("[Check Alerts] Error:", error);
+      res.status(500).json({ error: "Failed to check alerts" });
+    }
+  });
+
+  // ============================================
+  // GOOGLE CLOUD MONITORING SYNC ENDPOINTS
+  // ============================================
+
+  // GET /api/quota/google/status - Get Google Cloud sync status
+  app.get("/api/quota/google/status", async (req, res) => {
+    try {
+      const syncStatus = googleCloudMonitoringService.getSyncStatus();
+      const lastSnapshot = googleCloudMonitoringService.getLastSync();
+
+      res.json({
+        ...syncStatus,
+        lastSnapshot: lastSnapshot ? {
+          quotas: lastSnapshot.quotas,
+          projectId: lastSnapshot.projectId,
+          service: lastSnapshot.service,
+        } : null,
+      });
+    } catch (error: any) {
+      console.error("[Google Quota Status] Error:", error);
+      res.status(500).json({ error: "Failed to get Google quota status" });
+    }
+  });
+
+  // GET /api/quota/google/snapshot - Get latest Google quota snapshot
+  app.get("/api/quota/google/snapshot", async (req, res) => {
+    try {
+      const snapshot = googleCloudMonitoringService.getLastSync();
+
+      if (!snapshot) {
+        // Try to get from database if not in memory
+        const dbSnapshot = await storage.getLatestGoogleQuotaSnapshot();
+        if (dbSnapshot) {
+          res.json(dbSnapshot);
+          return;
+        }
+        return res.status(404).json({ error: "No quota snapshot available" });
+      }
+
+      res.json(snapshot);
+    } catch (error: any) {
+      console.error("[Google Quota Snapshot] Error:", error);
+      res.status(500).json({ error: "Failed to get Google quota snapshot" });
+    }
+  });
+
+  // POST /api/quota/google/sync - Trigger manual sync
+  app.post("/api/quota/google/sync", async (req, res) => {
+    try {
+      if (!googleCloudMonitoringService.isConfigured()) {
+        return res.status(400).json({
+          error: "Google Cloud Monitoring not configured",
+          details: "Set GOOGLE_CLOUD_PROJECT and GOOGLE_APPLICATION_CREDENTIALS or GOOGLE_CLOUD_CREDENTIALS_JSON environment variables",
+        });
+      }
+
+      // Create sync history entry
+      const syncEntry = await storage.createSyncHistoryEntry({
+        startedAt: new Date(),
+        status: 'running',
+        metricsRequested: 3, // We request 3 metrics
+        metricsFetched: 0,
+        triggerType: 'manual',
+      });
+
+      // Perform the sync
+      const snapshot = await googleCloudMonitoringService.triggerManualSync();
+
+      // Update sync history
+      await storage.updateSyncHistoryEntry(syncEntry.id, {
+        completedAt: new Date(),
+        durationMs: Date.now() - syncEntry.startedAt.getTime(),
+        status: snapshot.syncStatus,
+        metricsFetched: snapshot.quotas.length,
+        errorMessage: snapshot.errorMessage,
+      });
+
+      res.json({
+        success: snapshot.syncStatus !== 'failed',
+        snapshot,
+        syncHistoryId: syncEntry.id,
+      });
+    } catch (error: any) {
+      console.error("[Google Quota Manual Sync] Error:", error);
+      res.status(500).json({ error: "Failed to sync Google quota data" });
+    }
+  });
+
+  // GET /api/quota/google/history - Get sync history
+  app.get("/api/quota/google/history", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      const history = await storage.getRecentSyncHistory(limit);
+      res.json({ history });
+    } catch (error: any) {
+      console.error("[Google Quota Sync History] Error:", error);
+      res.status(500).json({ error: "Failed to get sync history" });
+    }
+  });
+
+  // GET /api/quota/google/snapshots - Get historical snapshots
+  app.get("/api/quota/google/snapshots", async (req, res) => {
+    try {
+      const brandId = req.query.brandId as string | undefined;
+      const startDate = new Date(req.query.startDate as string || Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const endDate = new Date(req.query.endDate as string || Date.now());
+      const limit = parseInt(req.query.limit as string) || 100;
+
+      const snapshots = await storage.getGoogleQuotaSnapshotHistory({
+        brandId,
+        startDate,
+        endDate,
+        limit,
+      });
+
+      res.json({ snapshots });
+    } catch (error: any) {
+      console.error("[Google Quota Snapshots History] Error:", error);
+      res.status(500).json({ error: "Failed to get snapshot history" });
+    }
+  });
+
+  // Start Google Cloud Monitoring auto-sync on server startup
+  googleCloudMonitoringService.startAutoSync();
 
   const httpServer = createServer(app);
   return httpServer;

@@ -44,6 +44,7 @@ export function Header({ currentPage }: HeaderProps) {
   const activePage = currentPage || (() => {
     if (location === "/") return "studio";
     if (location === "/gallery") return "gallery";
+    if (location === "/usage") return "usage";
     if (location === "/settings" || location === "/brand-profile") return "settings";
     if (location.startsWith("/templates") || location.startsWith("/admin/templates")) return "templates";
     if (location.startsWith("/generation/")) return "generation";
@@ -53,6 +54,7 @@ export function Header({ currentPage }: HeaderProps) {
   const navItems = [
     { id: "studio", label: "Studio", href: "/" },
     { id: "gallery", label: "Gallery", href: "/gallery" },
+    { id: "usage", label: "Usage", href: "/usage" },
     { id: "settings", label: "Settings", href: "/settings" },
   ];
 

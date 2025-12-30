@@ -462,3 +462,195 @@ export type User = typeof users.$inferSelect;
 export const insertSessionSchema = createInsertSchema(sessions);
 export type InsertSession = z.infer<typeof insertSessionSchema>;
 export type Session = typeof sessions.$inferSelect;
+
+// ============================================
+// GEMINI API QUOTA MONITORING TABLES
+// ============================================
+
+/**
+ * Aggregated usage metrics by time window
+ * Stores minute/hour/day level metrics for dashboard display
+ */
+export const geminiQuotaMetrics = pgTable("gemini_quota_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+
+  // Time window
+  windowType: varchar("window_type", { length: 20 }).notNull(), // 'minute' | 'hour' | 'day'
+  windowStart: timestamp("window_start").notNull(),
+  windowEnd: timestamp("window_end").notNull(),
+
+  // Scope
+  brandId: varchar("brand_id").notNull(),
+
+  // Request metrics
+  requestCount: integer("request_count").default(0).notNull(),
+  successCount: integer("success_count").default(0).notNull(),
+  errorCount: integer("error_count").default(0).notNull(),
+  rateLimitCount: integer("rate_limit_count").default(0).notNull(),
+
+  // Token metrics
+  inputTokensTotal: integer("input_tokens_total").default(0).notNull(),
+  outputTokensTotal: integer("output_tokens_total").default(0).notNull(),
+
+  // Cost metrics (in micros USD)
+  estimatedCostMicros: integer("estimated_cost_micros").default(0).notNull(),
+
+  // Breakdown by operation
+  generateCount: integer("generate_count").default(0).notNull(),
+  editCount: integer("edit_count").default(0).notNull(),
+  analyzeCount: integer("analyze_count").default(0).notNull(),
+
+  // Breakdown by model (jsonb for flexibility)
+  modelBreakdown: jsonb("model_breakdown"), // { "gemini-3-pro-image": 10, "gemini-3-flash": 5 }
+
+  // Latency percentiles (in ms)
+  latencyP50: integer("latency_p50"),
+  latencyP90: integer("latency_p90"),
+  latencyP99: integer("latency_p99"),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  // Unique constraint on window + brand
+  uniqueWindow: unique().on(table.windowType, table.windowStart, table.brandId),
+}));
+
+/**
+ * Rate limit event log
+ * Records each time a 429 error is encountered
+ */
+export const geminiRateLimitEvents = pgTable("gemini_rate_limit_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+
+  brandId: varchar("brand_id").notNull(),
+
+  // Event details
+  operation: varchar("operation", { length: 20 }).notNull(), // 'generate' | 'edit' | 'analyze'
+  model: varchar("model", { length: 100 }).notNull(),
+
+  // Rate limit info
+  limitType: varchar("limit_type", { length: 20 }).notNull(), // 'rpm' | 'rpd' | 'tpm' | 'tpd'
+  retryAfterSeconds: integer("retry_after_seconds"),
+
+  // Context
+  endpoint: varchar("endpoint", { length: 100 }),
+  requestMetadata: jsonb("request_metadata"), // { resolution, imageCount, promptLength }
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+/**
+ * Quota alert configurations
+ * User-configurable warning thresholds
+ */
+export const geminiQuotaAlerts = pgTable("gemini_quota_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+
+  brandId: varchar("brand_id").notNull(),
+
+  // Alert configuration
+  alertType: varchar("alert_type", { length: 30 }).notNull(), // 'rpm_threshold' | 'rpd_threshold' | 'token_threshold' | 'cost_threshold'
+  thresholdValue: integer("threshold_value").notNull(), // Percent of limit (e.g., 80 for 80%)
+  isEnabled: boolean("is_enabled").default(true).notNull(),
+
+  // Last triggered
+  lastTriggeredAt: timestamp("last_triggered_at"),
+  triggerCount: integer("trigger_count").default(0).notNull(),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Quota monitoring schemas and types
+export const insertGeminiQuotaMetricsSchema = createInsertSchema(geminiQuotaMetrics).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertGeminiQuotaMetrics = z.infer<typeof insertGeminiQuotaMetricsSchema>;
+export type GeminiQuotaMetrics = typeof geminiQuotaMetrics.$inferSelect;
+
+export const insertGeminiRateLimitEventSchema = createInsertSchema(geminiRateLimitEvents).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertGeminiRateLimitEvent = z.infer<typeof insertGeminiRateLimitEventSchema>;
+export type GeminiRateLimitEvent = typeof geminiRateLimitEvents.$inferSelect;
+
+export const insertGeminiQuotaAlertSchema = createInsertSchema(geminiQuotaAlerts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertGeminiQuotaAlert = z.infer<typeof insertGeminiQuotaAlertSchema>;
+export type GeminiQuotaAlert = typeof geminiQuotaAlerts.$inferSelect;
+
+// ============================================
+// GOOGLE CLOUD MONITORING SYNC TABLES
+// ============================================
+
+/**
+ * Google Cloud Monitoring quota snapshots
+ * Stores synced data from Google Cloud Monitoring API
+ * Updated every 15 minutes via background job
+ */
+export const googleQuotaSnapshots = pgTable("google_quota_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+
+  // Sync metadata
+  syncedAt: timestamp("synced_at").notNull(),
+  nextSyncAt: timestamp("next_sync_at").notNull(),
+  syncStatus: varchar("sync_status", { length: 20 }).notNull(), // 'success' | 'partial' | 'failed'
+  errorMessage: text("error_message"),
+
+  // Google Cloud context
+  projectId: varchar("project_id", { length: 100 }).notNull(),
+  service: varchar("service", { length: 200 }).notNull(), // 'generativelanguage.googleapis.com'
+
+  // Quota data (stored as JSONB for flexibility)
+  quotas: jsonb("quotas").notNull(), // Array of { metricName, displayName, usage, limit, percentage, unit }
+
+  // For historical tracking
+  brandId: varchar("brand_id"), // Optional: scope to specific brand/tenant
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+/**
+ * Sync job history
+ * Tracks all sync attempts for debugging and audit
+ */
+export const googleQuotaSyncHistory = pgTable("google_quota_sync_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+
+  // Sync details
+  startedAt: timestamp("started_at").notNull(),
+  completedAt: timestamp("completed_at"),
+  durationMs: integer("duration_ms"),
+
+  // Status
+  status: varchar("status", { length: 20 }).notNull(), // 'running' | 'success' | 'partial' | 'failed'
+  errorMessage: text("error_message"),
+
+  // Metrics fetched
+  metricsRequested: integer("metrics_requested").default(0).notNull(),
+  metricsFetched: integer("metrics_fetched").default(0).notNull(),
+
+  // Trigger type
+  triggerType: varchar("trigger_type", { length: 20 }).notNull(), // 'scheduled' | 'manual' | 'startup'
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Google Cloud Monitoring schemas and types
+export const insertGoogleQuotaSnapshotSchema = createInsertSchema(googleQuotaSnapshots).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertGoogleQuotaSnapshot = z.infer<typeof insertGoogleQuotaSnapshotSchema>;
+export type GoogleQuotaSnapshot = typeof googleQuotaSnapshots.$inferSelect;
+
+export const insertGoogleQuotaSyncHistorySchema = createInsertSchema(googleQuotaSyncHistory).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertGoogleQuotaSyncHistory = z.infer<typeof insertGoogleQuotaSyncHistorySchema>;
+export type GoogleQuotaSyncHistory = typeof googleQuotaSyncHistory.$inferSelect;
