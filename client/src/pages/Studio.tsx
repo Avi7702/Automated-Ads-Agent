@@ -23,6 +23,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { IdeaBankPanel } from "@/components/IdeaBankPanel";
+import { LinkedInPostPreview } from "@/components/LinkedInPostPreview";
 
 // Icons
 import {
@@ -48,6 +49,7 @@ import {
   Zap,
   User,
   LogOut,
+  Eye,
 } from "lucide-react";
 
 // Types
@@ -58,6 +60,7 @@ interface CollapsedSections {
   templates: boolean;
   refine: boolean;
   copy: boolean;
+  preview: boolean;
 }
 
 // Persist collapsed state to localStorage
@@ -68,7 +71,7 @@ function getStoredCollapsedSections(): CollapsedSections {
     const stored = localStorage.getItem(COLLAPSED_SECTIONS_KEY);
     if (stored) return JSON.parse(stored);
   } catch {}
-  return { products: false, templates: false, refine: true, copy: true };
+  return { products: false, templates: false, refine: true, copy: true, preview: true };
 }
 
 function storeCollapsedSections(sections: CollapsedSections) {
@@ -310,6 +313,10 @@ export default function Studio() {
   const [askAIQuestion, setAskAIQuestion] = useState("");
   const [askAIResponse, setAskAIResponse] = useState<string | null>(null);
   const [isAskingAI, setIsAskingAI] = useState(false);
+
+  // Ad Copy state for LinkedIn Preview
+  const [generatedCopy, setGeneratedCopy] = useState<string>("");
+  const [isGeneratingCopy, setIsGeneratingCopy] = useState(false);
 
   // Selected suggestion state - for highlighting and showing near textarea
   const [selectedSuggestion, setSelectedSuggestion] = useState<{
@@ -556,6 +563,45 @@ export default function Studio() {
     }
   };
 
+  // Handle Generate Ad Copy
+  const handleGenerateCopy = async () => {
+    if (!generationId) return;
+
+    setIsGeneratingCopy(true);
+
+    try {
+      const response = await fetch("/api/copy/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: prompt || quickStartPrompt,
+          platform: "linkedin",
+          tone: "professional",
+          framework: "auto",
+          numVariations: 1,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Failed to generate copy");
+      }
+
+      // Use the first variation
+      if (data.variations && data.variations.length > 0) {
+        setGeneratedCopy(data.variations[0].copy);
+        // Auto-expand preview section
+        setCollapsedSections((prev) => ({ ...prev, preview: false }));
+      }
+    } catch (error: any) {
+      console.error("Copy generation error:", error);
+      alert(error.message || "Failed to generate copy");
+    } finally {
+      setIsGeneratingCopy(false);
+    }
+  };
+
   // Handle Ask AI
   const handleAskAI = async () => {
     if (!askAIQuestion.trim() || !generationId) return;
@@ -779,7 +825,7 @@ export default function Studio() {
               </div>
 
               {/* Action Buttons */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-4 gap-4">
                 <Button
                   variant="outline"
                   className="h-14"
@@ -795,6 +841,19 @@ export default function Studio() {
                 >
                   <MessageCircle className="w-4 h-4 mr-2" />
                   Copy
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-14"
+                  onClick={() => {
+                    toggleSection("preview");
+                    if (!generatedCopy) {
+                      handleGenerateCopy();
+                    }
+                  }}
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  Preview
                 </Button>
                 <Button variant="outline" className="h-14">
                   <Share2 className="w-4 h-4 mr-2" />
@@ -877,6 +936,84 @@ export default function Studio() {
                   {askAIResponse && (
                     <div className="p-4 rounded-xl bg-card border border-white/10">
                       <p className="text-sm whitespace-pre-wrap">{askAIResponse}</p>
+                    </div>
+                  )}
+                </div>
+              </Section>
+
+              {/* LinkedIn Preview Section */}
+              <Section
+                id="linkedin-preview"
+                title="Preview on LinkedIn"
+                subtitle={generatedCopy ? "See how your post will look" : "Generate copy first to see preview"}
+                isOpen={!collapsedSections.preview}
+                onToggle={() => toggleSection("preview")}
+              >
+                <div className="space-y-4">
+                  {!generatedCopy ? (
+                    <div className="text-center py-8">
+                      <Eye className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+                      <p className="text-muted-foreground mb-4">
+                        Generate ad copy to see how your post will look on LinkedIn
+                      </p>
+                      <Button
+                        onClick={handleGenerateCopy}
+                        disabled={isGeneratingCopy}
+                      >
+                        {isGeneratingCopy ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-4 h-4 mr-2" />
+                            Generate Ad Copy
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Editable Copy */}
+                      <div>
+                        <label className="text-sm text-muted-foreground mb-2 block">
+                          Edit your post text:
+                        </label>
+                        <Textarea
+                          value={generatedCopy}
+                          onChange={(e) => setGeneratedCopy(e.target.value)}
+                          rows={4}
+                          className="resize-none"
+                        />
+                      </div>
+
+                      {/* LinkedIn Preview */}
+                      <div className="pt-4 border-t border-white/10">
+                        <LinkedInPostPreview
+                          authorName={authUser?.email?.split("@")[0] || "Your Company"}
+                          authorHeadline="Building Products | Construction Solutions"
+                          postText={generatedCopy}
+                          imageUrl={generatedImage || undefined}
+                        />
+                      </div>
+
+                      {/* Regenerate Button */}
+                      <div className="flex justify-center">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleGenerateCopy}
+                          disabled={isGeneratingCopy}
+                        >
+                          {isGeneratingCopy ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <RefreshCw className="w-4 h-4 mr-2" />
+                          )}
+                          Regenerate Copy
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>
