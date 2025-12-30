@@ -364,11 +364,11 @@ export async function fetchGoogleQuotaSnapshot(): Promise<GoogleQuotaSnapshot> {
         syncedAt: result.syncedAt,
         nextSyncAt: result.nextSyncAt,
         syncStatus: result.syncStatus,
-        errorMessage: result.errorMessage,
+        errorMessage: result.errorMessage || null,
         projectId: result.projectId,
         service: result.service,
         quotas: result.quotas,
-        brandId: undefined, // Global snapshot
+        brandId: null, // Global snapshot
       });
     } catch (dbError) {
       console.warn('[GoogleCloudMonitoring] Failed to persist snapshot to database:', dbError);
