@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { seedBrandProfile } from "./seeds/seedBrandProfile";
 import multer from "multer";
 
 import { saveOriginalFile, saveGeneratedImage, deleteFile } from "./fileStorage";
@@ -412,6 +413,22 @@ Guidelines:
           }
         }
         // If no files in standard mode, use prompt as-is for text-only generation
+      }
+
+      // INJECT BRAND PROFILE (if available)
+      const brandProfile = await storage.getBrandProfileByUserId(req.params.userId || (req.user as any)?.id || req.session.userId);
+      if (brandProfile) {
+        console.log(`[Transform] Applying Brand Profile: ${brandProfile.brandName}`);
+        const brandContext = `
+
+BRAND GUIDELINES (${brandProfile.brandName}):
+- Visual Style: ${brandProfile.preferredStyles?.join(", ") || "Professional"}
+- Brand Values: ${brandProfile.brandValues?.join(", ") || "Reliability"}
+- Brand Colors: ${brandProfile.colorPreferences?.join(", ") || "Standard"}
+- Voice Principles: ${(brandProfile.voice as { principles?: string[] })?.principles?.join(", ") || "Professional"}
+
+Ensure the generated image aligns with these brand guidelines where possible.`;
+        enhancedPrompt += brandContext;
       }
 
       // Build user message parts
@@ -1622,6 +1639,18 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
     } catch (error: any) {
       console.error("[Update Brand Voice] Error:", error);
       res.status(500).json({ error: "Failed to update brand voice" });
+    }
+  });
+
+  // Admin: Force verification of Brand Profile Seed
+  app.post("/api/admin/seed-brand", async (req, res) => {
+    try {
+      console.log("[Admin] Force seeding brand profile...");
+      await seedBrandProfile();
+      res.json({ success: true, message: "Brand Profile seeded successfully" });
+    } catch (error: any) {
+      console.error("[Admin] Seed failed:", error);
+      res.status(500).json({ error: "Seed failed", details: error.message });
     }
   });
 
