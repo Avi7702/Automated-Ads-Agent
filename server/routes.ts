@@ -2534,12 +2534,18 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   });
 
   // Start Google Cloud Monitoring auto-sync on server startup
-  // Temporarily disabled to troubleshoot Railway 502 errors
-  // try {
-  //   googleCloudMonitoringService.startAutoSync();
-  // } catch (error) {
-  //   console.error('[GoogleCloudMonitoring] Failed to start auto-sync:', error);
-  // }
+  // Uses lazy-loading to prevent import-time errors
+  (async () => {
+    try {
+      const service = await getGoogleCloudService();
+      if (service) {
+        service.startAutoSync();
+        console.log('[GoogleCloudMonitoring] Auto-sync started');
+      }
+    } catch (error) {
+      console.error('[GoogleCloudMonitoring] Failed to start auto-sync:', error);
+    }
+  })();
 
   const httpServer = createServer(app);
   return httpServer;
