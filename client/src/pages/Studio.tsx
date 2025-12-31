@@ -28,7 +28,7 @@ import { UploadZone } from "@/components/UploadZone";
 import { HistoryTimeline } from "@/components/HistoryTimeline";
 import { SaveToCatalogDialog } from "@/components/SaveToCatalogDialog";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { Header } from "@/components/layout/Header";
 
 // Icons
 import {
@@ -49,11 +49,8 @@ import {
   Send,
   Loader2,
   History,
-  Settings,
   LayoutGrid,
   Zap,
-  User,
-  LogOut,
   Eye,
   FolderPlus,
 } from "lucide-react";
@@ -360,22 +357,6 @@ export default function Studio() {
       return res.json();
     },
     retry: false,
-  });
-
-  const demoLoginMutation = useMutation({
-    mutationFn: async () => {
-      const res = await fetch("/api/auth/demo", { credentials: "include" });
-      if (!res.ok) throw new Error("Demo login failed");
-      return res.json();
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["auth"] }),
-  });
-
-  const logoutMutation = useMutation({
-    mutationFn: async () => {
-      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["auth"] }),
   });
 
   // Fetch products
@@ -758,51 +739,7 @@ export default function Studio() {
       </div>
 
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-background/50 backdrop-blur-md">
-        <div className="container max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-              V3
-            </div>
-            <span className="font-display font-medium tracking-tight">
-              Product Content Studio
-            </span>
-          </div>
-          <nav className="flex items-center gap-6 text-sm font-medium text-muted-foreground">
-            <span className="text-foreground">Studio</span>
-            <Link href="/gallery" className="hover:text-foreground transition-colors">
-              Gallery
-            </Link>
-            <Link href="/settings" className="hover:text-foreground transition-colors">
-              <Settings className="w-4 h-4" />
-            </Link>
-            <ThemeToggle />
-            <div className="border-l border-white/10 h-5 mx-2" />
-            {authUser ? (
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-primary">{authUser.email}</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => logoutMutation.mutate()}
-                >
-                  <LogOut className="w-4 h-4" />
-                </Button>
-              </div>
-            ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => demoLoginMutation.mutate()}
-                disabled={demoLoginMutation.isPending}
-              >
-                <User className="w-4 h-4 mr-2" />
-                {demoLoginMutation.isPending ? "..." : "Demo Login"}
-              </Button>
-            )}
-          </nav>
-        </div>
-      </header>
+      <Header currentPage="studio" />
 
       {/* Context Bar */}
       <AnimatePresence>

@@ -2,8 +2,9 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { User, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface HeaderProps {
   currentPage?: "studio" | "gallery" | "settings" | "templates" | "generation";
@@ -22,15 +23,6 @@ export function Header({ currentPage }: HeaderProps) {
       return res.json();
     },
     retry: false,
-  });
-
-  const demoLoginMutation = useMutation({
-    mutationFn: async () => {
-      const res = await fetch("/api/auth/demo", { credentials: "include" });
-      if (!res.ok) throw new Error("Demo login failed");
-      return res.json();
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["auth"] }),
   });
 
   const logoutMutation = useMutation({
@@ -89,9 +81,10 @@ export function Header({ currentPage }: HeaderProps) {
           ))}
         </nav>
 
-        {/* Auth Section */}
+        {/* Actions */}
         <div className="flex items-center gap-2">
-          {authUser ? (
+          <ThemeToggle />
+          {authUser && (
             <>
               <span className="text-sm text-muted-foreground hidden sm:inline">
                 {authUser.username || "User"}
@@ -105,16 +98,6 @@ export function Header({ currentPage }: HeaderProps) {
                 <LogOut className="w-4 h-4" />
               </Button>
             </>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => demoLoginMutation.mutate()}
-              disabled={demoLoginMutation.isPending}
-            >
-              <User className="w-4 h-4 mr-2" />
-              {demoLoginMutation.isPending ? "..." : "Demo Login"}
-            </Button>
           )}
         </div>
       </div>
