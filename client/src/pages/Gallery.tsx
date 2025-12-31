@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Trash2, Edit, Calendar } from "lucide-react";
+import { Trash2, Edit, Calendar, ImageOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
@@ -13,6 +14,28 @@ interface Generation {
   generatedImagePath: string;
   resolution: string;
   createdAt: string;
+}
+
+function GalleryImage({ src, alt }: { src: string; alt: string }) {
+  const [hasError, setHasError] = useState(false);
+
+  if (hasError) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center bg-muted/50 text-muted-foreground">
+        <ImageOff className="w-12 h-12 mb-2 opacity-50" />
+        <span className="text-xs">Image unavailable</span>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+      onError={() => setHasError(true)}
+    />
+  );
 }
 
 export default function Gallery() {
@@ -88,12 +111,10 @@ export default function Gallery() {
               >
                 {/* Image */}
                 <Link href={`/generation/${gen.id}`} className="block">
-                  <div className="aspect-square overflow-hidden bg-black/50">
-                    <img
+                  <div className="aspect-square overflow-hidden bg-black/50" data-testid={`img-generation-${gen.id}`}>
+                    <GalleryImage
                       src={`/${gen.generatedImagePath}`}
                       alt={gen.prompt}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      data-testid={`img-generation-${gen.id}`}
                     />
                   </div>
                 </Link>

@@ -80,6 +80,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Serve static files from attached_assets directory
   app.use("/attached_assets", express.static(path.join(process.cwd(), "attached_assets")));
 
+  // Serve uploaded images (generations)
+  app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+
   // Apply rate limiting to API routes
   const rateLimiter = createRateLimiter({
     windowMs: 15 * 60 * 1000, // 15 minutes
