@@ -3,16 +3,11 @@ import { type Server } from "node:http";
 import express, { type Express, type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { registerRoutes } from "./routes";
+import { logger, apiLogger } from "./lib/logger";
 
 export function log(message: string, source = "express") {
-  const formattedTime = new Date().toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true,
-  });
-
-  console.log(`${formattedTime} [${source}] ${message}`);
+  // Use structured logger in production, formatted console in development
+  apiLogger.info({ source }, message);
 }
 
 export const app = express();
@@ -40,19 +35,18 @@ if (process.env.REDIS_URL) {
       client: getRedisClient(),
       prefix: 'sess:',
     });
-    log('Using Redis session store', 'session');
+    logger.info({ store: 'redis' }, 'Using Redis session store');
   } catch (error) {
-    log('Redis not available, using memory session store', 'session');
+    logger.warn({ store: 'memory', reason: 'redis_unavailable' }, 'Redis not available, using memory session store');
   }
 } else {
-  log('REDIS_URL not set, using memory session store (sessions will not persist across restarts)', 'session');
+  logger.warn({ store: 'memory', reason: 'no_redis_url' }, 'REDIS_URL not set, using memory session store');
 }
 
 // Validate session secret in production
 const sessionSecret = process.env.SESSION_SECRET;
 if (process.env.NODE_ENV === 'production' && !sessionSecret) {
-  console.warn('[SECURITY WARNING] SESSION_SECRET environment variable is not set in production!');
-  console.warn('[SECURITY WARNING] Using a random session secret. Sessions will not persist across restarts.');
+  logger.warn({ security: true }, 'SESSION_SECRET not set in production - using random secret, sessions will not persist');
 }
 // Generate a random secret if not provided (for development or fallback)
 const effectiveSessionSecret = sessionSecret || require('crypto').randomBytes(32).toString('hex');

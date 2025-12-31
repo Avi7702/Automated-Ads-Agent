@@ -52,14 +52,24 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests
-        run: npm test --if-present -- --coverage --passWithNoTests
+      - name: Run tests with coverage
+        run: npm run test:coverage
+        env:
+          CI: true
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         if: always()
         with:
           fail_ci_if_error: false
+          files: coverage/lcov.info
 
   # ============================================
   # JOB 3: Security Audit (replaces Snyk)

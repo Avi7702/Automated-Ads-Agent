@@ -44,14 +44,26 @@ export default defineConfig({
         ],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html'],
+      reporter: ['text', 'json', 'html', 'lcov'],
       exclude: [
         'node_modules/',
         'dist/',
         '**/*.d.ts',
         '**/*.config.*',
         '**/mockData',
+        'e2e/**',
+        'scripts/**',
       ],
+      // Coverage thresholds - fail if below these
+      thresholds: {
+        // Global thresholds
+        statements: 50,
+        branches: 40,
+        functions: 50,
+        lines: 50,
+        // Per-file thresholds (more lenient for now)
+        perFile: false,
+      },
     },
   },
   resolve: {
