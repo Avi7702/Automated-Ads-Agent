@@ -59,6 +59,11 @@ const genaiImage = genAI;
 const genai = genaiText;
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check endpoint (no rate limiting)
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
   // Serve static files from attached_assets directory
   app.use("/attached_assets", express.static(path.join(process.cwd(), "attached_assets")));
 
@@ -2507,7 +2512,11 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   });
 
   // Start Google Cloud Monitoring auto-sync on server startup
-  googleCloudMonitoringService.startAutoSync();
+  try {
+    googleCloudMonitoringService.startAutoSync();
+  } catch (error) {
+    console.error('[GoogleCloudMonitoring] Failed to start auto-sync:', error);
+  }
 
   const httpServer = createServer(app);
   return httpServer;
