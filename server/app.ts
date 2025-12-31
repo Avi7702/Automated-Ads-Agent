@@ -51,12 +51,15 @@ if (process.env.REDIS_URL) {
 // Validate session secret in production
 const sessionSecret = process.env.SESSION_SECRET;
 if (process.env.NODE_ENV === 'production' && !sessionSecret) {
-  throw new Error('SESSION_SECRET environment variable is required in production');
+  console.warn('[SECURITY WARNING] SESSION_SECRET environment variable is not set in production!');
+  console.warn('[SECURITY WARNING] Using a random session secret. Sessions will not persist across restarts.');
 }
+// Generate a random secret if not provided (for development or fallback)
+const effectiveSessionSecret = sessionSecret || require('crypto').randomBytes(32).toString('hex');
 
 app.use(session({
   store: sessionStore, // undefined = default memory store
-  secret: sessionSecret || 'dev-secret-for-local-development-only',
+  secret: effectiveSessionSecret,
   resave: false,
   saveUninitialized: false,
   cookie: {
