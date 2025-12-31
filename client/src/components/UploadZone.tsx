@@ -15,7 +15,8 @@ interface UploadZoneProps {
  * UploadZone Component
  *
  * Allows users to drag-and-drop or select images for generation.
- * Images are analyzed with AI and descriptions can be edited inline.
+ * Images are analyzed with AI. Click to select for use in generation.
+ * Description shows on hover.
  */
 export function UploadZone({
   uploads,
@@ -80,6 +81,7 @@ export function UploadZone({
       description: null,
       confidence: 0,
       status: "analyzing" as const,
+      selected: false,
     }));
 
     // Add them immediately (with analyzing status)
@@ -165,6 +167,15 @@ export function UploadZone({
     onUploadsChange(uploads.filter((u) => u.id !== id));
   };
 
+  // Handle selection toggle
+  const handleToggleSelect = (id: string) => {
+    onUploadsChange(
+      uploads.map((u) =>
+        u.id === id ? { ...u, selected: !u.selected } : u
+      )
+    );
+  };
+
   // Handle edit
   const startEdit = (upload: AnalyzedUpload, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -197,6 +208,7 @@ export function UploadZone({
   }, []);
 
   const canAddMore = uploads.length < maxFiles && !disabled;
+  const selectedCount = uploads.filter(u => u.selected).length;
 
   return (
     <div className="space-y-4">
@@ -206,19 +218,28 @@ export function UploadZone({
           {uploads.map((upload) => {
             const isHighConfidence = upload.confidence >= AUTO_CONFIRM_THRESHOLD;
             const isEditing = editingId === upload.id;
+            const isSelected = upload.selected;
+            const isConfirmed = upload.status === "confirmed";
 
             return (
               <div
                 key={upload.id}
+                onClick={() => isConfirmed && !isEditing && handleToggleSelect(upload.id)}
                 className={cn(
-                  "relative aspect-square rounded-xl overflow-hidden border-2 transition-all group",
-                  "border-purple-500 ring-2 ring-purple-500/20"
+                  "relative aspect-square rounded-xl overflow-hidden border-2 transition-all group cursor-pointer",
+                  isSelected
+                    ? "border-primary ring-2 ring-primary/30"
+                    : "border-purple-500/30 hover:border-purple-500/60"
                 )}
               >
                 <img
                   src={upload.previewUrl}
                   alt={upload.description || "Upload"}
-                  className="w-full h-full object-cover"
+                  className={cn(
+                    "w-full h-full object-cover transition-all",
+                    isSelected && "brightness-100",
+                    !isSelected && "brightness-90 group-hover:brightness-100"
+                  )}
                 />
 
                 {/* Analyzing overlay */}
@@ -229,8 +250,8 @@ export function UploadZone({
                   </div>
                 )}
 
-                {/* Confidence badge */}
-                {upload.status === "confirmed" && (
+                {/* Confidence badge - top left */}
+                {isConfirmed && (
                   <div className="absolute top-1 left-1">
                     {isHighConfidence ? (
                       <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-green-500/90 text-white text-[10px] font-medium">
@@ -246,41 +267,76 @@ export function UploadZone({
                   </div>
                 )}
 
-                {/* Remove button */}
-                <button
-                  onClick={(e) => handleRemove(upload.id, e)}
-                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 hover:bg-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <X className="w-3 h-3 text-white" />
-                </button>
+                {/* Selected checkmark - top right when selected */}
+                {isSelected && (
+                  <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                    <Check className="w-3 h-3 text-white" />
+                  </div>
+                )}
 
-                {/* Bottom label with description */}
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                  {isEditing ? (
-                    <input
-                      type="text"
+                {/* Remove button - only on hover when NOT selected */}
+                {!isSelected && (
+                  <button
+                    onClick={(e) => handleRemove(upload.id, e)}
+                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 hover:bg-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="w-3 h-3 text-white" />
+                  </button>
+                )}
+
+                {/* Hover overlay with description */}
+                {isConfirmed && !isEditing && (
+                  <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-2">
+                    <p className="text-white text-xs text-center line-clamp-3 mb-2">
+                      {upload.description || "No description"}
+                    </p>
+                    <button
+                      onClick={(e) => startEdit(upload, e)}
+                      className="flex items-center gap-1 text-[10px] text-purple-300 hover:text-white transition-colors"
+                    >
+                      <Pencil className="w-2.5 h-2.5" />
+                      Edit
+                    </button>
+                    <p className="text-[10px] text-white/60 mt-2">
+                      {isSelected ? "Click to deselect" : "Click to select"}
+                    </p>
+                  </div>
+                )}
+
+                {/* Editing mode */}
+                {isEditing && (
+                  <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center p-2">
+                    <textarea
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
-                      onBlur={saveEdit}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") saveEdit();
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          saveEdit();
+                        }
                         if (e.key === "Escape") cancelEdit();
                       }}
-                      className="w-full text-xs text-white bg-transparent border-b border-white/50 focus:outline-none focus:border-white"
+                      className="w-full text-xs text-white bg-white/10 border border-white/30 rounded p-2 focus:outline-none focus:border-white resize-none"
+                      rows={3}
                       autoFocus
                       onClick={(e) => e.stopPropagation()}
                     />
-                  ) : (
-                    <p
-                      className="text-white text-xs truncate cursor-pointer hover:text-purple-300 flex items-center gap-1"
-                      onClick={(e) => startEdit(upload, e)}
-                      title={upload.description || "Click to edit"}
-                    >
-                      <span className="truncate">{upload.description || "Uploaded image"}</span>
-                      <Pencil className="w-2.5 h-2.5 flex-shrink-0 opacity-0 group-hover:opacity-100" />
-                    </p>
-                  )}
-                </div>
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); saveEdit(); }}
+                        className="px-2 py-1 text-[10px] bg-primary text-white rounded hover:bg-primary/80"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); cancelEdit(); }}
+                        className="px-2 py-1 text-[10px] bg-white/20 text-white rounded hover:bg-white/30"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -352,10 +408,16 @@ export function UploadZone({
         </div>
       )}
 
-      {/* File count when uploads exist */}
+      {/* File count and selection info */}
       {uploads.length > 0 && (
         <p className="text-xs text-muted-foreground">
-          {uploads.length} of {maxFiles} images • AI-analyzed for IdeaBank suggestions
+          {uploads.length} of {maxFiles} images
+          {selectedCount > 0 && (
+            <span className="text-primary font-medium"> • {selectedCount} selected for generation</span>
+          )}
+          {selectedCount === 0 && uploads.some(u => u.status === "confirmed") && (
+            <span> • Click images to select for IdeaBank</span>
+          )}
         </p>
       )}
     </div>

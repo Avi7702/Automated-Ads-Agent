@@ -23,6 +23,9 @@ export interface AnalyzedUpload {
 
   /** UI state: whether user is currently editing the description */
   isEditing?: boolean;
+
+  /** Whether this upload is selected for generation */
+  selected?: boolean;
 }
 
 /** Threshold for auto-confirming high-confidence analyses */

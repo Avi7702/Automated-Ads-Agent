@@ -216,16 +216,16 @@ export function IdeaBankPanel({
   const [error, setError] = useState<string | null>(null);
   const [legacyMode, setLegacyMode] = useState(false);
 
-  // Get confirmed uploads with descriptions
-  const confirmedUploads = tempUploads.filter(u => u.status === "confirmed" && u.description);
+  // Get SELECTED uploads with descriptions (user must click to select)
+  const selectedUploads = tempUploads.filter(u => u.selected && u.status === "confirmed" && u.description);
   const analyzingCount = tempUploads.filter(u => u.status === "analyzing").length;
 
-  // Fetch suggestions when products or confirmed uploads change
+  // Fetch suggestions when products or SELECTED uploads change
   useEffect(() => {
     const hasProducts = selectedProducts.length > 0;
-    const hasConfirmedUploads = confirmedUploads.length > 0;
+    const hasSelectedUploads = selectedUploads.length > 0;
 
-    if (hasProducts || hasConfirmedUploads) {
+    if (hasProducts || hasSelectedUploads) {
       fetchSuggestions();
     } else {
       setResponse(null);
@@ -233,15 +233,15 @@ export function IdeaBankPanel({
     }
   }, [
     selectedProducts.map(p => p.id).join(","),
-    confirmedUploads.map(u => u.description).join(","),
+    selectedUploads.map(u => u.description).join(","),
   ]);
 
   const fetchSuggestions = async () => {
     setLoading(true);
     setError(null);
 
-    // Prepare upload descriptions for the request
-    const uploadDescriptions = confirmedUploads
+    // Prepare upload descriptions for the request (only SELECTED uploads)
+    const uploadDescriptions = selectedUploads
       .map(u => u.description)
       .filter((d): d is string => !!d);
 
@@ -340,8 +340,8 @@ export function IdeaBankPanel({
     }
   };
 
-  // Show panel if there are products OR confirmed uploads
-  const hasContent = selectedProducts.length > 0 || confirmedUploads.length > 0;
+  // Show panel if there are products OR selected uploads
+  const hasContent = selectedProducts.length > 0 || selectedUploads.length > 0;
   const hasAnalyzing = analyzingCount > 0;
 
   if (!hasContent && !hasAnalyzing) {
@@ -386,10 +386,10 @@ export function IdeaBankPanel({
             {selectedProducts.length} {selectedProducts.length === 1 ? 'product' : 'products'}
           </span>
         )}
-        {confirmedUploads.length > 0 && (
+        {selectedUploads.length > 0 && (
           <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-purple-500/10 border border-purple-500/20">
             <Upload className="w-3 h-3 text-purple-500" />
-            {confirmedUploads.length} {confirmedUploads.length === 1 ? 'upload' : 'uploads'}
+            {selectedUploads.length} {selectedUploads.length === 1 ? 'upload' : 'uploads'}
           </span>
         )}
         {analyzingCount > 0 && (
