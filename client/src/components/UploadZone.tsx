@@ -1,6 +1,6 @@
 import { useCallback, useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { Upload, X, ImageIcon, AlertCircle, Loader2, Check, AlertTriangle, Pencil } from "lucide-react";
+import { Upload, X, Loader2, Check, AlertTriangle, Pencil } from "lucide-react";
 import type { AnalyzedUpload, ImageAnalysisResponse } from "@/types/analyzedUpload";
 import { AUTO_CONFIRM_THRESHOLD } from "@/types/analyzedUpload";
 
@@ -14,10 +14,8 @@ interface UploadZoneProps {
 /**
  * UploadZone Component
  *
- * Allows users to drag-and-drop or select temporary images for one-time generation.
- * These images are NOT saved to the product catalog.
- *
- * New in Phase 9: Automatically analyzes uploads with AI and shows inline editable descriptions.
+ * Allows users to drag-and-drop or select images for generation.
+ * Images are analyzed with AI and descriptions can be edited inline.
  */
 export function UploadZone({
   uploads,
@@ -27,6 +25,8 @@ export function UploadZone({
 }: UploadZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
 
   // Generate unique ID
   const generateId = () => `upload-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -91,8 +91,7 @@ export function UploadZone({
       newUploads.map((upload) => analyzeImage(upload))
     );
 
-    // Update with analysis results - merge analyzed uploads into current state
-    // Note: We need to work with the latest uploads state, which we track via the updatedUploads reference
+    // Update with analysis results
     const finalUploads = updatedUploads.map((u) => {
       const analyzed = analyzedUploads.find((a) => a.id === u.id);
       return analyzed || u;
@@ -157,7 +156,8 @@ export function UploadZone({
   };
 
   // Handle remove
-  const handleRemove = (id: string) => {
+  const handleRemove = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     const upload = uploads.find((u) => u.id === id);
     if (upload) {
       URL.revokeObjectURL(upload.previewUrl);
@@ -165,20 +165,28 @@ export function UploadZone({
     onUploadsChange(uploads.filter((u) => u.id !== id));
   };
 
-  // Handle description edit
-  const handleDescriptionChange = (id: string, description: string) => {
-    onUploadsChange(
-      uploads.map((u) =>
-        u.id === id ? { ...u, description, isEditing: false } : u
-      )
-    );
+  // Handle edit
+  const startEdit = (upload: AnalyzedUpload, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingId(upload.id);
+    setEditValue(upload.description || "");
   };
 
-  // Toggle edit mode
-  const toggleEdit = (id: string, isEditing: boolean) => {
-    onUploadsChange(
-      uploads.map((u) => (u.id === id ? { ...u, isEditing } : u))
-    );
+  const saveEdit = () => {
+    if (editingId) {
+      onUploadsChange(
+        uploads.map((u) =>
+          u.id === editingId ? { ...u, description: editValue.trim() || "Image" } : u
+        )
+      );
+      setEditingId(null);
+      setEditValue("");
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditValue("");
   };
 
   // Cleanup object URLs on unmount
@@ -191,71 +199,101 @@ export function UploadZone({
   const canAddMore = uploads.length < maxFiles && !disabled;
 
   return (
-    <div className="space-y-3">
-      {/* Drop Zone */}
-      <div
-        onDragEnter={handleDragEnter}
-        onDragLeave={handleDragLeave}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-        onClick={handleClick}
-        className={cn(
-          "relative border-2 border-dashed rounded-xl p-6 transition-all text-center cursor-pointer",
-          isDragging
-            ? "border-primary bg-primary/10"
-            : canAddMore
-            ? "border-border hover:border-primary/50"
-            : "border-border opacity-50 cursor-not-allowed",
-        )}
-      >
-        <input
-          type="file"
-          ref={fileInputRef}
-          accept="image/*"
-          multiple
-          onChange={handleFileSelect}
-          className="hidden"
-          data-testid="input-file-upload"
-        />
-
-        <div className="flex flex-col items-center gap-2">
-          <Upload className={cn(
-            "w-8 h-8",
-            isDragging ? "text-primary" : "text-muted-foreground"
-          )} />
-          <div>
-            <p className="text-sm font-medium">
-              {isDragging ? "Drop images here" : "Drag & drop images"}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              or click to browse • Max {maxFiles} images
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Warning notice */}
-      <div className="flex items-center gap-2 text-xs text-amber-500/80">
-        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-        <span>These images are temporary and won't be saved to your catalog</span>
-      </div>
-
-      {/* Uploaded Files Preview - With Analysis */}
+    <div className="space-y-4">
+      {/* Image Grid - matches product grid style */}
       {uploads.length > 0 && (
-        <div className="space-y-2">
-          {uploads.map((upload) => (
-            <UploadCard
-              key={upload.id}
-              upload={upload}
-              onRemove={() => handleRemove(upload.id)}
-              onDescriptionChange={(desc) => handleDescriptionChange(upload.id, desc)}
-              onToggleEdit={(editing) => toggleEdit(upload.id, editing)}
-            />
-          ))}
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+          {uploads.map((upload) => {
+            const isHighConfidence = upload.confidence >= AUTO_CONFIRM_THRESHOLD;
+            const isEditing = editingId === upload.id;
 
-          {/* Add more button */}
+            return (
+              <div
+                key={upload.id}
+                className={cn(
+                  "relative aspect-square rounded-xl overflow-hidden border-2 transition-all group",
+                  "border-purple-500 ring-2 ring-purple-500/20"
+                )}
+              >
+                <img
+                  src={upload.previewUrl}
+                  alt={upload.description || "Upload"}
+                  className="w-full h-full object-cover"
+                />
+
+                {/* Analyzing overlay */}
+                {upload.status === "analyzing" && (
+                  <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center">
+                    <Loader2 className="w-6 h-6 text-white animate-spin mb-2" />
+                    <span className="text-xs text-white">Analyzing...</span>
+                  </div>
+                )}
+
+                {/* Confidence badge */}
+                {upload.status === "confirmed" && (
+                  <div className="absolute top-1 left-1">
+                    {isHighConfidence ? (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-green-500/90 text-white text-[10px] font-medium">
+                        <Check className="w-2.5 h-2.5" />
+                        {upload.confidence}%
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/90 text-white text-[10px] font-medium">
+                        <AlertTriangle className="w-2.5 h-2.5" />
+                        {upload.confidence}%
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Remove button */}
+                <button
+                  onClick={(e) => handleRemove(upload.id, e)}
+                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 hover:bg-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="w-3 h-3 text-white" />
+                </button>
+
+                {/* Bottom label with description */}
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      onBlur={saveEdit}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") saveEdit();
+                        if (e.key === "Escape") cancelEdit();
+                      }}
+                      className="w-full text-xs text-white bg-transparent border-b border-white/50 focus:outline-none focus:border-white"
+                      autoFocus
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  ) : (
+                    <p
+                      className="text-white text-xs truncate cursor-pointer hover:text-purple-300 flex items-center gap-1"
+                      onClick={(e) => startEdit(upload, e)}
+                      title={upload.description || "Click to edit"}
+                    >
+                      <span className="truncate">{upload.description || "Uploaded image"}</span>
+                      <Pencil className="w-2.5 h-2.5 flex-shrink-0 opacity-0 group-hover:opacity-100" />
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Add more button - styled like an empty product slot */}
           {canAddMore && (
-            <label className="flex items-center justify-center gap-2 py-2 px-4 rounded-lg border-2 border-dashed border-border cursor-pointer hover:border-primary/50 transition-colors">
+            <label
+              className={cn(
+                "aspect-square rounded-xl border-2 border-dashed transition-all cursor-pointer",
+                "border-border hover:border-purple-500/50 hover:bg-purple-500/5",
+                "flex flex-col items-center justify-center gap-2"
+              )}
+            >
               <input
                 type="file"
                 accept="image/*"
@@ -263,140 +301,63 @@ export function UploadZone({
                 onChange={handleFileSelect}
                 className="hidden"
               />
-              <ImageIcon className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Add more images</span>
+              <Upload className="w-6 h-6 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Add more</span>
             </label>
           )}
         </div>
       )}
 
-      {/* File count */}
+      {/* Drop Zone - only shown when no uploads */}
+      {uploads.length === 0 && (
+        <div
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          onClick={handleClick}
+          className={cn(
+            "relative border-2 border-dashed rounded-xl p-8 transition-all text-center cursor-pointer",
+            isDragging
+              ? "border-purple-500 bg-purple-500/10"
+              : canAddMore
+              ? "border-border hover:border-purple-500/50"
+              : "border-border opacity-50 cursor-not-allowed",
+          )}
+        >
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept="image/*"
+            multiple
+            onChange={handleFileSelect}
+            className="hidden"
+            data-testid="input-file-upload"
+          />
+
+          <div className="flex flex-col items-center gap-2">
+            <Upload className={cn(
+              "w-10 h-10",
+              isDragging ? "text-purple-500" : "text-muted-foreground"
+            )} />
+            <div>
+              <p className="text-sm font-medium">
+                {isDragging ? "Drop images here" : "Drag & drop images"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                or click to browse • Max {maxFiles} images
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* File count when uploads exist */}
       {uploads.length > 0 && (
         <p className="text-xs text-muted-foreground">
-          {uploads.length} of {maxFiles} images uploaded
+          {uploads.length} of {maxFiles} images • AI-analyzed for IdeaBank suggestions
         </p>
       )}
-    </div>
-  );
-}
-
-/**
- * Individual upload card with inline editing
- */
-interface UploadCardProps {
-  upload: AnalyzedUpload;
-  onRemove: () => void;
-  onDescriptionChange: (description: string) => void;
-  onToggleEdit: (isEditing: boolean) => void;
-}
-
-function UploadCard({ upload, onRemove, onDescriptionChange, onToggleEdit }: UploadCardProps) {
-  const [editValue, setEditValue] = useState(upload.description || "");
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  // Focus input when entering edit mode
-  useEffect(() => {
-    if (upload.isEditing && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
-    }
-  }, [upload.isEditing]);
-
-  // Update edit value when description changes externally
-  useEffect(() => {
-    setEditValue(upload.description || "");
-  }, [upload.description]);
-
-  const handleSave = () => {
-    onDescriptionChange(editValue.trim() || upload.description || "Image");
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleSave();
-    } else if (e.key === "Escape") {
-      setEditValue(upload.description || "");
-      onToggleEdit(false);
-    }
-  };
-
-  const isHighConfidence = upload.confidence >= AUTO_CONFIRM_THRESHOLD;
-
-  return (
-    <div className="flex items-start gap-3 p-2 rounded-lg border border-border bg-card/50">
-      {/* Thumbnail */}
-      <div className="relative flex-shrink-0 w-16 h-16 rounded-md overflow-hidden">
-        <img
-          src={upload.previewUrl}
-          alt="Upload preview"
-          className="w-full h-full object-cover"
-        />
-
-        {/* Status overlay */}
-        {upload.status === "analyzing" && (
-          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-            <Loader2 className="w-5 h-5 text-white animate-spin" />
-          </div>
-        )}
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        {upload.status === "analyzing" ? (
-          <p className="text-sm text-muted-foreground">Analyzing image...</p>
-        ) : upload.isEditing ? (
-          <div className="flex items-center gap-2">
-            <input
-              ref={inputRef}
-              type="text"
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              onBlur={handleSave}
-              onKeyDown={handleKeyDown}
-              className="flex-1 text-sm bg-transparent border-b border-primary focus:outline-none"
-              placeholder="Describe this image..."
-            />
-          </div>
-        ) : (
-          <div className="space-y-1">
-            {/* Confidence badge */}
-            <div className="flex items-center gap-1.5">
-              {isHighConfidence ? (
-                <span className="inline-flex items-center gap-1 text-xs text-green-500">
-                  <Check className="w-3 h-3" />
-                  {upload.confidence}%
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 text-xs text-amber-500">
-                  <AlertTriangle className="w-3 h-3" />
-                  {upload.confidence}%
-                </span>
-              )}
-              {!isHighConfidence && (
-                <span className="text-xs text-muted-foreground">Review suggested</span>
-              )}
-            </div>
-
-            {/* Description */}
-            <p
-              className="text-sm text-foreground line-clamp-2 cursor-pointer hover:text-primary group flex items-start gap-1"
-              onClick={() => onToggleEdit(true)}
-            >
-              <span className="flex-1">"{upload.description}"</span>
-              <Pencil className="w-3 h-3 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Remove button */}
-      <button
-        onClick={onRemove}
-        className="flex-shrink-0 p-1 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-        title="Remove image"
-      >
-        <X className="w-4 h-4" />
-      </button>
     </div>
   );
 }

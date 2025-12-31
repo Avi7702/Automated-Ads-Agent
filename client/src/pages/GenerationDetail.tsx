@@ -248,11 +248,11 @@ export default function GenerationDetail() {
             </div>
           )}
 
-          <div className="relative aspect-square rounded-3xl overflow-hidden border border-border bg-black shadow-2xl">
+          <div className="relative w-full max-w-3xl mx-auto rounded-3xl overflow-hidden border border-border bg-black shadow-2xl">
             <img
               src={generation.generatedImagePath.startsWith("http") ? generation.generatedImagePath : `/${generation.generatedImagePath}`}
               alt={generation.prompt}
-              className="w-full h-full object-contain"
+              className="w-full h-auto block"
               data-testid="img-generated-full"
             />
           </div>

@@ -677,15 +677,27 @@ export default function Studio() {
     setIsGeneratingCopy(true);
 
     try {
+      // Build product info from selected products or prompt
+      const productName = selectedProducts.length > 0
+        ? selectedProducts.map(p => p.name).join(", ")
+        : "Product";
+      const productDescription = selectedProducts.length > 0
+        ? selectedProducts.map(p => p.description || p.name).join(". ")
+        : (prompt || quickStartPrompt || "Professional product for marketing");
+
       const response = await fetch("/api/copy/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
-          prompt: prompt || quickStartPrompt,
-          platform: "linkedin",
+          generationId,
+          platform: platform.toLowerCase() as "linkedin" | "instagram" | "facebook" | "twitter" | "tiktok",
           tone: "professional",
+          productName: productName.slice(0, 100), // Max 100 chars
+          productDescription: productDescription.slice(0, 500), // Max 500 chars
+          industry: "Building Products", // Default industry
           framework: "auto",
-          numVariations: 1,
+          variations: 1,
         }),
       });
 
