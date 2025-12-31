@@ -72,7 +72,11 @@ export default function GenerationDetail() {
   const handleDownload = () => {
     if (!generation) return;
     const link = document.createElement("a");
-    link.href = `/${generation.generatedImagePath}`;
+    // Handle both Cloudinary URLs and local paths
+    const imageUrl = generation.generatedImagePath.startsWith("http")
+      ? generation.generatedImagePath
+      : `/${generation.generatedImagePath}`;
+    link.href = imageUrl;
     link.download = `product-content-${generation.id}.png`;
     document.body.appendChild(link);
     link.click();
@@ -246,7 +250,7 @@ export default function GenerationDetail() {
 
           <div className="relative aspect-square rounded-3xl overflow-hidden border border-border bg-black shadow-2xl">
             <img
-              src={`/${generation.generatedImagePath}`}
+              src={generation.generatedImagePath.startsWith("http") ? generation.generatedImagePath : `/${generation.generatedImagePath}`}
               alt={generation.prompt}
               className="w-full h-full object-contain"
               data-testid="img-generated-full"

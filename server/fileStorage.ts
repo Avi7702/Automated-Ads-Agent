@@ -1,10 +1,29 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
+import { v2 as cloudinary } from "cloudinary";
 
 const STORAGE_BASE = path.join(process.cwd(), "attached_assets", "generations");
 const ORIGINALS_DIR = path.join(STORAGE_BASE, "originals");
 const RESULTS_DIR = path.join(STORAGE_BASE, "results");
+
+// Configure Cloudinary if credentials are available
+const isCloudinaryConfigured = !!(
+  process.env.CLOUDINARY_CLOUD_NAME &&
+  process.env.CLOUDINARY_API_KEY &&
+  process.env.CLOUDINARY_API_SECRET
+);
+
+if (isCloudinaryConfigured) {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+  console.log("[fileStorage] Cloudinary configured for persistent storage");
+} else {
+  console.warn("[fileStorage] Cloudinary not configured - using local storage (images will be lost on deploy)");
+}
 
 async function ensureDirectories() {
   await fs.mkdir(ORIGINALS_DIR, { recursive: true });
@@ -58,13 +77,44 @@ export async function saveOriginalFile(
 }
 
 /**
- * Save a generated image (base64) to disk
- * @returns Relative path to the saved file
+ * Save a generated image (base64) to Cloudinary or local disk
+ * @returns URL (Cloudinary) or relative path (local) to the saved file
  */
 export async function saveGeneratedImage(
   base64Data: string,
   format: string = "png"
 ): Promise<string> {
+  // Remove data URL prefix if present
+  const base64Image = base64Data.replace(/^data:image\/\w+;base64,/, "");
+
+  // Use Cloudinary if configured (persistent storage)
+  if (isCloudinaryConfigured) {
+    try {
+      const uploadResult = await new Promise<any>((resolve, reject) => {
+        cloudinary.uploader.upload(
+          `data:image/${format};base64,${base64Image}`,
+          {
+            folder: "generations/results",
+            resource_type: "image",
+            format: format,
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+      });
+
+      console.log(`[fileStorage] Uploaded to Cloudinary: ${uploadResult.public_id}`);
+      // Return the secure URL for the image
+      return uploadResult.secure_url;
+    } catch (error) {
+      console.error("[fileStorage] Cloudinary upload failed, falling back to local:", error);
+      // Fall through to local storage
+    }
+  }
+
+  // Fallback: Local storage (for development or if Cloudinary fails)
   await ensureDirectories();
 
   // Sanitize format to prevent injection
@@ -77,10 +127,7 @@ export async function saveGeneratedImage(
     throw new Error('Invalid file path');
   }
 
-  // Remove data URL prefix if present
-  const base64Image = base64Data.replace(/^data:image\/\w+;base64,/, "");
   const buffer = Buffer.from(base64Image, "base64");
-
   await fs.writeFile(filepath, buffer);
 
   // Return relative path from project root
@@ -88,21 +135,53 @@ export async function saveGeneratedImage(
 }
 
 /**
- * Delete a file from disk
+ * Delete a file from Cloudinary or local disk
+ * @param pathOrUrl - Cloudinary URL or relative local path
  */
-export async function deleteFile(relativePath: string): Promise<void> {
-  const filepath = path.join(process.cwd(), relativePath);
+export async function deleteFile(pathOrUrl: string): Promise<void> {
+  // Check if this is a Cloudinary URL
+  if (pathOrUrl.startsWith("https://res.cloudinary.com/")) {
+    if (!isCloudinaryConfigured) {
+      console.warn("[fileStorage] Cannot delete Cloudinary file - not configured");
+      return;
+    }
+
+    try {
+      // Extract public_id from Cloudinary URL
+      // URL format: https://res.cloudinary.com/{cloud}/image/upload/{version}/{folder}/{public_id}.{format}
+      const urlParts = pathOrUrl.split("/");
+      const filename = urlParts[urlParts.length - 1];
+      const publicIdWithExt = urlParts.slice(-2).join("/"); // e.g., "generations/results/abc123.png"
+      const publicId = publicIdWithExt.replace(/\.[^/.]+$/, ""); // Remove extension
+
+      await new Promise<void>((resolve, reject) => {
+        cloudinary.uploader.destroy(publicId, { resource_type: "image" }, (error, result) => {
+          if (error) reject(error);
+          else {
+            console.log(`[fileStorage] Deleted from Cloudinary: ${publicId}`);
+            resolve();
+          }
+        });
+      });
+    } catch (error) {
+      console.error(`[fileStorage] Failed to delete from Cloudinary: ${pathOrUrl}`, error);
+    }
+    return;
+  }
+
+  // Local file deletion
+  const filepath = path.join(process.cwd(), pathOrUrl);
 
   // Verify the path is within the storage directory
   if (!isPathSafe(STORAGE_BASE, filepath)) {
-    console.error(`[fileStorage] Attempted path traversal: ${relativePath}`);
+    console.error(`[fileStorage] Attempted path traversal: ${pathOrUrl}`);
     throw new Error('Invalid file path');
   }
 
   try {
     await fs.unlink(filepath);
   } catch (error) {
-    console.error(`Failed to delete file ${relativePath}:`, error);
+    console.error(`Failed to delete file ${pathOrUrl}:`, error);
   }
 }
 

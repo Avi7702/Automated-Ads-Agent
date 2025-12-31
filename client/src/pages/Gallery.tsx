@@ -113,7 +113,7 @@ export default function Gallery() {
                 <Link href={`/generation/${gen.id}`} className="block">
                   <div className="aspect-square overflow-hidden bg-muted" data-testid={`img-generation-${gen.id}`}>
                     <GalleryImage
-                      src={`/${gen.generatedImagePath}`}
+                      src={gen.generatedImagePath.startsWith("http") ? gen.generatedImagePath : `/${gen.generatedImagePath}`}
                       alt={gen.prompt}
                     />
                   </div>

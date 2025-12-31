@@ -624,10 +624,10 @@ Ensure the generated image aligns with these brand guidelines where possible.`;
 
         success = true;
 
-        // Return the file path for the frontend to use
+        // Return the file path or Cloudinary URL for the frontend to use
         res.json({
           success: true,
-          imageUrl: `/${generatedImagePath}`,
+          imageUrl: generatedImagePath.startsWith("http") ? generatedImagePath : `/${generatedImagePath}`,
           generationId: generation.id,
           prompt: prompt,
           canEdit: true,
@@ -942,7 +942,7 @@ Ensure the generated image aligns with these brand guidelines where possible.`;
       return res.json({
         success: true,
         generationId: newGeneration.id,
-        imageUrl: `/${generatedImagePath}`,
+        imageUrl: generatedImagePath.startsWith("http") ? generatedImagePath : `/${generatedImagePath}`,
         parentId: parentGeneration.id,
         canEdit: true
       });

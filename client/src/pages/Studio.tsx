@@ -680,7 +680,11 @@ export default function Studio() {
 
   // Handle loading a generation from history
   const handleLoadFromHistory = (generation: any) => {
-    setGeneratedImage(generation.generatedImagePath);
+    // Handle both Cloudinary URLs and local paths
+    const imagePath = generation.generatedImagePath?.startsWith("http")
+      ? generation.generatedImagePath
+      : `/${generation.generatedImagePath}`;
+    setGeneratedImage(imagePath);
     setGenerationId(generation.id);
     setPrompt(generation.prompt || "");
     setState("result");

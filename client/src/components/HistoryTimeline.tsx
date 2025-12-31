@@ -168,7 +168,7 @@ export function HistoryTimeline({
               >
                 {/* Thumbnail */}
                 <img
-                  src={generation.generatedImagePath}
+                  src={generation.generatedImagePath?.startsWith("http") ? generation.generatedImagePath : `/${generation.generatedImagePath}`}
                   alt={generation.prompt?.slice(0, 30) || "Generated"}
                   className="w-full h-full object-cover"
                   loading="lazy"
