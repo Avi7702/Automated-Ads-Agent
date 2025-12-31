@@ -16,9 +16,11 @@ const execAsync = promisify(exec);
 export async function pushSchema() {
     try {
         console.log("[db] Pushing schema to database...");
-        // We use drizzle-kit push command. 
+        // We use drizzle-kit push command with --force to skip interactive confirmation.
         // This requires drizzle.config.ts to be present and correct.
-        const { stdout, stderr } = await execAsync("npx drizzle-kit push");
+        const { stdout, stderr } = await execAsync("npx drizzle-kit push --force", {
+            timeout: 60000, // 60 second timeout
+        });
         console.log("[db] Schema push output:", stdout);
         if (stderr) console.error("[db] Schema push stderr:", stderr);
         console.log("[db] Schema push completed successfully");
