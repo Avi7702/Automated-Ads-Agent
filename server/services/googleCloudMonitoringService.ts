@@ -16,8 +16,22 @@
  */
 
 import { storage } from "../storage";
-import pkg from "jsonwebtoken";
-const { sign: jwtSign } = pkg;
+
+// Lazy-load jsonwebtoken to prevent import errors from crashing the server
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let jwtSign: any = null;
+
+async function ensureJwtLoaded(): Promise<void> {
+  if (!jwtSign) {
+    try {
+      const pkg = await import("jsonwebtoken");
+      jwtSign = pkg.default?.sign || pkg.sign;
+    } catch (error) {
+      console.error('[GoogleCloudMonitoring] Failed to load jsonwebtoken:', error);
+      throw new Error('jsonwebtoken module not available');
+    }
+  }
+}
 
 // Types for Cloud Monitoring API responses
 interface TimeSeriesPoint {
@@ -171,6 +185,12 @@ async function getAccessTokenFromServiceAccount(credentials: {
   private_key: string;
   token_uri?: string;
 }): Promise<string> {
+  // Ensure jsonwebtoken is loaded
+  await ensureJwtLoaded();
+  if (!jwtSign) {
+    throw new Error('jsonwebtoken not available');
+  }
+
   const now = Math.floor(Date.now() / 1000);
   const payload = {
     iss: credentials.client_email,
