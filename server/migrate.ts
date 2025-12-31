@@ -14,9 +14,15 @@ import { promisify } from "util";
 const execAsync = promisify(exec);
 
 export async function pushSchema() {
-    // Skip schema push if SKIP_SCHEMA_PUSH is set (useful for faster deploys after initial setup)
-    if (process.env.SKIP_SCHEMA_PUSH === 'true') {
-        console.log("[db] Schema push skipped (SKIP_SCHEMA_PUSH=true)");
+    // Skip schema push by default in production (tables should already exist)
+    // Set FORCE_SCHEMA_PUSH=true to run schema push in production
+    const isProduction = process.env.NODE_ENV === 'production';
+    const skipSchemaPush = process.env.SKIP_SCHEMA_PUSH === 'true';
+    const forceSchemaPush = process.env.FORCE_SCHEMA_PUSH === 'true';
+
+    if (skipSchemaPush || (isProduction && !forceSchemaPush)) {
+        console.log("[db] Schema push skipped - tables should already exist");
+        console.log("[db] Set FORCE_SCHEMA_PUSH=true to run schema push");
         return;
     }
 
