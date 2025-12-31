@@ -36,10 +36,12 @@ RUN mkdir -p attached_assets
 
 # Set environment to production
 ENV NODE_ENV=production
-ENV PORT=5000
+# Note: Railway sets PORT dynamically, don't hardcode it
+# Default to 8080 if not set by platform
+ENV PORT=8080
 
-# Expose the port
-EXPOSE 5000
+# Expose the port (Railway ignores this and uses its own port mapping)
+EXPOSE 8080
 
 # Start the application
 CMD ["npm", "start"]
