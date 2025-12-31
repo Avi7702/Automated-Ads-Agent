@@ -112,7 +112,9 @@
       "Bash(DATABASE_URL=\"postgresql://postgres:VYtUsSExJERzegiSWssGmXHRKqwQzNyq@switchback.proxy.rlwy.net:34192/railway\" NODE_ENV=production PORT=3000 timeout 10 node:*)",
       "Bash(for:*)",
       "Bash(do echo \"Attempt $i:\")",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:VYtUsSExJERzegiSWssGmXHRKqwQzNyq@switchback.proxy.rlwy.net:34192/railway\" npx vitest run:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:VYtUsSExJERzegiSWssGmXHRKqwQzNyq@switchback.proxy.rlwy.net:34192/railway\" GOOGLE_API_KEY=\"AIzaSyBxFVFRRqsX_sKEWjDt1srKIoizSB7ftoQ\" npx vitest run server/__tests__/copywriting.test.ts)"
     ]
   }
 }

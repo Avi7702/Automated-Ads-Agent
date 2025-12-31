@@ -28,6 +28,7 @@ import { UploadZone } from "@/components/UploadZone";
 import { HistoryTimeline } from "@/components/HistoryTimeline";
 import { SaveToCatalogDialog } from "@/components/SaveToCatalogDialog";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 // Icons
 import {
@@ -775,6 +776,7 @@ export default function Studio() {
             <Link href="/settings" className="hover:text-foreground transition-colors">
               <Settings className="w-4 h-4" />
             </Link>
+            <ThemeToggle />
             <div className="border-l border-white/10 h-5 mx-2" />
             {authUser ? (
               <div className="flex items-center gap-3">

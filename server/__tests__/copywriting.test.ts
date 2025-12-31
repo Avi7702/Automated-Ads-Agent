@@ -7,11 +7,10 @@ describe('Copywriting Service', () => {
   let testUserId: string;
 
   beforeAll(async () => {
-    // Create test user
-    const testUser = await storage.createUser({
-      email: `copytest-${Date.now()}@test.com`,
-      password: 'testpassword123',
-    });
+    // Create test user with hashed password
+    const testEmail = `copytest-${Date.now()}@test.com`;
+    const testPasswordHash = 'hashedpassword123'; // In real code, use bcrypt
+    const testUser = await storage.createUser(testEmail, testPasswordHash);
     testUserId = testUser.id;
 
     // Create test generation
@@ -506,10 +505,9 @@ describe('Storage Layer - AdCopy', () => {
   let testGenerationId: string;
 
   beforeAll(async () => {
-    const testUser = await storage.createUser({
-      email: `storage-${Date.now()}@test.com`,
-      password: 'testpass123',
-    });
+    const testEmail = `storage-${Date.now()}@test.com`;
+    const testPasswordHash = 'hashedpassword123';
+    const testUser = await storage.createUser(testEmail, testPasswordHash);
     testUserId = testUser.id;
 
     const testGen = await storage.saveGeneration({
