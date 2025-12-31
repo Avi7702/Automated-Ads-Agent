@@ -1,10 +1,71 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi, beforeEach } from 'vitest';
 import { storage } from '../storage';
 import type { GenerateCopyInput } from '../validation/schemas';
+
+// Counter for generating unique variations
+let callCount = 0;
+
+// Helper to create mock response
+function createMockResponse(framework: string = 'AIDA', variationNum: number = 1) {
+  return {
+    candidates: [{
+      content: {
+        parts: [{
+          text: JSON.stringify({
+            headline: `Test Headline V${variationNum}`,
+            hook: `Test Hook for Your Product V${variationNum}`,
+            bodyText: `This is test body text that describes the product benefits. Variation ${variationNum}.`,
+            primaryText: `Primary text for TikTok V${variationNum}`, // For TikTok tests
+            cta: 'Shop Now',
+            caption: `Check out our amazing product! V${variationNum} #test #product`,
+            hashtags: ['#test', '#product', '#quality', '#deal'],
+            framework: framework,
+            qualityScore: {
+              clarity: 8,
+              persuasiveness: 7,
+              platformFit: 9,
+              brandAlignment: 8,
+              overallScore: 8,
+              reasoning: `Well-structured ${framework} copy with clear value proposition`
+            }
+          })
+        }]
+      }
+    }]
+  };
+}
+
+// Mock the genAI module with dynamic responses
+vi.mock('../lib/gemini', () => ({
+  genAI: {
+    models: {
+      generateContent: vi.fn().mockImplementation((opts: any) => {
+        callCount++;
+        // Extract framework from prompt if specified
+        const promptText = opts.contents?.[0]?.parts?.[0]?.text || '';
+        let framework = 'AIDA';
+        if (promptText.includes('PAS')) framework = 'PAS';
+        else if (promptText.includes('BAB')) framework = 'BAB';
+        else if (promptText.includes('FAB')) framework = 'FAB';
+
+        return Promise.resolve(createMockResponse(framework, callCount));
+      })
+    }
+  }
+}));
+
+// Get mock for assertions
+const mockGenerateContent = vi.mocked((await import('../lib/gemini')).genAI.models.generateContent);
 
 describe('Copywriting Service', () => {
   let testGenerationId: string;
   let testUserId: string;
+
+  beforeEach(() => {
+    // Reset call count before each test
+    callCount = 0;
+    vi.clearAllMocks();
+  });
 
   beforeAll(async () => {
     // Create test user with hashed password
