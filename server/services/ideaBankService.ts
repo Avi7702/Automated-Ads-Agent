@@ -38,11 +38,12 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 20;
 
 export interface IdeaBankRequest {
-  productId: string;
+  productId?: string; // Optional if uploadDescriptions provided
   userId: string;
   userGoal?: string; // Optional user-provided goal/context
   enableWebSearch?: boolean; // Default: false (KB-first policy)
   maxSuggestions?: number; // Default: 3, max: 5
+  uploadDescriptions?: string[]; // Descriptions of temporary uploaded images
 }
 
 export interface IdeaBankError {
@@ -71,12 +72,12 @@ function checkRateLimit(userId: string): boolean {
 }
 
 /**
- * Generate ad idea suggestions for a product
+ * Generate ad idea suggestions for a product and/or uploaded images
  */
 export async function generateSuggestions(
   request: IdeaBankRequest
 ): Promise<{ success: true; response: IdeaBankSuggestResponse } | { success: false; error: IdeaBankError }> {
-  const { productId, userId, userGoal, enableWebSearch = false, maxSuggestions = 3 } = request;
+  const { productId, userId, userGoal, enableWebSearch = false, maxSuggestions = 3, uploadDescriptions = [] } = request;
 
   // Rate limit check
   if (!checkRateLimit(userId)) {
@@ -89,48 +90,70 @@ export async function generateSuggestions(
     };
   }
 
-  // 1. Fetch product
-  const product = await storage.getProductById(productId);
-  if (!product) {
+  // Validate that we have at least a product or upload descriptions
+  const hasProduct = !!productId;
+  const hasUploads = uploadDescriptions.length > 0;
+
+  if (!hasProduct && !hasUploads) {
     return {
       success: false,
       error: {
         code: "PRODUCT_NOT_FOUND",
-        message: "Product not found",
+        message: "Either productId or uploadDescriptions is required",
       },
     };
   }
 
-  // 2. Get or perform vision analysis
-  const analysisResult = await visionAnalysisService.analyzeProductImage(product, userId);
-  if (!analysisResult.success) {
-    return {
-      success: false,
-      error: {
-        code: "ANALYSIS_FAILED",
-        message: analysisResult.error.message,
-      },
-    };
+  // 1. Fetch product if provided
+  let product: Product | undefined;
+  if (hasProduct) {
+    product = await storage.getProductById(productId);
+    if (!product) {
+      return {
+        success: false,
+        error: {
+          code: "PRODUCT_NOT_FOUND",
+          message: "Product not found",
+        },
+      };
+    }
   }
-  const productAnalysis = analysisResult.analysis;
+
+  // 2. Get or perform vision analysis (only if product exists)
+  let productAnalysis: VisionAnalysisResult | null = null;
+  if (product) {
+    const analysisResult = await visionAnalysisService.analyzeProductImage(product, userId);
+    if (!analysisResult.success) {
+      return {
+        success: false,
+        error: {
+          code: "ANALYSIS_FAILED",
+          message: analysisResult.error.message,
+        },
+      };
+    }
+    productAnalysis = analysisResult.analysis;
+  }
 
   // 3. Fetch brand profile if exists
   const brandProfile = await storage.getBrandProfileByUserId(userId);
 
-  // 3.5 Build enhanced product context (Phase 0.5)
+  // 3.5 Build enhanced product context (Phase 0.5) - only if product exists
   let enhancedContext: EnhancedProductContext | null = null;
-  try {
-    enhancedContext = await productKnowledgeService.buildEnhancedContext(productId, userId);
-  } catch (err) {
-    console.error("[IdeaBank] Failed to build enhanced context:", err);
-    // Continue without enhanced context - not a fatal error
+  if (productId) {
+    try {
+      enhancedContext = await productKnowledgeService.buildEnhancedContext(productId, userId);
+    } catch (err) {
+      console.error("[IdeaBank] Failed to build enhanced context:", err);
+      // Continue without enhanced context - not a fatal error
+    }
   }
 
   // 4. Query KB for relevant context
   let kbContext: string | null = null;
   let kbCitations: string[] = [];
   try {
-    const kbQuery = buildKBQuery(product, productAnalysis, userGoal);
+    const kbQuery = buildKBQueryExtended(product, productAnalysis, uploadDescriptions, userGoal);
     const kbResult = await queryFileSearchStore({ query: kbQuery, maxResults: 5 });
     if (kbResult) {
       kbContext = sanitizeKBContent(kbResult.context);
@@ -141,14 +164,15 @@ export async function generateSuggestions(
     // Continue without KB context - not a fatal error
   }
 
-  // 5. Match templates based on product analysis
-  const matchedTemplates = await matchTemplates(productAnalysis);
+  // 5. Match templates based on product analysis (if available)
+  const matchedTemplates = productAnalysis ? await matchTemplates(productAnalysis) : [];
 
   // 6. Generate suggestions via LLM
   try {
     const suggestions = await generateLLMSuggestions({
       product,
       productAnalysis,
+      uploadDescriptions,
       enhancedContext,
       brandProfile,
       kbContext,
@@ -163,11 +187,12 @@ export async function generateSuggestions(
     const response: IdeaBankSuggestResponse = {
       suggestions,
       analysisStatus: {
-        visionComplete: true,
+        visionComplete: !!productAnalysis,
         kbQueried: !!kbContext,
         templatesMatched: matchedTemplates.length,
         webSearchUsed: false, // Web search disabled for now
         productKnowledgeUsed: !!enhancedContext, // Phase 0.5
+        uploadDescriptionsUsed: uploadDescriptions.length, // Phase 9
       },
     };
 
@@ -197,6 +222,45 @@ function buildKBQuery(product: Product, analysis: VisionAnalysisResult, userGoal
 
   if (userGoal) {
     parts.push(userGoal);
+  }
+
+  return parts.filter(Boolean).join(" ");
+}
+
+/**
+ * Build a KB query that can work with products, uploads, or both
+ */
+function buildKBQueryExtended(
+  product: Product | undefined,
+  analysis: VisionAnalysisResult | null,
+  uploadDescriptions: string[],
+  userGoal?: string
+): string {
+  const parts: string[] = [];
+
+  // Add product-based terms if available
+  if (analysis) {
+    parts.push(`advertising ideas for ${analysis.category}`);
+    if (analysis.subcategory) parts.push(analysis.subcategory);
+    if (analysis.style) parts.push(analysis.style);
+  }
+
+  if (product) {
+    parts.push(product.name);
+  }
+
+  // Add upload descriptions as additional context
+  if (uploadDescriptions.length > 0) {
+    parts.push(...uploadDescriptions.slice(0, 3)); // Limit to avoid overly long queries
+  }
+
+  if (userGoal) {
+    parts.push(userGoal);
+  }
+
+  // If we have no parts at all, use a generic query
+  if (parts.length === 0) {
+    return "advertising ideas creative marketing";
   }
 
   return parts.filter(Boolean).join(" ");
@@ -287,8 +351,9 @@ function calculateTemplateScore(template: AdSceneTemplate, analysis: VisionAnaly
  * Generate suggestions using LLM
  */
 async function generateLLMSuggestions(params: {
-  product: Product;
-  productAnalysis: VisionAnalysisResult;
+  product?: Product;
+  productAnalysis: VisionAnalysisResult | null;
+  uploadDescriptions: string[];
   enhancedContext: EnhancedProductContext | null;
   brandProfile: BrandProfile | undefined;
   kbContext: string | null;
@@ -301,6 +366,7 @@ async function generateLLMSuggestions(params: {
   const {
     product,
     productAnalysis,
+    uploadDescriptions,
     enhancedContext,
     brandProfile,
     kbContext,
@@ -314,6 +380,7 @@ async function generateLLMSuggestions(params: {
   const prompt = buildSuggestionPrompt({
     product,
     productAnalysis,
+    uploadDescriptions,
     enhancedContext,
     brandProfile,
     kbContext,
@@ -408,8 +475,9 @@ async function generateLLMSuggestions(params: {
  * Build the suggestion generation prompt
  */
 function buildSuggestionPrompt(params: {
-  product: Product;
-  productAnalysis: VisionAnalysisResult;
+  product?: Product;
+  productAnalysis: VisionAnalysisResult | null;
+  uploadDescriptions: string[];
   enhancedContext: EnhancedProductContext | null;
   brandProfile: BrandProfile | undefined;
   kbContext: string | null;
@@ -417,12 +485,16 @@ function buildSuggestionPrompt(params: {
   userGoal?: string;
   maxSuggestions: number;
 }): string {
-  const { product, productAnalysis, enhancedContext, brandProfile, kbContext, matchedTemplates, userGoal, maxSuggestions } =
+  const { product, productAnalysis, uploadDescriptions, enhancedContext, brandProfile, kbContext, matchedTemplates, userGoal, maxSuggestions } =
     params;
 
-  let prompt = `You are an expert advertising creative director. Generate ${maxSuggestions} distinct ad concept suggestions for this product.
+  let prompt = `You are an expert advertising creative director. Generate ${maxSuggestions} distinct ad concept suggestions.
 
-## Product Information
+`;
+
+  // Add product information if available
+  if (product && productAnalysis) {
+    prompt += `## Product Information
 - Name: ${product.name}
 - Category: ${productAnalysis.category} / ${productAnalysis.subcategory}
 - Materials: ${productAnalysis.materials.join(", ") || "Not specified"}
@@ -431,6 +503,17 @@ function buildSuggestionPrompt(params: {
 - Usage Context: ${productAnalysis.usageContext}
 - Target Demographic: ${productAnalysis.targetDemographic}
 `;
+  }
+
+  // Add uploaded image descriptions
+  if (uploadDescriptions.length > 0) {
+    prompt += `\n## Uploaded Images (User-Provided)
+The user has also uploaded the following images for context:
+${uploadDescriptions.map((desc, i) => `${i + 1}. "${desc}"`).join("\n")}
+
+IMPORTANT: These uploaded images should be incorporated into your ad concepts. Consider how they can be used alongside the products or as the main visual elements.
+`;
+  }
 
   // Add enhanced product knowledge context (Phase 0.5)
   if (enhancedContext) {

@@ -279,8 +279,110 @@ export async function invalidateAnalysisCache(productId: string): Promise<void> 
   }
 }
 
+/**
+ * Simple image analysis response for arbitrary uploads (not products)
+ */
+export interface SimpleImageAnalysis {
+  description: string;
+  confidence: number;
+}
+
+/**
+ * Analyze an arbitrary image (not a product) for a simple description
+ * Used for temporary uploads that need context for IdeaBank
+ * Does NOT cache results (ephemeral analysis)
+ */
+export async function analyzeArbitraryImage(
+  imageBuffer: Buffer,
+  mimeType: string,
+  userId: string
+): Promise<{ success: true; analysis: SimpleImageAnalysis } | { success: false; error: VisionAnalysisError }> {
+  // Check rate limit
+  if (!checkRateLimit(userId)) {
+    return {
+      success: false,
+      error: {
+        code: "RATE_LIMITED",
+        message: "Too many analysis requests. Please wait before trying again.",
+      },
+    };
+  }
+
+  try {
+    const base64Data = imageBuffer.toString("base64");
+
+    const prompt = `Analyze this image and provide a concise description for advertising context.
+
+Return JSON in this exact format:
+{
+  "description": "A single sentence (15-30 words) describing what this image shows, focusing on elements useful for advertising",
+  "confidence": a number 0-100 indicating how confident you are in this description
+}
+
+Be specific and descriptive. Focus on:
+- Main subject/product/scene
+- Key visual elements
+- Context or setting
+- Any notable details
+
+Example good descriptions:
+- "Modern kitchen with white marble countertops and stainless steel appliances in a bright, open floor plan"
+- "Construction site showing freshly poured concrete foundation with rebar reinforcement visible"
+- "Professional flooring installation with oak hardwood planks being laid in herringbone pattern"`;
+
+    const response = await genAI.models.generateContent({
+      model: VISION_MODEL,
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { text: prompt },
+            {
+              inlineData: {
+                mimeType: mimeType || "image/jpeg",
+                data: base64Data,
+              },
+            },
+          ],
+        },
+      ],
+      config: {
+        temperature: 0.3,
+      },
+    });
+
+    const text = response.text || "";
+
+    // Extract JSON from response
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error("Failed to parse image analysis response");
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]);
+
+    return {
+      success: true,
+      analysis: {
+        description: sanitizeString(parsed.description) || "Unable to describe image",
+        confidence: typeof parsed.confidence === "number" ? Math.min(100, Math.max(0, parsed.confidence)) : 70,
+      },
+    };
+  } catch (err) {
+    console.error("[VisionAnalysis] Arbitrary image analysis error:", err);
+    return {
+      success: false,
+      error: {
+        code: "API_ERROR",
+        message: err instanceof Error ? err.message : "Image analysis failed",
+      },
+    };
+  }
+}
+
 export const visionAnalysisService = {
   analyzeProductImage,
+  analyzeArbitraryImage,
   getCachedAnalysis,
   invalidateAnalysisCache,
   generateImageFingerprint,

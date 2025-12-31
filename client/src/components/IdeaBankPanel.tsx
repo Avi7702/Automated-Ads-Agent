@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, RefreshCw, Eye, Zap, Database, Globe, CheckCircle2, XCircle, Lightbulb, TrendingUp, Check, Play, Loader2 } from "lucide-react";
+import { Sparkles, RefreshCw, Eye, Zap, Database, Globe, CheckCircle2, XCircle, Lightbulb, TrendingUp, Check, Play, Loader2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { IdeaBankSuggestResponse, IdeaBankSuggestion, GenerationMode } from "@shared/types/ideaBank";
 import type { Product } from "@shared/schema";
+import type { AnalyzedUpload } from "@/types/analyzedUpload";
 
 interface IdeaBankPanelProps {
   selectedProducts: Product[];
+  tempUploads?: AnalyzedUpload[];
   onSelectPrompt: (prompt: string, id?: string, reasoning?: string) => void;
   onSetPlatform?: (platform: string) => void;
   onSetAspectRatio?: (aspectRatio: string) => void;
@@ -200,6 +202,7 @@ function SuggestionCard({
 
 export function IdeaBankPanel({
   selectedProducts,
+  tempUploads = [],
   onSelectPrompt,
   onSetPlatform,
   onSetAspectRatio,
@@ -213,19 +216,34 @@ export function IdeaBankPanel({
   const [error, setError] = useState<string | null>(null);
   const [legacyMode, setLegacyMode] = useState(false);
 
-  // Fetch suggestions when products change
+  // Get confirmed uploads with descriptions
+  const confirmedUploads = tempUploads.filter(u => u.status === "confirmed" && u.description);
+  const analyzingCount = tempUploads.filter(u => u.status === "analyzing").length;
+
+  // Fetch suggestions when products or confirmed uploads change
   useEffect(() => {
-    if (selectedProducts.length > 0) {
+    const hasProducts = selectedProducts.length > 0;
+    const hasConfirmedUploads = confirmedUploads.length > 0;
+
+    if (hasProducts || hasConfirmedUploads) {
       fetchSuggestions();
     } else {
       setResponse(null);
       setError(null);
     }
-  }, [selectedProducts.map(p => p.id).join(",")]);
+  }, [
+    selectedProducts.map(p => p.id).join(","),
+    confirmedUploads.map(u => u.description).join(","),
+  ]);
 
   const fetchSuggestions = async () => {
     setLoading(true);
     setError(null);
+
+    // Prepare upload descriptions for the request
+    const uploadDescriptions = confirmedUploads
+      .map(u => u.description)
+      .filter((d): d is string => !!d);
 
     try {
       // Try the new endpoint first
@@ -235,6 +253,7 @@ export function IdeaBankPanel({
         credentials: "include",
         body: JSON.stringify({
           productIds: selectedProducts.map(p => p.id),
+          uploadDescriptions: uploadDescriptions.length > 0 ? uploadDescriptions : undefined,
           maxSuggestions: 6,
         }),
       });
@@ -321,7 +340,11 @@ export function IdeaBankPanel({
     }
   };
 
-  if (selectedProducts.length === 0) {
+  // Show panel if there are products OR confirmed uploads
+  const hasContent = selectedProducts.length > 0 || confirmedUploads.length > 0;
+  const hasAnalyzing = analyzingCount > 0;
+
+  if (!hasContent && !hasAnalyzing) {
     return null;
   }
 
@@ -353,6 +376,28 @@ export function IdeaBankPanel({
         >
           <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
         </button>
+      </div>
+
+      {/* Input Summary - Products and Uploads */}
+      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        {selectedProducts.length > 0 && (
+          <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-primary/10 border border-primary/20">
+            <Database className="w-3 h-3 text-primary" />
+            {selectedProducts.length} {selectedProducts.length === 1 ? 'product' : 'products'}
+          </span>
+        )}
+        {confirmedUploads.length > 0 && (
+          <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-purple-500/10 border border-purple-500/20">
+            <Upload className="w-3 h-3 text-purple-500" />
+            {confirmedUploads.length} {confirmedUploads.length === 1 ? 'upload' : 'uploads'}
+          </span>
+        )}
+        {analyzingCount > 0 && (
+          <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-amber-500/10 border border-amber-500/20 text-amber-600">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            Analyzing {analyzingCount} {analyzingCount === 1 ? 'image' : 'images'}...
+          </span>
+        )}
       </div>
 
       {/* Analysis Status Summary */}

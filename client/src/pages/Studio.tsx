@@ -4,12 +4,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import type { Product, PromptTemplate } from "@shared/schema";
+import type { Product, PromptTemplate, PerformingAdTemplate } from "@shared/schema";
 
 // Components
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -22,9 +23,17 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { IdeaBankPanel } from "@/components/IdeaBankPanel";
 import { LinkedInPostPreview } from "@/components/LinkedInPostPreview";
 import { UploadZone } from "@/components/UploadZone";
+import type { AnalyzedUpload } from "@/types/analyzedUpload";
 import { HistoryTimeline } from "@/components/HistoryTimeline";
 import { SaveToCatalogDialog } from "@/components/SaveToCatalogDialog";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -53,6 +62,13 @@ import {
   Zap,
   Eye,
   FolderPlus,
+  TrendingUp,
+  Star,
+  Layout,
+  Instagram,
+  Linkedin,
+  Facebook,
+  Twitter,
 } from "lucide-react";
 
 // Types
@@ -312,8 +328,8 @@ export default function Studio() {
   const [quickStartMode, setQuickStartMode] = useState(false);
   const [quickStartPrompt, setQuickStartPrompt] = useState("");
 
-  // Temporary uploads (not saved to catalog)
-  const [tempUploads, setTempUploads] = useState<File[]>([]);
+  // Temporary uploads (not saved to catalog) - with AI analysis
+  const [tempUploads, setTempUploads] = useState<AnalyzedUpload[]>([]);
 
   // Price estimate
   const [priceEstimate, setPriceEstimate] = useState<{
@@ -336,6 +352,10 @@ export default function Studio() {
 
   // Save to Catalog dialog state
   const [showSaveToCatalog, setShowSaveToCatalog] = useState(false);
+
+  // Template Inspiration dialog state
+  const [showTemplateInspiration, setShowTemplateInspiration] = useState(false);
+  const [selectedPerformingTemplate, setSelectedPerformingTemplate] = useState<PerformingAdTemplate | null>(null);
 
   // Selected suggestion state - for highlighting and showing near textarea
   const [selectedSuggestion, setSelectedSuggestion] = useState<{
@@ -377,6 +397,17 @@ export default function Studio() {
       if (!res.ok) return [];
       return res.json();
     },
+  });
+
+  // Fetch featured performing ad templates (for inspiration)
+  const { data: featuredAdTemplates = [], isLoading: isLoadingFeatured } = useQuery<PerformingAdTemplate[]>({
+    queryKey: ["performing-ad-templates-featured"],
+    queryFn: async () => {
+      const res = await fetch("/api/performing-ad-templates/featured", { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: showTemplateInspiration, // Only fetch when modal is opened
   });
 
   // Filter products
@@ -523,8 +554,8 @@ export default function Studio() {
         const files = await Promise.all(filePromises);
         files.forEach((file) => formData.append("images", file));
 
-        // Add temp uploads
-        tempUploads.forEach((file) => formData.append("images", file));
+        // Add temp uploads (extract File from AnalyzedUpload)
+        tempUploads.forEach((upload) => formData.append("images", upload.file));
       }
 
       formData.append("prompt", finalPrompt);
@@ -722,6 +753,63 @@ export default function Studio() {
     } finally {
       setIsAskingAI(false);
     }
+  };
+
+  // Handle selecting a performing ad template for inspiration
+  const handleSelectPerformingTemplate = (template: PerformingAdTemplate) => {
+    setSelectedPerformingTemplate(template);
+
+    // Map template platform to our platform names
+    const platformMap: Record<string, string> = {
+      instagram: "Instagram",
+      linkedin: "LinkedIn",
+      facebook: "Facebook",
+      twitter: "Twitter",
+      tiktok: "TikTok",
+    };
+
+    // Map aspect ratios to our format
+    const aspectRatioMap: Record<string, string> = {
+      "1:1": "1200x1200",
+      "16:9": "1920x1080",
+      "9:16": "1080x1920",
+      "4:5": "1080x1350",
+      "1.91:1": "1200x627",
+    };
+
+    // Set platform from first target platform
+    if (template.targetPlatforms && template.targetPlatforms.length > 0) {
+      const mappedPlatform = platformMap[template.targetPlatforms[0]];
+      if (mappedPlatform) {
+        setPlatform(mappedPlatform);
+      }
+    }
+
+    // Set aspect ratio from first target aspect ratio
+    if (template.targetAspectRatios && template.targetAspectRatios.length > 0) {
+      const mappedRatio = aspectRatioMap[template.targetAspectRatios[0]];
+      if (mappedRatio) {
+        setAspectRatio(mappedRatio);
+      }
+    }
+
+    // Build style hints for the prompt
+    const styleHints: string[] = [];
+    if (template.mood) styleHints.push(template.mood);
+    if (template.style) styleHints.push(template.style);
+    if (template.backgroundType) styleHints.push(`${template.backgroundType} background`);
+
+    // Add style hints to prompt if any exist
+    if (styleHints.length > 0) {
+      const stylePrefix = `Style: ${styleHints.join(", ")}. `;
+      // Only prepend if not already in prompt
+      if (!prompt.startsWith("Style:")) {
+        setPrompt((prev) => prev ? `${stylePrefix}${prev}` : stylePrefix);
+      }
+    }
+
+    // Close the modal
+    setShowTemplateInspiration(false);
   };
 
   // Progress rail sections
@@ -1100,13 +1188,8 @@ export default function Studio() {
                 onToggle={() => toggleSection("upload")}
               >
                 <UploadZone
-                  files={tempUploads}
-                  onFilesAdded={(files) =>
-                    setTempUploads((prev) => [...prev, ...files].slice(0, 6 - selectedProducts.length))
-                  }
-                  onRemove={(index) =>
-                    setTempUploads((prev) => prev.filter((_, i) => i !== index))
-                  }
+                  uploads={tempUploads}
+                  onUploadsChange={setTempUploads}
                   maxFiles={6 - selectedProducts.length}
                   disabled={selectedProducts.length + tempUploads.length >= 6}
                 />
@@ -1319,6 +1402,58 @@ export default function Studio() {
                     </div>
                   )}
 
+                  {/* Template Inspiration - High-performing ads */}
+                  <div className="pt-4 border-t border-border/50">
+                    <button
+                      onClick={() => setShowTemplateInspiration(true)}
+                      className="w-full p-4 rounded-xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-all text-left group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-yellow-500/20 to-orange-500/20 flex items-center justify-center">
+                          <TrendingUp className="w-5 h-5 text-yellow-500" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium flex items-center gap-2">
+                            Template Inspiration
+                            {featuredAdTemplates.length > 0 && (
+                              <Badge variant="secondary" className="text-xs">
+                                {featuredAdTemplates.length} featured
+                              </Badge>
+                            )}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Browse high-performing ad templates for style ideas
+                          </p>
+                        </div>
+                        <Star className="w-5 h-5 text-muted-foreground group-hover:text-yellow-500 transition-colors" />
+                      </div>
+                    </button>
+
+                    {/* Show selected performing template */}
+                    {selectedPerformingTemplate && (
+                      <div className="mt-3 flex items-center justify-between p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="w-4 h-4 text-yellow-500" />
+                          <span className="text-sm">
+                            Inspired by: <strong>{selectedPerformingTemplate.name}</strong>
+                          </span>
+                          {selectedPerformingTemplate.engagementTier && selectedPerformingTemplate.engagementTier !== "unranked" && (
+                            <Badge variant="outline" className="text-xs bg-yellow-500/10 text-yellow-600 border-yellow-500/30">
+                              {selectedPerformingTemplate.engagementTier.replace("-", " ")}
+                            </Badge>
+                          )}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedPerformingTemplate(null)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
                   <p className="text-sm text-muted-foreground">
                     Select a template to pre-fill your prompt, or skip and describe your vision below.
                   </p>
@@ -1392,6 +1527,7 @@ export default function Studio() {
                 <ErrorBoundary>
                   <IdeaBankPanel
                     selectedProducts={selectedProducts}
+                    tempUploads={tempUploads}
                     onSelectPrompt={(promptText, id, reasoning) => handleSelectSuggestion(promptText, id, reasoning)}
                     onSetPlatform={setPlatform}
                     onSetAspectRatio={setAspectRatio}
@@ -1647,6 +1783,164 @@ export default function Studio() {
           />
         </ErrorBoundary>
       )}
+
+      {/* Template Inspiration Dialog */}
+      <Dialog open={showTemplateInspiration} onOpenChange={setShowTemplateInspiration}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-yellow-500" />
+              Template Inspiration
+            </DialogTitle>
+            <DialogDescription>
+              Browse high-performing ad templates to inspire your creative direction
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto pr-2 -mr-2">
+            {isLoadingFeatured ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-1">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="rounded-xl border border-border bg-card overflow-hidden animate-pulse">
+                    <div className="aspect-[4/3] bg-muted" />
+                    <div className="p-3 space-y-2">
+                      <div className="h-4 bg-muted rounded w-3/4" />
+                      <div className="h-3 bg-muted rounded w-1/2" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : featuredAdTemplates.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Layout className="w-12 h-12 text-muted-foreground/50 mb-4" />
+                <h3 className="font-medium mb-1">No featured templates yet</h3>
+                <p className="text-sm text-muted-foreground max-w-md">
+                  Add high-performing ad templates to your library to see them here for inspiration.
+                </p>
+                <Link href="/templates">
+                  <Button variant="outline" className="mt-4 gap-2">
+                    <Layout className="w-4 h-4" />
+                    Go to Template Library
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-1">
+                {featuredAdTemplates.map((template) => {
+                  const platformIcons: Record<string, typeof Instagram> = {
+                    instagram: Instagram,
+                    linkedin: Linkedin,
+                    facebook: Facebook,
+                    twitter: Twitter,
+                    tiktok: Sparkles,
+                  };
+
+                  return (
+                    <button
+                      key={template.id}
+                      onClick={() => handleSelectPerformingTemplate(template)}
+                      className="rounded-xl border border-border bg-card overflow-hidden hover:border-primary/50 hover:shadow-lg transition-all text-left group"
+                    >
+                      {/* Image */}
+                      <div className="aspect-[4/3] overflow-hidden bg-muted relative">
+                        {template.previewImageUrl ? (
+                          <img
+                            src={template.previewImageUrl}
+                            alt={template.name}
+                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Layout className="w-10 h-10 text-muted-foreground/30" />
+                          </div>
+                        )}
+
+                        {/* Badges */}
+                        <div className="absolute top-2 left-2 flex gap-1">
+                          {template.isFeatured && (
+                            <Badge className="bg-yellow-500/90 text-yellow-950 text-xs px-1.5 py-0.5">
+                              <Star className="w-3 h-3 mr-1 fill-current" />
+                              Featured
+                            </Badge>
+                          )}
+                        </div>
+                        {template.engagementTier && template.engagementTier !== "unranked" && (
+                          <div className="absolute top-2 right-2">
+                            <Badge variant="secondary" className="text-xs px-1.5 py-0.5 bg-black/50 backdrop-blur-sm text-white border-0">
+                              {template.engagementTier.replace("-", " ")}
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Info */}
+                      <div className="p-3 space-y-2">
+                        <h4 className="font-medium text-sm line-clamp-1">{template.name}</h4>
+
+                        {/* Style tags */}
+                        <div className="flex flex-wrap gap-1">
+                          {template.mood && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-500 capitalize">
+                              {template.mood}
+                            </span>
+                          )}
+                          {template.style && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 capitalize">
+                              {template.style}
+                            </span>
+                          )}
+                          {template.category && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground capitalize">
+                              {template.category}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Platforms */}
+                        {template.targetPlatforms && template.targetPlatforms.length > 0 && (
+                          <div className="flex items-center gap-1.5 pt-1">
+                            {template.targetPlatforms.slice(0, 4).map((p) => {
+                              const Icon = platformIcons[p] || Sparkles;
+                              return (
+                                <Icon
+                                  key={p}
+                                  className="w-3.5 h-3.5 text-muted-foreground"
+                                  title={p}
+                                />
+                              );
+                            })}
+                            {template.targetPlatforms.length > 4 && (
+                              <span className="text-[10px] text-muted-foreground">
+                                +{template.targetPlatforms.length - 4}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-between pt-4 border-t border-border mt-4">
+            <Link href="/templates">
+              <Button variant="ghost" size="sm" className="gap-2">
+                <Layout className="w-4 h-4" />
+                View Full Library
+              </Button>
+            </Link>
+            <Button variant="outline" onClick={() => setShowTemplateInspiration(false)}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -7,7 +7,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface HeaderProps {
-  currentPage?: "studio" | "gallery" | "settings" | "templates" | "generation";
+  currentPage?: "studio" | "gallery" | "products" | "template-library" | "settings" | "templates" | "generation";
 }
 
 export function Header({ currentPage }: HeaderProps) {
@@ -36,6 +36,8 @@ export function Header({ currentPage }: HeaderProps) {
   const activePage = currentPage || (() => {
     if (location === "/") return "studio";
     if (location === "/gallery") return "gallery";
+    if (location === "/products") return "products";
+    if (location === "/template-library") return "template-library";
     if (location === "/usage") return "usage";
     if (location === "/settings" || location === "/brand-profile") return "settings";
     if (location.startsWith("/templates") || location.startsWith("/admin/templates")) return "templates";
@@ -46,6 +48,8 @@ export function Header({ currentPage }: HeaderProps) {
   const navItems = [
     { id: "studio", label: "Studio", href: "/" },
     { id: "gallery", label: "Gallery", href: "/gallery" },
+    { id: "products", label: "Products", href: "/products" },
+    { id: "template-library", label: "Templates", href: "/template-library" },
     { id: "usage", label: "Usage", href: "/usage" },
     { id: "settings", label: "Settings", href: "/settings" },
   ];

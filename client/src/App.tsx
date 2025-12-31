@@ -13,6 +13,10 @@ import BrandProfile from "@/pages/BrandProfile";
 import Templates from "@/pages/Templates";
 import TemplateAdmin from "@/pages/TemplateAdmin";
 import QuotaDashboard from "@/pages/QuotaDashboard";
+import ProductLibrary from "@/pages/ProductLibrary";
+import InstallationScenarios from "@/pages/InstallationScenarios";
+import BrandImageLibrary from "@/pages/BrandImageLibrary";
+import TemplateLibrary from "@/pages/TemplateLibrary";
 
 function Router() {
   return (
@@ -28,6 +32,18 @@ function Router() {
 
       {/* Usage/Quota Dashboard */}
       <Route path="/usage" component={QuotaDashboard} />
+
+      {/* Product Library */}
+      <Route path="/products" component={ProductLibrary} />
+
+      {/* Installation Scenarios */}
+      <Route path="/installation-scenarios" component={InstallationScenarios} />
+
+      {/* Brand Image Library */}
+      <Route path="/brand-images" component={BrandImageLibrary} />
+
+      {/* Template Library */}
+      <Route path="/template-library" component={TemplateLibrary} />
 
       {/* Settings pages */}
       <Route path="/settings" component={BrandProfile} />

@@ -114,7 +114,9 @@
       "Bash(do echo \"Attempt $i:\")",
       "Bash(done)",
       "Bash(DATABASE_URL=\"postgresql://postgres:VYtUsSExJERzegiSWssGmXHRKqwQzNyq@switchback.proxy.rlwy.net:34192/railway\" npx vitest run:*)",
-      "Bash(DATABASE_URL=\"postgresql://postgres:VYtUsSExJERzegiSWssGmXHRKqwQzNyq@switchback.proxy.rlwy.net:34192/railway\" GOOGLE_API_KEY=\"AIzaSyBxFVFRRqsX_sKEWjDt1srKIoizSB7ftoQ\" npx vitest run server/__tests__/copywriting.test.ts)"
+      "Bash(DATABASE_URL=\"postgresql://postgres:VYtUsSExJERzegiSWssGmXHRKqwQzNyq@switchback.proxy.rlwy.net:34192/railway\" GOOGLE_API_KEY=\"AIzaSyBxFVFRRqsX_sKEWjDt1srKIoizSB7ftoQ\" npx vitest run server/__tests__/copywriting.test.ts)",
+      "Bash(if not exist \"c:\\\\Users\\\\avibm\\\\Automated-Ads-Agent\\\\scripts\" mkdir \"c:\\\\Users\\\\avibm\\\\Automated-Ads-Agent\\\\scripts\")",
+      "Bash(DATABASE_URL=\"postgresql://postgres:VYtUsSExJERzegiSWssGmXHRKqwQzNyq@switchback.proxy.rlwy.net:34192/railway\" npx vitest:*)"
     ]
   }
 }

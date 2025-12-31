@@ -130,13 +130,15 @@ class CopywritingService {
     let tools: Array<{ fileSearch: { fileSearchStoreNames: string[] } }> | undefined = undefined;
     try {
       const fileSearchStore = await getFileSearchStoreForGeneration();
-      tools = [
-        {
-          fileSearch: {
-            fileSearchStoreNames: [fileSearchStore],
+      if (fileSearchStore) {
+        tools = [
+          {
+            fileSearch: {
+              fileSearchStoreNames: [fileSearchStore],
+            },
           },
-        },
-      ];
+        ];
+      }
     } catch (error) {
       // No File Search available, continue without tools
     }

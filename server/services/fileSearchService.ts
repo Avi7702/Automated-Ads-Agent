@@ -64,12 +64,26 @@ export function validateFile(filePath: string, stats: { size: number }): void {
  * File categories for organization
  */
 export enum FileCategory {
+  /** Brand voice, tone, logo usage, color palettes */
   BRAND_GUIDELINES = 'brand_guidelines',
+  /** Example ads for style reference and inspiration */
   AD_EXAMPLES = 'ad_examples',
+  /** Product information, specs, pricing */
   PRODUCT_CATALOG = 'product_catalog',
+  /** Competitor ad analysis and market research */
   COMPETITOR_RESEARCH = 'competitor_research',
+  /** Historical ad performance metrics */
   PERFORMANCE_DATA = 'performance_data',
+  /** Uncategorized reference materials */
   GENERAL = 'general',
+  /** Installation manuals, how-to guides for products */
+  INSTALLATION_GUIDES = 'installation_guides',
+  /** Product ecosystem documentation, pairing guides */
+  PRODUCT_RELATIONSHIPS = 'product_relationships',
+  /** Style guides, image usage documentation */
+  BRAND_IMAGE_GUIDELINES = 'brand_image_guidelines',
+  /** Ad template patterns, design references */
+  TEMPLATE_LIBRARY = 'template_library',
 }
 
 /**
@@ -314,10 +328,13 @@ export async function queryFileSearchStore(params: {
 
 /**
  * Get File Search Store for use in copywriting generation
- * Returns the store name to pass to Gemini's tools config
+ * Returns the store name to pass to Gemini's tools config, or null if unavailable
  */
-export async function getFileSearchStoreForGeneration() {
+export async function getFileSearchStoreForGeneration(): Promise<string | null> {
   const store = await initializeFileSearchStore();
+  if (!store) {
+    return null;
+  }
   return store.name;
 }
 
@@ -386,13 +403,19 @@ export async function seedFileSearchStore() {
    ├── product_catalog/
    ├── competitor_research/
    ├── performance_data/
-   └── general/
+   ├── general/
+   ├── installation_guides/
+   ├── product_relationships/
+   ├── brand_image_guidelines/
+   └── template_library/
 
 📝 Next steps:
    1. Add your NDS ad examples to: ${refDir}/ad_examples/
    2. Add brand guidelines to: ${refDir}/brand_guidelines/
    3. Add product catalogs to: ${refDir}/product_catalog/
-   4. Run: POST /api/file-search/upload-directory to index them
+   4. Add installation guides to: ${refDir}/installation_guides/
+   5. Add product relationship docs to: ${refDir}/product_relationships/
+   6. Run: POST /api/file-search/upload-directory to index them
 
 💡 Supported formats: PDF, DOCX, TXT, MD, CSV, XLSX, PPTX, and more
    Max file size: 100 MB per file

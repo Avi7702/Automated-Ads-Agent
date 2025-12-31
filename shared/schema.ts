@@ -315,6 +315,73 @@ export const brandImages = pgTable("brand_images", {
 
 
 // ============================================
+// PERFORMING AD TEMPLATES LIBRARY
+// ============================================
+
+/**
+ * Performing Ad Templates - High-performing ad templates sourced from
+ * AdSpy, BigSpy, Envato, etc. for reference and inspiration
+ */
+export const performingAdTemplates = pgTable("performing_ad_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+
+  // Basic info
+  name: text("name").notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 50 }).notNull(), // ecommerce, saas, services, awareness
+
+  // Source tracking
+  sourceUrl: text("source_url"),
+  sourcePlatform: varchar("source_platform", { length: 50 }), // adspy, bigspy, envato, canva, figma, manual
+  advertiserName: text("advertiser_name"),
+
+  // Performance metrics (estimated)
+  engagementTier: varchar("engagement_tier", { length: 20 }), // top-5, top-10, top-25, unranked
+  estimatedEngagementRate: integer("estimated_engagement_rate"), // 0-100
+  runningDays: integer("running_days"),
+  estimatedBudget: varchar("estimated_budget", { length: 20 }), // under-1k, 1k-5k, 5k-20k, 20k+
+
+  // Platform-specific metrics
+  platformMetrics: jsonb("platform_metrics"), // [{ platform, estimatedCTR, estimatedConversionRate }]
+
+  // Design specifications
+  layouts: jsonb("layouts"), // [{ platform, aspectRatio, gridStructure, primaryFocusArea }]
+  colorPalette: jsonb("color_palette"), // { primary, secondary, accent, background, text, contrast }
+  typography: jsonb("typography"), // { fontStack, headlineSize, bodySize, ctaSize }
+  backgroundType: varchar("background_type", { length: 20 }), // solid, gradient, image, video
+
+  // Content blocks
+  contentBlocks: jsonb("content_blocks"), // { headline, body, cta } with placeholders and positions
+
+  // Visual patterns for AI matching
+  visualPatterns: text("visual_patterns").array(), // detected patterns for similarity search
+  mood: varchar("mood", { length: 50 }), // luxury, cozy, bold, minimal, vibrant
+  style: varchar("style", { length: 50 }), // modern, classic, playful, professional
+
+  // Implementation
+  templateFormat: varchar("template_format", { length: 20 }), // figma, canva, html-css, react, image
+  sourceFileUrl: text("source_file_url"),
+  previewImageUrl: text("preview_image_url"),
+  previewPublicId: text("preview_public_id"),
+  editableVariables: text("editable_variables").array(), // variables that can be customized
+
+  // Targeting
+  targetPlatforms: text("target_platforms").array(), // instagram, facebook, linkedin, twitter, tiktok
+  targetAspectRatios: text("target_aspect_ratios").array(), // 1:1, 16:9, 9:16, 4:5
+  bestForIndustries: text("best_for_industries").array(),
+  bestForObjectives: text("best_for_objectives").array(), // awareness, consideration, conversion
+
+  // Status
+  isActive: boolean("is_active").default(true).notNull(),
+  isFeatured: boolean("is_featured").default(false).notNull(),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+
+// ============================================
 // GENERATION USAGE (COST ESTIMATION)
 // ============================================
 
@@ -451,6 +518,34 @@ export type ProductRelationship = typeof productRelationships.$inferSelect;
 
 export type InsertBrandImage = z.infer<typeof insertBrandImageSchema>;
 export type BrandImage = typeof brandImages.$inferSelect;
+
+// Performing Ad Templates enum constraints
+const templateCategoryEnum = z.enum(['ecommerce', 'saas', 'services', 'awareness']);
+const sourcePlatformEnum = z.enum(['adspy', 'bigspy', 'envato', 'canva', 'figma', 'manual']);
+const engagementTierEnum = z.enum(['top-5', 'top-10', 'top-25', 'unranked']);
+const estimatedBudgetEnum = z.enum(['under-1k', '1k-5k', '5k-20k', '20k+']);
+const backgroundTypeEnum = z.enum(['solid', 'gradient', 'image', 'video']);
+const templateFormatEnum = z.enum(['figma', 'canva', 'html-css', 'react', 'image']);
+const templateMoodEnum = z.enum(['luxury', 'cozy', 'bold', 'minimal', 'vibrant']);
+const templateStyleEnum = z.enum(['modern', 'classic', 'playful', 'professional']);
+
+export const insertPerformingAdTemplateSchema = createInsertSchema(performingAdTemplates, {
+  category: templateCategoryEnum,
+  sourcePlatform: sourcePlatformEnum.optional(),
+  engagementTier: engagementTierEnum.optional(),
+  estimatedBudget: estimatedBudgetEnum.optional(),
+  backgroundType: backgroundTypeEnum.optional(),
+  templateFormat: templateFormatEnum.optional(),
+  mood: templateMoodEnum.optional(),
+  style: templateStyleEnum.optional(),
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertPerformingAdTemplate = z.infer<typeof insertPerformingAdTemplateSchema>;
+export type PerformingAdTemplate = typeof performingAdTemplates.$inferSelect;
 
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,

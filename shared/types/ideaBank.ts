@@ -35,6 +35,7 @@ export interface IdeaBankSuggestion {
 export interface IdeaBankSuggestRequest {
   productId?: string; // Single product (backward compatibility)
   productIds?: string[]; // Multiple products (preferred)
+  uploadDescriptions?: string[]; // Descriptions of temporary uploads (Phase 9)
   platform?: string;
   templateCategory?: string;
   userGoal?: string; // User-provided context/goal
@@ -48,6 +49,7 @@ export interface AnalysisStatus {
   templatesMatched: number;
   webSearchUsed: boolean;
   productKnowledgeUsed?: boolean; // Phase 0.5
+  uploadDescriptionsUsed?: number; // Phase 9 - count of upload descriptions used
 }
 
 export interface IdeaBankSuggestResponse {

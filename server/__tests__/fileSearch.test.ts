@@ -559,8 +559,8 @@ describe('File Search Service Integration', () => {
     it('should create subdirectory for each category', async () => {
       await fileSearchService.seedFileSearchStore();
 
-      // 1 main directory + 6 category directories
-      expect(mockMkdir).toHaveBeenCalledTimes(7);
+      // 1 main directory + 10 category directories
+      expect(mockMkdir).toHaveBeenCalledTimes(11);
     });
   });
 
@@ -635,6 +635,10 @@ describe('File Search Service Integration', () => {
       expect(fileSearchService.FileCategory.COMPETITOR_RESEARCH).toBe('competitor_research');
       expect(fileSearchService.FileCategory.PERFORMANCE_DATA).toBe('performance_data');
       expect(fileSearchService.FileCategory.GENERAL).toBe('general');
+      expect(fileSearchService.FileCategory.INSTALLATION_GUIDES).toBe('installation_guides');
+      expect(fileSearchService.FileCategory.PRODUCT_RELATIONSHIPS).toBe('product_relationships');
+      expect(fileSearchService.FileCategory.BRAND_IMAGE_GUIDELINES).toBe('brand_image_guidelines');
+      expect(fileSearchService.FileCategory.TEMPLATE_LIBRARY).toBe('template_library');
     });
   });
 });

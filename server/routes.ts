@@ -1894,6 +1894,47 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
     }
   });
 
+  // ===== ARBITRARY IMAGE ANALYSIS =====
+  // Analyze a temporary upload image (not a product) for IdeaBank context
+
+  app.post("/api/analyze-image", upload.single("image"), async (req, res) => {
+    try {
+      const userId = (req.session as any)?.userId || "system-user";
+      const file = req.file;
+
+      if (!file) {
+        return res.status(400).json({ error: "No image file provided" });
+      }
+
+      // Validate file type
+      if (!file.mimetype.startsWith("image/")) {
+        return res.status(400).json({ error: "File must be an image" });
+      }
+
+      const { visionAnalysisService } = await import('./services/visionAnalysisService');
+      const result = await visionAnalysisService.analyzeArbitraryImage(
+        file.buffer,
+        file.mimetype,
+        userId
+      );
+
+      if (!result.success) {
+        if (result.error.code === "RATE_LIMITED") {
+          return res.status(429).json({ error: result.error.message });
+        }
+        return res.status(500).json({ error: result.error.message });
+      }
+
+      res.json({
+        description: result.analysis.description,
+        confidence: result.analysis.confidence,
+      });
+    } catch (error: any) {
+      console.error("[Analyze Image] Error:", error);
+      res.status(500).json({ error: "Failed to analyze image" });
+    }
+  });
+
   // ===== PRODUCT ENRICHMENT ROUTES =====
   // Phase 0.5: Human-in-the-loop product data collection
 
@@ -1918,6 +1959,44 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
     } catch (error: any) {
       console.error("[Product Enrichment] Error:", error);
       res.status(500).json({ error: "Failed to generate enrichment draft" });
+    }
+  });
+
+  // Enrich product from a user-provided URL
+  app.post("/api/products/:productId/enrich-from-url", requireAuth, async (req, res) => {
+    try {
+      const { productId } = req.params;
+      const { productUrl } = req.body;
+
+      if (!productUrl || typeof productUrl !== "string") {
+        return res.status(400).json({ error: "Product URL is required" });
+      }
+
+      // Validate URL format
+      try {
+        new URL(productUrl);
+      } catch {
+        return res.status(400).json({ error: "Invalid URL format" });
+      }
+
+      const { enrichFromUrl, saveEnrichmentDraft } = await import('./services/enrichmentServiceWithUrl');
+      const result = await enrichFromUrl({ productId, productUrl });
+
+      if (!result.success || !result.enrichmentDraft) {
+        return res.status(400).json({ error: result.error || "Failed to enrich from URL" });
+      }
+
+      // Save the draft to the product
+      await saveEnrichmentDraft(productId, result.enrichmentDraft);
+
+      res.json({
+        success: true,
+        productId: result.productId,
+        draft: result.enrichmentDraft,
+      });
+    } catch (error: any) {
+      console.error("[URL Enrichment] Error:", error);
+      res.status(500).json({ error: "Failed to enrich product from URL" });
     }
   });
 
@@ -1997,18 +2076,544 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
     }
   });
 
+  // ============================================
+  // INSTALLATION SCENARIOS
+  // ============================================
+
+  // Create installation scenario
+  app.post("/api/installation-scenarios", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const scenario = await storage.createInstallationScenario({
+        ...req.body,
+        userId,
+      });
+      res.status(201).json(scenario);
+    } catch (error: any) {
+      console.error("[Installation Scenarios] Create error:", error);
+      res.status(500).json({ error: "Failed to create installation scenario" });
+    }
+  });
+
+  // Get all installation scenarios for user
+  app.get("/api/installation-scenarios", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const scenarios = await storage.getInstallationScenariosByUser(userId);
+      res.json(scenarios);
+    } catch (error: any) {
+      console.error("[Installation Scenarios] List error:", error);
+      res.status(500).json({ error: "Failed to get installation scenarios" });
+    }
+  });
+
+  // Get single installation scenario
+  app.get("/api/installation-scenarios/:id", requireAuth, async (req, res) => {
+    try {
+      const scenario = await storage.getInstallationScenarioById(req.params.id);
+      if (!scenario) {
+        return res.status(404).json({ error: "Installation scenario not found" });
+      }
+      res.json(scenario);
+    } catch (error: any) {
+      console.error("[Installation Scenarios] Get error:", error);
+      res.status(500).json({ error: "Failed to get installation scenario" });
+    }
+  });
+
+  // Update installation scenario
+  app.put("/api/installation-scenarios/:id", requireAuth, async (req, res) => {
+    try {
+      const scenario = await storage.updateInstallationScenario(req.params.id, req.body);
+      res.json(scenario);
+    } catch (error: any) {
+      console.error("[Installation Scenarios] Update error:", error);
+      res.status(500).json({ error: "Failed to update installation scenario" });
+    }
+  });
+
+  // Delete installation scenario
+  app.delete("/api/installation-scenarios/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteInstallationScenario(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[Installation Scenarios] Delete error:", error);
+      res.status(500).json({ error: "Failed to delete installation scenario" });
+    }
+  });
+
+  // Get scenarios by room type
+  app.get("/api/installation-scenarios/room-type/:roomType", requireAuth, async (req, res) => {
+    try {
+      const scenarios = await storage.getScenariosByRoomType(req.params.roomType);
+      res.json(scenarios);
+    } catch (error: any) {
+      console.error("[Installation Scenarios] Room type query error:", error);
+      res.status(500).json({ error: "Failed to get scenarios by room type" });
+    }
+  });
+
+  // Get scenarios for products
+  app.post("/api/installation-scenarios/for-products", requireAuth, async (req, res) => {
+    try {
+      const { productIds } = req.body;
+      if (!productIds || !Array.isArray(productIds)) {
+        return res.status(400).json({ error: "productIds array is required" });
+      }
+      const scenarios = await storage.getInstallationScenariosForProducts(productIds);
+      res.json(scenarios);
+    } catch (error: any) {
+      console.error("[Installation Scenarios] Products query error:", error);
+      res.status(500).json({ error: "Failed to get scenarios for products" });
+    }
+  });
+
+  // ============================================
+  // PRODUCT RELATIONSHIPS
+  // ============================================
+
+  // Create product relationship
+  app.post("/api/product-relationships", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const relationship = await storage.createProductRelationship({
+        ...req.body,
+        userId,
+      });
+      res.status(201).json(relationship);
+    } catch (error: any) {
+      console.error("[Product Relationships] Create error:", error);
+      if (error.code === "23505") { // Unique constraint violation
+        return res.status(409).json({ error: "This relationship already exists" });
+      }
+      res.status(500).json({ error: "Failed to create product relationship" });
+    }
+  });
+
+  // Get relationships for a product
+  app.get("/api/products/:productId/relationships", requireAuth, async (req, res) => {
+    try {
+      const relationships = await storage.getProductRelationships([req.params.productId]);
+      res.json(relationships);
+    } catch (error: any) {
+      console.error("[Product Relationships] Get error:", error);
+      res.status(500).json({ error: "Failed to get product relationships" });
+    }
+  });
+
+  // Get relationships by type for a product
+  app.get("/api/products/:productId/relationships/:relationshipType", requireAuth, async (req, res) => {
+    try {
+      const relationships = await storage.getProductRelationshipsByType(
+        req.params.productId,
+        req.params.relationshipType
+      );
+      res.json(relationships);
+    } catch (error: any) {
+      console.error("[Product Relationships] Get by type error:", error);
+      res.status(500).json({ error: "Failed to get product relationships" });
+    }
+  });
+
+  // Delete product relationship
+  app.delete("/api/product-relationships/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteProductRelationship(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[Product Relationships] Delete error:", error);
+      res.status(500).json({ error: "Failed to delete product relationship" });
+    }
+  });
+
+  // Bulk get relationships for multiple products
+  app.post("/api/product-relationships/bulk", requireAuth, async (req, res) => {
+    try {
+      const { productIds } = req.body;
+      if (!productIds || !Array.isArray(productIds)) {
+        return res.status(400).json({ error: "productIds array is required" });
+      }
+      const relationships = await storage.getProductRelationships(productIds);
+      res.json(relationships);
+    } catch (error: any) {
+      console.error("[Product Relationships] Bulk get error:", error);
+      res.status(500).json({ error: "Failed to get product relationships" });
+    }
+  });
+
+  // ============================================
+  // BRAND IMAGES
+  // ============================================
+
+  // Upload brand image
+  app.post("/api/brand-images", upload.single("image"), requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const file = req.file;
+
+      if (!file) {
+        return res.status(400).json({ error: "Image file is required" });
+      }
+
+      // Upload to Cloudinary
+      const cloudinary = (await import("cloudinary")).v2;
+      cloudinary.config({
+        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+        api_key: process.env.CLOUDINARY_API_KEY,
+        api_secret: process.env.CLOUDINARY_API_SECRET,
+      });
+
+      const uploadResult = await new Promise<any>((resolve, reject) => {
+        cloudinary.uploader.upload_stream(
+          {
+            folder: "brand-images",
+            resource_type: "image",
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        ).end(file.buffer);
+      });
+
+      // Parse metadata from body
+      const category = req.body.category || "general";
+      const tags = req.body.tags ? JSON.parse(req.body.tags) : [];
+      const productIds = req.body.productIds ? JSON.parse(req.body.productIds) : [];
+      const suggestedUse = req.body.suggestedUse ? JSON.parse(req.body.suggestedUse) : [];
+
+      // Create database record
+      const brandImage = await storage.createBrandImage({
+        userId,
+        cloudinaryUrl: uploadResult.secure_url,
+        cloudinaryPublicId: uploadResult.public_id,
+        category,
+        tags,
+        description: req.body.description || null,
+        productIds,
+        scenarioId: req.body.scenarioId || null,
+        suggestedUse,
+        aspectRatio: req.body.aspectRatio || null,
+      });
+
+      res.status(201).json(brandImage);
+    } catch (error: any) {
+      console.error("[Brand Images] Upload error:", error);
+      res.status(500).json({ error: "Failed to upload brand image" });
+    }
+  });
+
+  // Get all brand images for user
+  app.get("/api/brand-images", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const images = await storage.getBrandImagesByUser(userId);
+      res.json(images);
+    } catch (error: any) {
+      console.error("[Brand Images] List error:", error);
+      res.status(500).json({ error: "Failed to get brand images" });
+    }
+  });
+
+  // Get brand images by category
+  app.get("/api/brand-images/category/:category", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const images = await storage.getBrandImagesByCategory(userId, req.params.category);
+      res.json(images);
+    } catch (error: any) {
+      console.error("[Brand Images] Category query error:", error);
+      res.status(500).json({ error: "Failed to get brand images by category" });
+    }
+  });
+
+  // Get brand images for products
+  app.post("/api/brand-images/for-products", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const { productIds } = req.body;
+      if (!productIds || !Array.isArray(productIds)) {
+        return res.status(400).json({ error: "productIds array is required" });
+      }
+      const images = await storage.getBrandImagesForProducts(productIds, userId);
+      res.json(images);
+    } catch (error: any) {
+      console.error("[Brand Images] Products query error:", error);
+      res.status(500).json({ error: "Failed to get brand images for products" });
+    }
+  });
+
+  // Update brand image
+  app.put("/api/brand-images/:id", requireAuth, async (req, res) => {
+    try {
+      const image = await storage.updateBrandImage(req.params.id, req.body);
+      res.json(image);
+    } catch (error: any) {
+      console.error("[Brand Images] Update error:", error);
+      res.status(500).json({ error: "Failed to update brand image" });
+    }
+  });
+
+  // Delete brand image
+  app.delete("/api/brand-images/:id", requireAuth, async (req, res) => {
+    try {
+      // Get the image to delete from Cloudinary
+      const images = await storage.getBrandImagesByUser((req.session as any).userId);
+      const imageToDelete = images.find(img => img.id === req.params.id);
+
+      if (imageToDelete) {
+        // Delete from Cloudinary
+        const cloudinary = (await import("cloudinary")).v2;
+        cloudinary.config({
+          cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+          api_key: process.env.CLOUDINARY_API_KEY,
+          api_secret: process.env.CLOUDINARY_API_SECRET,
+        });
+
+        try {
+          await cloudinary.uploader.destroy(imageToDelete.cloudinaryPublicId);
+        } catch (cloudinaryError) {
+          console.warn("[Brand Images] Cloudinary delete warning:", cloudinaryError);
+          // Continue with database deletion even if Cloudinary fails
+        }
+      }
+
+      await storage.deleteBrandImage(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[Brand Images] Delete error:", error);
+      res.status(500).json({ error: "Failed to delete brand image" });
+    }
+  });
+
+  // ============================================
+  // PERFORMING AD TEMPLATES ENDPOINTS
+  // ============================================
+
+  // Create performing ad template
+  app.post("/api/performing-ad-templates", upload.single("preview"), requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      let previewImageUrl: string | undefined;
+      let previewPublicId: string | undefined;
+
+      // Upload preview image to Cloudinary if provided
+      if (req.file) {
+        const cloudinary = (await import("cloudinary")).v2;
+        cloudinary.config({
+          cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+          api_key: process.env.CLOUDINARY_API_KEY,
+          api_secret: process.env.CLOUDINARY_API_SECRET,
+        });
+
+        const result = await new Promise<any>((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            {
+              folder: "performing-ad-templates",
+              resource_type: "image",
+            },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          );
+          uploadStream.end(req.file!.buffer);
+        });
+
+        previewImageUrl = result.secure_url;
+        previewPublicId = result.public_id;
+      }
+
+      // Parse JSON fields from form data
+      const templateData = {
+        userId,
+        name: req.body.name,
+        description: req.body.description,
+        category: req.body.category,
+        sourceUrl: req.body.sourceUrl,
+        sourcePlatform: req.body.sourcePlatform,
+        advertiserName: req.body.advertiserName,
+        engagementTier: req.body.engagementTier,
+        estimatedEngagementRate: req.body.estimatedEngagementRate ? parseInt(req.body.estimatedEngagementRate) : undefined,
+        runningDays: req.body.runningDays ? parseInt(req.body.runningDays) : undefined,
+        estimatedBudget: req.body.estimatedBudget,
+        platformMetrics: req.body.platformMetrics ? JSON.parse(req.body.platformMetrics) : undefined,
+        layouts: req.body.layouts ? JSON.parse(req.body.layouts) : undefined,
+        colorPalette: req.body.colorPalette ? JSON.parse(req.body.colorPalette) : undefined,
+        typography: req.body.typography ? JSON.parse(req.body.typography) : undefined,
+        backgroundType: req.body.backgroundType,
+        contentBlocks: req.body.contentBlocks ? JSON.parse(req.body.contentBlocks) : undefined,
+        visualPatterns: req.body.visualPatterns ? JSON.parse(req.body.visualPatterns) : undefined,
+        mood: req.body.mood,
+        style: req.body.style,
+        templateFormat: req.body.templateFormat,
+        sourceFileUrl: req.body.sourceFileUrl,
+        previewImageUrl,
+        previewPublicId,
+        editableVariables: req.body.editableVariables ? JSON.parse(req.body.editableVariables) : undefined,
+        targetPlatforms: req.body.targetPlatforms ? JSON.parse(req.body.targetPlatforms) : undefined,
+        targetAspectRatios: req.body.targetAspectRatios ? JSON.parse(req.body.targetAspectRatios) : undefined,
+        bestForIndustries: req.body.bestForIndustries ? JSON.parse(req.body.bestForIndustries) : undefined,
+        bestForObjectives: req.body.bestForObjectives ? JSON.parse(req.body.bestForObjectives) : undefined,
+        isActive: req.body.isActive !== "false",
+        isFeatured: req.body.isFeatured === "true",
+      };
+
+      const template = await storage.createPerformingAdTemplate(templateData);
+      res.json(template);
+    } catch (error: any) {
+      console.error("[Performing Templates] Create error:", error);
+      res.status(500).json({ error: "Failed to create performing ad template" });
+    }
+  });
+
+  // Get all performing ad templates for user
+  app.get("/api/performing-ad-templates", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const templates = await storage.getPerformingAdTemplates(userId);
+      res.json(templates);
+    } catch (error: any) {
+      console.error("[Performing Templates] List error:", error);
+      res.status(500).json({ error: "Failed to fetch performing ad templates" });
+    }
+  });
+
+  // Get single performing ad template
+  app.get("/api/performing-ad-templates/:id", requireAuth, async (req, res) => {
+    try {
+      const template = await storage.getPerformingAdTemplate(req.params.id);
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      res.json(template);
+    } catch (error: any) {
+      console.error("[Performing Templates] Get error:", error);
+      res.status(500).json({ error: "Failed to fetch performing ad template" });
+    }
+  });
+
+  // Get templates by category
+  app.get("/api/performing-ad-templates/category/:category", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const templates = await storage.getPerformingAdTemplatesByCategory(userId, req.params.category);
+      res.json(templates);
+    } catch (error: any) {
+      console.error("[Performing Templates] Get by category error:", error);
+      res.status(500).json({ error: "Failed to fetch templates by category" });
+    }
+  });
+
+  // Get templates by platform
+  app.get("/api/performing-ad-templates/platform/:platform", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const templates = await storage.getPerformingAdTemplatesByPlatform(userId, req.params.platform);
+      res.json(templates);
+    } catch (error: any) {
+      console.error("[Performing Templates] Get by platform error:", error);
+      res.status(500).json({ error: "Failed to fetch templates by platform" });
+    }
+  });
+
+  // Get featured templates
+  app.get("/api/performing-ad-templates/featured", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const templates = await storage.getFeaturedPerformingAdTemplates(userId);
+      res.json(templates);
+    } catch (error: any) {
+      console.error("[Performing Templates] Get featured error:", error);
+      res.status(500).json({ error: "Failed to fetch featured templates" });
+    }
+  });
+
+  // Get top performing templates
+  app.get("/api/performing-ad-templates/top", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const templates = await storage.getTopPerformingAdTemplates(userId, limit);
+      res.json(templates);
+    } catch (error: any) {
+      console.error("[Performing Templates] Get top error:", error);
+      res.status(500).json({ error: "Failed to fetch top templates" });
+    }
+  });
+
+  // Search templates with filters
+  app.post("/api/performing-ad-templates/search", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const filters = req.body;
+      const templates = await storage.searchPerformingAdTemplates(userId, filters);
+      res.json(templates);
+    } catch (error: any) {
+      console.error("[Performing Templates] Search error:", error);
+      res.status(500).json({ error: "Failed to search templates" });
+    }
+  });
+
+  // Update performing ad template
+  app.put("/api/performing-ad-templates/:id", requireAuth, async (req, res) => {
+    try {
+      const template = await storage.updatePerformingAdTemplate(req.params.id, req.body);
+      res.json(template);
+    } catch (error: any) {
+      console.error("[Performing Templates] Update error:", error);
+      res.status(500).json({ error: "Failed to update performing ad template" });
+    }
+  });
+
+  // Delete performing ad template
+  app.delete("/api/performing-ad-templates/:id", requireAuth, async (req, res) => {
+    try {
+      // Get the template to delete preview from Cloudinary
+      const template = await storage.getPerformingAdTemplate(req.params.id);
+
+      if (template?.previewPublicId) {
+        const cloudinary = (await import("cloudinary")).v2;
+        cloudinary.config({
+          cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+          api_key: process.env.CLOUDINARY_API_KEY,
+          api_secret: process.env.CLOUDINARY_API_SECRET,
+        });
+
+        try {
+          await cloudinary.uploader.destroy(template.previewPublicId);
+        } catch (cloudinaryError) {
+          console.warn("[Performing Templates] Cloudinary delete warning:", cloudinaryError);
+        }
+      }
+
+      await storage.deletePerformingAdTemplate(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[Performing Templates] Delete error:", error);
+      res.status(500).json({ error: "Failed to delete performing ad template" });
+    }
+  });
+
   // Generate idea bank suggestions (optional auth for single-tenant mode)
   app.post("/api/idea-bank/suggest", async (req, res) => {
     try {
       // Use authenticated userId or default system user for single-tenant mode
       const userId = (req.session as any)?.userId || "system-user";
-      const { productId, productIds, userGoal, enableWebSearch, maxSuggestions } = req.body;
+      const { productId, productIds, uploadDescriptions, userGoal, enableWebSearch, maxSuggestions } = req.body;
 
       // Support both single productId and multiple productIds
       const ids = productIds || (productId ? [productId] : []);
 
-      if (ids.length === 0) {
-        return res.status(400).json({ error: "productId or productIds is required" });
+      // Validate upload descriptions if provided
+      const validUploadDescriptions: string[] = Array.isArray(uploadDescriptions)
+        ? uploadDescriptions.filter((d: any) => typeof d === "string" && d.trim().length > 0).slice(0, 6)
+        : [];
+
+      // Require at least products or upload descriptions
+      if (ids.length === 0 && validUploadDescriptions.length === 0) {
+        return res.status(400).json({ error: "productId, productIds, or uploadDescriptions is required" });
       }
 
       const { ideaBankService } = await import('./services/ideaBankService');
@@ -2021,6 +2626,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
               productId: id,
               userId,
               userGoal,
+              uploadDescriptions: validUploadDescriptions,
               enableWebSearch: enableWebSearch || false,
               maxSuggestions: 2, // Fewer per product when multiple
             })
@@ -2040,6 +2646,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
           kbQueried: false,
           templatesMatched: 0,
           webSearchUsed: false,
+          uploadDescriptionsUsed: validUploadDescriptions.length,
         };
 
         for (const result of successfulResults) {
@@ -2063,11 +2670,12 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
         });
       }
 
-      // Single product flow
+      // Single product OR uploads-only flow
       const result = await ideaBankService.generateSuggestions({
-        productId: ids[0],
+        productId: ids.length > 0 ? ids[0] : undefined,
         userId,
         userGoal,
+        uploadDescriptions: validUploadDescriptions,
         enableWebSearch: enableWebSearch || false,
         maxSuggestions: Math.min(maxSuggestions || 3, 5),
       });

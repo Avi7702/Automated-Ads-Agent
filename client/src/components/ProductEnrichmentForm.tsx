@@ -17,6 +17,8 @@ import {
   FileText,
   Wrench,
   List,
+  Link2,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,7 +41,7 @@ interface EnrichmentDraft {
   relatedProductTypes?: string[];
   confidence: number;
   sources: Array<{
-    type: "vision" | "web_search" | "kb";
+    type: "vision" | "web_search" | "kb" | "url";
     detail: string;
   }>;
   generatedAt: string;
@@ -66,12 +68,13 @@ interface ProductEnrichmentFormProps {
 
 // Source badge component
 function SourceBadge({ source }: { source: EnrichmentDraft["sources"][0] }) {
-  const iconMap = {
+  const iconMap: Record<string, typeof Eye> = {
     vision: Eye,
     web_search: Globe,
     kb: Database,
+    url: Link2,
   };
-  const Icon = iconMap[source.type];
+  const Icon = iconMap[source.type] || Globe;
 
   return (
     <div className="flex items-center gap-1.5 px-2 py-1 bg-muted/50 rounded-full text-xs">
@@ -116,9 +119,13 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
   const [enrichmentStatus, setEnrichmentStatus] = useState<EnrichmentStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isFetchingUrl, setIsFetchingUrl] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
+
+  // URL enrichment state
+  const [productUrl, setProductUrl] = useState("");
 
   // Editable form state
   const [formData, setFormData] = useState({
@@ -198,6 +205,56 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
       setError(err.message);
     } finally {
       setIsGenerating(false);
+    }
+  }
+
+  // Fetch from URL
+  async function fetchFromUrl() {
+    if (!productUrl.trim()) {
+      setError("Please enter a product URL");
+      return;
+    }
+
+    // Validate URL
+    try {
+      new URL(productUrl);
+    } catch {
+      setError("Please enter a valid URL");
+      return;
+    }
+
+    setIsFetchingUrl(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/products/${product.id}/enrich-from-url`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productUrl: productUrl.trim() }),
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to fetch from URL");
+      }
+      const result = await response.json();
+
+      // Update form with fetched data
+      if (result.draft) {
+        setFormData({
+          description: result.draft.description || "",
+          features: flattenFeatures(result.draft.features || {}),
+          benefits: result.draft.benefits || [],
+          tags: result.draft.tags || [],
+          sku: product.sku || "",
+        });
+      }
+
+      await fetchEnrichmentStatus();
+      setIsExpanded(true);
+      setProductUrl(""); // Clear the input after success
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsFetchingUrl(false);
     }
   }
 
@@ -347,6 +404,38 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
             <div className="p-4 pt-0 space-y-6">
               {/* Completeness bar */}
               {completeness && <CompletenessIndicator completeness={completeness} />}
+
+              {/* URL Enrichment */}
+              <div className="space-y-2 p-3 bg-muted/30 rounded-lg border border-dashed">
+                <label className="flex items-center gap-2 text-sm font-medium">
+                  <Link2 className="w-4 h-4" />
+                  Enrich from Product URL
+                </label>
+                <p className="text-xs text-muted-foreground">
+                  Paste a link to the manufacturer's product page to automatically extract product details.
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    value={productUrl}
+                    onChange={(e) => setProductUrl(e.target.value)}
+                    placeholder="https://example.com/product-page"
+                    className="flex-1"
+                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), fetchFromUrl())}
+                  />
+                  <Button
+                    variant="secondary"
+                    onClick={fetchFromUrl}
+                    disabled={isFetchingUrl || !productUrl.trim()}
+                  >
+                    {isFetchingUrl ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                    ) : (
+                      <ExternalLink className="w-4 h-4 mr-1" />
+                    )}
+                    Fetch
+                  </Button>
+                </div>
+              </div>
 
               {/* Sources used */}
               {draft?.sources && draft.sources.length > 0 && (

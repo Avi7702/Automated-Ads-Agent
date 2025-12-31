@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config';
+import react from '@vitejs/plugin-react';
 import path from 'node:path';
 
 const isCI = process.env.CI === 'true';
@@ -17,9 +18,15 @@ const integrationTests = [
 ];
 
 export default defineConfig({
+  plugins: [react()],
   test: {
     globals: true,
     environment: 'node',
+    // Use jsdom for client tests via @vitest-environment jsdom directive in test files
+    environmentMatchGlobs: [
+      ['client/**/*.test.tsx', 'jsdom'],
+      ['client/**/*.test.ts', 'jsdom'],
+    ],
     setupFiles: ['./vitest.setup.ts'],
     // Exclude database-dependent tests in CI or when no DATABASE_URL is set
     // Also exclude e2e tests - those should be run with Playwright, not vitest
@@ -51,6 +58,8 @@ export default defineConfig({
     alias: {
       '@shared': path.resolve(__dirname, './shared'),
       '@server': path.resolve(__dirname, './server'),
+      '@': path.resolve(__dirname, './client/src'),
     },
+    dedupe: ['react', 'react-dom'],
   },
 });
