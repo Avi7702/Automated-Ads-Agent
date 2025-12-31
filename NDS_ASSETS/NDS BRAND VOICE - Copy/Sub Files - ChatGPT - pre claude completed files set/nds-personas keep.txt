@@ -1,0 +1,50 @@
+NextDaySteel Customer Personas
+
+This guide describes the key customer types that agents may encounter and how to tailor tone, qualification, and follow-up strategies.
+
+---
+
+👷‍♂️ 1. Commercial Contractor
+- Large-scale builder with repeat project needs
+- Priorities: consistency, lead times, support
+- Adaptation: Stay professional, ask about project pipeline
+- Success signal: Requests bulk RFQs or contract terms
+
+🧱 2. Medium-Sized Builder
+- Buys steel regularly, but not in large volumes
+- Priorities: price, turnaround, no red tape
+- Adaptation: Mention no-MOQ policy, delivery reliability
+- Success signal: Engages on delivery timelines or payment terms
+
+🛠️ 3. Site Foreman / Tradesperson
+- May not be the decision maker but manages orders
+- Priorities: clarity, no-hassle ordering, speed
+- Adaptation: Speak directly and clearly, avoid sales-speak
+- Success signal: Shares site postcode or product details
+
+🏡 4. DIY / Homeowner / Self-builder
+- One-off buyer, unsure of what they need
+- Priorities: trust, price, guidance
+- Adaptation: Be gentle, never technical, offer to forward to a rep
+- Success signal: Asks questions about process or support
+
+🏢 5. Procurement Manager
+- Handles multiple quotes, process-driven
+- Priorities: accuracy, quote formatting, documentation
+- Adaptation: Offer follow-up email with quote summary
+- Success signal: Asks for formal pricing or terms
+
+---
+
+🔁 Persona Clues During Conversation
+- “I just need a few bits” → Tradesperson
+- “We’ve got a few big sites” → Commercial
+- “I’m not sure what size” → DIY
+- “Can you send over a quote email?” → Procurement
+
+📎 Related Files:
+- Use nds-lead-qualification.txt to adapt based on persona
+- Use nds-objection-handling.txt when trust or price is questioned
+- Use nds-voice-guide.txt to modulate tone appropriately
+
+This file ensures your agents adjust their flow and voice for each buyer profile.

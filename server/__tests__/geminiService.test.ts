@@ -115,7 +115,7 @@ describe('GeminiService', () => {
       // Verify that generateContent was called with contents including inlineData
       expect(mockGenerateContent).toHaveBeenCalledWith(
         expect.objectContaining({
-          model: 'gemini-3-pro-preview',
+          model: 'gemini-3-pro-image-preview',
           contents: expect.arrayContaining([
             expect.objectContaining({ inlineData: expect.any(Object) })
           ])
@@ -204,7 +204,8 @@ describe('GeminiService', () => {
       const result = await geminiService.generateImage(prompt);
 
       expect(result).toHaveProperty('model');
-      expect(result.model).toBe('gemini-3-pro-preview');
+      // Default model is 'gemini-3-pro-image-preview' or from GEMINI_MODEL env
+      expect(result.model).toBe('gemini-3-pro-image-preview');
     });
   });
 
@@ -235,7 +236,7 @@ describe('GeminiService', () => {
 
       expect(mockGenerateContent).toHaveBeenCalledWith(
         expect.objectContaining({
-          model: 'gemini-3-pro-preview',
+          model: 'gemini-3-pro-image-preview',
           contents: expect.arrayContaining([
             expect.objectContaining({ role: 'user' }),
             expect.objectContaining({ role: 'model' }),

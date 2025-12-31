@@ -95,10 +95,6 @@ const helpers = {
     }
 };
 
-// Run if executed directly (ES module compatible)
-seedBrandProfile()
-    .then(() => process.exit(0))
-    .catch((err) => {
-        console.error(err);
-        process.exit(1);
-    });
+// CLI execution disabled - this check doesn't work correctly when bundled with esbuild
+// The bundled file becomes the "main module" so this would run on every server start
+// To seed manually, use: POST /api/admin/seed-brand

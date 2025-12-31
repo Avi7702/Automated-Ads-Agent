@@ -88,7 +88,31 @@
       "Bash(if ! head:*)",
       "Bash(gh run list:*)",
       "Bash(gh run view:*)",
-      "Bash(gh run rerun:*)"
+      "Bash(gh run rerun:*)",
+      "Bash(netstat:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:VYtUsSExJERzegiSWssGmXHRKqwQzNyq@switchback.proxy.rlwy.net:34192/railway\" node:*)",
+      "Bash(set DATABASE_URL=postgresql://postgres:VYtUsSExJERzegiSWssGmXHRKqwQzNyq@switchback.proxy.rlwy.net:34192/railway)",
+      "Bash(curl:*)",
+      "Bash(taskkill:*)",
+      "Bash(if exist \"node_modules\\\\.vite\" rmdir /s /q \"node_modules\\\\.vite\")",
+      "Bash(if exist \"client\\\\.vite\" rmdir /s /q \"client\\\\.vite\")",
+      "Bash(npx playwright install chromium)",
+      "Bash(start http://localhost:3000)",
+      "Bash(npm show:*)",
+      "Bash(npm update:*)",
+      "Bash(npx playwright test:*)",
+      "Bash(cmd /c \"taskkill /PID 37228 /F\")",
+      "Bash(npm info:*)",
+      "Bash(timeout:*)",
+      "Bash(ping:*)",
+      "Bash(start:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:VYtUsSExJERzegiSWssGmXHRKqwQzNyq@switchback.proxy.rlwy.net:34192/railway\" timeout 15 node:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:VYtUsSExJERzegiSWssGmXHRKqwQzNyq@switchback.proxy.rlwy.net:34192/railway\" npx drizzle-kit push:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:VYtUsSExJERzegiSWssGmXHRKqwQzNyq@switchback.proxy.rlwy.net:34192/railway\" NODE_ENV=production PORT=3000 timeout:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:VYtUsSExJERzegiSWssGmXHRKqwQzNyq@switchback.proxy.rlwy.net:34192/railway\" NODE_ENV=production PORT=3000 timeout 10 node:*)",
+      "Bash(for:*)",
+      "Bash(do echo \"Attempt $i:\")",
+      "Bash(done)"
     ]
   }
 }

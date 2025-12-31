@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import type { Product } from "@shared/schema";
+import type { Product, PromptTemplate } from "@shared/schema";
 
 // Components
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,10 @@ import {
 } from "@/components/ui/collapsible";
 import { IdeaBankPanel } from "@/components/IdeaBankPanel";
 import { LinkedInPostPreview } from "@/components/LinkedInPostPreview";
+import { UploadZone } from "@/components/UploadZone";
+import { HistoryTimeline } from "@/components/HistoryTimeline";
+import { SaveToCatalogDialog } from "@/components/SaveToCatalogDialog";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 // Icons
 import {
@@ -50,12 +54,14 @@ import {
   User,
   LogOut,
   Eye,
+  FolderPlus,
 } from "lucide-react";
 
 // Types
 type GenerationState = "idle" | "generating" | "result";
 
 interface CollapsedSections {
+  upload: boolean;
   products: boolean;
   templates: boolean;
   refine: boolean;
@@ -71,7 +77,7 @@ function getStoredCollapsedSections(): CollapsedSections {
     const stored = localStorage.getItem(COLLAPSED_SECTIONS_KEY);
     if (stored) return JSON.parse(stored);
   } catch {}
-  return { products: false, templates: false, refine: true, copy: true, preview: true };
+  return { upload: false, products: false, templates: false, refine: true, copy: true, preview: true };
 }
 
 function storeCollapsedSections(sections: CollapsedSections) {
@@ -186,7 +192,7 @@ function ContextBar({
   visible,
 }: {
   selectedProducts: Product[];
-  selectedTemplate: string | null;
+  selectedTemplate: PromptTemplate | null;
   platform: string;
   visible: boolean;
 }) {
@@ -211,7 +217,7 @@ function ContextBar({
             <span className="text-muted-foreground">•</span>
             <span className="flex items-center gap-1.5">
               <ImageIcon className="w-4 h-4 text-purple-500" />
-              {selectedTemplate}
+              {selectedTemplate.title}
             </span>
           </>
         )}
@@ -287,7 +293,8 @@ export default function Studio() {
 
   // Selection state
   const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<PromptTemplate | null>(null);
+  const [templateCategory, setTemplateCategory] = useState<string>("all");
   const [prompt, setPrompt] = useState("");
   const [platform, setPlatform] = useState("LinkedIn");
   const [aspectRatio, setAspectRatio] = useState("1200x627");
@@ -307,6 +314,17 @@ export default function Studio() {
   const [quickStartMode, setQuickStartMode] = useState(false);
   const [quickStartPrompt, setQuickStartPrompt] = useState("");
 
+  // Temporary uploads (not saved to catalog)
+  const [tempUploads, setTempUploads] = useState<File[]>([]);
+
+  // Price estimate
+  const [priceEstimate, setPriceEstimate] = useState<{
+    estimatedCost: number;
+    p90: number;
+    sampleCount: number;
+    usedFallback: boolean;
+  } | null>(null);
+
   // Edit/Ask AI state
   const [editPrompt, setEditPrompt] = useState("");
   const [isEditing, setIsEditing] = useState(false);
@@ -317,6 +335,9 @@ export default function Studio() {
   // Ad Copy state for LinkedIn Preview
   const [generatedCopy, setGeneratedCopy] = useState<string>("");
   const [isGeneratingCopy, setIsGeneratingCopy] = useState(false);
+
+  // Save to Catalog dialog state
+  const [showSaveToCatalog, setShowSaveToCatalog] = useState(false);
 
   // Selected suggestion state - for highlighting and showing near textarea
   const [selectedSuggestion, setSelectedSuggestion] = useState<{
@@ -366,6 +387,16 @@ export default function Studio() {
     },
   });
 
+  // Fetch prompt templates
+  const { data: templates = [] } = useQuery<PromptTemplate[]>({
+    queryKey: ["prompt-templates"],
+    queryFn: async () => {
+      const res = await fetch("/api/prompt-templates");
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
   // Filter products
   const filteredProducts = products.filter((product) => {
     const matchesSearch = product.name
@@ -387,6 +418,59 @@ export default function Studio() {
   useEffect(() => {
     storeCollapsedSections(collapsedSections);
   }, [collapsedSections]);
+
+  // Auto-save draft prompt to localStorage
+  useEffect(() => {
+    const savePromptDraft = () => {
+      if (prompt) {
+        localStorage.setItem("studio-prompt-draft", prompt);
+      }
+    };
+    const timeout = setTimeout(savePromptDraft, 500);
+    return () => clearTimeout(timeout);
+  }, [prompt]);
+
+  // Restore draft on mount
+  useEffect(() => {
+    const savedPrompt = localStorage.getItem("studio-prompt-draft");
+    if (savedPrompt && !prompt) {
+      setPrompt(savedPrompt);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Fetch price estimate when inputs change
+  useEffect(() => {
+    const fetchPriceEstimate = async () => {
+      const inputImagesCount = selectedProducts.length + tempUploads.length;
+      const promptChars = prompt.length;
+
+      if (inputImagesCount === 0 && promptChars === 0) {
+        setPriceEstimate(null);
+        return;
+      }
+
+      try {
+        const params = new URLSearchParams({
+          resolution,
+          operation: "generate",
+          inputImagesCount: String(inputImagesCount),
+          promptChars: String(promptChars),
+        });
+
+        const res = await fetch(`/api/pricing/estimate?${params}`);
+        if (res.ok) {
+          const data = await res.json();
+          setPriceEstimate(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch price estimate:", error);
+      }
+    };
+
+    const debounceTimer = setTimeout(fetchPriceEstimate, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [selectedProducts.length, tempUploads.length, prompt.length, resolution]);
 
   // Scroll tracking for context bar and sticky generate
   useEffect(() => {
@@ -433,7 +517,8 @@ export default function Studio() {
 
   // Handle generation
   const handleGenerate = async () => {
-    if (selectedProducts.length === 0 && !quickStartMode) {
+    const hasImages = selectedProducts.length > 0 || tempUploads.length > 0;
+    if (!hasImages && !quickStartMode) {
       return;
     }
 
@@ -446,6 +531,7 @@ export default function Studio() {
       const formData = new FormData();
 
       if (!quickStartMode) {
+        // Add selected products as files
         const filePromises = selectedProducts.map(async (product) => {
           const response = await fetch(product.cloudinaryUrl);
           const blob = await response.blob();
@@ -454,6 +540,9 @@ export default function Studio() {
 
         const files = await Promise.all(filePromises);
         files.forEach((file) => formData.append("images", file));
+
+        // Add temp uploads
+        tempUploads.forEach((file) => formData.append("images", file));
       }
 
       formData.append("prompt", finalPrompt);
@@ -473,6 +562,9 @@ export default function Studio() {
       setGeneratedImage(data.imageUrl);
       setGenerationId(data.generationId);
       setState("result");
+
+      // Clear the draft after successful generation
+      localStorage.removeItem("studio-prompt-draft");
 
       // Scroll to result
       setTimeout(() => {
@@ -510,6 +602,8 @@ export default function Studio() {
     setGenerationId(null);
     setQuickStartMode(false);
     setQuickStartPrompt("");
+    setTempUploads([]); // Clear temp uploads
+    setGeneratedCopy(""); // Clear generated copy
   };
 
   // Handle edit
@@ -602,6 +696,18 @@ export default function Studio() {
     }
   };
 
+  // Handle loading a generation from history
+  const handleLoadFromHistory = (generation: any) => {
+    setGeneratedImage(generation.generatedImagePath);
+    setGenerationId(generation.id);
+    setPrompt(generation.prompt || "");
+    setState("result");
+    // Scroll to result
+    setTimeout(() => {
+      document.getElementById("result")?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  };
+
   // Handle Ask AI
   const handleAskAI = async () => {
     if (!askAIQuestion.trim() || !generationId) return;
@@ -634,6 +740,7 @@ export default function Studio() {
 
   // Progress rail sections
   const progressSections = [
+    { id: "upload", label: "Upload", completed: tempUploads.length > 0 },
     { id: "products", label: "Products", completed: selectedProducts.length > 0 },
     { id: "templates", label: "Style", completed: !!selectedTemplate },
     { id: "prompt", label: "Prompt", completed: !!prompt.trim() },
@@ -712,9 +819,14 @@ export default function Studio() {
         onNavigate={navigateToSection}
       />
 
-      {/* Main Content */}
-      <main className="container max-w-4xl mx-auto px-6 pt-24 pb-32 relative z-10">
-        <div className="space-y-8">
+      {/* Main Content - 2 Column Layout on Desktop */}
+      <main className="container max-w-7xl mx-auto px-6 pt-24 pb-32 lg:pb-32 relative z-10">
+        {/* Extra padding on mobile for fixed bottom preview bar */}
+        <div className="pb-20 lg:pb-0">
+        {/* Desktop: 2-column grid, Mobile: single column */}
+        <div className="lg:grid lg:grid-cols-[1fr_400px] lg:gap-8">
+          {/* Left Column - All Inputs (scrollable) */}
+          <div className="space-y-8">
           {/* Hero Section */}
           <motion.div
             ref={heroRef}
@@ -855,11 +967,23 @@ export default function Studio() {
                   <Eye className="w-4 h-4 mr-2" />
                   Preview
                 </Button>
-                <Button variant="outline" className="h-14">
-                  <Share2 className="w-4 h-4 mr-2" />
-                  Share
+                <Button
+                  variant="outline"
+                  className="h-14"
+                  onClick={() => setShowSaveToCatalog(true)}
+                >
+                  <FolderPlus className="w-4 h-4 mr-2" />
+                  Save
                 </Button>
               </div>
+
+              {/* History Timeline */}
+              <ErrorBoundary>
+                <HistoryTimeline
+                  currentGenerationId={generationId}
+                  onSelect={handleLoadFromHistory}
+                />
+              </ErrorBoundary>
 
               {/* Refine Section */}
               <Section
@@ -1024,6 +1148,27 @@ export default function Studio() {
           {/* Idle State - Full Flow */}
           {state === "idle" && (
             <>
+              {/* Upload Section - Temporary Images */}
+              <Section
+                id="upload"
+                title="Upload Images"
+                subtitle="One-time use (not saved to catalog)"
+                isOpen={!collapsedSections.upload}
+                onToggle={() => toggleSection("upload")}
+              >
+                <UploadZone
+                  files={tempUploads}
+                  onFilesAdded={(files) =>
+                    setTempUploads((prev) => [...prev, ...files].slice(0, 6 - selectedProducts.length))
+                  }
+                  onRemove={(index) =>
+                    setTempUploads((prev) => prev.filter((_, i) => i !== index))
+                  }
+                  maxFiles={6 - selectedProducts.length}
+                  disabled={selectedProducts.length + tempUploads.length >= 6}
+                />
+              </Section>
+
               {/* Products Section */}
               <Section
                 id="products"
@@ -1089,39 +1234,41 @@ export default function Studio() {
                     </Select>
                   </div>
 
-                  {/* Product Grid */}
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-                    {filteredProducts.map((product) => {
-                      const isSelected = selectedProducts.some((p) => p.id === product.id);
-                      return (
-                        <button
-                          key={product.id}
-                          onClick={() => toggleProductSelection(product)}
-                          disabled={!isSelected && selectedProducts.length >= 6}
-                          className={cn(
-                            "relative aspect-square rounded-xl overflow-hidden border-2 transition-all",
-                            isSelected
-                              ? "border-primary ring-2 ring-primary/20"
-                              : "border-white/10 hover:border-white/30",
-                            !isSelected && selectedProducts.length >= 6 && "opacity-50"
-                          )}
-                        >
-                          <img
-                            src={product.cloudinaryUrl}
-                            alt={product.name}
-                            className="w-full h-full object-cover"
-                          />
-                          {isSelected && (
-                            <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                              <Check className="w-3 h-3 text-white" />
+                  {/* Product Grid - with internal scroll */}
+                  <div className="max-h-[300px] overflow-y-auto rounded-lg border border-white/5 p-2">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                      {filteredProducts.map((product) => {
+                        const isSelected = selectedProducts.some((p) => p.id === product.id);
+                        return (
+                          <button
+                            key={product.id}
+                            onClick={() => toggleProductSelection(product)}
+                            disabled={!isSelected && selectedProducts.length >= 6}
+                            className={cn(
+                              "relative aspect-square rounded-xl overflow-hidden border-2 transition-all",
+                              isSelected
+                                ? "border-primary ring-2 ring-primary/20"
+                                : "border-white/10 hover:border-white/30",
+                              !isSelected && selectedProducts.length >= 6 && "opacity-50"
+                            )}
+                          >
+                            <img
+                              src={product.cloudinaryUrl}
+                              alt={product.name}
+                              className="w-full h-full object-cover"
+                            />
+                            {isSelected && (
+                              <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                                <Check className="w-3 h-3 text-white" />
+                              </div>
+                            )}
+                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
+                              <p className="text-white text-xs truncate">{product.name}</p>
                             </div>
-                          )}
-                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                            <p className="text-white text-xs truncate">{product.name}</p>
-                          </div>
-                        </button>
-                      );
-                    })}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   {filteredProducts.length === 0 && (
@@ -1137,25 +1284,100 @@ export default function Studio() {
               <Section
                 id="templates"
                 title="Style & Template"
-                subtitle="Choose a starting point (optional)"
+                subtitle={selectedTemplate ? `Selected: ${selectedTemplate.title}` : "Choose a starting point (optional)"}
                 isOpen={!collapsedSections.templates}
                 onToggle={() => toggleSection("templates")}
               >
                 <div className="space-y-4">
+                  {/* Category Filter */}
                   <div className="flex flex-wrap gap-2">
-                    {["All", "Product Shots", "Social Media", "Banners", "Construction Site", "Technical"].map((cat) => (
+                    {["all", ...Array.from(new Set(templates.map(t => t.category).filter(Boolean)))].map((cat) => (
                       <Button
                         key={cat}
-                        variant={selectedTemplate === cat ? "default" : "outline"}
+                        variant={templateCategory === cat ? "default" : "outline"}
                         size="sm"
-                        onClick={() => setSelectedTemplate(cat === selectedTemplate ? null : cat)}
+                        onClick={() => setTemplateCategory(cat)}
                       >
-                        {cat}
+                        {cat === "all" ? "All" : cat}
                       </Button>
                     ))}
                   </div>
+
+                  {/* Templates Horizontal Scroll */}
+                  {templates.length > 0 ? (
+                    <div className="flex gap-3 overflow-x-auto pb-2">
+                      {templates
+                        .filter(t => templateCategory === "all" || t.category === templateCategory)
+                        .map((template) => (
+                          <button
+                            key={template.id}
+                            onClick={() => {
+                              if (selectedTemplate?.id === template.id) {
+                                setSelectedTemplate(null);
+                              } else {
+                                setSelectedTemplate(template);
+                                // Pre-fill the prompt with the template
+                                setPrompt(template.prompt);
+                              }
+                            }}
+                            className={cn(
+                              "flex-shrink-0 p-3 rounded-xl border-2 transition-all text-left min-w-[180px] max-w-[200px]",
+                              selectedTemplate?.id === template.id
+                                ? "border-primary bg-primary/10 ring-2 ring-primary/20"
+                                : "border-white/10 hover:border-white/30 bg-card/50"
+                            )}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs font-medium text-primary truncate">
+                                {template.category || "General"}
+                              </span>
+                              {selectedTemplate?.id === template.id && (
+                                <Check className="w-4 h-4 text-primary" />
+                              )}
+                            </div>
+                            <p className="text-sm font-medium truncate">{template.title}</p>
+                            <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                              {template.prompt}
+                            </p>
+                            {template.tags && template.tags.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {template.tags.slice(0, 3).map((tag, i) => (
+                                  <span
+                                    key={i}
+                                    className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-muted-foreground"
+                                  >
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground py-4 text-center">
+                      No templates available. Add templates in the admin section.
+                    </p>
+                  )}
+
+                  {selectedTemplate && (
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-primary/5 border border-primary/20">
+                      <div className="flex items-center gap-2">
+                        <Check className="w-4 h-4 text-primary" />
+                        <span className="text-sm">Using template: <strong>{selectedTemplate.title}</strong></span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedTemplate(null)}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+
                   <p className="text-sm text-muted-foreground">
-                    Or skip this — describe your vision below instead.
+                    Select a template to pre-fill your prompt, or skip and describe your vision below.
                   </p>
                 </div>
               </Section>
@@ -1224,11 +1446,21 @@ export default function Studio() {
                 </div>
 
                 {/* Idea Bank - suggestions based on selected products */}
-                <IdeaBankPanel
-                  selectedProducts={selectedProducts}
-                  onSelectPrompt={(promptText) => handleSelectSuggestion(promptText)}
-                  selectedPromptId={selectedSuggestion?.id}
-                />
+                <ErrorBoundary>
+                  <IdeaBankPanel
+                    selectedProducts={selectedProducts}
+                    onSelectPrompt={(promptText, id, reasoning) => handleSelectSuggestion(promptText, id, reasoning)}
+                    onSetPlatform={setPlatform}
+                    onSetAspectRatio={setAspectRatio}
+                    onQuickGenerate={(promptText) => {
+                      setPrompt(promptText);
+                      // Small delay to ensure state is updated before generating
+                      setTimeout(() => handleGenerate(), 100);
+                    }}
+                    selectedPromptId={selectedSuggestion?.id}
+                    isGenerating={state === "generating"}
+                  />
+                </ErrorBoundary>
 
                 {/* Platform & Aspect Ratio */}
                 <div className="flex flex-wrap gap-4">
@@ -1278,6 +1510,34 @@ export default function Studio() {
                 </div>
               </motion.section>
 
+              {/* Price Estimate */}
+              {priceEstimate && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-4 rounded-xl bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">💲</span>
+                      <div>
+                        <p className="text-sm font-medium">
+                          Estimated cost: <span className="text-green-400">${priceEstimate.estimatedCost.toFixed(3)}</span>
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {priceEstimate.usedFallback
+                            ? "Based on default rates"
+                            : `Based on ${priceEstimate.sampleCount} similar generations`}
+                          {priceEstimate.p90 > priceEstimate.estimatedCost && (
+                            <span> • 90th percentile: ${priceEstimate.p90.toFixed(3)}</span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
               {/* Generate Button */}
               <motion.div
                 ref={generateButtonRef}
@@ -1289,20 +1549,137 @@ export default function Studio() {
                 <Button
                   size="lg"
                   onClick={handleGenerate}
-                  disabled={selectedProducts.length === 0 || !prompt.trim()}
+                  disabled={(selectedProducts.length === 0 && tempUploads.length === 0) || !prompt.trim()}
                   className="w-full h-16 text-lg rounded-2xl"
                 >
                   <Sparkles className="w-5 h-5 mr-2" />
                   Generate Image
                 </Button>
                 <p className="text-center text-sm text-muted-foreground mt-3">
-                  {selectedProducts.length} product{selectedProducts.length !== 1 ? "s" : ""} • {platform} • {resolution}
+                  {selectedProducts.length + tempUploads.length} image{selectedProducts.length + tempUploads.length !== 1 ? "s" : ""} • {platform} • {resolution}
                 </p>
               </motion.div>
             </>
           )}
+          </div>
+
+          {/* Right Column - LinkedIn Preview (Always Visible, Sticky on Desktop) */}
+          <div className="hidden lg:block">
+            <div className="sticky top-24 max-h-[calc(100vh-120px)] overflow-y-auto">
+              <div className="rounded-2xl border border-white/10 bg-card/30 backdrop-blur-sm p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Eye className="w-5 h-5 text-primary" />
+                  <h3 className="font-medium">LinkedIn Preview</h3>
+                </div>
+
+                <LinkedInPostPreview
+                  authorName={authUser?.email?.split("@")[0] || "Your Company"}
+                  authorHeadline="Building Products | Construction Solutions"
+                  postText={generatedCopy || null}
+                  imageUrl={generatedImage || null}
+                  isEditable={true}
+                  onTextChange={(text) => setGeneratedCopy(text)}
+                  onGenerateCopy={generationId ? handleGenerateCopy : undefined}
+                  onGenerateImage={selectedProducts.length > 0 && prompt.trim() ? handleGenerate : undefined}
+                  isGeneratingCopy={isGeneratingCopy}
+                  isGeneratingImage={state === "generating"}
+                />
+
+                {/* Action Buttons */}
+                <div className="mt-4 space-y-2">
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      disabled={!generatedImage || !generatedCopy}
+                      onClick={() => {
+                        if (generatedCopy) {
+                          navigator.clipboard.writeText(generatedCopy);
+                        }
+                      }}
+                    >
+                      📋 Copy Text
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      disabled={!generatedImage}
+                      onClick={handleDownload}
+                    >
+                      📥 Download
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         </div>
       </main>
+
+      {/* Mobile LinkedIn Preview - Fixed Bottom Bar */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-md border-t border-white/10">
+        <Collapsible>
+          <CollapsibleTrigger asChild>
+            <button className="w-full p-4 flex items-center justify-between hover:bg-white/5">
+              <div className="flex items-center gap-2">
+                <Eye className="w-5 h-5 text-primary" />
+                <span className="font-medium">LinkedIn Preview</span>
+                {generatedImage && generatedCopy ? (
+                  <span className="text-xs text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full">Ready</span>
+                ) : (
+                  <span className="text-xs text-muted-foreground bg-white/5 px-2 py-0.5 rounded-full">
+                    {generatedImage ? "Need copy" : generatedCopy ? "Need image" : "Empty"}
+                  </span>
+                )}
+              </div>
+              <ChevronUp className="w-5 h-5 text-muted-foreground" />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="p-4 pt-0 max-h-[60vh] overflow-y-auto">
+              <LinkedInPostPreview
+                authorName={authUser?.email?.split("@")[0] || "Your Company"}
+                authorHeadline="Building Products | Construction Solutions"
+                postText={generatedCopy || null}
+                imageUrl={generatedImage || null}
+                isEditable={true}
+                onTextChange={(text) => setGeneratedCopy(text)}
+                onGenerateCopy={generationId ? handleGenerateCopy : undefined}
+                onGenerateImage={selectedProducts.length > 0 && prompt.trim() ? handleGenerate : undefined}
+                isGeneratingCopy={isGeneratingCopy}
+                isGeneratingImage={state === "generating"}
+              />
+              <div className="mt-4 flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  disabled={!generatedCopy}
+                  onClick={() => {
+                    if (generatedCopy) {
+                      navigator.clipboard.writeText(generatedCopy);
+                    }
+                  }}
+                >
+                  📋 Copy
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  disabled={!generatedImage}
+                  onClick={handleDownload}
+                >
+                  📥 Download
+                </Button>
+              </div>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
 
       {/* Sticky Generate Bar */}
       <AnimatePresence>
@@ -1311,10 +1688,22 @@ export default function Studio() {
           selectedProducts={selectedProducts}
           platform={platform}
           onGenerate={handleGenerate}
-          disabled={selectedProducts.length === 0 || !prompt.trim()}
+          disabled={(selectedProducts.length === 0 && tempUploads.length === 0) || !prompt.trim()}
           isGenerating={state === "generating"}
         />
       </AnimatePresence>
+
+      {/* Save to Catalog Dialog */}
+      {generatedImage && (
+        <ErrorBoundary>
+          <SaveToCatalogDialog
+            isOpen={showSaveToCatalog}
+            onClose={() => setShowSaveToCatalog(false)}
+            imageUrl={generatedImage}
+            defaultName={`Generated - ${new Date().toLocaleDateString()}`}
+          />
+        </ErrorBoundary>
+      )}
     </div>
   );
 }

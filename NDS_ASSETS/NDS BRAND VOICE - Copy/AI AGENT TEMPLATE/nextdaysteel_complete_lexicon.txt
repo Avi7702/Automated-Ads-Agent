@@ -1,0 +1,2339 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lexicon version="1.0"
+      xmlns="http://www.w3.org/2005/01/pronunciation-lexicon"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.w3.org/2005/01/pronunciation-lexicon
+        http://www.w3.org/TR/2007/CR-pronunciation-lexicon-20071212/pls.xsd"
+      alphabet="ipa" xml:lang="en-GB">
+  <!-- COMPANY NAME -->
+  <lexeme>
+    <grapheme>NextDaySteel</grapheme>
+    <alias>next day steel</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>nextdaysteel</grapheme>
+    <alias>next day steel</alias>
+  </lexeme>
+  <!-- REBAR SIZES - T SERIES -->
+  <lexeme>
+    <grapheme>T8</grapheme>
+    <alias>tee eight</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>T10</grapheme>
+    <alias>tee ten</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>T12</grapheme>
+    <alias>tee twelve</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>T16</grapheme>
+    <alias>tee sixteen</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>T20</grapheme>
+    <alias>tee twenty</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>T25</grapheme>
+    <alias>tee twenty five</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>T32</grapheme>
+    <alias>tee thirty two</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>T40</grapheme>
+    <alias>tee forty</alias>
+  </lexeme>
+  <!-- REBAR SIZES - H SERIES (Same as T) -->
+  <lexeme>
+    <grapheme>H8</grapheme>
+    <alias>aych eight</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>H10</grapheme>
+    <alias>aych ten</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>H12</grapheme>
+    <alias>aych twelve</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>H16</grapheme>
+    <alias>aych sixteen</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>H20</grapheme>
+    <alias>aych twenty</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>H25</grapheme>
+    <alias>aych twenty five</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>H32</grapheme>
+    <alias>aych thirty two</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>H40</grapheme>
+    <alias>aych forty</alias>
+  </lexeme>
+  <!-- MESH TYPES -->
+  <lexeme>
+    <grapheme>A142</grapheme>
+    <alias>ay one four two</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>A193</grapheme>
+    <alias>ay one nine three</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>A252</grapheme>
+    <alias>ay two five two</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>A393</grapheme>
+    <alias>ay three nine three</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>B283</grapheme>
+    <alias>bee two eight three</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>B385</grapheme>
+    <alias>bee three eight five</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>B503</grapheme>
+    <alias>bee five oh three</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>B785</grapheme>
+    <alias>bee seven eight five</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>B1131</grapheme>
+    <alias>bee one one three one</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>C283</grapheme>
+    <alias>see two eight three</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>C385</grapheme>
+    <alias>see three eight five</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>C503</grapheme>
+    <alias>see five oh three</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>C636</grapheme>
+    <alias>see six three six</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>C785</grapheme>
+    <alias>see seven eight five</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>D49</grapheme>
+    <alias>dee four nine</alias>
+  </lexeme>
+  <!-- K-FORM PRODUCTS -->
+  <lexeme>
+    <grapheme>K85</grapheme>
+    <alias>kay eight five</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>K135</grapheme>
+    <alias>kay one three five</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>K-FORM</grapheme>
+    <alias>kay form</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>KFORM</grapheme>
+    <alias>kay form</alias>
+  </lexeme>
+  <!-- B500 VARIANTS -->
+  <lexeme>
+    <grapheme>B500</grapheme>
+    <alias>bee five hundred</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>B500B</grapheme>
+    <alias>bee five hundred bee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>B500C</grapheme>
+    <alias>bee five hundred see</alias>
+  </lexeme>
+  <!-- SHAPE CODES (00-99) -->
+  <lexeme>
+    <grapheme>Shape Code 00</grapheme>
+    <alias>shape code double oh</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 01</grapheme>
+    <alias>shape code oh one</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 02</grapheme>
+    <alias>shape code oh two</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 03</grapheme>
+    <alias>shape code oh three</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 04</grapheme>
+    <alias>shape code oh four</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 05</grapheme>
+    <alias>shape code oh five</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 06</grapheme>
+    <alias>shape code oh six</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 07</grapheme>
+    <alias>shape code oh seven</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 08</grapheme>
+    <alias>shape code oh eight</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 09</grapheme>
+    <alias>shape code oh nine</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 10</grapheme>
+    <alias>shape code ten</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 11</grapheme>
+    <alias>shape code eleven</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 12</grapheme>
+    <alias>shape code twelve</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 13</grapheme>
+    <alias>shape code thirteen</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 14</grapheme>
+    <alias>shape code fourteen</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 15</grapheme>
+    <alias>shape code fifteen</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 16</grapheme>
+    <alias>shape code sixteen</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 17</grapheme>
+    <alias>shape code seventeen</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 18</grapheme>
+    <alias>shape code eighteen</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 19</grapheme>
+    <alias>shape code nineteen</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 20</grapheme>
+    <alias>shape code twenty</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 21</grapheme>
+    <alias>shape code twenty one</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 22</grapheme>
+    <alias>shape code twenty two</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 23</grapheme>
+    <alias>shape code twenty three</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 24</grapheme>
+    <alias>shape code twenty four</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 25</grapheme>
+    <alias>shape code twenty five</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 26</grapheme>
+    <alias>shape code twenty six</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 27</grapheme>
+    <alias>shape code twenty seven</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 28</grapheme>
+    <alias>shape code twenty eight</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 29</grapheme>
+    <alias>shape code twenty nine</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 30</grapheme>
+    <alias>shape code thirty</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 31</grapheme>
+    <alias>shape code thirty one</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 32</grapheme>
+    <alias>shape code thirty two</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 33</grapheme>
+    <alias>shape code thirty three</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 34</grapheme>
+    <alias>shape code thirty four</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 35</grapheme>
+    <alias>shape code thirty five</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 36</grapheme>
+    <alias>shape code thirty six</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 37</grapheme>
+    <alias>shape code thirty seven</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 38</grapheme>
+    <alias>shape code thirty eight</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 39</grapheme>
+    <alias>shape code thirty nine</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 40</grapheme>
+    <alias>shape code forty</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 41</grapheme>
+    <alias>shape code forty one</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 42</grapheme>
+    <alias>shape code forty two</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 43</grapheme>
+    <alias>shape code forty three</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 44</grapheme>
+    <alias>shape code forty four</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 45</grapheme>
+    <alias>shape code forty five</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 46</grapheme>
+    <alias>shape code forty six</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 47</grapheme>
+    <alias>shape code forty seven</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 48</grapheme>
+    <alias>shape code forty eight</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 49</grapheme>
+    <alias>shape code forty nine</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 50</grapheme>
+    <alias>shape code fifty</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 51</grapheme>
+    <alias>shape code fifty one</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 52</grapheme>
+    <alias>shape code fifty two</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 53</grapheme>
+    <alias>shape code fifty three</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 54</grapheme>
+    <alias>shape code fifty four</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 55</grapheme>
+    <alias>shape code fifty five</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 56</grapheme>
+    <alias>shape code fifty six</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 57</grapheme>
+    <alias>shape code fifty seven</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 58</grapheme>
+    <alias>shape code fifty eight</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 59</grapheme>
+    <alias>shape code fifty nine</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 60</grapheme>
+    <alias>shape code sixty</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 61</grapheme>
+    <alias>shape code sixty one</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 62</grapheme>
+    <alias>shape code sixty two</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 63</grapheme>
+    <alias>shape code sixty three</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 64</grapheme>
+    <alias>shape code sixty four</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 65</grapheme>
+    <alias>shape code sixty five</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 66</grapheme>
+    <alias>shape code sixty six</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 67</grapheme>
+    <alias>shape code sixty seven</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 68</grapheme>
+    <alias>shape code sixty eight</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 69</grapheme>
+    <alias>shape code sixty nine</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 70</grapheme>
+    <alias>shape code seventy</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 71</grapheme>
+    <alias>shape code seventy one</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 72</grapheme>
+    <alias>shape code seventy two</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 73</grapheme>
+    <alias>shape code seventy three</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 74</grapheme>
+    <alias>shape code seventy four</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 75</grapheme>
+    <alias>shape code seventy five</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 76</grapheme>
+    <alias>shape code seventy six</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 77</grapheme>
+    <alias>shape code seventy seven</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 78</grapheme>
+    <alias>shape code seventy eight</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 79</grapheme>
+    <alias>shape code seventy nine</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 80</grapheme>
+    <alias>shape code eighty</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 81</grapheme>
+    <alias>shape code eighty one</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 82</grapheme>
+    <alias>shape code eighty two</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 83</grapheme>
+    <alias>shape code eighty three</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 84</grapheme>
+    <alias>shape code eighty four</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 85</grapheme>
+    <alias>shape code eighty five</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 86</grapheme>
+    <alias>shape code eighty six</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 87</grapheme>
+    <alias>shape code eighty seven</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 88</grapheme>
+    <alias>shape code eighty eight</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 89</grapheme>
+    <alias>shape code eighty nine</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 90</grapheme>
+    <alias>shape code ninety</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 91</grapheme>
+    <alias>shape code ninety one</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 92</grapheme>
+    <alias>shape code ninety two</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 93</grapheme>
+    <alias>shape code ninety three</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 94</grapheme>
+    <alias>shape code ninety four</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 95</grapheme>
+    <alias>shape code ninety five</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 96</grapheme>
+    <alias>shape code ninety six</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 97</grapheme>
+    <alias>shape code ninety seven</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 98</grapheme>
+    <alias>shape code ninety eight</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Shape Code 99</grapheme>
+    <alias>shape code ninety nine</alias>
+  </lexeme>
+  <!-- BRITISH STANDARDS -->
+  <lexeme>
+    <grapheme>BS4449</grapheme>
+    <alias>bee ess four four four nine</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>BS4483</grapheme>
+    <alias>bee ess four four eight three</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>BS7973</grapheme>
+    <alias>bee ess seven nine seven three</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>BS8666</grapheme>
+    <alias>bee ess eight six six six</alias>
+  </lexeme>
+  <!-- MEASUREMENTS -->
+  <lexeme>
+    <grapheme>5mm</grapheme>
+    <alias>five millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>6mm</grapheme>
+    <alias>six millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>7mm</grapheme>
+    <alias>seven millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>8mm</grapheme>
+    <alias>eight millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>10mm</grapheme>
+    <alias>ten millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>12mm</grapheme>
+    <alias>twelve millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>16mm</grapheme>
+    <alias>sixteen millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>20mm</grapheme>
+    <alias>twenty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>25mm</grapheme>
+    <alias>twenty five millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>32mm</grapheme>
+    <alias>thirty two millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>40mm</grapheme>
+    <alias>forty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>100mm</grapheme>
+    <alias>one hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>110mm</grapheme>
+    <alias>one hundred ten millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>120mm</grapheme>
+    <alias>one hundred twenty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>140mm</grapheme>
+    <alias>one hundred forty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>150mm</grapheme>
+    <alias>one hundred fifty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>180mm</grapheme>
+    <alias>one hundred eighty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>200mm</grapheme>
+    <alias>two hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>225mm</grapheme>
+    <alias>two hundred twenty five millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>250mm</grapheme>
+    <alias>two hundred fifty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>280mm</grapheme>
+    <alias>two hundred eighty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>300mm</grapheme>
+    <alias>three hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>350mm</grapheme>
+    <alias>three hundred fifty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>400mm</grapheme>
+    <alias>four hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>440mm</grapheme>
+    <alias>four hundred forty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>450mm</grapheme>
+    <alias>four hundred fifty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>500mm</grapheme>
+    <alias>five hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>600mm</grapheme>
+    <alias>six hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>620mm</grapheme>
+    <alias>six hundred twenty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>695mm</grapheme>
+    <alias>six hundred ninety five millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>800mm</grapheme>
+    <alias>eight hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>960mm</grapheme>
+    <alias>nine hundred sixty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>1000mm</grapheme>
+    <alias>one thousand millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>1033mm</grapheme>
+    <alias>one thousand thirty three millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>1200mm</grapheme>
+    <alias>one thousand two hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>1350mm</grapheme>
+    <alias>one thousand three hundred fifty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>1400mm</grapheme>
+    <alias>one thousand four hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>1500mm</grapheme>
+    <alias>one thousand five hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>1600mm</grapheme>
+    <alias>one thousand six hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>1700mm</grapheme>
+    <alias>one thousand seven hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>1774mm</grapheme>
+    <alias>one thousand seven hundred seventy four millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>1800mm</grapheme>
+    <alias>one thousand eight hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>2000mm</grapheme>
+    <alias>two thousand millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>2100mm</grapheme>
+    <alias>two thousand one hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>2200mm</grapheme>
+    <alias>two thousand two hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>2260mm</grapheme>
+    <alias>two thousand two hundred sixty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>2300mm</grapheme>
+    <alias>two thousand three hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>2380mm</grapheme>
+    <alias>two thousand three hundred eighty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>2400mm</grapheme>
+    <alias>two thousand four hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>2460mm</grapheme>
+    <alias>two thousand four hundred sixty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>2500mm</grapheme>
+    <alias>two thousand five hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>2600mm</grapheme>
+    <alias>two thousand six hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>2700mm</grapheme>
+    <alias>two thousand seven hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>2800mm</grapheme>
+    <alias>two thousand eight hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>2850mm</grapheme>
+    <alias>two thousand eight hundred fifty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>2900mm</grapheme>
+    <alias>two thousand nine hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>2998mm</grapheme>
+    <alias>two thousand nine hundred ninety eight millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>3000mm</grapheme>
+    <alias>three thousand millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>3120mm</grapheme>
+    <alias>three thousand one hundred twenty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>3178mm</grapheme>
+    <alias>three thousand one hundred seventy eight millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>3200mm</grapheme>
+    <alias>three thousand two hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>3220mm</grapheme>
+    <alias>three thousand two hundred twenty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>3250mm</grapheme>
+    <alias>three thousand two hundred fifty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>3300mm</grapheme>
+    <alias>three thousand three hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>3400mm</grapheme>
+    <alias>three thousand four hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>3450mm</grapheme>
+    <alias>three thousand four hundred fifty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>3500mm</grapheme>
+    <alias>three thousand five hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>3600mm</grapheme>
+    <alias>three thousand six hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>3620mm</grapheme>
+    <alias>three thousand six hundred twenty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>3650mm</grapheme>
+    <alias>three thousand six hundred fifty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>3700mm</grapheme>
+    <alias>three thousand seven hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>3800mm</grapheme>
+    <alias>three thousand eight hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>3850mm</grapheme>
+    <alias>three thousand eight hundred fifty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>3900mm</grapheme>
+    <alias>three thousand nine hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>3930mm</grapheme>
+    <alias>three thousand nine hundred thirty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>4000mm</grapheme>
+    <alias>four thousand millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>4050mm</grapheme>
+    <alias>four thousand fifty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>4080mm</grapheme>
+    <alias>four thousand eighty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>4200mm</grapheme>
+    <alias>four thousand two hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>4300mm</grapheme>
+    <alias>four thousand three hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>4330mm</grapheme>
+    <alias>four thousand three hundred thirty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>4350mm</grapheme>
+    <alias>four thousand three hundred fifty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>4400mm</grapheme>
+    <alias>four thousand four hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>4500mm</grapheme>
+    <alias>four thousand five hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>4550mm</grapheme>
+    <alias>four thousand five hundred fifty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>4560mm</grapheme>
+    <alias>four thousand five hundred sixty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>4575mm</grapheme>
+    <alias>four thousand five hundred seventy five millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>4600mm</grapheme>
+    <alias>four thousand six hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>4700mm</grapheme>
+    <alias>four thousand seven hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>4760mm</grapheme>
+    <alias>four thousand seven hundred sixty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>4800mm</grapheme>
+    <alias>four thousand eight hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>5000mm</grapheme>
+    <alias>five thousand millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>5100mm</grapheme>
+    <alias>five thousand one hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>5120mm</grapheme>
+    <alias>five thousand one hundred twenty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>5200mm</grapheme>
+    <alias>five thousand two hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>5300mm</grapheme>
+    <alias>five thousand three hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>5420mm</grapheme>
+    <alias>five thousand four hundred twenty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>5500mm</grapheme>
+    <alias>five thousand five hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>5700mm</grapheme>
+    <alias>five thousand seven hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>5797mm</grapheme>
+    <alias>five thousand seven hundred ninety seven millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>6000mm</grapheme>
+    <alias>six thousand millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>6100mm</grapheme>
+    <alias>six thousand one hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>6200mm</grapheme>
+    <alias>six thousand two hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>6290mm</grapheme>
+    <alias>six thousand two hundred ninety millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>6496mm</grapheme>
+    <alias>six thousand four hundred ninety six millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>6500mm</grapheme>
+    <alias>six thousand five hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>6560mm</grapheme>
+    <alias>six thousand five hundred sixty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>6600mm</grapheme>
+    <alias>six thousand six hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>6800mm</grapheme>
+    <alias>six thousand eight hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>7000mm</grapheme>
+    <alias>seven thousand millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>7300mm</grapheme>
+    <alias>seven thousand three hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>7500mm</grapheme>
+    <alias>seven thousand five hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>8000mm</grapheme>
+    <alias>eight thousand millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>8100mm</grapheme>
+    <alias>eight thousand one hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>8500mm</grapheme>
+    <alias>eight thousand five hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>8700mm</grapheme>
+    <alias>eight thousand seven hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>8900mm</grapheme>
+    <alias>eight thousand nine hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>9000mm</grapheme>
+    <alias>nine thousand millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>9200mm</grapheme>
+    <alias>nine thousand two hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>10200mm</grapheme>
+    <alias>ten thousand two hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>10497mm</grapheme>
+    <alias>ten thousand four hundred ninety seven millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>10500mm</grapheme>
+    <alias>ten thousand five hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>12000mm</grapheme>
+    <alias>twelve thousand millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>12840mm</grapheme>
+    <alias>twelve thousand eight hundred forty millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>17199mm</grapheme>
+    <alias>seventeen thousand one hundred ninety nine millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>17200mm</grapheme>
+    <alias>seventeen thousand two hundred millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>22000mm</grapheme>
+    <alias>twenty two thousand millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>40000mm</grapheme>
+    <alias>forty thousand millimetre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>kg/m</grapheme>
+    <alias>kilograms per metre</alias>
+  </lexeme>
+  <!-- COMMON LENGTHS -->
+  <lexeme>
+    <grapheme>3m</grapheme>
+    <alias>three metre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>6m</grapheme>
+    <alias>six metre</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>12m</grapheme>
+    <alias>twelve metre</alias>
+  </lexeme>
+  <!-- SHEET SIZES -->
+  <lexeme>
+    <grapheme>4.8m</grapheme>
+    <alias>four point eight metres</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>2.4m</grapheme>
+    <alias>two point four metres</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>3.6m</grapheme>
+    <alias>three point six metres</alias>
+  </lexeme>
+  <!-- DIMENSIONAL SPECIFICATIONS -->
+  <lexeme>
+    <grapheme>50x50x6</grapheme>
+    <alias>fifty by fifty by six</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>60x60x6</grapheme>
+    <alias>sixty by sixty by six</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>60x60x8</grapheme>
+    <alias>sixty by sixty by eight</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>70x70x6</grapheme>
+    <alias>seventy by seventy by six</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>80x80x5</grapheme>
+    <alias>eighty by eighty by five</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>90x90x10</grapheme>
+    <alias>ninety by ninety by ten</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>100x50x10</grapheme>
+    <alias>one hundred by fifty by ten</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>100x65x7</grapheme>
+    <alias>one hundred by sixty five by seven</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>100x75x10</grapheme>
+    <alias>one hundred by seventy five by ten</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>100x100x4</grapheme>
+    <alias>one hundred by one hundred by four</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>100x100x5</grapheme>
+    <alias>one hundred by one hundred by five</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>100x100x8</grapheme>
+    <alias>one hundred by one hundred by eight</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>100x100x10</grapheme>
+    <alias>one hundred by one hundred by ten</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>120x60x5</grapheme>
+    <alias>one hundred twenty by sixty by five</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>120x60x6</grapheme>
+    <alias>one hundred twenty by sixty by six</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>120x120x10</grapheme>
+    <alias>one hundred twenty by one hundred twenty by ten</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>125x65x15</grapheme>
+    <alias>one hundred twenty five by sixty five by fifteen</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>125x75x8</grapheme>
+    <alias>one hundred twenty five by seventy five by eight</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>127x76x13</grapheme>
+    <alias>one hundred twenty seven by seventy six by thirteen</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>140x140x5</grapheme>
+    <alias>one hundred forty by one hundred forty by five</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>150x75x10</grapheme>
+    <alias>one hundred fifty by seventy five by ten</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>150x75x18</grapheme>
+    <alias>one hundred fifty by seventy five by eighteen</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>150x90x10</grapheme>
+    <alias>one hundred fifty by ninety by ten</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>150x90x12</grapheme>
+    <alias>one hundred fifty by ninety by twelve</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>150x90x24</grapheme>
+    <alias>one hundred fifty by ninety by twenty four</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>150x100x5</grapheme>
+    <alias>one hundred fifty by one hundred by five</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>150x150x10</grapheme>
+    <alias>one hundred fifty by one hundred fifty by ten</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>152x89x16</grapheme>
+    <alias>one hundred fifty two by eighty nine by sixteen</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>152x152x23</grapheme>
+    <alias>one hundred fifty two by one hundred fifty two by twenty three</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>152x152x30</grapheme>
+    <alias>one hundred fifty two by one hundred fifty two by thirty</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>152x152x37</grapheme>
+    <alias>one hundred fifty two by one hundred fifty two by thirty seven</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>152x152x44</grapheme>
+    <alias>one hundred fifty two by one hundred fifty two by forty four</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>160x160x5</grapheme>
+    <alias>one hundred sixty by one hundred sixty by five</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>178x102x19</grapheme>
+    <alias>one hundred seventy eight by one hundred two by nineteen</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>180x75x20</grapheme>
+    <alias>one hundred eighty by seventy five by twenty</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>180x90x26</grapheme>
+    <alias>one hundred eighty by ninety by twenty six</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>200x100x5</grapheme>
+    <alias>two hundred by one hundred by five</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>200x100x12</grapheme>
+    <alias>two hundred by one hundred by twelve</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>200x150x12</grapheme>
+    <alias>two hundred by one hundred fifty by twelve</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>200x150x15</grapheme>
+    <alias>two hundred by one hundred fifty by fifteen</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>200x200x6</grapheme>
+    <alias>two hundred by two hundred by six</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>200x200x8</grapheme>
+    <alias>two hundred by two hundred by eight</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>200x200x18</grapheme>
+    <alias>two hundred by two hundred by eighteen</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>203x102x23</grapheme>
+    <alias>two hundred three by one hundred two by twenty three</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>203x133x25</grapheme>
+    <alias>two hundred three by one hundred thirty three by twenty five</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>203x133x30</grapheme>
+    <alias>two hundred three by one hundred thirty three by thirty</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>203x203x46</grapheme>
+    <alias>two hundred three by two hundred three by forty six</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>203x203x52</grapheme>
+    <alias>two hundred three by two hundred three by fifty two</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>203x203x60</grapheme>
+    <alias>two hundred three by two hundred three by sixty</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>203x203x71</grapheme>
+    <alias>two hundred three by two hundred three by seventy one</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>203x203x86</grapheme>
+    <alias>two hundred three by two hundred three by eighty six</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>203x203x113</grapheme>
+    <alias>two hundred three by two hundred three by one hundred thirteen</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>250x150x5</grapheme>
+    <alias>two hundred fifty by one hundred fifty by five</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>250x150x10</grapheme>
+    <alias>two hundred fifty by one hundred fifty by ten</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>254x102x22</grapheme>
+    <alias>two hundred fifty four by one hundred two by twenty two</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>254x102x25</grapheme>
+    <alias>two hundred fifty four by one hundred two by twenty five</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>254x102x28</grapheme>
+    <alias>two hundred fifty four by one hundred two by twenty eight</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>254x146x31</grapheme>
+    <alias>two hundred fifty four by one hundred forty six by thirty one</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>254x146x37</grapheme>
+    <alias>two hundred fifty four by one hundred forty six by thirty seven</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>254x146x43</grapheme>
+    <alias>two hundred fifty four by one hundred forty six by forty three</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>300x90x41</grapheme>
+    <alias>three hundred by ninety by forty one</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>305x102x28</grapheme>
+    <alias>three hundred five by one hundred two by twenty eight</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>305x127x37</grapheme>
+    <alias>three hundred five by one hundred twenty seven by thirty seven</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>305x127x42</grapheme>
+    <alias>three hundred five by one hundred twenty seven by forty two</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>305x305x118</grapheme>
+    <alias>three hundred five by three hundred five by one hundred eighteen</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>356x171x51</grapheme>
+    <alias>three hundred fifty six by one hundred seventy one by fifty one</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>356x171x67</grapheme>
+    <alias>three hundred fifty six by one hundred seventy one by sixty seven</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>356x368x129</grapheme>
+    <alias>three hundred fifty six by three hundred sixty eight by one hundred twenty nine</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>400x200x8</grapheme>
+    <alias>four hundred by two hundred by eight</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>400x200x12</grapheme>
+    <alias>four hundred by two hundred by twelve</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>406x140x39</grapheme>
+    <alias>four hundred six by one hundred forty by thirty nine</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>406x178x54</grapheme>
+    <alias>four hundred six by one hundred seventy eight by fifty four</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>406x178x60</grapheme>
+    <alias>four hundred six by one hundred seventy eight by sixty</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>406x178x74</grapheme>
+    <alias>four hundred six by one hundred seventy eight by seventy four</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>430x100x64</grapheme>
+    <alias>four hundred thirty by one hundred by sixty four</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>457x152x52</grapheme>
+    <alias>four hundred fifty seven by one hundred fifty two by fifty two</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>457x152x74</grapheme>
+    <alias>four hundred fifty seven by one hundred fifty two by seventy four</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>533x165x66</grapheme>
+    <alias>five hundred thirty three by one hundred sixty five by sixty six</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>533x210x82</grapheme>
+    <alias>five hundred thirty three by two hundred ten by eighty two</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>914x305x289</grapheme>
+    <alias>nine hundred fourteen by three hundred five by two hundred eighty nine</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>914x419x343</grapheme>
+    <alias>nine hundred fourteen by four hundred nineteen by three hundred forty three</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>1016x305x249</grapheme>
+    <alias>one thousand sixteen by three hundred five by two hundred forty nine</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>1016x305x314</grapheme>
+    <alias>one thousand sixteen by three hundred five by three hundred fourteen</alias>
+  </lexeme>
+  <!-- KEY PRODUCT TERMS -->
+  <lexeme>
+    <grapheme>rebar</grapheme>
+    <alias>re bar</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Rebar</grapheme>
+    <alias>re bar</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>REBAR</grapheme>
+    <alias>re bar</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>reinforcement</grapheme>
+    <alias>re in force ment</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Reinforcement</grapheme>
+    <alias>re in force ment</alias>
+  </lexeme>
+  <!-- ENGINEERING/TECHNICAL TERMS -->
+  <lexeme>
+    <grapheme>fabricators</grapheme>
+    <alias>fab ri kay tors</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>stirrups</grapheme>
+    <alias>stir ups</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>offcuts</grapheme>
+    <alias>off cuts</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>prefab</grapheme>
+    <alias>pre fab</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>prefabricated</grapheme>
+    <alias>pre fabricated</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>pile caps</grapheme>
+    <alias>pile caps</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>ground beams</grapheme>
+    <alias>ground beams</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>shuttering</grapheme>
+    <alias>shutter ing</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>formwork</grapheme>
+    <alias>form work</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>couplers</grapheme>
+    <alias>cup lers</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>screed</grapheme>
+    <alias>screed</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>screed rail</grapheme>
+    <alias>screed rail</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>barrier fencing</grapheme>
+    <alias>barrier fencing</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>diameter</grapheme>
+    <alias>die am it er</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>L bars</grapheme>
+    <alias>el bars</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>U bars</grapheme>
+    <alias>you bars</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>kicker</grapheme>
+    <alias>kick er</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>kickers</grapheme>
+    <alias>kick ers</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>90-degree</grapheme>
+    <alias>ninety degree</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>degree</grapheme>
+    <alias>degree</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>u-bend</grapheme>
+    <alias>you bend</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>straight cut</grapheme>
+    <alias>straight cut</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>universal beams</grapheme>
+    <alias>universal beams</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>universal columns</grapheme>
+    <alias>universal columns</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>equal angles</grapheme>
+    <alias>equal angles</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>unequal angles</grapheme>
+    <alias>unequal angles</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>angles</grapheme>
+    <alias>angles</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>beams</grapheme>
+    <alias>beams</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>columns</grapheme>
+    <alias>columns</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>no paint</grapheme>
+    <alias>no paint</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>paint</grapheme>
+    <alias>paint</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>red</grapheme>
+    <alias>red</alias>
+  </lexeme>
+  <!-- STRUCTURAL STEEL SECTIONS -->
+  <lexeme>
+    <grapheme>UB</grapheme>
+    <alias>you bee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>UC</grapheme>
+    <alias>you see</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>PFC</grapheme>
+    <alias>pee eff see</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>SHS</grapheme>
+    <alias>ess aych ess</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>RHS</grapheme>
+    <alias>are aych ess</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>CHS</grapheme>
+    <alias>see aych ess</alias>
+  </lexeme>
+  <!-- GRADES AND SPECIFICATIONS -->
+  <lexeme>
+    <grapheme>Grade 250</grapheme>
+    <alias>grade two fifty</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Grade 500</grapheme>
+    <alias>grade five hundred</alias>
+  </lexeme>
+  <!-- ACCESSORY TERMS -->
+  <lexeme>
+    <grapheme>spacers</grapheme>
+    <alias>spay sers</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>annealed</grapheme>
+    <alias>a nealed</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>tie wire</grapheme>
+    <alias>tie wire</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>bespoke</grapheme>
+    <alias>be spoke</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>custom</grapheme>
+    <alias>cus tum</alias>
+  </lexeme>
+  <!-- TIE BAR PRODUCTS -->
+  <lexeme>
+    <grapheme>tie bar</grapheme>
+    <alias>tie bar</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Tie Bar</grapheme>
+    <alias>tie bar</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>waler</grapheme>
+    <alias>way ler</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>wing nut</grapheme>
+    <alias>wing nut</alias>
+  </lexeme>
+  <!-- CONSTRUCTION ROLES -->
+  <lexeme>
+    <grapheme>groundworkers</grapheme>
+    <alias>ground workers</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>QS</grapheme>
+    <alias>queue ess</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>SE</grapheme>
+    <alias>ess ee</alias>
+  </lexeme>
+  <!-- BUSINESS TERMS -->
+  <lexeme>
+    <grapheme>VAT</grapheme>
+    <alias>vee ay tee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>CIS</grapheme>
+    <alias>see eye ess</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>RFQ</grapheme>
+    <alias>are eff queue</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>SME</grapheme>
+    <alias>ess em ee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>DIY</grapheme>
+    <alias>dee eye why</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>MOQ</grapheme>
+    <alias>em oh queue</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>RC</grapheme>
+    <alias>are see</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>PC</grapheme>
+    <alias>pee see</alias>
+  </lexeme>
+  <!-- SERVICE TERMS -->
+  <lexeme>
+    <grapheme>gap-fill</grapheme>
+    <alias>gap fill</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>cut-to-length</grapheme>
+    <alias>cut to length</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>next-day</grapheme>
+    <alias>next day</alias>
+  </lexeme>
+  <!-- CERTIFICATIONS -->
+  <lexeme>
+    <grapheme>CARES</grapheme>
+    <alias>cares</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>CE</grapheme>
+    <alias>see ee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>BBA</grapheme>
+    <alias>bee bee ay</alias>
+  </lexeme>
+  <!-- KEY CUSTOMERS -->
+  <lexeme>
+    <grapheme>Kier</grapheme>
+    <alias>keer</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Balfour</grapheme>
+    <alias>bal four</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>Beatty</grapheme>
+    <alias>bee tee</alias>
+  </lexeme>
+  <!-- PRODUCT DESCRIPTIONS -->
+  <lexeme>
+    <grapheme>galvanised</grapheme>
+    <alias>gal van ized</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>galvanized</grapheme>
+    <alias>gal van ized</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>tonne</grapheme>
+    <alias>ton</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>tonnes</grapheme>
+    <alias>tons</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>steel</grapheme>
+    <alias>steel</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>concrete</grapheme>
+    <alias>con creet</alias>
+  </lexeme>
+  <!-- LOCATIONS -->
+  <lexeme>
+    <grapheme>Bushey</grapheme>
+    <alias>bush ee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>London</grapheme>
+    <alias>lun dun</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>UK</grapheme>
+    <alias>you kay</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>depot</grapheme>
+    <alias>dep oh</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>mainland</grapheme>
+    <alias>main land</alias>
+  </lexeme>
+  <!-- CONTACT NUMBER -->
+  <lexeme>
+    <grapheme>020 8079 7719</grapheme>
+    <alias>oh two oh. eight oh seven nine. seven seven one nine</alias>
+  </lexeme>
+  <!-- WEBSITE -->
+  <lexeme>
+    <grapheme>nextdaysteel.co.uk</grapheme>
+    <alias>next day steel dot co dot you kay</alias>
+  </lexeme>
+  <!-- EMAIL -->
+  <lexeme>
+    <grapheme>sales@nextdaysteel.co.uk</grapheme>
+    <alias>sales at next day steel dot co dot you kay</alias>
+  </lexeme>
+  <!-- UK POSTCODE AREAS (Major ones for coverage) -->
+  <lexeme>
+    <grapheme>AL</grapheme>
+    <alias>ay el</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>B</grapheme>
+    <alias>bee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>BA</grapheme>
+    <alias>bee ay</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>BB</grapheme>
+    <alias>bee bee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>BD</grapheme>
+    <alias>bee dee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>BH</grapheme>
+    <alias>bee aych</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>BL</grapheme>
+    <alias>bee el</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>BN</grapheme>
+    <alias>bee en</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>BR</grapheme>
+    <alias>bee are</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>BS</grapheme>
+    <alias>bee ess</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>BT</grapheme>
+    <alias>bee tee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>CA</grapheme>
+    <alias>see ay</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>CB</grapheme>
+    <alias>see bee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>CF</grapheme>
+    <alias>see eff</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>CH</grapheme>
+    <alias>see aych</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>CM</grapheme>
+    <alias>see em</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>CO</grapheme>
+    <alias>see oh</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>CR</grapheme>
+    <alias>see are</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>CT</grapheme>
+    <alias>see tee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>CV</grapheme>
+    <alias>see vee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>CW</grapheme>
+    <alias>see double you</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>DA</grapheme>
+    <alias>dee ay</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>DD</grapheme>
+    <alias>dee dee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>DE</grapheme>
+    <alias>dee ee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>DG</grapheme>
+    <alias>dee gee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>DH</grapheme>
+    <alias>dee aych</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>DL</grapheme>
+    <alias>dee el</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>DN</grapheme>
+    <alias>dee en</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>DT</grapheme>
+    <alias>dee tee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>DY</grapheme>
+    <alias>dee why</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>E</grapheme>
+    <alias>ee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>EC</grapheme>
+    <alias>ee see</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>EH</grapheme>
+    <alias>ee aych</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>EN</grapheme>
+    <alias>ee en</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>EX</grapheme>
+    <alias>ee ex</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>FK</grapheme>
+    <alias>eff kay</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>FY</grapheme>
+    <alias>eff why</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>G</grapheme>
+    <alias>gee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>GL</grapheme>
+    <alias>gee el</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>GU</grapheme>
+    <alias>gee you</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>HA</grapheme>
+    <alias>aych ay</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>HD</grapheme>
+    <alias>aych dee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>HG</grapheme>
+    <alias>aych gee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>HP</grapheme>
+    <alias>aych pee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>HR</grapheme>
+    <alias>aych are</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>HS</grapheme>
+    <alias>aych ess</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>HU</grapheme>
+    <alias>aych you</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>HX</grapheme>
+    <alias>aych ex</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>IG</grapheme>
+    <alias>eye gee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>IP</grapheme>
+    <alias>eye pee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>IV</grapheme>
+    <alias>eye vee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>KA</grapheme>
+    <alias>kay ay</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>KT</grapheme>
+    <alias>kay tee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>KW</grapheme>
+    <alias>kay double you</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>KY</grapheme>
+    <alias>kay why</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>L</grapheme>
+    <alias>el</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>LA</grapheme>
+    <alias>el ay</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>LD</grapheme>
+    <alias>el dee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>LE</grapheme>
+    <alias>el ee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>LL</grapheme>
+    <alias>el el</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>LN</grapheme>
+    <alias>el en</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>LS</grapheme>
+    <alias>el ess</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>LU</grapheme>
+    <alias>el you</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>M</grapheme>
+    <alias>em</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>ME</grapheme>
+    <alias>em ee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>MK</grapheme>
+    <alias>em kay</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>ML</grapheme>
+    <alias>em el</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>N</grapheme>
+    <alias>en</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>NE</grapheme>
+    <alias>en ee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>NG</grapheme>
+    <alias>en gee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>NN</grapheme>
+    <alias>en en</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>NP</grapheme>
+    <alias>en pee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>NR</grapheme>
+    <alias>en are</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>NW</grapheme>
+    <alias>en double you</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>OL</grapheme>
+    <alias>oh el</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>OX</grapheme>
+    <alias>oh ex</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>PA</grapheme>
+    <alias>pee ay</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>PE</grapheme>
+    <alias>pee ee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>PH</grapheme>
+    <alias>pee aych</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>PL</grapheme>
+    <alias>pee el</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>PO</grapheme>
+    <alias>pee oh</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>PR</grapheme>
+    <alias>pee are</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>RG</grapheme>
+    <alias>are gee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>RH</grapheme>
+    <alias>are aych</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>RM</grapheme>
+    <alias>are em</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>S</grapheme>
+    <alias>ess</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>SA</grapheme>
+    <alias>ess ay</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>SE</grapheme>
+    <alias>ess ee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>SG</grapheme>
+    <alias>ess gee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>SK</grapheme>
+    <alias>ess kay</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>SL</grapheme>
+    <alias>ess el</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>SM</grapheme>
+    <alias>ess em</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>SN</grapheme>
+    <alias>ess en</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>SO</grapheme>
+    <alias>ess oh</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>SP</grapheme>
+    <alias>ess pee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>SR</grapheme>
+    <alias>ess are</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>SS</grapheme>
+    <alias>ess ess</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>ST</grapheme>
+    <alias>ess tee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>SW</grapheme>
+    <alias>ess double you</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>SY</grapheme>
+    <alias>ess why</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>TA</grapheme>
+    <alias>tee ay</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>TD</grapheme>
+    <alias>tee dee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>TF</grapheme>
+    <alias>tee eff</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>TN</grapheme>
+    <alias>tee en</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>TQ</grapheme>
+    <alias>tee queue</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>TR</grapheme>
+    <alias>tee are</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>TS</grapheme>
+    <alias>tee ess</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>TW</grapheme>
+    <alias>tee double you</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>UB</grapheme>
+    <alias>you bee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>W</grapheme>
+    <alias>double you</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>WA</grapheme>
+    <alias>double you ay</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>WC</grapheme>
+    <alias>double you see</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>WD</grapheme>
+    <alias>double you dee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>WF</grapheme>
+    <alias>double you eff</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>WN</grapheme>
+    <alias>double you en</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>WR</grapheme>
+    <alias>double you are</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>WS</grapheme>
+    <alias>double you ess</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>WV</grapheme>
+    <alias>double you vee</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>YO</grapheme>
+    <alias>why oh</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>ZE</grapheme>
+    <alias>zed ee</alias>
+  </lexeme>
+  <!-- PAYMENT/FINANCE TERMS -->
+  <lexeme>
+    <grapheme>Iwoca</grapheme>
+    <alias>eye woh ka</alias>
+  </lexeme>
+  <!-- SPECIFIC IMPORTANT POSTCODES -->
+  <lexeme>
+    <grapheme>WD23</grapheme>
+    <alias>double you dee two three</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>EN1</grapheme>
+    <alias>ee en one</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>N20</grapheme>
+    <alias>en twenty</alias>
+  </lexeme>
+  <lexeme>
+    <grapheme>AL9</grapheme>
+    <alias>ay el nine</alias>
+  </lexeme>
+</lexicon>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, RefreshCw, Eye, Zap, Database, Globe, CheckCircle2, XCircle, Lightbulb, TrendingUp, Check } from "lucide-react";
+import { Sparkles, RefreshCw, Eye, Zap, Database, Globe, CheckCircle2, XCircle, Lightbulb, TrendingUp, Check, Play, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { IdeaBankSuggestResponse, IdeaBankSuggestion, GenerationMode } from "@shared/types/ideaBank";
@@ -9,8 +9,12 @@ import type { Product } from "@shared/schema";
 interface IdeaBankPanelProps {
   selectedProducts: Product[];
   onSelectPrompt: (prompt: string, id?: string, reasoning?: string) => void;
+  onSetPlatform?: (platform: string) => void;
+  onSetAspectRatio?: (aspectRatio: string) => void;
+  onQuickGenerate?: (prompt: string) => void;
   className?: string;
   selectedPromptId?: string;
+  isGenerating?: boolean;
 }
 
 // Badge component for mode display
@@ -69,13 +73,17 @@ function SourceIndicators({ suggestion }: { suggestion: IdeaBankSuggestion }) {
 function SuggestionCard({
   suggestion,
   onUse,
+  onQuickGenerate,
   index,
   isSelected,
+  isGenerating,
 }: {
   suggestion: IdeaBankSuggestion;
   onUse: (prompt: string, id: string, reasoning?: string) => void;
+  onQuickGenerate?: (prompt: string) => void;
   index: number;
   isSelected: boolean;
+  isGenerating?: boolean;
 }) {
   const confidencePercentage = Math.round(suggestion.confidence * 100);
 
@@ -108,27 +116,27 @@ function SuggestionCard({
         </div>
 
         {/* Prompt text */}
-        <p className="text-sm text-foreground/90 group-hover:text-foreground transition-colors leading-relaxed">
+        <p className="text-sm text-foreground/90 group-hover:text-foreground transition-colors leading-relaxed line-clamp-3">
           {suggestion.prompt}
         </p>
 
         {/* Reasoning */}
         {suggestion.reasoning && (
-          <p className="text-xs text-muted-foreground italic border-l-2 border-primary/30 pl-3">
+          <p className="text-xs text-muted-foreground italic border-l-2 border-primary/30 pl-3 line-clamp-2">
             {suggestion.reasoning}
           </p>
         )}
 
         {/* Recommended platform and aspect ratio */}
         {(suggestion.recommendedPlatform || suggestion.recommendedAspectRatio) && (
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
             {suggestion.recommendedPlatform && (
-              <span className="px-2 py-1 rounded bg-white/5 border border-white/10">
+              <span className="px-2 py-0.5 rounded bg-primary/10 border border-primary/20 text-primary">
                 {suggestion.recommendedPlatform}
               </span>
             )}
             {suggestion.recommendedAspectRatio && (
-              <span className="px-2 py-1 rounded bg-white/5 border border-white/10">
+              <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10">
                 {suggestion.recommendedAspectRatio}
               </span>
             )}
@@ -138,35 +146,68 @@ function SuggestionCard({
         {/* Sources used */}
         <SourceIndicators suggestion={suggestion} />
 
-        {/* Use button */}
-        <Button
-          onClick={(e) => {
-            e.stopPropagation();
-            onUse(suggestion.prompt, suggestion.id, suggestion.reasoning);
-          }}
-          variant={isSelected ? "default" : "outline"}
-          size="sm"
-          className="w-full mt-2"
-          data-testid={`button-use-suggestion-${suggestion.id}`}
-        >
-          {isSelected ? (
-            <>
-              <Check className="w-3 h-3 mr-2" />
-              Selected
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-3 h-3 mr-2" />
-              Use this suggestion
-            </>
+        {/* Action buttons */}
+        <div className="flex gap-2 mt-2">
+          <Button
+            onClick={(e) => {
+              e.stopPropagation();
+              onUse(suggestion.prompt, suggestion.id, suggestion.reasoning);
+            }}
+            variant={isSelected ? "default" : "outline"}
+            size="sm"
+            className="flex-1"
+            data-testid={`button-use-suggestion-${suggestion.id}`}
+          >
+            {isSelected ? (
+              <>
+                <Check className="w-3 h-3 mr-1" />
+                Selected
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-3 h-3 mr-1" />
+                Use
+              </>
+            )}
+          </Button>
+          {onQuickGenerate && (
+            <Button
+              onClick={(e) => {
+                e.stopPropagation();
+                onQuickGenerate(suggestion.prompt);
+              }}
+              variant="default"
+              size="sm"
+              className="bg-green-600 hover:bg-green-700"
+              disabled={isGenerating}
+              data-testid={`button-generate-suggestion-${suggestion.id}`}
+            >
+              {isGenerating ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <>
+                  <Play className="w-3 h-3 mr-1" />
+                  Generate
+                </>
+              )}
+            </Button>
           )}
-        </Button>
+        </div>
       </div>
     </motion.div>
   );
 }
 
-export function IdeaBankPanel({ selectedProducts, onSelectPrompt, className, selectedPromptId }: IdeaBankPanelProps) {
+export function IdeaBankPanel({
+  selectedProducts,
+  onSelectPrompt,
+  onSetPlatform,
+  onSetAspectRatio,
+  onQuickGenerate,
+  className,
+  selectedPromptId,
+  isGenerating,
+}: IdeaBankPanelProps) {
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<IdeaBankSuggestResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -368,15 +409,42 @@ export function IdeaBankPanel({ selectedProducts, onSelectPrompt, className, sel
             <span className="text-xs text-muted-foreground">
               {response.suggestions.length} AI-generated {response.suggestions.length === 1 ? 'idea' : 'ideas'}
             </span>
+            {onQuickGenerate && (
+              <span className="text-xs text-green-500">
+                Click "Generate" to start immediately
+              </span>
+            )}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {response.suggestions.map((suggestion, index) => (
               <SuggestionCard
                 key={suggestion.id}
                 suggestion={suggestion}
-                onUse={onSelectPrompt}
+                onUse={(prompt, id, reasoning) => {
+                  // Set the prompt
+                  onSelectPrompt(prompt, id, reasoning);
+                  // Auto-set platform if recommendation exists
+                  if (suggestion.recommendedPlatform && onSetPlatform) {
+                    onSetPlatform(suggestion.recommendedPlatform);
+                  }
+                  // Auto-set aspect ratio if recommendation exists
+                  if (suggestion.recommendedAspectRatio && onSetAspectRatio) {
+                    onSetAspectRatio(suggestion.recommendedAspectRatio);
+                  }
+                }}
+                onQuickGenerate={onQuickGenerate ? (prompt) => {
+                  // First set the prompt so user can see what's generating
+                  onSelectPrompt(prompt, suggestion.id, suggestion.reasoning);
+                  // Auto-set platform if recommendation exists
+                  if (suggestion.recommendedPlatform && onSetPlatform) {
+                    onSetPlatform(suggestion.recommendedPlatform);
+                  }
+                  // Then trigger generation
+                  onQuickGenerate(prompt);
+                } : undefined}
                 index={index}
                 isSelected={selectedPromptId === suggestion.id}
+                isGenerating={isGenerating}
               />
             ))}
           </div>

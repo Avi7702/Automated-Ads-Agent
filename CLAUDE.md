@@ -8,6 +8,42 @@ You must verify information before responding. Never make assumptions about code
 
 ---
 
+## CRITICAL: Production-First Mindset
+
+**NEVER take the easy path. ALWAYS build for production.**
+
+### Mandatory Requirements:
+
+1. **Always use official APIs** - Never build workarounds when proper APIs exist
+2. **Always use the most comprehensive solution** - Don't build MVP when production-grade is available
+3. **Always verify with official documentation** - Web search for the latest docs (last 4-6 weeks)
+4. **Never assume API limitations** - Research first, then implement
+5. **Cost is secondary to correctness** - A free/cheap solution that's incomplete is worthless
+
+### When Building Integrations:
+
+1. **Research the official API first** - What endpoints exist? What data is available?
+2. **Check for service accounts/proper auth** - Don't use API keys when service accounts are needed
+3. **Use Cloud Monitoring/Observability APIs** - For any quota/usage tracking
+4. **Implement proper sync mechanisms** - With "last updated" and "next update" timestamps
+5. **Store historical data** - Don't just show real-time, track trends
+
+### Examples of WRONG approach (DO NOT DO):
+- ❌ "Google doesn't provide X" without verifying with web search
+- ❌ Building local tracking when Cloud Monitoring API exists
+- ❌ Using estimates when real data is available via API
+- ❌ Skipping service account setup because API key is "easier"
+- ❌ Assuming an API has limitations without checking latest docs
+
+### Examples of CORRECT approach:
+- ✅ Web search for "[Service] API quota monitoring endpoint 2025"
+- ✅ Checking official docs for Cloud Monitoring metrics
+- ✅ Implementing proper service account authentication
+- ✅ Building hybrid systems (real-time local + periodic sync from source)
+- ✅ Displaying "Last synced: X min ago, Next sync: Y min"
+
+---
+
 ## Research & Current Information
 
 - **Always use web search** to check today's date and verify any time-sensitive information

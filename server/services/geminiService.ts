@@ -29,7 +29,7 @@ export interface GenerateOptions {
 }
 
 export class GeminiService {
-  private readonly modelName = 'gemini-3-pro-preview';
+  private readonly modelName = process.env.GEMINI_MODEL || 'gemini-3-pro-image-preview';
 
 
   async generateImage(prompt: string, options?: GenerateOptions, userId?: string): Promise<GenerateResult> {

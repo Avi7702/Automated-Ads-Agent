@@ -1,0 +1,47 @@
+NextDaySteel Product Catalog
+
+📦 Core Product Categories
+
+1. Steel Reinforcement Bars (Rebar)
+   - Sizes: T8, T10, T12, T16, T20, T25, T32, T40
+   - Grade: High Tensile, compliant with BS4449 standards
+   - Sold in standard lengths (6m, 12m) and custom cut-to-size on request
+
+2. Reinforcement Mesh
+   - Standard Types: A142, A193, A252, A393
+   - Heavy Duty Mesh: B385, B503, B785, B1131
+   - Supplied in sheets (typically 3.6m x 2.0m), BBA certified
+
+3. Structural Steel Sections
+   - Beams (UB), Columns (UC), PFC Channels
+   - Hollow Sections: SHS, RHS, CHS
+   - Mild steel flats, angles, and unequal angles
+
+4. Groundworks & Civils
+   - Trench sheets, mesh spacers, damp-proof membranes
+   - Formwork systems and Cellcore ground heave protection
+   - Gas venting systems and accessories
+
+5. Accessories & Fixings
+   - Rebar spacers, protection caps, tie wire and tools
+   - Dowel bars, sleeves, expansion joint foam
+   - Concrete curing agents and formwork release oils
+
+🚫 What AI Agents Can & Cannot Say
+
+✅ Agents Can:
+- State the product names and types available
+- Confirm standards compliance (e.g. BS4449)
+- Offer cut-to-size availability (not specific measurements unless uploaded)
+- Reference next-day delivery subject to cutoff time (see nds-delivery-terms.txt)
+
+🚫 Agents Cannot:
+- Recommend one product over another
+- Advise on technical specs, load-bearing use, or site conditions
+- Compare product types or provide usage advice
+
+For compliance and safe boundaries, always cross-check with:
+- nds-compliance-rules.txt
+- nds-objection-handling.txt (when uncertain about specific requests)
+
+This file helps agents speak accurately and confidently about NextDaySteel's product offerings without making unsupported claims.

@@ -1,0 +1,52 @@
+NextDaySteel Lead Qualification Framework
+
+Use this file to guide agents when a caller expresses interest in a quote, future supply, or ongoing project.
+
+---
+
+🔍 1. Quote Qualification Questions
+
+Ask clearly and in this order:
+
+1. “What type of steel or product do you need?”
+2. “Roughly how much or what lengths are you after?”
+3. “What’s the delivery postcode?”
+4. “When would you need it on site?”
+
+If unsure:
+→ “Even a rough idea helps — I’ll pass it along for a proper quote.”
+
+---
+
+🗂️ 2. Lead Type Detection
+
+- One-off or DIY? → Ask if they need help understanding next steps
+- Regular buyer or site? → Ask about delivery windows and bulk needs
+- Procurement? → Ask if they need a formal quote PDF or just a call-back
+
+(Reference nds-personas.txt for clues)
+
+---
+
+📆 3. Timeline & Cutoff Considerations
+
+- Always ask: “Would this be for next-day delivery?”
+- If yes, check if the current time is before 1 PM
+- If no, offer to schedule a call or quote for the right time window
+
+---
+
+📩 4. Follow-up Preferences
+
+Offer:
+✅ “Would you prefer we call or email you the quote?”
+✅ “Is there a good time for a rep to check in?”
+
+---
+
+📎 Related Files:
+- nds-conversation-flows.txt to trigger RFQ flow
+- nds-delivery-terms.txt for cutoff and delivery timing
+- nds-personas.txt for tailoring questions to caller type
+
+This file helps agents gather just enough info to pass on a clean quote request without sounding like a form.

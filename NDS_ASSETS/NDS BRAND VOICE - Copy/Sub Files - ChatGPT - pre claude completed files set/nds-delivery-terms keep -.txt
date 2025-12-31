@@ -1,0 +1,36 @@
+NextDaySteel Delivery Terms & Conditions
+
+🚚 Standard Delivery Policy
+
+- Next-day delivery available across most of mainland UK
+- Orders must be placed before 1:00 PM for next-day dispatch
+- Delivery window is typically between 7:00 AM and 6:00 PM
+- No deliveries on weekends or public holidays
+
+📍 Geographic Coverage
+
+- Mainland UK: Standard next-day service
+- Greater London & surrounding areas: Eligible for same-day delivery (within 30-mile radius)
+- Remote regions and islands (e.g. Isle of Wight, Highlands): Delivery may take 2–3 business days
+
+📦 Delivery Notes
+
+- No minimum order quantity (MOQ)
+- Free delivery on bulk orders (threshold varies by region and order type)
+- Tracking and updates available via SMS or email (if details are provided)
+
+⚠️ What AI Agents Can Say
+
+✅ “We offer next-day delivery across most of the UK if ordered before 1 PM.”
+✅ “For sites within 30 miles of London, we may offer same-day delivery.”
+
+🚫 Do Not:
+- Promise exact delivery times
+- Confirm weekend delivery availability
+- Guarantee dispatch on custom-cut orders unless confirmed by a human
+
+📎 If uncertain, reference:
+- nds-compliance-rules.txt for liability and promises
+- nds-lead-qualification.txt to confirm postcode and cutoff eligibility
+
+This file defines the delivery expectations agents can share safely, and how to qualify conversations about logistics and fulfillment.

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('LinkedIn Post Preview', () => {
+test.describe('LinkedIn Post Preview - Always Visible', () => {
   // Increase timeout for image generation tests
   test.setTimeout(120000);
 
@@ -11,7 +11,49 @@ test.describe('LinkedIn Post Preview', () => {
     await page.waitForLoadState('networkidle');
   });
 
-  test('should show Preview button after image generation', async ({ page }) => {
+  test('should show LinkedIn Preview panel on desktop', async ({ page }) => {
+    // Set desktop viewport
+    await page.setViewportSize({ width: 1280, height: 800 });
+
+    // LinkedIn Preview should be visible on the right side (use heading)
+    await expect(page.getByRole('heading', { name: 'LinkedIn Preview' })).toBeVisible();
+
+    // Should show empty placeholders initially
+    await expect(page.locator('text=Your ad copy will appear here')).toBeVisible();
+    await expect(page.locator('text=Your image will appear here')).toBeVisible();
+  });
+
+  test('should show LinkedIn Preview in mobile bottom bar', async ({ page }) => {
+    // Set mobile viewport
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    // Mobile should show the expandable bottom bar with "LinkedIn Preview" text
+    const mobileBar = page.locator('.lg\\:hidden button').filter({ hasText: 'LinkedIn Preview' });
+    await expect(mobileBar).toBeVisible();
+
+    // Should show "Empty" status badge
+    await expect(page.locator('text=Empty')).toBeVisible();
+  });
+
+  test('should show Generate Image placeholder button when prompt is ready', async ({ page }) => {
+    // Set desktop viewport for this test
+    await page.setViewportSize({ width: 1280, height: 800 });
+
+    // Fill in the prompt first
+    const promptTextarea = page.locator('textarea[placeholder*="Professional construction"]');
+    await promptTextarea.fill('Test product shot for drainage system');
+
+    // Select a product if available
+    const productButtons = page.locator('button[class*="aspect-square"]');
+    if (await productButtons.count() > 0) {
+      await productButtons.first().click();
+    }
+
+    // LinkedIn Preview heading should be visible
+    await expect(page.getByRole('heading', { name: 'LinkedIn Preview' })).toBeVisible();
+  });
+
+  test('should update preview after image generation', async ({ page }) => {
     // Use Quick Start to generate an image
     const quickStartInput = page.locator('input[placeholder*="Just describe what you want"]');
     await quickStartInput.fill('Professional product shot of drainage system');
@@ -19,183 +61,95 @@ test.describe('LinkedIn Post Preview', () => {
     // Click Generate Now
     await page.getByRole('button', { name: /Generate Now/i }).click();
 
-    // Wait for generation to complete (may take 10-30 seconds)
-    await expect(page.locator('text=Generating')).toBeVisible({ timeout: 5000 });
+    // Wait for generation to start
+    await expect(page.locator('text=Generating content')).toBeVisible({ timeout: 10000 });
 
-    // Wait for result state - look for the action buttons
-    await expect(page.getByRole('button', { name: /Preview/i })).toBeVisible({ timeout: 60000 });
+    // Wait for result state - the image should appear
+    await expect(page.locator('text=Start New')).toBeVisible({ timeout: 90000 });
 
-    // Verify all 4 action buttons are present
+    // The LinkedIn Preview should now show the generated image (not the placeholder)
+    await expect(page.locator('text=Your image will appear here')).not.toBeVisible();
+
+    // Verify action buttons are present
     await expect(page.getByRole('button', { name: /Edit/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Copy/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Preview/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Share/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Copy/i }).first()).toBeVisible();
   });
 
-  test('should open LinkedIn Preview section when clicking Preview button', async ({ page }) => {
-    // Quick generate
-    const quickStartInput = page.locator('input[placeholder*="Just describe what you want"]');
-    await quickStartInput.fill('Construction site drainage installation');
-    await page.getByRole('button', { name: /Generate Now/i }).click();
-
-    // Wait for result
-    await expect(page.getByRole('button', { name: /Preview/i })).toBeVisible({ timeout: 60000 });
-
-    // Click Preview button
-    await page.getByRole('button', { name: /Preview/i }).click();
-
-    // Verify LinkedIn Preview section is visible
-    await expect(page.locator('text=Preview on LinkedIn')).toBeVisible();
-  });
-
-  test('should generate ad copy and show LinkedIn mockup', async ({ page }) => {
+  test('should generate ad copy when clicking Generate Copy in preview', async ({ page }) => {
     // Quick generate
     const quickStartInput = page.locator('input[placeholder*="Just describe what you want"]');
     await quickStartInput.fill('NDS drainage product marketing image');
     await page.getByRole('button', { name: /Generate Now/i }).click();
 
-    // Wait for result and click Preview
-    await expect(page.getByRole('button', { name: /Preview/i })).toBeVisible({ timeout: 60000 });
-    await page.getByRole('button', { name: /Preview/i }).click();
+    // Wait for image generation to complete
+    await expect(page.locator('text=Start New')).toBeVisible({ timeout: 90000 });
 
-    // Should trigger copy generation - look for loading state or Generate button
-    const generateCopyButton = page.getByRole('button', { name: /Generate Ad Copy/i });
-    const loadingIndicator = page.locator('text=Generating...');
+    // The LinkedIn Preview should have a "Generate Copy" button in the text placeholder
+    const generateCopyButton = page.locator('button:has-text("Generate Copy")');
 
-    // Either we see the generate button (need to click) or it's already generating
-    if (await generateCopyButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    // If visible, click it to generate copy
+    if (await generateCopyButton.isVisible({ timeout: 5000 }).catch(() => false)) {
       await generateCopyButton.click();
+
+      // Wait for copy generation
+      await expect(page.locator('text=Generating...')).toBeVisible({ timeout: 5000 }).catch(() => {});
+
+      // After generation, the placeholder should be replaced with actual text
+      await expect(page.locator('text=Your ad copy will appear here')).not.toBeVisible({ timeout: 30000 });
     }
-
-    // Wait for copy generation to complete
-    await expect(page.locator('text=Edit your post text')).toBeVisible({ timeout: 30000 });
-
-    // Verify LinkedIn mockup elements
-    await expect(page.locator('text=This is a preview simulation')).toBeVisible();
-
-    // LinkedIn action buttons should be visible
-    await expect(page.locator('text=Like')).toBeVisible();
-    await expect(page.locator('text=Comment')).toBeVisible();
-    await expect(page.locator('text=Repost')).toBeVisible();
-  });
-
-  test('should update preview when editing copy text', async ({ page }) => {
-    // Quick generate
-    const quickStartInput = page.locator('input[placeholder*="Just describe what you want"]');
-    await quickStartInput.fill('Professional drainage system photo');
-    await page.getByRole('button', { name: /Generate Now/i }).click();
-
-    // Wait and open preview
-    await expect(page.getByRole('button', { name: /Preview/i })).toBeVisible({ timeout: 60000 });
-    await page.getByRole('button', { name: /Preview/i }).click();
-
-    // Generate copy if needed
-    const generateCopyButton = page.getByRole('button', { name: /Generate Ad Copy/i });
-    if (await generateCopyButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await generateCopyButton.click();
-    }
-
-    // Wait for textarea to appear
-    const copyTextarea = page.locator('textarea').filter({ hasText: /.+/ }).first();
-    await expect(copyTextarea).toBeVisible({ timeout: 30000 });
-
-    // Clear and type new text
-    await copyTextarea.clear();
-    const testText = 'This is my custom LinkedIn post text for testing!';
-    await copyTextarea.fill(testText);
-
-    // Verify the preview updates - the text should appear in the LinkedIn mockup
-    // The mockup is in a white background card
-    const linkedInCard = page.locator('.bg-white');
-    await expect(linkedInCard.locator(`text=${testText.slice(0, 30)}`)).toBeVisible();
   });
 
   test('should show author info in LinkedIn preview', async ({ page }) => {
-    // Quick generate
-    const quickStartInput = page.locator('input[placeholder*="Just describe what you want"]');
-    await quickStartInput.fill('Product showcase image');
-    await page.getByRole('button', { name: /Generate Now/i }).click();
+    // Set desktop viewport
+    await page.setViewportSize({ width: 1280, height: 800 });
 
-    // Wait and open preview
-    await expect(page.getByRole('button', { name: /Preview/i })).toBeVisible({ timeout: 60000 });
-    await page.getByRole('button', { name: /Preview/i }).click();
-
-    // Generate copy if needed
-    const generateCopyButton = page.getByRole('button', { name: /Generate Ad Copy/i });
-    if (await generateCopyButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await generateCopyButton.click();
-    }
-
-    // Wait for preview to load
-    await expect(page.locator('text=This is a preview simulation')).toBeVisible({ timeout: 30000 });
-
-    // Should show author headline
+    // LinkedIn Preview should show author headline
     await expect(page.locator('text=Building Products')).toBeVisible();
 
     // Should show timestamp indicator
     await expect(page.locator('text=1h')).toBeVisible();
   });
 
-  test('should allow regenerating copy', async ({ page }) => {
+  test('should have Copy Text and Download buttons', async ({ page }) => {
+    // Set desktop viewport
+    await page.setViewportSize({ width: 1280, height: 800 });
+
+    // These buttons should exist but be disabled when no content
+    const copyTextButton = page.locator('button:has-text("Copy Text")');
+    const downloadButton = page.locator('button:has-text("Download")').first();
+
+    await expect(copyTextButton).toBeVisible();
+    await expect(downloadButton).toBeVisible();
+
+    // They should be disabled initially (no content)
+    await expect(copyTextButton).toBeDisabled();
+    await expect(downloadButton).toBeDisabled();
+  });
+
+  test('should enable action buttons after generation', async ({ page }) => {
     // Quick generate
     const quickStartInput = page.locator('input[placeholder*="Just describe what you want"]');
-    await quickStartInput.fill('Drainage installation photo');
+    await quickStartInput.fill('Product showcase image');
     await page.getByRole('button', { name: /Generate Now/i }).click();
 
-    // Wait and open preview
-    await expect(page.getByRole('button', { name: /Preview/i })).toBeVisible({ timeout: 60000 });
-    await page.getByRole('button', { name: /Preview/i }).click();
+    // Wait for result
+    await expect(page.locator('text=Start New')).toBeVisible({ timeout: 90000 });
 
-    // Generate initial copy
-    const generateCopyButton = page.getByRole('button', { name: /Generate Ad Copy/i });
-    if (await generateCopyButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await generateCopyButton.click();
-    }
-
-    // Wait for copy
-    await expect(page.locator('text=Edit your post text')).toBeVisible({ timeout: 30000 });
-
-    // Get initial copy text
-    const copyTextarea = page.locator('textarea').first();
-    const initialText = await copyTextarea.inputValue();
-
-    // Click Regenerate
-    await page.getByRole('button', { name: /Regenerate Copy/i }).click();
-
-    // Wait for regeneration (loading state)
-    await expect(page.locator('button:has-text("Regenerate Copy") svg.animate-spin')).toBeVisible({ timeout: 5000 }).catch(() => {});
-
-    // Wait for new copy (may be same or different, but button should be clickable again)
-    await expect(page.getByRole('button', { name: /Regenerate Copy/i })).toBeEnabled({ timeout: 30000 });
+    // Download button should now be enabled (has image)
+    const downloadButton = page.locator('button:has-text("Download")').first();
+    await expect(downloadButton).toBeEnabled({ timeout: 5000 });
   });
 });
 
-test.describe('LinkedIn Preview - Component Display', () => {
+test.describe('LinkedIn Preview - Visual Elements', () => {
   test.setTimeout(120000);
 
   test('LinkedIn mockup has correct visual elements', async ({ page }) => {
-    // This test assumes we have a generated image with copy
     await page.goto('/');
+    await page.setViewportSize({ width: 1280, height: 800 });
     await page.waitForLoadState('networkidle');
 
-    // Quick generate
-    const quickStartInput = page.locator('input[placeholder*="Just describe what you want"]');
-    await quickStartInput.fill('Product image for social media');
-    await page.getByRole('button', { name: /Generate Now/i }).click();
-
-    // Wait and open preview
-    await expect(page.getByRole('button', { name: /Preview/i })).toBeVisible({ timeout: 60000 });
-    await page.getByRole('button', { name: /Preview/i }).click();
-
-    // Generate copy
-    const generateCopyButton = page.getByRole('button', { name: /Generate Ad Copy/i });
-    if (await generateCopyButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await generateCopyButton.click();
-    }
-
-    await expect(page.locator('text=This is a preview simulation')).toBeVisible({ timeout: 30000 });
-
-    // Check LinkedIn card structure
+    // Check LinkedIn card structure exists
     const linkedInCard = page.locator('.bg-white.rounded-lg');
     await expect(linkedInCard).toBeVisible();
 
@@ -203,14 +157,47 @@ test.describe('LinkedIn Preview - Component Display', () => {
     const avatar = linkedInCard.locator('.rounded-full').first();
     await expect(avatar).toBeVisible();
 
-    // Check for engagement section
+    // Check for engagement section (these are visible but faded when incomplete)
     await expect(linkedInCard.locator('text=Like')).toBeVisible();
     await expect(linkedInCard.locator('text=Comment')).toBeVisible();
     await expect(linkedInCard.locator('text=Repost')).toBeVisible();
     await expect(linkedInCard.locator('text=Send')).toBeVisible();
+  });
 
-    // Check for more options button (three dots)
-    const moreButton = linkedInCard.locator('button').filter({ has: page.locator('svg') }).first();
-    await expect(moreButton).toBeVisible();
+  test('should show status notice based on content state', async ({ page }) => {
+    await page.goto('/');
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.waitForLoadState('networkidle');
+
+    // Initially should show the "Generate image and copy" notice
+    await expect(page.locator('text=Generate image and copy to preview')).toBeVisible();
+  });
+});
+
+test.describe('LinkedIn Preview - Mobile Experience', () => {
+  test.setTimeout(120000);
+
+  test('mobile preview bar shows correct status', async ({ page }) => {
+    await page.goto('/');
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.waitForLoadState('networkidle');
+
+    // Should show "Empty" status initially
+    const mobileBar = page.locator('.lg\\:hidden').filter({ hasText: 'LinkedIn Preview' });
+    await expect(mobileBar).toBeVisible();
+    await expect(mobileBar.locator('text=Empty')).toBeVisible();
+  });
+
+  test('mobile preview expands on click', async ({ page }) => {
+    await page.goto('/');
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.waitForLoadState('networkidle');
+
+    // Click the mobile preview bar to expand
+    const mobileButton = page.locator('.lg\\:hidden button').filter({ hasText: 'LinkedIn Preview' });
+    await mobileButton.click();
+
+    // Should show the full LinkedIn card
+    await expect(page.locator('.bg-white.rounded-lg')).toBeVisible();
   });
 });

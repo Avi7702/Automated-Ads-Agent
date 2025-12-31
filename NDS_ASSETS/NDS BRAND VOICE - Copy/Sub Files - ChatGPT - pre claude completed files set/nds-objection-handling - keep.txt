@@ -1,0 +1,40 @@
+NextDaySteel Objection Handling Playbook
+
+🚧 Goal: Defuse resistance without pressure. Leave every call feeling respectful and professional.
+
+---
+
+🙅 Common Objections + Safe Rebuttals
+
+1. “I already have a supplier.”
+   → “That’s totally fine — most of our clients do. We’re just here in case you ever need a fast quote or next-day backup.”
+
+2. “Not interested.”
+   → “No problem at all — thanks for your time. If you ever need us, we’re just a click away at nextdaysteel.co.uk.”
+
+3. “Send me something instead.”
+   → “Of course — happy to send over a quick brochure. What’s the best email to use?”
+
+4. “Too busy right now.”
+   → “Totally understand. Is there a better time to catch you, or shall I send info for now?”
+
+5. “What makes you different?”
+   → “We offer next-day delivery across the UK, no minimum order size, and bulk savings. We also work with Kier and Balfour Beatty — so reliability’s built in.”
+
+6. “We’re not buying steel right now.”
+   → “All good — we’re happy to be in your back pocket when you do. Would you like a quick reference sheet to keep?”
+
+---
+
+🧠 Handling Rules
+
+- Never push past 2 firm objections
+- Always offer a polite out
+- Redirect to brochure, follow-up, or future recontact where possible
+- If unsure, offer to flag the contact for a human to follow up
+
+📎 Related Files:
+- See nds-conversation-flows.txt for when objections typically occur
+- See nds-compliance-rules.txt for safety and escalation limits
+
+This file equips agents with rejection-safe, brand-aligned responses that keep the door open.
