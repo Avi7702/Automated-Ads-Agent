@@ -368,7 +368,7 @@ export function BrandProfileForm() {
       </div>
 
       {/* Form */}
-      <div className="space-y-6 p-6 rounded-2xl border border-white/10 bg-card/30 backdrop-blur-sm">
+      <div className="space-y-6 p-6 rounded-2xl border border-border bg-card/30 backdrop-blur-sm">
         {/* Brand Name */}
         <div className="space-y-2">
           <Label htmlFor="brandName">Brand Name</Label>
@@ -431,7 +431,7 @@ export function BrandProfileForm() {
 
         {/* Target Audience - Collapsible */}
         <Collapsible open={targetAudienceOpen} onOpenChange={setTargetAudienceOpen}>
-          <CollapsibleTrigger className="flex items-center justify-between w-full p-4 rounded-lg border border-white/10 hover:bg-white/5 transition-colors">
+          <CollapsibleTrigger className="flex items-center justify-between w-full p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
             <Label className="cursor-pointer">Target Audience</Label>
             {targetAudienceOpen ? (
               <ChevronUp className="w-4 h-4" />
@@ -550,7 +550,7 @@ export function BrandProfileForm() {
 
         {/* Voice - Collapsible */}
         <Collapsible open={voiceOpen} onOpenChange={setVoiceOpen}>
-          <CollapsibleTrigger className="flex items-center justify-between w-full p-4 rounded-lg border border-white/10 hover:bg-white/5 transition-colors">
+          <CollapsibleTrigger className="flex items-center justify-between w-full p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
             <Label className="cursor-pointer">Brand Voice</Label>
             {voiceOpen ? (
               <ChevronUp className="w-4 h-4" />

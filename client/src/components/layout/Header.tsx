@@ -51,7 +51,7 @@ export function Header({ currentPage }: HeaderProps) {
   ];
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-background/80 backdrop-blur-md">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-md">
       <div className="container flex h-16 items-center justify-between">
         {/* Logo & Brand */}
         <div className="flex items-center gap-4">
@@ -72,7 +72,7 @@ export function Header({ currentPage }: HeaderProps) {
                   "px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer",
                   activePage === item.id
                     ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 )}
               >
                 {item.label}

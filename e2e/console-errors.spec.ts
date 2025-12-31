@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
 
 test('capture console errors', async ({ page }) => {
+  test.setTimeout(60000); // 60s timeout for slow startup
+
   const errors: string[] = [];
 
   // Capture console errors
@@ -16,7 +18,7 @@ test('capture console errors', async ({ page }) => {
   });
 
   // Go to home page
-  await page.goto('/');
+  await page.goto('/', { timeout: 45000 });
 
   // Wait for page to attempt load
   await page.waitForTimeout(5000);

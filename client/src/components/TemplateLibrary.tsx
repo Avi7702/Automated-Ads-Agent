@@ -137,7 +137,7 @@ export function TemplateLibrary({
                   "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200",
                   selectedCategory === category.value
                     ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                    : "bg-card border border-white/10 text-muted-foreground hover:text-foreground hover:border-white/30"
+                    : "bg-card border border-border text-muted-foreground hover:text-foreground hover:border-primary/50"
                 )}
                 data-testid={`button-category-${category.value}`}
               >
@@ -155,7 +155,7 @@ export function TemplateLibrary({
               "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200",
               isGlobalOnly
                 ? "bg-primary/20 text-primary border border-primary/30"
-                : "bg-card border border-white/10 text-muted-foreground hover:text-foreground hover:border-white/30"
+                : "bg-card border border-border text-muted-foreground hover:text-foreground hover:border-primary/50"
             )}
             data-testid="button-toggle-global"
           >

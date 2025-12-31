@@ -102,8 +102,8 @@ export function UploadZone({
           isDragging
             ? "border-primary bg-primary/10"
             : canAddMore
-            ? "border-white/20 hover:border-white/40"
-            : "border-white/10 opacity-50 cursor-not-allowed",
+            ? "border-border hover:border-primary/50"
+            : "border-border opacity-50 cursor-not-allowed",
         )}
       >
         <input
@@ -144,7 +144,7 @@ export function UploadZone({
           {files.map((file, index) => (
             <div
               key={`${file.name}-${index}`}
-              className="relative flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 border-white/20 group"
+              className="relative flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 border-border group"
             >
               <img
                 src={URL.createObjectURL(file)}
@@ -168,7 +168,7 @@ export function UploadZone({
 
           {/* Add more button */}
           {canAddMore && (
-            <label className="relative flex-shrink-0 w-20 h-20 rounded-lg border-2 border-dashed border-white/20 flex items-center justify-center cursor-pointer hover:border-white/40 transition-colors">
+            <label className="relative flex-shrink-0 w-20 h-20 rounded-lg border-2 border-dashed border-border flex items-center justify-center cursor-pointer hover:border-primary/50 transition-colors">
               <input
                 type="file"
                 accept="image/*"

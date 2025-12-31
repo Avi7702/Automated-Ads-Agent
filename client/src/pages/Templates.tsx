@@ -70,7 +70,7 @@ export default function Templates() {
               </Button>
             </div>
             <div className="flex gap-6 items-start">
-              <div className="w-40 h-48 rounded-lg border border-white/10 bg-card overflow-hidden relative flex-shrink-0">
+              <div className="w-40 h-48 rounded-lg border border-border bg-card overflow-hidden relative flex-shrink-0">
                 {selectedTemplate.previewImageUrl ? (
                   <img
                     src={selectedTemplate.previewImageUrl}
@@ -104,12 +104,12 @@ export default function Templates() {
                     {selectedTemplate.category}
                   </span>
                   {selectedTemplate.lightingStyle && (
-                    <span className="text-xs px-2 py-1 rounded-md bg-white/5 text-muted-foreground border border-white/10">
+                    <span className="text-xs px-2 py-1 rounded-md bg-muted/30 text-muted-foreground border border-border">
                       {selectedTemplate.lightingStyle} lighting
                     </span>
                   )}
                   {selectedTemplate.environment && (
-                    <span className="text-xs px-2 py-1 rounded-md bg-white/5 text-muted-foreground border border-white/10">
+                    <span className="text-xs px-2 py-1 rounded-md bg-muted/30 text-muted-foreground border border-border">
                       {selectedTemplate.environment}
                     </span>
                   )}
@@ -126,7 +126,7 @@ export default function Templates() {
                       className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                         selectedMode === "exact_insert"
                           ? "bg-blue-500/20 text-blue-300 border border-blue-500/50 shadow-lg shadow-blue-500/10"
-                          : "bg-card border border-white/10 text-muted-foreground hover:text-foreground hover:border-white/30"
+                          : "bg-card border border-border text-muted-foreground hover:text-foreground hover:border-primary/50"
                       }`}
                       data-testid="mode-exact-insert"
                     >
@@ -138,7 +138,7 @@ export default function Templates() {
                       className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                         selectedMode === "inspiration"
                           ? "bg-purple-500/20 text-purple-300 border border-purple-500/50 shadow-lg shadow-purple-500/10"
-                          : "bg-card border border-white/10 text-muted-foreground hover:text-foreground hover:border-white/30"
+                          : "bg-card border border-border text-muted-foreground hover:text-foreground hover:border-primary/50"
                       }`}
                       data-testid="mode-inspiration"
                     >

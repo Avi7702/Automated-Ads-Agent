@@ -141,7 +141,7 @@ export function CopywritingPanel({ generationId, prompt }: CopywritingPanelProps
       </button>
 
       {isExpanded && (
-        <div className="px-6 pb-6 space-y-6 border-t border-white/5">
+        <div className="px-6 pb-6 space-y-6 border-t border-border/50">
           <div className="pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground">Platform</label>
@@ -323,7 +323,7 @@ export function CopywritingPanel({ generationId, prompt }: CopywritingPanelProps
                       </div>
 
                       {copy.qualityScore && (
-                        <div className="pt-3 border-t border-white/5">
+                        <div className="pt-3 border-t border-border/50">
                           <div className="flex items-center gap-4 text-xs">
                             <span className="text-muted-foreground">Quality Score:</span>
                             <span className={`font-medium ${copy.qualityScore.overall >= 80 ? 'text-green-400' : copy.qualityScore.overall >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>

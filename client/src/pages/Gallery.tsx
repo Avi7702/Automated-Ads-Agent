@@ -106,12 +106,12 @@ export default function Gallery() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className="group relative rounded-2xl border border-white/10 bg-card overflow-hidden hover:border-primary/50 transition-all"
+                className="group relative rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/50 transition-all"
                 data-testid={`card-generation-${gen.id}`}
               >
                 {/* Image */}
                 <Link href={`/generation/${gen.id}`} className="block">
-                  <div className="aspect-square overflow-hidden bg-black/50" data-testid={`img-generation-${gen.id}`}>
+                  <div className="aspect-square overflow-hidden bg-muted" data-testid={`img-generation-${gen.id}`}>
                     <GalleryImage
                       src={`/${gen.generatedImagePath}`}
                       alt={gen.prompt}

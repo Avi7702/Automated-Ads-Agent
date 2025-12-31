@@ -30,7 +30,7 @@ export function PromptInput({ value, onChange, onSubmit, isGenerating, className
   return (
     <div className={cn("relative group", className)}>
       <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-primary/20 via-purple-500/20 to-blue-500/20 blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-      <div className="relative bg-card border border-white/10 rounded-3xl shadow-2xl overflow-hidden ring-1 ring-white/5 focus-within:ring-primary/50 transition-all duration-300">
+      <div className="relative bg-card border border-border rounded-3xl shadow-2xl overflow-hidden ring-1 ring-white/5 focus-within:ring-primary/50 transition-all duration-300">
         <textarea
           ref={textareaRef}
           value={value}

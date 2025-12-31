@@ -68,7 +68,7 @@ export function HistoryTimeline({
 
   if (isLoading) {
     return (
-      <div className={cn("p-4 rounded-xl border border-white/10 bg-card/30", className)}>
+      <div className={cn("p-4 rounded-xl border border-border bg-card/30", className)}>
         <div className="flex items-center gap-2 mb-3">
           <History className="w-4 h-4 text-muted-foreground" />
           <span className="text-sm font-medium">Recent Generations</span>
@@ -77,7 +77,7 @@ export function HistoryTimeline({
           {[1, 2, 3, 4].map((i) => (
             <div
               key={i}
-              className="w-20 h-20 rounded-lg bg-white/5 animate-pulse flex-shrink-0"
+              className="w-20 h-20 rounded-lg bg-muted/30 animate-pulse flex-shrink-0"
             />
           ))}
         </div>
@@ -87,7 +87,7 @@ export function HistoryTimeline({
 
   if (generations.length === 0) {
     return (
-      <div className={cn("p-4 rounded-xl border border-white/10 bg-card/30", className)}>
+      <div className={cn("p-4 rounded-xl border border-border bg-card/30", className)}>
         <div className="flex items-center gap-2 mb-3">
           <History className="w-4 h-4 text-muted-foreground" />
           <span className="text-sm font-medium">Recent Generations</span>
@@ -100,7 +100,7 @@ export function HistoryTimeline({
   }
 
   return (
-    <div className={cn("p-4 rounded-xl border border-white/10 bg-card/30", className)}>
+    <div className={cn("p-4 rounded-xl border border-border bg-card/30", className)}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <History className="w-4 h-4 text-muted-foreground" />
@@ -116,7 +116,7 @@ export function HistoryTimeline({
             className={cn(
               "p-1 rounded-md transition-colors",
               canScrollLeft
-                ? "hover:bg-white/10 text-foreground"
+                ? "hover:bg-muted/50 text-foreground"
                 : "text-muted-foreground/30 cursor-not-allowed"
             )}
           >
@@ -128,7 +128,7 @@ export function HistoryTimeline({
             className={cn(
               "p-1 rounded-md transition-colors",
               canScrollRight
-                ? "hover:bg-white/10 text-foreground"
+                ? "hover:bg-muted/50 text-foreground"
                 : "text-muted-foreground/30 cursor-not-allowed"
             )}
           >
@@ -163,7 +163,7 @@ export function HistoryTimeline({
                   "border-2 transition-all",
                   isCurrent
                     ? "border-primary ring-2 ring-primary/30"
-                    : "border-white/10 hover:border-white/30"
+                    : "border-border hover:border-primary/50"
                 )}
               >
                 {/* Thumbnail */}

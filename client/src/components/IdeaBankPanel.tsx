@@ -96,7 +96,7 @@ function SuggestionCard({
         "p-4 rounded-xl border-2 transition-all group cursor-pointer",
         isSelected
           ? "border-primary bg-primary/10 ring-2 ring-primary/20 scale-[1.02]"
-          : "border-white/10 bg-card/50 hover:bg-card hover:border-primary/30"
+          : "border-border bg-card/50 hover:bg-card hover:border-primary/30"
       )}
       onClick={() => onUse(suggestion.prompt, suggestion.id, suggestion.reasoning)}
     >
@@ -136,7 +136,7 @@ function SuggestionCard({
               </span>
             )}
             {suggestion.recommendedAspectRatio && (
-              <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10">
+              <span className="px-2 py-0.5 rounded bg-muted/30 border border-border">
                 {suggestion.recommendedAspectRatio}
               </span>
             )}
@@ -330,7 +330,7 @@ export function IdeaBankPanel({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        "p-6 rounded-2xl border border-white/10 bg-gradient-to-br from-primary/5 to-purple-500/5 space-y-4",
+        "p-6 rounded-2xl border border-border bg-gradient-to-br from-primary/5 to-purple-500/5 space-y-4",
         className
       )}
     >
@@ -348,7 +348,7 @@ export function IdeaBankPanel({
         <button
           onClick={fetchSuggestions}
           disabled={loading}
-          className="p-2 rounded-lg hover:bg-white/5 transition-colors disabled:opacity-50"
+          className="p-2 rounded-lg hover:bg-muted/50 transition-colors disabled:opacity-50"
           data-testid="button-refresh-idea-bank"
         >
           <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
@@ -357,7 +357,7 @@ export function IdeaBankPanel({
 
       {/* Analysis Status Summary */}
       {response && !legacyMode && (
-        <div className="flex items-center gap-4 p-3 rounded-lg bg-card/30 border border-white/5 text-xs">
+        <div className="flex items-center gap-4 p-3 rounded-lg bg-card/30 border border-border/50 text-xs">
           <div className="flex items-center gap-1.5">
             {response.analysisStatus.visionComplete ? (
               <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />

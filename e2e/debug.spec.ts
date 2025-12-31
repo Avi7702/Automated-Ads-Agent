@@ -1,8 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 test('page should load without errors', async ({ page }) => {
+  test.setTimeout(60000); // 60s timeout for slow startup
+
   // Go to home page
-  await page.goto('/');
+  await page.goto('/', { timeout: 45000 });
 
   // Wait for page to load
   await page.waitForTimeout(5000);

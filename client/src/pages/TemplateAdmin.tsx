@@ -271,7 +271,7 @@ export default function TemplateAdmin() {
                 Back to Templates
               </Button>
             </Link>
-            <div className="h-6 w-px bg-white/10" />
+            <div className="h-6 w-px bg-muted/50" />
             <h1 className="font-semibold">Template Admin</h1>
           </div>
           <div className="flex items-center gap-2">
@@ -294,7 +294,7 @@ export default function TemplateAdmin() {
 
         {/* Templates Table */}
         {!showForm && (
-          <div className="rounded-xl border border-white/10 overflow-hidden">
+          <div className="rounded-xl border border-border overflow-hidden">
             <table className="w-full">
               <thead className="bg-card/50">
                 <tr className="text-left text-sm text-muted-foreground">
@@ -323,7 +323,7 @@ export default function TemplateAdmin() {
                   templates.map(template => (
                     <tr key={template.id} className="hover:bg-card/30 transition-colors">
                       <td className="px-4 py-3">
-                        <div className="w-16 h-16 rounded-lg border border-white/10 bg-card overflow-hidden relative">
+                        <div className="w-16 h-16 rounded-lg border border-border bg-card overflow-hidden relative">
                           {template.previewImageUrl ? (
                             <img
                               src={template.previewImageUrl}
@@ -359,7 +359,7 @@ export default function TemplateAdmin() {
                       <td className="px-4 py-3">
                         <div className="flex gap-1 flex-wrap">
                           {template.platformHints?.slice(0, 2).map(p => (
-                            <span key={p} className="px-1.5 py-0.5 text-xs rounded bg-white/5 text-muted-foreground">
+                            <span key={p} className="px-1.5 py-0.5 text-xs rounded bg-muted/30 text-muted-foreground">
                               {p}
                             </span>
                           ))}
@@ -437,7 +437,7 @@ export default function TemplateAdmin() {
 
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Basic Info */}
-              <div className="p-6 rounded-xl border border-white/10 bg-card/30 space-y-4">
+              <div className="p-6 rounded-xl border border-border bg-card/30 space-y-4">
                 <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
                   Basic Information
                 </h3>
@@ -457,7 +457,7 @@ export default function TemplateAdmin() {
                       value={formData.description}
                       onChange={e => setFormData({ ...formData, description: e.target.value })}
                       placeholder="Brief description of the template..."
-                      className="w-full px-3 py-2 rounded-lg border border-white/10 bg-background text-sm resize-none"
+                      className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm resize-none"
                       rows={2}
                     />
                   </div>
@@ -466,7 +466,7 @@ export default function TemplateAdmin() {
                     <select
                       value={formData.category}
                       onChange={e => setFormData({ ...formData, category: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg border border-white/10 bg-background text-sm"
+                      className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm"
                       required
                     >
                       {categories.map(c => (
@@ -486,7 +486,7 @@ export default function TemplateAdmin() {
               </div>
 
               {/* Prompt Blueprint */}
-              <div className="p-6 rounded-xl border border-white/10 bg-card/30 space-y-4">
+              <div className="p-6 rounded-xl border border-border bg-card/30 space-y-4">
                 <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
                   Prompt Blueprint
                 </h3>
@@ -498,7 +498,7 @@ export default function TemplateAdmin() {
                     value={formData.promptBlueprint}
                     onChange={e => setFormData({ ...formData, promptBlueprint: e.target.value })}
                     placeholder="Professional interior photograph of {{product}} installed in a modern minimalist living room..."
-                    className="w-full px-3 py-2 rounded-lg border border-white/10 bg-background text-sm resize-none font-mono"
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm resize-none font-mono"
                     rows={4}
                     required
                   />
@@ -512,7 +512,7 @@ export default function TemplateAdmin() {
               </div>
 
               {/* Platform & Aspect Ratio */}
-              <div className="p-6 rounded-xl border border-white/10 bg-card/30 space-y-4">
+              <div className="p-6 rounded-xl border border-border bg-card/30 space-y-4">
                 <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
                   Platform Targeting
                 </h3>
@@ -529,7 +529,7 @@ export default function TemplateAdmin() {
                             "px-3 py-1.5 text-sm rounded-lg border transition-colors",
                             formData.platformHints.includes(p)
                               ? "bg-primary/20 border-primary/50 text-primary"
-                              : "border-white/10 hover:border-white/30"
+                              : "border-border hover:border-primary/50"
                           )}
                         >
                           {p}
@@ -549,7 +549,7 @@ export default function TemplateAdmin() {
                             "px-3 py-1.5 text-sm rounded-lg border transition-colors",
                             formData.aspectRatioHints.includes(ar)
                               ? "bg-primary/20 border-primary/50 text-primary"
-                              : "border-white/10 hover:border-white/30"
+                              : "border-border hover:border-primary/50"
                           )}
                         >
                           {ar}
@@ -561,7 +561,7 @@ export default function TemplateAdmin() {
               </div>
 
               {/* Style & Mood */}
-              <div className="p-6 rounded-xl border border-white/10 bg-card/30 space-y-4">
+              <div className="p-6 rounded-xl border border-border bg-card/30 space-y-4">
                 <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
                   Style & Mood
                 </h3>
@@ -571,7 +571,7 @@ export default function TemplateAdmin() {
                     <select
                       value={formData.lightingStyle}
                       onChange={e => setFormData({ ...formData, lightingStyle: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg border border-white/10 bg-background text-sm"
+                      className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm"
                     >
                       {lightingStyles.map(ls => (
                         <option key={ls} value={ls}>{ls}</option>
@@ -583,7 +583,7 @@ export default function TemplateAdmin() {
                     <select
                       value={formData.intent}
                       onChange={e => setFormData({ ...formData, intent: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg border border-white/10 bg-background text-sm"
+                      className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm"
                     >
                       {intents.map(i => (
                         <option key={i} value={i}>{i}</option>
@@ -595,7 +595,7 @@ export default function TemplateAdmin() {
                     <select
                       value={formData.environment}
                       onChange={e => setFormData({ ...formData, environment: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg border border-white/10 bg-background text-sm"
+                      className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm"
                     >
                       {environments.map(env => (
                         <option key={env} value={env}>{env}</option>
@@ -607,7 +607,7 @@ export default function TemplateAdmin() {
                     <select
                       value={formData.mood}
                       onChange={e => setFormData({ ...formData, mood: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg border border-white/10 bg-background text-sm"
+                      className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm"
                     >
                       {moods.map(m => (
                         <option key={m} value={m}>{m}</option>
@@ -618,7 +618,7 @@ export default function TemplateAdmin() {
               </div>
 
               {/* Placement */}
-              <div className="p-6 rounded-xl border border-white/10 bg-card/30 space-y-4">
+              <div className="p-6 rounded-xl border border-border bg-card/30 space-y-4">
                 <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
                   Placement Hints
                 </h3>
@@ -631,7 +631,7 @@ export default function TemplateAdmin() {
                         ...formData,
                         placementHints: { ...formData.placementHints, position: e.target.value }
                       })}
-                      className="w-full px-3 py-2 rounded-lg border border-white/10 bg-background text-sm"
+                      className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm"
                     >
                       {["center", "center-left", "center-right", "foreground", "top", "bottom"].map(p => (
                         <option key={p} value={p}>{p}</option>
@@ -646,7 +646,7 @@ export default function TemplateAdmin() {
                         ...formData,
                         placementHints: { ...formData.placementHints, scale: e.target.value }
                       })}
-                      className="w-full px-3 py-2 rounded-lg border border-white/10 bg-background text-sm"
+                      className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm"
                     >
                       {["small", "medium", "large", "fill"].map(s => (
                         <option key={s} value={s}>{s}</option>
@@ -657,7 +657,7 @@ export default function TemplateAdmin() {
               </div>
 
               {/* Tags */}
-              <div className="p-6 rounded-xl border border-white/10 bg-card/30 space-y-4">
+              <div className="p-6 rounded-xl border border-border bg-card/30 space-y-4">
                 <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
                   Tags & Product Types
                 </h3>
@@ -675,7 +675,7 @@ export default function TemplateAdmin() {
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {formData.tags.map(tag => (
-                        <span key={tag} className="px-2 py-1 text-xs rounded-md bg-white/5 flex items-center gap-1">
+                        <span key={tag} className="px-2 py-1 text-xs rounded-md bg-muted/30 flex items-center gap-1">
                           {tag}
                           <button type="button" onClick={() => removeTag(tag)}>
                             <X className="w-3 h-3" />
@@ -697,7 +697,7 @@ export default function TemplateAdmin() {
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {formData.bestForProductTypes.map(type => (
-                        <span key={type} className="px-2 py-1 text-xs rounded-md bg-white/5 flex items-center gap-1">
+                        <span key={type} className="px-2 py-1 text-xs rounded-md bg-muted/30 flex items-center gap-1">
                           {type}
                           <button type="button" onClick={() => removeProductType(type)}>
                             <X className="w-3 h-3" />
@@ -710,13 +710,13 @@ export default function TemplateAdmin() {
               </div>
 
               {/* Global Toggle */}
-              <div className="p-6 rounded-xl border border-white/10 bg-card/30">
+              <div className="p-6 rounded-xl border border-border bg-card/30">
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={formData.isGlobal}
                     onChange={e => setFormData({ ...formData, isGlobal: e.target.checked })}
-                    className="w-5 h-5 rounded border-white/20"
+                    className="w-5 h-5 rounded border-border"
                   />
                   <div>
                     <span className="font-medium">Make Global</span>

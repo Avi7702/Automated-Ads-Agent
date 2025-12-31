@@ -109,12 +109,12 @@ function Section({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className={cn(
-          "rounded-2xl border border-white/10 bg-card/30 backdrop-blur-sm overflow-hidden",
+          "rounded-2xl border border-border bg-card/30 backdrop-blur-sm overflow-hidden",
           className
         )}
       >
         <CollapsibleTrigger asChild>
-          <button className="w-full p-6 flex items-center justify-between hover:bg-white/5 transition-colors">
+          <button className="w-full p-6 flex items-center justify-between hover:bg-muted/50 transition-colors">
             <div className="text-left">
               <h2 className="text-lg font-medium">{title}</h2>
               {subtitle && (
@@ -165,7 +165,7 @@ function ProgressRail({
                 : "border-muted-foreground/30 bg-transparent"
             )}
           />
-          <span className="absolute right-6 whitespace-nowrap text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity bg-card px-2 py-1 rounded border border-white/10">
+          <span className="absolute right-6 whitespace-nowrap text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity bg-card px-2 py-1 rounded border border-border">
             {section.label}
           </span>
           {index < sections.length - 1 && (
@@ -201,7 +201,7 @@ function ContextBar({
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: -20, opacity: 0 }}
-      className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-card/90 backdrop-blur-md border border-white/10 shadow-lg"
+      className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-card/90 backdrop-blur-md border border-border shadow-lg"
     >
       <div className="flex items-center gap-3 text-sm">
         {selectedProducts.length > 0 && (
@@ -867,7 +867,7 @@ export default function Studio() {
               </div>
 
               {/* Generated Image */}
-              <div className="rounded-2xl overflow-hidden border border-white/10 bg-black">
+              <div className="rounded-2xl overflow-hidden border border-border bg-black">
                 <img
                   src={generatedImage}
                   alt="Generated"
@@ -997,7 +997,7 @@ export default function Studio() {
                     </Button>
                   </div>
                   {askAIResponse && (
-                    <div className="p-4 rounded-xl bg-card border border-white/10">
+                    <div className="p-4 rounded-xl bg-card border border-border">
                       <p className="text-sm whitespace-pre-wrap">{askAIResponse}</p>
                     </div>
                   )}
@@ -1052,7 +1052,7 @@ export default function Studio() {
                       </div>
 
                       {/* LinkedIn Preview */}
-                      <div className="pt-4 border-t border-white/10">
+                      <div className="pt-4 border-t border-border">
                         <LinkedInPostPreview
                           authorName={authUser?.email?.split("@")[0] || "Your Company"}
                           authorHeadline="Building Products | Construction Solutions"
@@ -1174,7 +1174,7 @@ export default function Studio() {
                   </div>
 
                   {/* Product Grid - with internal scroll */}
-                  <div className="max-h-[300px] overflow-y-auto rounded-lg border border-white/5 p-2">
+                  <div className="max-h-[300px] overflow-y-auto rounded-lg border border-border/50 p-2">
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
                       {filteredProducts.map((product) => {
                         const isSelected = selectedProducts.some((p) => p.id === product.id);
@@ -1187,7 +1187,7 @@ export default function Studio() {
                               "relative aspect-square rounded-xl overflow-hidden border-2 transition-all",
                               isSelected
                                 ? "border-primary ring-2 ring-primary/20"
-                                : "border-white/10 hover:border-white/30",
+                                : "border-border hover:border-primary/50",
                               !isSelected && selectedProducts.length >= 6 && "opacity-50"
                             )}
                           >
@@ -1263,7 +1263,7 @@ export default function Studio() {
                               "flex-shrink-0 p-3 rounded-xl border-2 transition-all text-left min-w-[180px] max-w-[200px]",
                               selectedTemplate?.id === template.id
                                 ? "border-primary bg-primary/10 ring-2 ring-primary/20"
-                                : "border-white/10 hover:border-white/30 bg-card/50"
+                                : "border-border hover:border-primary/50 bg-card/50"
                             )}
                           >
                             <div className="flex items-center justify-between mb-2">
@@ -1283,7 +1283,7 @@ export default function Studio() {
                                 {template.tags.slice(0, 3).map((tag, i) => (
                                   <span
                                     key={i}
-                                    className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-muted-foreground"
+                                    className="text-[10px] px-1.5 py-0.5 rounded bg-muted/30 text-muted-foreground"
                                   >
                                     {tag}
                                   </span>
@@ -1326,7 +1326,7 @@ export default function Studio() {
                 id="prompt"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-6 rounded-2xl border border-white/10 bg-card/30 backdrop-blur-sm space-y-6"
+                className="p-6 rounded-2xl border border-border bg-card/30 backdrop-blur-sm space-y-6"
               >
                 <h2 className="text-lg font-medium">Describe Your Vision</h2>
 
@@ -1505,7 +1505,7 @@ export default function Studio() {
           {/* Right Column - LinkedIn Preview (Always Visible, Sticky on Desktop) */}
           <div className="hidden lg:block">
             <div className="sticky top-24 max-h-[calc(100vh-120px)] overflow-y-auto">
-              <div className="rounded-2xl border border-white/10 bg-card/30 backdrop-blur-sm p-6">
+              <div className="rounded-2xl border border-border bg-card/30 backdrop-blur-sm p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <Eye className="w-5 h-5 text-primary" />
                   <h3 className="font-medium">LinkedIn Preview</h3>
@@ -1559,17 +1559,17 @@ export default function Studio() {
       </main>
 
       {/* Mobile LinkedIn Preview - Fixed Bottom Bar */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-md border-t border-white/10">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-md border-t border-border">
         <Collapsible>
           <CollapsibleTrigger asChild>
-            <button className="w-full p-4 flex items-center justify-between hover:bg-white/5">
+            <button className="w-full p-4 flex items-center justify-between hover:bg-muted/50">
               <div className="flex items-center gap-2">
                 <Eye className="w-5 h-5 text-primary" />
                 <span className="font-medium">LinkedIn Preview</span>
                 {generatedImage && generatedCopy ? (
                   <span className="text-xs text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full">Ready</span>
                 ) : (
-                  <span className="text-xs text-muted-foreground bg-white/5 px-2 py-0.5 rounded-full">
+                  <span className="text-xs text-muted-foreground bg-muted/30 px-2 py-0.5 rounded-full">
                     {generatedImage ? "Need copy" : generatedCopy ? "Need image" : "Empty"}
                   </span>
                 )}

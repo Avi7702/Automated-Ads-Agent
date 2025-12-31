@@ -39,7 +39,7 @@ export function TemplateCard({ template, onSelect, isSelected }: TemplateCardPro
         "relative group aspect-[4/5] rounded-2xl overflow-hidden border-2 transition-all duration-300",
         isSelected
           ? "border-primary ring-2 ring-primary/30 scale-[0.98]"
-          : "border-white/10 hover:border-white/30 hover:scale-[1.02]",
+          : "border-border hover:border-primary/50 hover:scale-[1.02]",
         "shadow-lg hover:shadow-2xl"
       )}
       data-testid={`template-card-${template.id}`}
@@ -124,13 +124,13 @@ export function TemplateCard({ template, onSelect, isSelected }: TemplateCardPro
               {template.tags.slice(0, 4).map((tag, idx) => (
                 <span
                   key={idx}
-                  className="text-xs px-2 py-1 rounded-md bg-white/10 text-white/70 border border-white/20"
+                  className="text-xs px-2 py-1 rounded-md bg-muted/50 text-white/70 border border-border"
                 >
                   {tag}
                 </span>
               ))}
               {template.tags.length > 4 && (
-                <span className="text-xs px-2 py-1 rounded-md bg-white/10 text-white/70 border border-white/20">
+                <span className="text-xs px-2 py-1 rounded-md bg-muted/50 text-white/70 border border-border">
                   +{template.tags.length - 4} more
                 </span>
               )}
@@ -182,7 +182,7 @@ export function TemplateCard({ template, onSelect, isSelected }: TemplateCardPro
 
           {/* Global indicator */}
           {template.isGlobal && (
-            <div className="pt-2 border-t border-white/10">
+            <div className="pt-2 border-t border-border">
               <span className="text-xs text-primary/80 flex items-center gap-1">
                 <svg
                   className="w-3 h-3"

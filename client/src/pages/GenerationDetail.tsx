@@ -244,7 +244,7 @@ export default function GenerationDetail() {
             </div>
           )}
 
-          <div className="relative aspect-square rounded-3xl overflow-hidden border border-white/10 bg-black shadow-2xl">
+          <div className="relative aspect-square rounded-3xl overflow-hidden border border-border bg-black shadow-2xl">
             <img
               src={`/${generation.generatedImagePath}`}
               alt={generation.prompt}
@@ -464,7 +464,7 @@ export default function GenerationDetail() {
           {showComparison && generation.originalImagePaths.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {generation.originalImagePaths.map((path, index) => (
-                <div key={index} className="aspect-square rounded-xl overflow-hidden border border-white/10 bg-card">
+                <div key={index} className="aspect-square rounded-xl overflow-hidden border border-border bg-card">
                   <img
                     src={`/${path}`}
                     alt={`Original ${index + 1}`}
@@ -476,13 +476,13 @@ export default function GenerationDetail() {
             </div>
           )}
 
-          <div className="p-6 rounded-3xl border border-white/5 bg-card/30 backdrop-blur-sm space-y-4">
+          <div className="p-6 rounded-3xl border border-border/50 bg-card/30 backdrop-blur-sm space-y-4">
             <div>
               <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">Prompt</h3>
               <p className="text-foreground" data-testid="text-prompt-detail">{generation.prompt}</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
               <div>
                 <h4 className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Created</h4>
                 <p className="text-sm">{format(new Date(generation.createdAt), "MMM d, yyyy 'at' h:mm a")}</p>
