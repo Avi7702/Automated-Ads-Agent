@@ -15,7 +15,20 @@ import { createRateLimiter } from "./middleware/rateLimit";
 import { telemetry } from "./instrumentation";
 import { computeAdaptiveEstimate, estimateGenerationCostMicros, normalizeResolution } from "./services/pricingEstimator";
 import { quotaMonitoringService, parseRetryDelay, parseLimitType } from "./services/quotaMonitoringService";
-import { googleCloudMonitoringService } from "./services/googleCloudMonitoringService";
+
+// Lazy-load Google Cloud Monitoring to prevent any import-time errors
+let googleCloudMonitoringService: any = null;
+async function getGoogleCloudService() {
+  if (!googleCloudMonitoringService) {
+    try {
+      const module = await import("./services/googleCloudMonitoringService");
+      googleCloudMonitoringService = module.googleCloudMonitoringService;
+    } catch (error) {
+      console.error("[GoogleCloudMonitoring] Failed to load module:", error);
+    }
+  }
+  return googleCloudMonitoringService;
+}
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -2396,8 +2409,12 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   // GET /api/quota/google/status - Get Google Cloud sync status
   app.get("/api/quota/google/status", async (req, res) => {
     try {
-      const syncStatus = googleCloudMonitoringService.getSyncStatus();
-      const lastSnapshot = googleCloudMonitoringService.getLastSync();
+      const service = await getGoogleCloudService();
+      if (!service) {
+        return res.status(503).json({ error: "Google Cloud Monitoring not available" });
+      }
+      const syncStatus = service.getSyncStatus();
+      const lastSnapshot = service.getLastSync();
 
       res.json({
         ...syncStatus,
@@ -2416,7 +2433,8 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   // GET /api/quota/google/snapshot - Get latest Google quota snapshot
   app.get("/api/quota/google/snapshot", async (req, res) => {
     try {
-      const snapshot = googleCloudMonitoringService.getLastSync();
+      const service = await getGoogleCloudService();
+      const snapshot = service?.getLastSync();
 
       if (!snapshot) {
         // Try to get from database if not in memory
@@ -2438,7 +2456,11 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   // POST /api/quota/google/sync - Trigger manual sync
   app.post("/api/quota/google/sync", async (req, res) => {
     try {
-      if (!googleCloudMonitoringService.isConfigured()) {
+      const service = await getGoogleCloudService();
+      if (!service) {
+        return res.status(503).json({ error: "Google Cloud Monitoring not available" });
+      }
+      if (!service.isConfigured()) {
         return res.status(400).json({
           error: "Google Cloud Monitoring not configured",
           details: "Set GOOGLE_CLOUD_PROJECT and GOOGLE_APPLICATION_CREDENTIALS or GOOGLE_CLOUD_CREDENTIALS_JSON environment variables",
@@ -2455,7 +2477,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       });
 
       // Perform the sync
-      const snapshot = await googleCloudMonitoringService.triggerManualSync();
+      const snapshot = await service.triggerManualSync();
 
       // Update sync history
       await storage.updateSyncHistoryEntry(syncEntry.id, {
