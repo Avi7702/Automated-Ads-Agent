@@ -1,13 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useRoute, useLocation } from "wouter";
-import { Download, Pencil, X, Loader2, History, MessageCircle, Send, Sparkles } from "lucide-react";
+import { Download, Pencil, X, Loader2, History, MessageCircle, Send, Sparkles, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { CopywritingPanel } from "@/components/CopywritingPanel";
 import { Header } from "@/components/layout/Header";
+import { cn } from "@/lib/utils";
 
 const QUICK_EDITS = [
   { label: "Warmer lighting", prompt: "Make the lighting warmer and more golden" },
@@ -56,6 +57,19 @@ export default function GenerationDetail() {
   const [lastAskedQuestion, setLastAskedQuestion] = useState<string | null>(null);
   const [isAskingAI, setIsAskingAI] = useState(false);
   const [askAIError, setAskAIError] = useState<string | null>(null);
+
+  // Image loading state
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+
+  const handleImageLoad = useCallback(() => {
+    setImageLoaded(true);
+  }, []);
+
+  const handleImageError = useCallback(() => {
+    setImageError(true);
+    setImageLoaded(true);
+  }, []);
 
   const { data: generation, isLoading } = useQuery<Generation>({
     queryKey: ["generation", params?.id],
@@ -248,11 +262,40 @@ export default function GenerationDetail() {
             </div>
           )}
 
-          <div className="relative w-full max-w-3xl mx-auto rounded-3xl overflow-hidden border border-border bg-black shadow-2xl">
+          <div className="relative w-full max-w-4xl mx-auto rounded-3xl overflow-hidden border border-border/50 bg-gradient-to-b from-black/90 to-black shadow-2xl ring-1 ring-white/5 group">
+            {/* Subtle corner accents */}
+            <div className="absolute top-0 left-0 w-24 h-24 bg-gradient-to-br from-primary/10 to-transparent pointer-events-none z-10" />
+            <div className="absolute bottom-0 right-0 w-24 h-24 bg-gradient-to-tl from-primary/10 to-transparent pointer-events-none z-10" />
+
+            {/* Loading skeleton */}
+            {!imageLoaded && !imageError && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/20 animate-pulse min-h-[300px]">
+                <Loader2 className="w-8 h-8 text-primary/50 animate-spin mb-2" />
+                <span className="text-xs text-muted-foreground">Loading image...</span>
+              </div>
+            )}
+
+            {/* Error state */}
+            {imageError && (
+              <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+                <ImageIcon className="w-12 h-12 mb-3 opacity-50" />
+                <span className="text-sm">Failed to load image</span>
+              </div>
+            )}
+
+            {/* Main image with performance optimizations */}
             <img
               src={generation.generatedImagePath.startsWith("http") ? generation.generatedImagePath : `/${generation.generatedImagePath}`}
               alt={generation.prompt}
-              className="w-full h-auto block"
+              className={cn(
+                "w-full h-auto max-h-[75vh] object-contain block transition-all duration-300",
+                "group-hover:scale-[1.02]",
+                imageLoaded ? "opacity-100" : "opacity-0"
+              )}
+              loading="lazy"
+              decoding="async"
+              onLoad={handleImageLoad}
+              onError={handleImageError}
               data-testid="img-generated-full"
             />
           </div>
