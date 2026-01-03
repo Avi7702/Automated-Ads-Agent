@@ -64,7 +64,7 @@
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
     "drizzle-kit": "^0.31.4",
-    "drizzle-orm": "^0.39.1",
+    "drizzle-orm": "^0.45.1",
     "drizzle-zod": "^0.7.0",
     "embla-carousel-react": "^8.6.0",
     "express": "^5.2.1",
