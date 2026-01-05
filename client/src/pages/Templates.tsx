@@ -125,7 +125,7 @@ export default function Templates() {
                       onClick={() => setSelectedMode("exact_insert")}
                       className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                         selectedMode === "exact_insert"
-                          ? "bg-blue-500/20 text-blue-300 border border-blue-500/50 shadow-lg shadow-blue-500/10"
+                          ? "bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/50 shadow-lg shadow-blue-500/10"
                           : "bg-card border border-border text-muted-foreground hover:text-foreground hover:border-primary/50"
                       }`}
                       data-testid="mode-exact-insert"
@@ -137,7 +137,7 @@ export default function Templates() {
                       onClick={() => setSelectedMode("inspiration")}
                       className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                         selectedMode === "inspiration"
-                          ? "bg-purple-500/20 text-purple-300 border border-purple-500/50 shadow-lg shadow-purple-500/10"
+                          ? "bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/50 shadow-lg shadow-purple-500/10"
                           : "bg-card border border-border text-muted-foreground hover:text-foreground hover:border-primary/50"
                       }`}
                       data-testid="mode-inspiration"

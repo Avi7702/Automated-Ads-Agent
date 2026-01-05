@@ -1,4 +1,4 @@
-import { BrandProfileForm } from "@/components/BrandProfileForm";
+import { BrandProfileDisplay } from "@/components/BrandProfileDisplay";
 import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,8 @@ export default function BrandProfile() {
           </Link>
         </div>
 
-        <BrandProfileForm />
+        <h1 className="text-2xl font-semibold text-foreground mb-6">Brand Profile</h1>
+        <BrandProfileDisplay className="max-w-3xl" />
       </main>
     </div>
   );

@@ -29,6 +29,7 @@ import {
 // ============================================
 
 // Search model - uses Google Search grounding
+// MODEL RECENCY RULE: Before changing any model ID, verify today's date and confirm the model is current within the last 3-4 weeks.
 const SEARCH_MODEL = process.env.GEMINI_SEARCH_MODEL || "gemini-2.5-flash";
 
 // Known trusted domains for construction products

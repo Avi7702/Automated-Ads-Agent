@@ -114,6 +114,8 @@ const ENGAGEMENT_TIER_SCORES: Record<string, number> = {
   'unranked': 40,
 };
 
+// MODEL RECENCY RULE: Before changing any model ID, verify today's date and confirm the model is current within the last 3-4 weeks.
+
 // =============================================================================
 // Main Functions
 // =============================================================================

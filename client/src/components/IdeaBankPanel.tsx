@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Sparkles, RefreshCw, Eye, Zap, Database, Globe, CheckCircle2, XCircle, Lightbulb, TrendingUp, Check, Play, Loader2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { IdeaBankSuggestResponse, IdeaBankSuggestion, GenerationMode } from "@shared/types/ideaBank";
+import type { IdeaBankSuggestResponse, IdeaBankSuggestion, GenerationMode, GenerationRecipe } from "@shared/types/ideaBank";
 import type { Product } from "@shared/schema";
 import type { AnalyzedUpload } from "@/types/analyzedUpload";
 
@@ -11,6 +11,7 @@ interface IdeaBankPanelProps {
   selectedProducts: Product[];
   tempUploads?: AnalyzedUpload[];
   onSelectPrompt: (prompt: string, id?: string, reasoning?: string) => void;
+  onRecipeAvailable?: (recipe: GenerationRecipe | undefined) => void;
   onSetPlatform?: (platform: string) => void;
   onSetAspectRatio?: (aspectRatio: string) => void;
   onQuickGenerate?: (prompt: string) => void;
@@ -204,6 +205,7 @@ export function IdeaBankPanel({
   selectedProducts,
   tempUploads = [],
   onSelectPrompt,
+  onRecipeAvailable,
   onSetPlatform,
   onSetAspectRatio,
   onQuickGenerate,
@@ -468,6 +470,10 @@ export function IdeaBankPanel({
                 onUse={(prompt, id, reasoning) => {
                   // Set the prompt
                   onSelectPrompt(prompt, id, reasoning);
+                  // Pass recipe context to parent for /api/transform
+                  if (onRecipeAvailable) {
+                    onRecipeAvailable(response?.recipe);
+                  }
                   // Auto-set platform if recommendation exists
                   if (suggestion.recommendedPlatform && onSetPlatform) {
                     onSetPlatform(suggestion.recommendedPlatform);
@@ -480,6 +486,10 @@ export function IdeaBankPanel({
                 onQuickGenerate={onQuickGenerate ? (prompt) => {
                   // First set the prompt so user can see what's generating
                   onSelectPrompt(prompt, suggestion.id, suggestion.reasoning);
+                  // Pass recipe context to parent for /api/transform
+                  if (onRecipeAvailable) {
+                    onRecipeAvailable(response?.recipe);
+                  }
                   // Auto-set platform if recommendation exists
                   if (suggestion.recommendedPlatform && onSetPlatform) {
                     onSetPlatform(suggestion.recommendedPlatform);

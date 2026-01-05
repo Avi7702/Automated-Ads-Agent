@@ -25,10 +25,15 @@ import type {
   IdeaBankSuggestResponse,
   GenerationMode,
   SourcesUsed,
+  GenerationRecipe,
+  GenerationRecipeProduct,
+  GenerationRecipeRelationship,
+  GenerationRecipeScenario,
 } from "@shared/types/ideaBank";
 import type { Product, AdSceneTemplate, BrandProfile } from "@shared/schema";
 
 // LLM model for reasoning - use Gemini 3 Flash for speed
+// MODEL RECENCY RULE: Before changing any model ID, verify today's date and confirm the model is current within the last 3-4 weeks.
 const REASONING_MODEL = process.env.GEMINI_REASONING_MODEL || "gemini-3-flash-preview";
 
 
@@ -78,6 +83,7 @@ export async function generateSuggestions(
   request: IdeaBankRequest
 ): Promise<{ success: true; response: IdeaBankSuggestResponse } | { success: false; error: IdeaBankError }> {
   const { productId, userId, userGoal, enableWebSearch = false, maxSuggestions = 3, uploadDescriptions = [] } = request;
+  const buildStartTime = Date.now(); // Track for recipe debug timing
 
   // Rate limit check
   if (!checkRateLimit(userId)) {
@@ -183,6 +189,15 @@ export async function generateSuggestions(
       enableWebSearch,
     });
 
+    // Build GenerationRecipe for context passing to /api/transform
+    const recipe = buildGenerationRecipe({
+      product,
+      enhancedContext,
+      matchedTemplates,
+      brandProfile,
+      buildStartTime,
+    });
+
     // Build response
     const response: IdeaBankSuggestResponse = {
       suggestions,
@@ -194,6 +209,7 @@ export async function generateSuggestions(
         productKnowledgeUsed: !!enhancedContext, // Phase 0.5
         uploadDescriptionsUsed: uploadDescriptions.length, // Phase 9
       },
+      recipe, // Include recipe for /api/transform context
     };
 
     return { success: true, response };
@@ -617,6 +633,105 @@ export async function getMatchedTemplates(
     templates,
     analysis: analysisResult.analysis,
   };
+}
+
+/**
+ * Build GenerationRecipe from enhanced context
+ * Recipe includes products, relationships, scenarios, and brand context
+ */
+function buildGenerationRecipe(params: {
+  product?: Product;
+  enhancedContext: EnhancedProductContext | null;
+  matchedTemplates: AdSceneTemplate[];
+  brandProfile?: BrandProfile;
+  buildStartTime: number;
+}): GenerationRecipe | undefined {
+  const { product, enhancedContext, matchedTemplates, brandProfile, buildStartTime } = params;
+
+  // If no product or enhanced context, return undefined (recipe is optional)
+  if (!product || !enhancedContext) {
+    return undefined;
+  }
+
+  // Check if debug context should be included (env var gated)
+  const includeDebug = process.env.ENABLE_DEBUG_CONTEXT === "true";
+
+  // Build products array
+  const products: GenerationRecipeProduct[] = [{
+    id: product.id,
+    name: product.name,
+    category: product.category || undefined,
+    description: product.description || undefined,
+    imageUrls: product.cloudinaryUrl ? [product.cloudinaryUrl] : [],
+  }];
+
+  // Build relationships array
+  const relationships: GenerationRecipeRelationship[] = enhancedContext.relatedProducts.map(rp => ({
+    sourceProductId: product.id,
+    sourceProductName: product.name,
+    targetProductId: rp.product.id,
+    targetProductName: rp.product.name,
+    relationshipType: rp.relationshipType,
+    description: rp.relationshipDescription,
+  }));
+
+  // Build scenarios array
+  const scenarios: GenerationRecipeScenario[] = enhancedContext.installationScenarios.map(s => ({
+    id: s.id,
+    title: s.title,
+    description: s.description,
+    steps: s.installationSteps,
+    isActive: true, // From enhanced context means active
+    scenarioType: s.scenarioType,
+  }));
+
+  // Build template info (first matched template if any)
+  const template = matchedTemplates.length > 0 ? {
+    id: matchedTemplates[0].id,
+    title: matchedTemplates[0].title,
+    category: matchedTemplates[0].category,
+    aspectRatio: matchedTemplates[0].aspectRatioHints?.[0],
+  } : undefined;
+
+  // Build brand images
+  const brandImages = enhancedContext.brandImages.map(bi => ({
+    id: bi.id,
+    imageUrl: bi.cloudinaryUrl,
+    category: bi.category,
+  }));
+
+  // Build brand voice
+  const brandVoice = brandProfile ? {
+    brandName: brandProfile.brandName || undefined,
+    industry: brandProfile.industry || undefined,
+    values: brandProfile.brandValues || undefined,
+  } : undefined;
+
+  const recipe: GenerationRecipe = {
+    version: "1.0",
+    products,
+    relationships,
+    scenarios,
+    template,
+    brandImages,
+    brandVoice,
+  };
+
+  // Add debug context if enabled
+  if (includeDebug) {
+    const activeScenarios = scenarios.filter(s => s.isActive).length;
+    recipe.debugContext = {
+      relationshipsFound: relationships.length,
+      scenariosFound: scenarios.length,
+      scenariosActive: activeScenarios,
+      scenariosInactive: scenarios.length - activeScenarios,
+      templatesMatched: matchedTemplates.length,
+      brandImagesFound: brandImages.length,
+      buildTimeMs: Date.now() - buildStartTime,
+    };
+  }
+
+  return recipe;
 }
 
 export const ideaBankService = {

@@ -15,7 +15,7 @@ import {
   Package,
   ImageOff,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getProductImageUrl } from "@/lib/utils";
 import type { BrandImage, Product } from "@shared/schema";
 
 // Components
@@ -74,13 +74,14 @@ const ASPECT_RATIOS = [
 // Category badge component
 function CategoryBadge({ category }: { category: string }) {
   const info = IMAGE_CATEGORIES.find(c => c.value === category);
+  // Light mode readable + dark mode optimized colors
   const colors: Record<string, string> = {
-    historical_ad: "bg-amber-500/20 text-amber-400 border-amber-500/30",
-    product_hero: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-    installation: "bg-green-500/20 text-green-400 border-green-500/30",
-    detail: "bg-purple-500/20 text-purple-400 border-purple-500/30",
-    lifestyle: "bg-pink-500/20 text-pink-400 border-pink-500/30",
-    comparison: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
+    historical_ad: "bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30",
+    product_hero: "bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/30",
+    installation: "bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30",
+    detail: "bg-purple-500/20 text-purple-700 dark:text-purple-400 border-purple-500/30",
+    lifestyle: "bg-pink-500/20 text-pink-700 dark:text-pink-400 border-pink-500/30",
+    comparison: "bg-cyan-500/20 text-cyan-700 dark:text-cyan-400 border-cyan-500/30",
   };
 
   return (
@@ -152,7 +153,7 @@ function BrandImageCard({
             </div>
           ) : (
             <img
-              src={image.cloudinaryUrl}
+              src={getProductImageUrl(image.cloudinaryUrl)}
               alt={image.description || "Brand image"}
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
               onError={() => setHasError(true)}
@@ -520,7 +521,7 @@ function ImageDetailModal({
           {/* Image */}
           <div className="aspect-video rounded-xl overflow-hidden bg-muted">
             <img
-              src={image.cloudinaryUrl}
+              src={getProductImageUrl(image.cloudinaryUrl)}
               alt={image.description || "Brand image"}
               className="w-full h-full object-contain"
             />

@@ -1,36 +1,17 @@
-// @ts-nocheck
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface HeaderProps {
-  currentPage?: "studio" | "gallery" | "products" | "template-library" | "settings" | "templates" | "generation";
+  currentPage?: "studio" | "gallery" | "products" | "template-library" | "installation-scenarios" | "brand-images" | "settings" | "templates" | "generation";
 }
 
 export function Header({ currentPage }: HeaderProps) {
   const [location] = useLocation();
-  const queryClient = useQueryClient();
-
-  // Auth state
-  const { data: authUser } = useQuery({
-    queryKey: ["auth"],
-    queryFn: async () => {
-      const res = await fetch("/api/auth/me", { credentials: "include" });
-      if (!res.ok) return null;
-      return res.json();
-    },
-    retry: false,
-  });
-
-  const logoutMutation = useMutation({
-    mutationFn: async () => {
-      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["auth"] }),
-  });
+  const { user, logout } = useAuth();
 
   // Determine active page from location if not provided
   const activePage = currentPage || (() => {
@@ -38,6 +19,8 @@ export function Header({ currentPage }: HeaderProps) {
     if (location === "/gallery") return "gallery";
     if (location === "/products") return "products";
     if (location === "/template-library") return "template-library";
+    if (location === "/installation-scenarios") return "installation-scenarios";
+    if (location === "/brand-images") return "brand-images";
     if (location === "/usage") return "usage";
     if (location === "/settings" || location === "/brand-profile") return "settings";
     if (location.startsWith("/templates") || location.startsWith("/admin/templates")) return "templates";
@@ -47,9 +30,11 @@ export function Header({ currentPage }: HeaderProps) {
 
   const navItems = [
     { id: "studio", label: "Studio", href: "/" },
-    { id: "gallery", label: "Gallery", href: "/gallery" },
+    { id: "gallery", label: "History", href: "/gallery" },
     { id: "products", label: "Products", href: "/products" },
     { id: "template-library", label: "Templates", href: "/template-library" },
+    { id: "installation-scenarios", label: "Scenarios", href: "/installation-scenarios" },
+    { id: "brand-images", label: "Brand Images", href: "/brand-images" },
     { id: "usage", label: "Usage", href: "/usage" },
     { id: "settings", label: "Settings", href: "/settings" },
   ];
@@ -88,15 +73,15 @@ export function Header({ currentPage }: HeaderProps) {
         {/* Actions */}
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          {authUser && (
+          {user && (
             <>
               <span className="text-sm text-muted-foreground hidden sm:inline">
-                {authUser.username || "User"}
+                {user.email || "User"}
               </span>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => logoutMutation.mutate()}
+                onClick={logout}
                 className="text-muted-foreground hover:text-foreground"
               >
                 <LogOut className="w-4 h-4" />

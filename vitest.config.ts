@@ -15,6 +15,7 @@ const integrationTests = [
   '**/transform.test.ts', // Requires database
   '**/imageStorage.test.ts', // Mock issues with drizzle-orm
   '**/productKnowledge.test.ts', // Requires database
+  '**/ragEndpoints.test.ts', // Requires database
 ];
 
 export default defineConfig({

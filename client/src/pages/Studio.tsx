@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
-import { cn } from "@/lib/utils";
+import { cn, getProductImageUrl } from "@/lib/utils";
 import type { Product, PromptTemplate, PerformingAdTemplate } from "@shared/schema";
 
 // Components
@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/dialog";
 import { IdeaBankPanel } from "@/components/IdeaBankPanel";
 import { LinkedInPostPreview } from "@/components/LinkedInPostPreview";
+import type { GenerationRecipe } from "@shared/types/ideaBank";
 import { UploadZone } from "@/components/UploadZone";
 import type { AnalyzedUpload } from "@/types/analyzedUpload";
 import { HistoryTimeline } from "@/components/HistoryTimeline";
@@ -364,6 +365,9 @@ export default function Studio() {
     reasoning?: string;
   } | null>(null);
 
+  // GenerationRecipe from IdeaBank - contains relationships, scenarios, brand context
+  const [generationRecipe, setGenerationRecipe] = useState<GenerationRecipe | undefined>(undefined);
+
   // Refs for scroll tracking
   const generateButtonRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
@@ -546,7 +550,8 @@ export default function Studio() {
       if (!quickStartMode) {
         // Add selected products as files
         const filePromises = selectedProducts.map(async (product) => {
-          const response = await fetch(product.cloudinaryUrl);
+          const imageUrl = getProductImageUrl(product.cloudinaryUrl);
+          const response = await fetch(imageUrl);
           const blob = await response.blob();
           return new File([blob], `${product.name}.jpg`, { type: blob.type });
         });
@@ -560,6 +565,11 @@ export default function Studio() {
 
       formData.append("prompt", finalPrompt);
       formData.append("resolution", resolution);
+
+      // Append GenerationRecipe if available (from IdeaBank suggestions)
+      if (generationRecipe) {
+        formData.append("recipe", JSON.stringify(generationRecipe));
+      }
 
       const response = await fetch("/api/transform", {
         method: "POST",
@@ -1225,7 +1235,7 @@ export default function Studio() {
                           className="relative group w-16 h-16 rounded-lg overflow-hidden border-2 border-primary"
                         >
                           <img
-                            src={product.cloudinaryUrl}
+                            src={getProductImageUrl(product.cloudinaryUrl)}
                             alt={product.name}
                             className="w-full h-full object-cover"
                           />
@@ -1291,7 +1301,7 @@ export default function Studio() {
                             )}
                           >
                             <img
-                              src={product.cloudinaryUrl}
+                              src={getProductImageUrl(product.cloudinaryUrl)}
                               alt={product.name}
                               className="w-full h-full object-cover"
                             />
@@ -1541,6 +1551,7 @@ export default function Studio() {
                     selectedProducts={selectedProducts}
                     tempUploads={tempUploads}
                     onSelectPrompt={(promptText, id, reasoning) => handleSelectSuggestion(promptText, id, reasoning)}
+                    onRecipeAvailable={(recipe) => setGenerationRecipe(recipe)}
                     onSetPlatform={setPlatform}
                     onSetAspectRatio={setAspectRatio}
                     onQuickGenerate={(promptText) => {
@@ -1613,7 +1624,7 @@ export default function Studio() {
                       <span className="text-2xl">💲</span>
                       <div>
                         <p className="text-sm font-medium">
-                          Estimated cost: <span className="text-green-400">${priceEstimate.estimatedCost.toFixed(3)}</span>
+                          Estimated cost: <span className="text-green-700 dark:text-green-400">${priceEstimate.estimatedCost.toFixed(3)}</span>
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {priceEstimate.usedFallback

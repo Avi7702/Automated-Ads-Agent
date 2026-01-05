@@ -650,7 +650,7 @@ export class DbStorage implements IStorage {
     if (productIds.length === 0) return [];
 
     // Get scenarios where any of the productIds is the primary product
-    // or is in the secondary products array
+    // OR appears in the secondaryProductIds array (using PostgreSQL && overlap operator)
     return await db
       .select()
       .from(installationScenarios)
@@ -659,8 +659,8 @@ export class DbStorage implements IStorage {
           eq(installationScenarios.isActive, true),
           or(
             inArray(installationScenarios.primaryProductId, productIds),
-            // For secondary products, we need to check array overlap
-            // This is a simplified version - might need SQL function for full overlap check
+            // Check if secondaryProductIds array overlaps with input productIds
+            sql`${installationScenarios.secondaryProductIds} && ARRAY[${sql.join(productIds.map(id => sql`${id}`), sql`, `)}]::text[]`
           )
         )
       )

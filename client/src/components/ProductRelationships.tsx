@@ -11,7 +11,7 @@ import {
   Loader2,
   X,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getProductImageUrl } from "@/lib/utils";
 import type { ProductRelationship, Product } from "@shared/schema";
 
 // Components
@@ -49,16 +49,16 @@ function getRelationshipInfo(type: string) {
   return RELATIONSHIP_TYPES.find(t => t.value === type) || { value: type, label: type, description: "" };
 }
 
-// Relationship badge component
+// Relationship badge component (light mode readable + dark mode optimized)
 function RelationshipTypeBadge({ type }: { type: string }) {
   const info = getRelationshipInfo(type);
   const colors: Record<string, string> = {
-    pairs_with: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-    requires: "bg-red-500/20 text-red-400 border-red-500/30",
-    replaces: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-    matches: "bg-green-500/20 text-green-400 border-green-500/30",
-    completes: "bg-purple-500/20 text-purple-400 border-purple-500/30",
-    upgrades: "bg-orange-500/20 text-orange-400 border-orange-500/30",
+    pairs_with: "bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/30",
+    requires: "bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/30",
+    replaces: "bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-500/30",
+    matches: "bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30",
+    completes: "bg-purple-500/20 text-purple-700 dark:text-purple-400 border-purple-500/30",
+    upgrades: "bg-orange-500/20 text-orange-700 dark:text-orange-400 border-orange-500/30",
   };
 
   return (
@@ -96,7 +96,7 @@ function RelationshipCard({
         <div className="w-12 h-12 rounded-md bg-muted overflow-hidden flex-shrink-0">
           {relatedProduct?.cloudinaryUrl ? (
             <img
-              src={relatedProduct.cloudinaryUrl}
+              src={getProductImageUrl(relatedProduct.cloudinaryUrl)}
               alt={relatedProduct.name}
               className="w-full h-full object-cover"
             />

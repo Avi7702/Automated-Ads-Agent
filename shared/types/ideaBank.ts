@@ -55,6 +55,9 @@ export interface AnalysisStatus {
 export interface IdeaBankSuggestResponse {
   suggestions: IdeaBankSuggestion[];
   analysisStatus: AnalysisStatus;
+  // GenerationRecipe for passing context to /api/transform
+  // Includes relationships, scenarios, brand context
+  recipe?: GenerationRecipe;
 }
 
 // Legacy format for batch analysis
@@ -249,6 +252,75 @@ export interface GenerationModeParams {
   mode: GenerationMode;
   templateId?: string;
   templateReferenceUrls?: string[];
+}
+
+// ============================================
+// GENERATION RECIPE TYPES
+// ============================================
+
+/**
+ * GenerationRecipe - Encapsulates all context for image generation
+ * Built by IdeaBankService and optionally passed to /api/transform
+ */
+export interface GenerationRecipeProduct {
+  id: string;
+  name: string;
+  category?: string;
+  description?: string;
+  imageUrls: string[];
+}
+
+export interface GenerationRecipeRelationship {
+  sourceProductId: string;
+  sourceProductName: string;
+  targetProductId: string;
+  targetProductName: string;
+  relationshipType: string;
+  description?: string;
+}
+
+export interface GenerationRecipeScenario {
+  id: string;
+  title: string;
+  description: string;
+  steps?: string[];
+  isActive: boolean;
+  scenarioType?: string;
+}
+
+export interface GenerationRecipeDebugContext {
+  relationshipsFound: number;
+  scenariosFound: number;
+  scenariosActive: number;
+  scenariosInactive: number;
+  templatesMatched: number;
+  brandImagesFound: number;
+  buildTimeMs: number;
+}
+
+export interface GenerationRecipe {
+  version: "1.0";
+  products: GenerationRecipeProduct[];
+  relationships: GenerationRecipeRelationship[];
+  scenarios: GenerationRecipeScenario[];
+  template?: {
+    id: string;
+    title: string;
+    category: string;
+    aspectRatio?: string;
+  };
+  brandImages?: Array<{
+    id: string;
+    imageUrl: string;
+    category: string;
+  }>;
+  brandVoice?: {
+    brandName?: string;
+    industry?: string;
+    values?: string[];
+  };
+  // Debug context - only included when ENABLE_DEBUG_CONTEXT=true
+  debugContext?: GenerationRecipeDebugContext;
 }
 
 // ============================================

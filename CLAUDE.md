@@ -110,9 +110,12 @@ You must verify information before responding. Never make assumptions about code
 ### Before Starting ANY Task
 
 1. **Read the task specification completely** from `docs/IMPLEMENTATION-TASKS.md`
-2. **Check for existing implementations** - never duplicate work
-3. **For multi-file tasks**: Run `/feature-dev [task]` to get structured guidance
-4. **Understand the codebase first**: Use the Explore agent or read relevant files
+2. **Consult the Component Classification Schema** from `docs/COMPONENT-CLASSIFICATION-SCHEMA.md`
+   - Determine if new code is `[UI]`, `[TOOL]`, `[KB]`, `[HYB]`, or `[INFRA]`
+   - Add new components to the schema before implementing
+3. **Check for existing implementations** - never duplicate work
+4. **For multi-file tasks**: Run `/feature-dev [task]` to get structured guidance
+5. **Understand the codebase first**: Use the Explore agent or read relevant files
 
 ### During Implementation
 
@@ -152,18 +155,20 @@ server/
   app.ts           # Express app setup
   storage.ts       # Database/storage layer
 docs/
-  IMPLEMENTATION-TASKS.md  # Task specifications
+  IMPLEMENTATION-TASKS.md        # Task specifications
+  COMPONENT-CLASSIFICATION-SCHEMA.md  # Component categorization (MUST READ)
 ```
 
 ## Key Files to Know
 
+- `docs/COMPONENT-CLASSIFICATION-SCHEMA.md` - **MUST READ** before adding features
 - `server/middleware/rateLimit.ts` - Rate limiting (Task 1.1 complete)
 - `server/services/authService.ts` - Authentication logic (Task 1.2 complete)
 - `server/middleware/auth.ts` - Auth middleware
 - `server/middleware/validate.ts` - Zod validation middleware (Task 2.1 complete)
 - `server/validation/schemas.ts` - Validation schemas (Task 2.1 complete)
-- `server/services/geminiService.ts` - Gemini API wrapper (Task 2.2 complete)
-- `server/services/imageStorage.ts` - Image storage service (Task 2.3 complete)
+- `server/services/ideaBankService.ts` - Main AI orchestrator
+- `server/services/fileSearchService.ts` - Central RAG query hub
 - `server/types/api.ts` - API response types (Task 2.4 complete)
 - `server/routes.ts` - All API endpoints
 - `docker-compose.test.yml` - PostgreSQL for integration tests

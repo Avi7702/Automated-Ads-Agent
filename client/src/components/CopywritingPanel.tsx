@@ -326,7 +326,7 @@ export function CopywritingPanel({ generationId, prompt }: CopywritingPanelProps
                         <div className="pt-3 border-t border-border/50">
                           <div className="flex items-center gap-4 text-xs">
                             <span className="text-muted-foreground">Quality Score:</span>
-                            <span className={`font-medium ${copy.qualityScore.overall >= 80 ? 'text-green-400' : copy.qualityScore.overall >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>
+                            <span className={`font-medium ${copy.qualityScore.overall >= 80 ? 'text-green-700 dark:text-green-400' : copy.qualityScore.overall >= 60 ? 'text-yellow-700 dark:text-yellow-400' : 'text-red-700 dark:text-red-400'}`}>
                               {copy.qualityScore.overall}/100
                             </span>
                             <span className="text-muted-foreground">Relevance: {copy.qualityScore.relevance}</span>

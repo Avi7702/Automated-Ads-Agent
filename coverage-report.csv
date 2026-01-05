@@ -1,0 +1,154 @@
+productId,name,category,enrichmentStatus,hasDescription,hasFeatures,hasBenefits,hasSpecs,hasTags,hasSku,relationshipsAsSourceCount,relationshipsAsTargetCount,relationshipsAnyCount,scenariosPrimaryCount,scenariosSecondaryCount,scenariosAnyCount,scenariosActiveCount,scenariosInactiveCount,brandImagesCount,hasProductAnalysis,lastVerifiedAt,createdAt
+d1368702-46ae-4bed-9faf-cbc74ca8bf1d,"logo",nds,pending,false,false,false,false,false,false,0,0,0,0,0,0,0,0,0,true,,2025-12-25T14:53:15.623Z
+9a01b5b3-9386-4e51-b6f4-0f353b099f28,"T8 Rebar Bar - 6m Length",rebar,complete,true,true,true,true,true,true,3,0,3,6,0,6,6,0,2,false,,2026-01-01T15:28:03.091Z
+66418145-6074-4fde-b07e-87a0df8cede6,"T10 Rebar Bar - 6m Length",rebar,complete,true,true,true,true,true,true,4,1,5,0,0,0,0,0,2,false,,2026-01-01T15:28:03.423Z
+2bde59df-c6b4-4286-a6cd-8b3875e88f90,"T12 Rebar Bar - 6m Length",rebar,complete,true,true,true,true,true,true,5,1,6,0,0,0,0,0,2,false,,2026-01-01T15:28:03.753Z
+0450605b-20f8-42c5-98d4-b7ab4a074523,"T16 Rebar Bar - 6m Length",rebar,complete,true,true,true,true,true,true,5,1,6,0,0,0,0,0,2,false,,2026-01-01T15:28:04.081Z
+0b38647d-f7d2-4902-a548-bfd218db11a0,"T20 Rebar Bar - 6m Length",rebar,complete,true,true,true,true,true,true,3,1,4,0,0,0,0,0,2,false,,2026-01-01T15:28:04.410Z
+7dbe3e57-f614-472d-8a7d-154438a9ea8f,"T25 Rebar Bar - 6m Length",rebar,complete,true,true,true,true,true,true,2,1,3,0,0,0,0,0,2,false,,2026-01-01T15:28:04.738Z
+76dd5bcf-129a-4608-b392-a0781764ebff,"T32 Rebar Bar - 6m Length",rebar,complete,true,true,true,true,true,true,1,1,2,0,0,0,0,0,2,false,,2026-01-01T15:28:05.072Z
+79cac941-22db-4e4c-806f-6c703179818b,"T40 Rebar Bar - 6m Length",rebar,complete,true,true,true,true,true,true,0,1,1,0,0,0,0,0,2,false,,2026-01-01T15:28:05.399Z
+862b0f05-2b0f-40d5-b8e9-af8bd499cee5,"A142 Steel Mesh - 4.8m x 2.4m Sheet",mesh,complete,true,true,true,true,true,true,3,0,3,3,0,3,3,0,3,false,,2026-01-01T15:28:05.753Z
+3533ffc5-d6ca-4d6f-92dd-2117e4b64043,"A193 Steel Mesh - 4.8m x 2.4m Sheet",mesh,complete,true,true,true,true,true,true,3,2,5,0,0,0,0,0,3,false,,2026-01-01T15:28:06.091Z
+00da1e38-8a85-45c7-9d94-dba892350506,"A252 Steel Mesh - 4.8m x 2.4m Sheet",mesh,complete,true,true,true,true,true,true,3,2,5,0,0,0,0,0,3,false,,2026-01-01T15:28:06.429Z
+89e19d2d-95ab-4465-8b2b-9475004c2647,"A393 Steel Mesh - 4.8m x 2.4m Sheet",mesh,complete,true,true,true,true,true,true,2,2,4,0,0,0,0,0,3,false,,2026-01-01T15:28:06.783Z
+20892a3c-d163-4a35-a893-111769fa2c64,"Concrete Spacers - 25mm Cover (Pack of 100)",spacers,complete,true,true,true,true,true,true,2,2,4,1,0,1,1,0,3,false,,2026-01-01T15:28:07.130Z
+08a14358-16af-4f1b-a78f-9d59b5bda41e,"Concrete Spacers - 40mm Cover (Pack of 100)",spacers,complete,true,true,true,true,true,true,1,3,4,0,0,0,0,0,3,false,,2026-01-01T15:28:07.461Z
+1a24f20b-fa03-4093-98da-3d7e89f4134d,"Concrete Spacers - 50mm Cover (Pack of 100)",spacers,complete,true,true,true,true,true,true,0,3,3,0,0,0,0,0,3,false,,2026-01-01T15:28:07.790Z
+5835728d-c1ed-4b8f-bf7d-cd2cb6bd868d,"Chair Spacers - Heavy Duty (Pack of 50)",spacers,complete,true,true,true,true,true,true,0,5,5,0,0,0,0,0,3,false,,2026-01-01T15:28:08.124Z
+5d1d7cb4-a21c-4f24-9f32-7190dc747a4f,"Tie Wire - 1.6mm Soft Annealed (20kg Coil)",accessories,complete,true,true,true,true,true,true,0,5,5,0,0,0,0,0,0,false,,2026-01-01T15:28:08.453Z
+2a43842a-643c-4e6b-acc0-72f92d9756ac,"Rebar Couplers - T12 Mechanical Splice (Pack of 10)",accessories,complete,true,true,true,true,true,true,0,1,1,0,0,0,0,0,0,false,,2026-01-01T15:28:08.780Z
+ae8ad208-d465-4b33-941c-342e8dea29ec,"Rebar Couplers - T16 Mechanical Splice (Pack of 10)",accessories,complete,true,true,true,true,true,true,0,1,1,0,0,0,0,0,0,false,,2026-01-01T15:28:09.123Z
+2b762c00-15fa-45e6-ac09-59699ea7dbc9,"Mesh Clips - Universal (Pack of 200)",accessories,complete,true,true,true,true,true,true,0,4,4,0,0,0,0,0,0,false,,2026-01-01T15:28:09.453Z
+8f8253eb-8291-4a5f-99ac-a0324debaa28,"T8 Rebar - 8mm High Tensile Reinforcement Bar",rebar,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,2,false,,2026-01-01T16:30:14.796Z
+8ea29be2-f3b3-4d89-9c0d-1a5dfb22d363,"T10 Rebar - 10mm High Tensile Reinforcement Bar",rebar,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,2,false,,2026-01-01T16:30:23.048Z
+a3c600a5-d867-4069-843c-338e756139f1,"T12 Rebar - 12mm High Tensile Reinforcement Bar",rebar,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,2,false,,2026-01-01T16:30:31.166Z
+2f4648f9-9c8d-40cd-a115-8c6290fe1a66,"T16 Rebar - 16mm High Tensile Reinforcement Bar",rebar,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,2,false,,2026-01-01T16:30:39.319Z
+297a8d58-cc77-4107-8946-8901dc6c0f8d,"T20 Rebar - 20mm High Tensile Reinforcement Bar",rebar,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,2,false,,2026-01-01T16:30:47.601Z
+2f908314-0fc0-417f-8d6c-59a66e50b704,"T25 Rebar - 25mm High Tensile Reinforcement Bar",rebar,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,2,false,,2026-01-01T16:30:56.050Z
+b3eba6b9-6fc5-497e-8fde-081d4ec6768f,"Air Bricks & Cavity Vents",groundworks,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:40:51.624Z
+0a28aa84-01ae-437a-9f95-9d386e483929,"Cellcore HX Plus - Insulated Ground Heave Protection for Slabs",groundworks,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:41:02.919Z
+b27f0278-bd84-40b7-a264-40f54f7de0eb,"T32 Rebar - 32mm High Tensile Reinforcement Bar",rebar,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,2,false,,2026-01-01T16:31:03.988Z
+44bf6cc1-fb73-4478-8db8-98d199998948,"T40 Rebar - 40mm High Tensile Reinforcement Bar",rebar,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,2,false,,2026-01-01T16:31:11.857Z
+9d381968-523e-4862-a67f-9312ab120524,"A193 Mesh - Steel Reinforcement - 7mm Cross Bar & 7mm Long Bar",mesh,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,3,false,,2026-01-01T16:31:47.652Z
+42f764a4-2c7b-43e8-a3b3-01770201e30d,"A142 Mesh - Steel Reinforcement - 6mm Cross Bar",mesh,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,3,false,,2026-01-01T16:31:39.510Z
+68c5b8bc-7f08-4cf2-b79f-0c85fc1a6852,"B283 Mesh - Steel Reinforcement - 6mm Long and 7mm Cross Bars",mesh,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,3,false,,2026-01-01T16:32:13.183Z
+621329c0-8c59-4f40-88c1-ac2355563d7e,"A252 Mesh - Steel Reinforcement - 8mm Cross Bar",mesh,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,3,false,,2026-01-01T16:31:56.013Z
+035bf957-70c5-44ae-a76d-fffea9ccc90c,"A393 Mesh - Steel Reinforcement - 10mm Cross Bar",mesh,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,3,false,,2026-01-01T16:32:04.309Z
+268bf2b8-228c-4f36-8925-3ab919a9d4e1,"B785 Mesh - Steel Reinforcement - 10mm Long and 8mm Cross Bars",mesh,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,3,false,,2026-01-01T16:32:38.028Z
+a8ad4552-e2fc-4517-8124-f7e87eca24d5,"B385 Mesh - Steel Reinforcement - 7mm Long and Cross Bars",mesh,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,3,false,,2026-01-01T16:32:21.171Z
+9259375e-af12-4b7a-93f2-45bca742f4f3,"B503 Mesh - Steel Reinforcement - 8mm Long and Cross Bars",mesh,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,3,false,,2026-01-01T16:32:29.552Z
+f4899490-6ff3-483e-9ef2-2586fa43ff91,"B1131 Mesh - Steel Reinforcement - 12mm Long and 8mm Cross Bars",mesh,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,3,false,,2026-01-01T16:32:46.234Z
+b789882d-5ed5-41f2-a54e-9cdfbada7f30,"D49 Reinforcement Wrapping Mesh - 4.8m x 2.4m x 2.5mm",mesh,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,3,false,,2026-01-01T16:32:53.918Z
+f88c258b-f0f3-44f1-ac9e-36ed65e276b5,"Custom Cut & Bent Rebar - Shape Code 11, L Bars, Kicker, 90-degree bar",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:33:34.394Z
+8622d147-36f8-41cc-8c32-687f774c2e92,"Custom Cut & Bent Rebar - Shape Code 13",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:33:50.722Z
+f20d070b-5f6d-4917-9d40-ea37a85920b1,"Custom Cut & Bent Rebar - Shape Code 14",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:33:58.810Z
+1fec57b9-4a71-43e3-b598-450d4b62f748,"Custom Cut & Bent Rebar - Shape Code 15",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:34:07.555Z
+8fb341ee-3b40-4e52-b22c-dbae75febe62,"Custom Cut & Bent Rebar - Shape Code 25",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:34:47.933Z
+b2e5ff73-77c0-4371-a72b-e1ffbd11c564,"Custom Cut & Bent Rebar - Shape Code 22",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:34:23.718Z
+709ff9a6-91ec-4c74-8ce6-b50855dae40c,"Custom Cut & Bent Rebar - Shape Code 23",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:34:31.873Z
+ab90bc4c-30a8-4907-946e-453c8dd381bb,"Custom Cut & Bent Rebar - Shape Code 24",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:34:39.918Z
+e07a5584-7aca-4f2e-93c9-b8f207d3ae6f,"Custom Cut & Bent Rebar - Shape Code 21, U Bar. U-bend reinforcement",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:34:15.879Z
+9428f9a7-acb6-4981-9bc6-ff4423ab0300,"Custom Cut & Bent Rebar - Shape Code 26",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:34:56.388Z
+6c15edaa-2eb2-4c69-a90a-ef820b95616e,"Custom Cut & Bent Rebar - Shape Code 27",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:35:05.376Z
+2c2fd6a5-c98f-4718-8f56-eff3a4447a8f,"Custom Cut & Bent Rebar - Shape Code 29",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:35:21.599Z
+6d90b9b1-93d3-4a2b-9b94-f01b885e0835,"Custom Cut & Bent Rebar - Shape Code 31",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:35:30.111Z
+1e7fedeb-abfa-4d73-bff4-d748e061fef6,"Custom Cut & Bent Rebar - Shape Code 32",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:35:38.621Z
+34b2fbd9-bdd7-4ec9-9512-44afc83de421,"Custom Cut & Bent Rebar - Shape Code 33",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:35:47.055Z
+7ca80c71-f919-460f-bb76-72d5fb110897,"Custom Cut & Bent Rebar - Shape Code 35",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:36:03.523Z
+f0f7377e-e3bd-4da6-ab30-d993b506c90a,"Custom Cut & Bent Rebar - Shape Code 36",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:36:11.444Z
+57fda4b5-2ff3-46e5-9db1-d230cf78eefc,"Custom Cut & Bent Rebar - Shape Code 41",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:36:20.021Z
+fb8d65c7-bd8f-48eb-a7a7-ebb410b6bf82,"Custom Cut & Bent Rebar - Shape Code 44",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:36:28.629Z
+e64a4706-cfa1-4035-b6bd-70a7c01f7a7e,"Custom Cut & Bent Rebar - Shape Code 47",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:36:45.115Z
+217ae58f-a5d6-46dc-9dfd-d4c86a3157a5,"Custom Cut & Bent Rebar - Shape Code 51-1",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:36:53.086Z
+246d5753-9a31-4fdb-a359-b0648f347483,"Custom Cut & Bent Rebar - Shape Code 56",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:37:01.287Z
+6d8dfe80-fcbf-430a-8580-cb683c3dc720,"Custom Cut & Bent Rebar - Shape Code 63",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:37:09.985Z
+4bc620bf-b00e-4ac2-a80c-98dec43c5431,"Universal Columns (UC)",structural,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:39:38.124Z
+aa271382-8d18-4aee-a6ec-9e2ccd0465a7,"Custom Cut & Bent Rebar - Shape Code 67",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:37:26.697Z
+87b4dc0f-2ba1-4140-b429-d72762a9a1cd,"Custom Cut & Bent Rebar - Shape Code 75",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:37:34.916Z
+97a3738a-131a-4db9-9b5b-c65fcb27272e,"Universal Beams (UB)",structural,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:39:29.562Z
+30feb503-6183-435b-88a1-1dc80027e709,"Steel Flat Bar",structural,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:39:21.028Z
+97d41de2-a836-42be-a0a6-01082b2b645c,"Custom Cut & Bent Rebar - Shape Code 00, Straight Cut Rebar, Bespoke length",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:33:26.067Z
+edba86c7-2c73-46b2-8437-422b559b39d8,"Custom Cut & Bent Rebar - Shape Code 98",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:37:43.590Z
+3694ad0e-c433-4724-aee0-cb19a316dd4a,"Custom Helical Rebar - Precision Spiral Reinforcement",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:37:51.844Z
+a1f3d65d-1c97-49ac-b195-8666cbde0e79,"Custom Cut & Bent Rebar - Shape Code 12 - Circular Bent L Bar",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:33:42.425Z
+015e715d-acec-4b5c-8c17-cedc062695b9,"Custom Cut & Bent Rebar - Shape Code 28",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:35:13.388Z
+ac63d7c8-1d95-4d54-b9f4-bf1bb57f9953,"Custom Cut & Bent Rebar - Shape Code 34",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:35:55.472Z
+1281e8ec-fa03-4c6c-abda-6882d2d794e0,"Custom Cut & Bent Rebar - Shape Code 46",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:36:36.637Z
+450e54fb-036d-4bd8-b6ac-10bf16a4b1e6,"Custom Cut & Bent Rebar - Shape Code 64",cut-bent,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:37:18.215Z
+35a7cb43-0ac4-4f5e-a509-e9e30414dcbe,"Sideform 8m Corex - Permanent Formwork for Ground Beams",groundworks,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:40:28.728Z
+8e2fb404-f6ef-42ea-a4da-f93cfdfcd0b1,"Equal Angles",structural,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:39:46.391Z
+4ab7c0f9-43ad-4901-a6f8-d7ca8ddaa6b4,"Square Hollow Sections (SHS)",structural,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:39:55.068Z
+4be0c3de-d681-4be4-9eaa-7a5b174362bf,"Heaveguard - Lateral Heave Protection for Foundations",groundworks,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:40:39.728Z
+28a53d46-a9c1-47d6-b723-f1b6fce4aaba,"Anti-Skid Road Plate - Trench Cover",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:41:22.072Z
+886fc5b6-c77e-4f9a-864f-64471a6590e9,"Trench Sheets - Standard Lap",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:41:57.129Z
+2b365224-1b9e-46f4-b0cf-ae42de2bfea3,"Double Sided Jointing Tape",groundworks,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:42:05.482Z
+6b389d39-a9cf-4afc-a949-a170f09b103c,"Solsheet GR Self-Adhesive Membrane",groundworks,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:42:28.734Z
+ce8d95dd-47ad-4220-99f6-5a35be1d3b9c,"Solseal HP Emulsion & Primer - Modified Bituminous Primer",groundworks,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:42:54.837Z
+e3adc06f-fd78-483f-9673-9d894499f0a7,"Gas Membrane Lap Tape",groundworks,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:42:17.376Z
+cd0f81bc-dcda-47bc-9198-276731eacfc5,"Solsheet Self-Adhesive DPM & Waterproofing Membrane",groundworks,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:42:43.425Z
+b7c302fd-61eb-4b67-80ad-bdcdc4035392,"Cordek Heaveguard Pile Collar - Clay Heave Protection for Piles",groundworks,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:43:55.702Z
+c2941a7b-5b14-4159-a59f-9f8cc8647c93,"Holding Down Bolt Set – High Tensile (8.8 HT)",groundworks,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:43:07.486Z
+e94cabff-4b18-4dbe-82ec-25f048c55b4d,"Tapered Waxed Cone",groundworks,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:43:32.335Z
+d054a3d8-9c8e-4353-8350-b402f4212fe1,"Square Hole Plate Washer",groundworks,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:43:44.288Z
+47498d55-96a0-4bb9-8cf0-3885ed870688,"Cordek Cellcore HX S Slabs - Clay Heave Protection for Slabs",groundworks,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:44:07.068Z
+621960bb-2860-4c91-9638-83ceeaf2d108,"Cordek Cellcore HX B Slabs - Clay Heave Protection for Beams and Pile Caps",groundworks,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:44:18.497Z
+79ca0850-b26d-4523-b5a4-181b6ccf04d4,"BEWI FormMaster Shuttering - Permanent Formwork for Ground Beams",groundworks,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:44:29.980Z
+f5a4656d-fa3f-426e-beed-d4cba3f41e3a,"BEWI HeaveMaster B - Clay Heave Protection for Beams and Pile Caps",groundworks,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:44:41.720Z
+8190367e-da94-4a6c-bbe6-9127b9c07de1,"Wire Snake Spacers",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:49:13.559Z
+d12ad9da-9175-4946-a81a-e6046f431c35,"Continuous Wire High Chair Spacers - 2m Long",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:49:22.344Z
+9a9445a6-2ce4-46cb-a70c-a71e5135570a,"Ventform - Passive Gas Venting and Insulation for Concrete Slabs",groundworks,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:40:16.060Z
+4075dae7-808f-401e-989f-acde60b1168d,"BEWI ClayMaster Pile Collar - Clay Heave Protection for Piles",groundworks,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:45:04.471Z
+e9cc140c-3375-4f93-afe3-a57f94e0e4ce,"Trench Sheet Driving Caps",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:41:30.971Z
+b2a77269-8bfd-4fdf-a236-5fad584b59a3,"Square/Square Holding Down Bolt & Nut (8.8 HT)",groundworks,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:43:20.003Z
+3b7bed79-f6e9-4826-9b4a-1377f651412c,"Pitching Shackles for Trench Sheets",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:41:49.033Z
+5e80a2f4-d4c5-4962-80c1-33457a3b714d,"BEWI HeaveMaster S - Clay Heave Protection for Slabs",groundworks,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:44:53.043Z
+be9f311b-8b48-4640-b628-7b410a12b6f8,"Plastic Wheel Spacer",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:46:30.275Z
+a41f58c9-d162-4151-bb8c-3a5027dea724,"Damp Proof Membrane (DPM)",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:49:31.382Z
+f41a1aa7-0674-42e9-9ff5-bca16971bb1b,"Plastic Mesh Spacers",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:46:21.273Z
+e94dc8e9-e4a2-45be-b4de-5ef5ed046aa8,"Concrete Castle spacer",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:46:38.686Z
+7906b669-ddc3-4670-b3f4-0f4c77594018,"Double Cover Concrete Spacers",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:46:47.255Z
+73938846-9ca2-4432-a258-446d35228c35,"Triple Cover Concrete Spacers",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:46:55.760Z
+83f41d5a-2854-4560-8975-e0436e995984,"Concrete Spacers with Plastic Clips",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:47:03.484Z
+a9fdd006-a09b-4639-90bb-2b6e956cfa01,"Barrier Fencing Mesh - 1m X 50m",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:50:03.622Z
+5d2cde5f-1fae-4022-87fb-7ad3f436d06a,"Concrete Frost Blanket",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:50:11.786Z
+5945a731-35b2-4b6f-bc6e-88499ca35a60,"Black Annealed Tying Wire Coil",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:47:11.258Z
+52edb167-76fc-487d-a636-5c491998a5a4,"Stainless Steel Tying Wire",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:47:19.355Z
+99623f00-40bb-4fbd-8368-8eb16600278d,"Double Loop Tying Wire Ties - Pack of 1000",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:47:27.656Z
+9ef8cd14-ffba-44f5-8c86-a39a1ac2cded,"Semi-Automatic Rebar Tie Wire Twisting Tool",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:47:36.116Z
+5ef4a72f-9ce4-44e7-9f16-f9c8419fa250,"End Cutting Nipper Pliers 200mm",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:47:44.305Z
+57fa5b40-0be6-4c6c-800f-ced772ba8503,"End Cutting Nipper Pliers 280mm",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:47:52.399Z
+a0fd28d3-b95f-4698-91e3-d98bcec7e982,"Reel Easy Wire Dispenser",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:48:00.396Z
+e1b47bd0-aad3-438a-9017-658b433a8397,"Aluminium Steel Wire Dispenser",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:48:08.650Z
+d773b9c9-3752-4334-bf7b-42c890367601,"Concrete Square Bar Spacers - 1m Length",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:48:24.642Z
+3ee07665-66c4-48f3-9a55-75a3ffbd59c0,"Dowel Bars",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:48:33.098Z
+78875d46-3f70-4af1-9c53-28970384135d,"Dowel Bar Caps - Pack of 100",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:48:50.099Z
+118c0108-98fc-4ed9-9efd-d0bd39aafa0e,"Rebar Protection Caps - Bulk Pack of 250",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:48:57.976Z
+608940b6-b621-4017-a32d-956fcff0e83f,"Thruty Cones - Pack of 500",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:49:05.586Z
+19ea85d4-9ba0-418b-8dfe-6dd65a7f3b95,"Dowel Bar Sleeves - Pack of 100",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:48:41.029Z
+5270a112-56fc-4e04-b9ab-26f8c338c5a3,"Steel Road Form Pins",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:49:47.553Z
+77f1c041-4fd9-4f3c-a629-1587d9f84ad5,"Steel Fencing Pins - 1350mm (Pack of 10)",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:49:55.576Z
+2fd11c6c-396b-499a-9014-b664fe4dd9ad,"Tie Bar Wing Nut",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:51:14.746Z
+15127b70-2e33-46a0-a06f-eef039ba4717,"Tie Bar Sleeves",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:51:22.722Z
+30ad63eb-d94a-4aae-ad4c-81b044deaada,"Hydrophilic Swelling Water Stop Strip",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:50:19.430Z
+c54e4f96-720a-447a-a99e-995b9ea64b06,"ActiTex Bentonite Waterproofing Membrane",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:50:27.210Z
+6b78625b-ae02-483a-be81-1b0f1b64fee8,"Soft Washer Fixings for Bentonite Membranes",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:50:35.312Z
+9fa47f09-fdf2-4a7b-b719-f631798f2e13,"ActiFill Bentonite Granules - 25kg",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:50:43.079Z
+d081e507-33eb-46fb-a19f-7c9642e350e2,"Tie Bar Waler Plate",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:51:06.599Z
+fcdb8389-8068-47f3-86f4-eeb7f46e6464,"Formwork Tie Bar",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:50:50.776Z
+4580b5fd-5d0c-4e4d-8f81-85c43ead7182,"Tie Bar Connector",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:50:58.640Z
+a86e8e8a-d68f-4de0-977e-f49541723ad4,"Slab and Wall Stop End Metal Rib Sheets",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:51:30.146Z
+10640082-5bbf-43c3-b647-1428862897d4,"MBT ET Series Reinforcing Bar Couplers",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:51:38.375Z
+1a4ea940-d560-4881-9189-a2f0b44893d0,"K-FORM K135 Screed Rail",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:51:46.486Z
+e7c80bce-b02d-41d6-9fc2-854b78b588ce,"K-FORM K85 Screed Rail",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:51:54.280Z
+ca4ee726-e812-4f52-a9b6-057cf1a71a97,"Obex Cortex 0771FR Fire-Rated Membrane Adhesive",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:52:21.996Z
+b28c3044-99b8-43cd-a882-e55c6eadd396,"Eco-Friendly Concrete Curing Agent, 20L",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:52:32.792Z
+a6f1938b-5d5b-430b-8bae-152b8d98defe,"K-FORM 25mm Extension Strip",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:52:02.530Z
+3486e635-f8fb-4378-9881-c1d2925e1f42,"Obex Cortex 0100FR Cavity Barrier DPC Membrane",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:52:10.894Z
+9b3a72e2-d065-4486-98af-34efbfd5446e,"Concrete Sealing Compound (25L)",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:52:40.405Z
+51917e43-b535-4b5b-9b47-000dcc2c53d5,"ActiSeal Bentonite Sealant - 20kg",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:52:48.118Z
+59fd0967-3b90-4a04-9a53-3ec8a65a8557,"Trench Sheet Extractors",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:41:40.584Z
+983d5f86-78be-45f6-8a14-31c1feadbbfc,"SolDebond Debonding Compound - Bituminous Dowel Bar Coating (5L)",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:52:55.688Z
+70a53b98-10a8-4bb4-b3fc-552bd3396202,"Plain Steel Road Plates - Trench Covers",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:41:13.955Z
+5a8c5e18-eb0d-4af2-9aca-3160a926b657,"Heavy Duty Tric Trac Spacers - 2m Length",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:48:16.766Z
+0d5aa078-4271-41ab-b172-da3d538a9e1f,"Expansion Joint Foam",accessories,draft,true,true,true,true,true,true,0,0,0,0,0,0,0,0,0,false,,2026-01-01T16:49:39.520Z

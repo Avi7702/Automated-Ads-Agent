@@ -143,6 +143,7 @@ class CopywritingService {
       // No File Search available, continue without tools
     }
 
+    // MODEL RECENCY RULE: Before changing any model ID, verify today's date and confirm the model is current within the last 3-4 weeks.
     const response = await genAI.models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: [

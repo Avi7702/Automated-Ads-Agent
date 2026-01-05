@@ -85,6 +85,7 @@ export interface SimilarProductMatch {
 }
 
 // Model for text analysis
+// MODEL RECENCY RULE: Before changing any model ID, verify today's date and confirm the model is current within the last 3-4 weeks.
 const TEXT_MODEL = 'gemini-2.0-flash';
 
 /**

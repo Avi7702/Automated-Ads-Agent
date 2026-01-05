@@ -28,4 +28,9 @@ node_modules/
 
 # Task files
 # tasks.json
-# tasks/ 
+# tasks/
+
+# Playwright
+e2e/.auth/user.json
+e2e/test-results/
+playwright-report/

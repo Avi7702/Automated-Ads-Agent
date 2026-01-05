@@ -266,7 +266,7 @@ export function SaveToCatalogDialog({
 
                 {/* Info */}
                 <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                  <p className="text-xs text-blue-400">
+                  <p className="text-xs text-blue-700 dark:text-blue-400">
                     <ImageIcon className="w-3 h-3 inline mr-1" />
                     This image will be saved to your product catalog and can be
                     used in future generations.
@@ -311,7 +311,7 @@ export function SaveToCatalogDialog({
               {/* Error Message */}
               {saveMutation.isError && (
                 <div className="px-4 pb-4">
-                  <p className="text-xs text-red-400">
+                  <p className="text-xs text-red-700 dark:text-red-400">
                     {saveMutation.error?.message || "Failed to save"}
                   </p>
                 </div>

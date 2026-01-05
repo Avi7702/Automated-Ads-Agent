@@ -116,7 +116,17 @@
       "Bash(DATABASE_URL=\"postgresql://postgres:VYtUsSExJERzegiSWssGmXHRKqwQzNyq@switchback.proxy.rlwy.net:34192/railway\" npx vitest run:*)",
       "Bash(DATABASE_URL=\"postgresql://postgres:VYtUsSExJERzegiSWssGmXHRKqwQzNyq@switchback.proxy.rlwy.net:34192/railway\" GOOGLE_API_KEY=\"AIzaSyBxFVFRRqsX_sKEWjDt1srKIoizSB7ftoQ\" npx vitest run server/__tests__/copywriting.test.ts)",
       "Bash(if not exist \"c:\\\\Users\\\\avibm\\\\Automated-Ads-Agent\\\\scripts\" mkdir \"c:\\\\Users\\\\avibm\\\\Automated-Ads-Agent\\\\scripts\")",
-      "Bash(DATABASE_URL=\"postgresql://postgres:VYtUsSExJERzegiSWssGmXHRKqwQzNyq@switchback.proxy.rlwy.net:34192/railway\" npx vitest:*)"
+      "Bash(DATABASE_URL=\"postgresql://postgres:VYtUsSExJERzegiSWssGmXHRKqwQzNyq@switchback.proxy.rlwy.net:34192/railway\" npx vitest:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:VYtUsSExJERzegiSWssGmXHRKqwQzNyq@switchback.proxy.rlwy.net:34192/railway\" node -e \"\nconst { Pool } = require\\(''pg''\\);\nconst pool = new Pool\\({ connectionString: process.env.DATABASE_URL }\\);\n\nasync function check\\(\\) {\n  // Check brand_profiles table\n  const profiles = await pool.query\\(''SELECT * FROM brand_profiles''\\);\n  console.log\\(''=== BRAND PROFILES ===''\\);\n  console.log\\(''Count:'', profiles.rows.length\\);\n  if \\(profiles.rows.length > 0\\) {\n    console.log\\(''First profile:'', JSON.stringify\\(profiles.rows[0], null, 2\\)\\);\n  }\n  \n  // Check users table\n  const users = await pool.query\\(''SELECT id, email FROM users''\\);\n  console.log\\(''\\\\n=== USERS ===''\\);\n  users.rows.forEach\\(u => console.log\\(''-'', u.id, u.email\\)\\);\n  \n  await pool.end\\(\\);\n}\ncheck\\(\\).catch\\(console.error\\);\n\")",
+      "Bash(Remove-Item -Path \"c:\\\\Users\\\\avibm\\\\Automated-Ads-Agent\\\\client\\\\src\\\\components\\\\PromptInput.tsx\", \"c:\\\\Users\\\\avibm\\\\Automated-Ads-Agent\\\\client\\\\src\\\\components\\\\PromptSuggestions.tsx\", \"c:\\\\Users\\\\avibm\\\\Automated-Ads-Agent\\\\client\\\\src\\\\components\\\\IntentVisualizer.tsx\", \"c:\\\\Users\\\\avibm\\\\Automated-Ads-Agent\\\\client\\\\src\\\\components\\\\index.ts\" -Force)",
+      "Bash(rm:*)",
+      "Bash(npm run build:*)",
+      "Bash(wc -l echo \"\" echo \"Total unique API endpoints defined in routes:\" grep -E \"app\\\\.\\(get|post|put|delete|patch\\)\\\\\\(\" \"c:\\\\Users\\\\avibm\\\\Automated-Ads-Agent\\\\server\\\\routes.ts\")",
+      "Bash(npm run check:*)",
+      "Bash(npm run build:server:*)",
+      "Bash(claude mcp add:*)",
+      "Bash(npx:*)",
+      "Bash(claude mcp list:*)"
     ]
   }
 }

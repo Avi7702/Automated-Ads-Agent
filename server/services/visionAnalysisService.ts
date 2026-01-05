@@ -22,6 +22,7 @@ const RATE_LIMIT_MAX_REQUESTS = 10;
 
 // Vision analysis model - Gemini 3 Pro is #1 on LMArena Vision leaderboard (Dec 2025)
 // Superior spatial reasoning and OCR for understanding product details
+// MODEL RECENCY RULE: Before changing any model ID, verify today's date and confirm the model is current within the last 3-4 weeks.
 const VISION_MODEL = process.env.GEMINI_VISION_MODEL || "gemini-3-pro-preview";
 
 

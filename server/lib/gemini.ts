@@ -9,6 +9,7 @@ if (!apiKey) {
 
 // Single instance of the client
 // We use the TEST key as the primary source of truth as requested
+// MODEL RECENCY RULE: Before changing any model ID, verify today's date and confirm the model is current within the last 3-4 weeks.
 export const genAI = new GoogleGenAI({
     apiKey: apiKey || "" // Empty string fallback to prevent crash if missing (warning logged above)
 });

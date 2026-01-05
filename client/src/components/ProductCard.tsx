@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
+import { cn, getProductImageUrl } from "@/lib/utils";
 import type { Product } from "@shared/schema";
 
 export type EnrichmentStatus = "pending" | "draft" | "verified" | "complete";
@@ -152,7 +152,7 @@ export function ProductCard({
           </div>
         ) : (
           <img
-            src={product.cloudinaryUrl}
+            src={getProductImageUrl(product.cloudinaryUrl)}
             alt={product.name}
             className={cn(
               "w-full h-full object-cover transition-transform duration-500",

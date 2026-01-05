@@ -23,7 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
+import { cn, getProductImageUrl } from "@/lib/utils";
 import type { Product } from "@shared/schema";
 
 interface EnrichmentDraft {
@@ -147,7 +147,7 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/products/${product.id}/enrichment`);
+      const response = await fetch(`/api/products/${product.id}/enrichment`, { credentials: "include" });
       if (!response.ok) throw new Error("Failed to fetch enrichment status");
       const data = await response.json();
       setEnrichmentStatus(data);
@@ -194,6 +194,7 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
       const response = await fetch(`/api/products/${product.id}/enrich`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
       });
       if (!response.ok) {
         const data = await response.json();
@@ -230,6 +231,7 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ productUrl: productUrl.trim() }),
+        credentials: "include",
       });
       if (!response.ok) {
         const data = await response.json();
@@ -267,6 +269,7 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(approvedAsIs ? { approvedAsIs: true } : formData),
+        credentials: "include",
       });
       if (!response.ok) {
         const data = await response.json();
@@ -339,7 +342,7 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted">
             <img
-              src={product.cloudinaryUrl}
+              src={getProductImageUrl(product.cloudinaryUrl)}
               alt={product.name}
               className="w-full h-full object-cover"
             />

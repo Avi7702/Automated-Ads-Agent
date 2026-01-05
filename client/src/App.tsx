@@ -5,7 +5,10 @@ import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import NotFound from "@/pages/not-found";
+import Login from "@/pages/Login";
 import Studio from "@/pages/Studio";
 import Gallery from "@/pages/Gallery";
 import GenerationDetail from "@/pages/GenerationDetail";
@@ -17,41 +20,93 @@ import ProductLibrary from "@/pages/ProductLibrary";
 import InstallationScenarios from "@/pages/InstallationScenarios";
 import BrandImageLibrary from "@/pages/BrandImageLibrary";
 import TemplateLibrary from "@/pages/TemplateLibrary";
+import SystemMap from "@/pages/SystemMap";
 
 function Router() {
   return (
     <Switch>
-      {/* Main Studio - the unified workspace */}
-      <Route path="/" component={Studio} />
+      {/* Public route - Login */}
+      <Route path="/login" component={Login} />
 
-      {/* Gallery for browsing all generations */}
-      <Route path="/gallery" component={Gallery} />
+      {/* Protected routes */}
+      <Route path="/">
+        <ProtectedRoute>
+          <Studio />
+        </ProtectedRoute>
+      </Route>
 
-      {/* Generation details (accessed from gallery or after generation) */}
-      <Route path="/generation/:id" component={GenerationDetail} />
+      <Route path="/gallery">
+        <ProtectedRoute>
+          <Gallery />
+        </ProtectedRoute>
+      </Route>
 
-      {/* Usage/Quota Dashboard */}
-      <Route path="/usage" component={QuotaDashboard} />
+      <Route path="/generation/:id">
+        <ProtectedRoute>
+          <GenerationDetail />
+        </ProtectedRoute>
+      </Route>
 
-      {/* Product Library */}
-      <Route path="/products" component={ProductLibrary} />
+      <Route path="/usage">
+        <ProtectedRoute>
+          <QuotaDashboard />
+        </ProtectedRoute>
+      </Route>
 
-      {/* Installation Scenarios */}
-      <Route path="/installation-scenarios" component={InstallationScenarios} />
+      <Route path="/products">
+        <ProtectedRoute>
+          <ProductLibrary />
+        </ProtectedRoute>
+      </Route>
 
-      {/* Brand Image Library */}
-      <Route path="/brand-images" component={BrandImageLibrary} />
+      <Route path="/installation-scenarios">
+        <ProtectedRoute>
+          <InstallationScenarios />
+        </ProtectedRoute>
+      </Route>
 
-      {/* Template Library */}
-      <Route path="/template-library" component={TemplateLibrary} />
+      <Route path="/brand-images">
+        <ProtectedRoute>
+          <BrandImageLibrary />
+        </ProtectedRoute>
+      </Route>
 
-      {/* Settings pages */}
-      <Route path="/settings" component={BrandProfile} />
-      <Route path="/brand-profile" component={BrandProfile} />
+      <Route path="/template-library">
+        <ProtectedRoute>
+          <TemplateLibrary />
+        </ProtectedRoute>
+      </Route>
 
-      {/* Templates (still needed for template management) */}
-      <Route path="/templates" component={Templates} />
-      <Route path="/admin/templates" component={TemplateAdmin} />
+      <Route path="/settings">
+        <ProtectedRoute>
+          <BrandProfile />
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/brand-profile">
+        <ProtectedRoute>
+          <BrandProfile />
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/templates">
+        <ProtectedRoute>
+          <Templates />
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/admin/templates">
+        <ProtectedRoute>
+          <TemplateAdmin />
+        </ProtectedRoute>
+      </Route>
+
+      {/* Developer Tools */}
+      <Route path="/system-map">
+        <ProtectedRoute>
+          <SystemMap />
+        </ProtectedRoute>
+      </Route>
 
       <Route component={NotFound} />
     </Switch>
@@ -63,10 +118,12 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
         <QueryClientProvider client={queryClient}>
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-          </TooltipProvider>
+          <AuthProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Router />
+            </TooltipProvider>
+          </AuthProvider>
         </QueryClientProvider>
       </ThemeProvider>
     </ErrorBoundary>

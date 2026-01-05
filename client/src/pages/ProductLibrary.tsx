@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import {
@@ -9,9 +9,10 @@ import {
   Package,
   ImageOff,
   Tag,
-  X
+  X,
+  Trash2
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getProductImageUrl } from "@/lib/utils";
 import type { Product } from "@shared/schema";
 
 // Components
@@ -28,27 +29,41 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Header } from "@/components/layout/Header";
 import { ProductEnrichmentForm } from "@/components/ProductEnrichmentForm";
+import { AddProductModal } from "@/components/AddProductModal";
+import { ProductRelationships } from "@/components/ProductRelationships";
+import { useToast } from "@/hooks/use-toast";
 
-// Enrichment status badge styling
+// Enrichment status badge styling (light mode readable + dark mode optimized)
 function getEnrichmentStatusBadge(status: string | null | undefined) {
   switch (status) {
     case "complete":
-      return { variant: "default" as const, label: "Complete", className: "bg-green-500/20 text-green-400 border-green-500/30" };
+      return { variant: "default" as const, label: "Complete", className: "bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30" };
     case "verified":
-      return { variant: "default" as const, label: "Verified", className: "bg-blue-500/20 text-blue-400 border-blue-500/30" };
+      return { variant: "default" as const, label: "Verified", className: "bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/30" };
     case "draft":
-      return { variant: "secondary" as const, label: "Draft", className: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" };
+      return { variant: "secondary" as const, label: "Draft", className: "bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-500/30" };
     case "pending":
     default:
       return { variant: "outline" as const, label: "Pending", className: "bg-muted/50 text-muted-foreground" };
   }
 }
 
-// Product image component with error handling
+// Product image component with error handling and URL normalization
 function ProductImage({ src, alt }: { src: string; alt: string }) {
   const [hasError, setHasError] = useState(false);
+  const normalizedSrc = getProductImageUrl(src);
 
   if (hasError) {
     return (
@@ -61,7 +76,7 @@ function ProductImage({ src, alt }: { src: string; alt: string }) {
 
   return (
     <img
-      src={src}
+      src={normalizedSrc}
       alt={alt}
       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
       onError={() => setHasError(true)}
@@ -115,8 +130,9 @@ function ProductDetailModal({
         </DialogHeader>
 
         <Tabs defaultValue="details" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="details">Details</TabsTrigger>
+            <TabsTrigger value="relationships">Relationships</TabsTrigger>
             <TabsTrigger value="enrich">Enrich</TabsTrigger>
           </TabsList>
 
@@ -190,6 +206,11 @@ function ProductDetailModal({
             </div>
           </TabsContent>
 
+          {/* Relationships Tab */}
+          <TabsContent value="relationships" className="mt-4">
+            <ProductRelationships productId={product.id} />
+          </TabsContent>
+
           {/* Enrich Tab */}
           <TabsContent value="enrich" className="mt-4">
             <ProductEnrichmentForm
@@ -207,9 +228,15 @@ function ProductDetailModal({
 }
 
 export default function ProductLibrary() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch products
   const { data: products, isLoading, refetch } = useQuery<Product[]>({
@@ -240,6 +267,44 @@ export default function ProductLibrary() {
     setSelectedProduct(null);
   };
 
+  // Handle product deletion
+  const handleDeleteProduct = async () => {
+    if (!productToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/products/${productToDelete.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete product");
+      }
+
+      // Invalidate and refetch products
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+
+      toast({
+        title: "Product deleted",
+        description: `${productToDelete.name} has been removed from your library.`,
+      });
+
+      // Close detail modal if this product was open
+      if (selectedProduct?.id === productToDelete.id) {
+        handleCloseDetail();
+      }
+    } catch (error) {
+      toast({
+        title: "Delete failed",
+        description: error instanceof Error ? error.message : "Failed to delete product",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+      setProductToDelete(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Background */}
@@ -260,12 +325,10 @@ export default function ProductLibrary() {
               Manage and organize your product catalog
             </p>
           </div>
-          <Link href="/settings">
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Product
-            </Button>
-          </Link>
+          <Button onClick={() => setIsAddModalOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Add Product
+          </Button>
         </div>
 
         {/* Search Bar */}
@@ -312,12 +375,10 @@ export default function ProductLibrary() {
                 Add your first product to start creating stunning visuals
               </p>
             </div>
-            <Link href="/settings">
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Your First Product
-              </Button>
-            </Link>
+            <Button onClick={() => setIsAddModalOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Your First Product
+            </Button>
           </div>
         ) : /* No Search Results */ filteredProducts.length === 0 ? (
           <div className="flex flex-col items-center justify-center min-h-[40vh] text-center space-y-4">
@@ -369,6 +430,17 @@ export default function ProductLibrary() {
                       </Badge>
                     </div>
 
+                    {/* Delete Button - Shows on hover */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setProductToDelete(product);
+                      }}
+                      className="absolute top-3 left-3 w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+
                     {/* Product Info */}
                     <CardContent className="p-4 space-y-2">
                       <h3 className="font-medium text-sm line-clamp-1" title={product.name}>
@@ -419,6 +491,34 @@ export default function ProductLibrary() {
         onClose={handleCloseDetail}
         onEnrichComplete={() => refetch()}
       />
+
+      {/* Add Product Modal */}
+      <AddProductModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!productToDelete} onOpenChange={() => setProductToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Product</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{productToDelete?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteProduct}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

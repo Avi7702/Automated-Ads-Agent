@@ -5,16 +5,21 @@ import { seedBrandProfile } from "./seeds/seedBrandProfile";
 import multer from "multer";
 
 import { saveOriginalFile, saveGeneratedImage, deleteFile } from "./fileStorage";
-import { insertGenerationSchema, insertProductSchema, insertPromptTemplateSchema } from "@shared/schema";
+import { insertGenerationSchema, insertProductSchema, insertPromptTemplateSchema, insertInstallationScenarioSchema, insertProductRelationshipSchema } from "@shared/schema";
+import { validate } from "./middleware/validate";
 import express from "express";
 import path from "path";
 import { v2 as cloudinary } from "cloudinary";
 import { authService } from "./services/authService";
-import { requireAuth } from "./middleware/auth";
+import { requireAuth, optionalAuth } from "./middleware/auth";
 import { createRateLimiter } from "./middleware/rateLimit";
 import { telemetry } from "./instrumentation";
 import { computeAdaptiveEstimate, estimateGenerationCostMicros, normalizeResolution } from "./services/pricingEstimator";
 import { quotaMonitoringService, parseRetryDelay, parseLimitType } from "./services/quotaMonitoringService";
+import { installationScenarioRAG, getRoomInstallationContext, ROOM_TYPES, type RoomType } from "./services/installationScenarioRAG";
+import { suggestRelationships, findSimilarProducts, analyzeRelationshipType, batchSuggestRelationships, autoCreateRelationships } from "./services/relationshipDiscoveryRAG";
+import { brandImageRecommendationRAG } from "./services/brandImageRecommendationRAG";
+import { matchTemplateForContext, analyzeTemplatePatterns, suggestTemplateCustomizations } from "./services/templatePatternRAG";
 
 // Lazy-load Google Cloud Monitoring to prevent any import-time errors
 let googleCloudMonitoringService: any = null;
@@ -294,19 +299,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Image transformation endpoint (supports both image transformation and text-only generation)
-  app.post("/api/transform", upload.array("images", 6), async (req, res) => {
+  app.post("/api/transform", requireAuth, upload.array("images", 6), async (req, res) => {
     const startTime = Date.now();
-    const userId = (req as any).session?.userId;
+    const userId = req.user?.id;
     let success = false;
     let errorType: string | undefined;
 
     try {
       // Safely handle files - could be undefined, null, or empty
       const files = Array.isArray(req.files) ? req.files as Express.Multer.File[] : [];
-      const { prompt, resolution, mode, templateId, templateReferenceUrls } = req.body;
+      const { prompt, resolution, mode, templateId, templateReferenceUrls, recipe: recipeJson } = req.body;
 
       if (!prompt) {
         return res.status(400).json({ error: "No prompt provided" });
+      }
+
+      // Parse GenerationRecipe if provided (from IdeaBank)
+      let recipe: {
+        relationships?: Array<{ targetProductName: string; relationshipType: string; description?: string }>;
+        scenarios?: Array<{ title: string; description: string; steps?: string[] }>;
+        brandVoice?: { brandName?: string; industry?: string; values?: string[] };
+      } | undefined;
+      if (recipeJson) {
+        try {
+          recipe = typeof recipeJson === 'string' ? JSON.parse(recipeJson) : recipeJson;
+        } catch (e) {
+          console.warn('[Transform] Failed to parse recipe JSON:', e);
+        }
       }
 
       const hasFiles = files.length > 0;
@@ -439,7 +458,7 @@ Guidelines:
       }
 
       // INJECT BRAND PROFILE (if available)
-      const brandProfile = await storage.getBrandProfileByUserId(req.params.userId || (req.user as any)?.id || req.session.userId);
+      const brandProfile = userId ? await storage.getBrandProfileByUserId(userId) : null;
       if (brandProfile) {
         console.log(`[Transform] Applying Brand Profile: ${brandProfile.brandName}`);
         const brandContext = `
@@ -452,6 +471,51 @@ BRAND GUIDELINES (${brandProfile.brandName}):
 
 Ensure the generated image aligns with these brand guidelines where possible.`;
         enhancedPrompt += brandContext;
+      }
+
+      // INJECT RECIPE CONTEXT (if provided from IdeaBank)
+      if (recipe) {
+        let recipeContext = `
+
+PRODUCT CONTEXT (from IdeaBank):`;
+
+        // Add related products context
+        if (recipe.relationships && recipe.relationships.length > 0) {
+          recipeContext += `
+Related Products:`;
+          for (const rel of recipe.relationships.slice(0, 5)) {
+            recipeContext += `
+- ${rel.targetProductName} (${rel.relationshipType})${rel.description ? `: ${rel.description}` : ''}`;
+          }
+        }
+
+        // Add installation scenario context (only include active scenarios)
+        if (recipe.scenarios && recipe.scenarios.length > 0) {
+          const activeScenarios = recipe.scenarios.filter((s: { title: string; description: string; isActive?: boolean }) => s.isActive !== false);
+          if (activeScenarios.length > 0) {
+            recipeContext += `
+Installation Context:`;
+            for (const scenario of activeScenarios.slice(0, 2)) {
+              recipeContext += `
+- ${scenario.title}: ${scenario.description.slice(0, 200)}`;
+            }
+          }
+        }
+
+        // Add brand voice if not already from profile
+        if (recipe.brandVoice && !brandProfile) {
+          recipeContext += `
+Brand Context:
+- Brand: ${recipe.brandVoice.brandName || 'Not specified'}
+- Industry: ${recipe.brandVoice.industry || 'Not specified'}
+- Values: ${recipe.brandVoice.values?.join(', ') || 'Not specified'}`;
+        }
+
+        recipeContext += `
+
+Consider these product relationships and usage contexts when generating the image.`;
+        enhancedPrompt += recipeContext;
+        console.log(`[Transform] Recipe context applied: ${recipe.relationships?.length || 0} relationships, ${recipe.scenarios?.length || 0} scenarios`);
       }
 
       // Build user message parts
@@ -584,6 +648,7 @@ Ensure the generated image aligns with these brand guidelines where possible.`;
 
         // Save generation record to database with conversation history
         const generation = await storage.saveGeneration({
+          userId,  // Now properly set from authenticated session
           prompt,
           originalImagePaths,
           generatedImagePath,
@@ -1725,6 +1790,131 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
     }
   });
 
+  // Admin: Seed Products
+  app.post("/api/admin/seed-products", async (req, res) => {
+    try {
+      console.log("[Admin] Seeding products...");
+      const { seedProducts } = await import("./seeds/seedProducts");
+      const { sampleOnly, cloudinaryOnly, cloudinaryFolder } = req.body || {};
+      const results = await seedProducts({ sampleOnly, cloudinaryOnly, cloudinaryFolder });
+      res.json({ success: true, message: "Products seeded successfully", results });
+    } catch (error: any) {
+      console.error("[Admin] Product seed failed:", error);
+      res.status(500).json({ error: "Seed failed", details: error.message });
+    }
+  });
+
+  // Admin: Seed Installation Scenarios
+  app.post("/api/admin/seed-installation-scenarios", async (req, res) => {
+    try {
+      console.log("[Admin] Seeding installation scenarios...");
+      const { seedInstallationScenarios } = await import("./seeds/seedInstallationScenarios");
+      const results = await seedInstallationScenarios();
+      res.json({ success: true, message: "Installation scenarios seeded successfully", results });
+    } catch (error: any) {
+      console.error("[Admin] Installation scenarios seed failed:", error);
+      res.status(500).json({ error: "Seed failed", details: error.message });
+    }
+  });
+
+  // Admin: Seed Product Relationships
+  app.post("/api/admin/seed-relationships", async (req, res) => {
+    try {
+      console.log("[Admin] Seeding product relationships...");
+      const { seedProductRelationships } = await import("./seeds/seedRelationships");
+      const results = await seedProductRelationships();
+      res.json({ success: true, message: "Product relationships seeded successfully", results });
+    } catch (error: any) {
+      console.error("[Admin] Relationships seed failed:", error);
+      res.status(500).json({ error: "Seed failed", details: error.message });
+    }
+  });
+
+  // Admin: Seed Brand Images
+  app.post("/api/admin/seed-brand-images", async (req, res) => {
+    try {
+      console.log("[Admin] Seeding brand images...");
+      const { seedBrandImages } = await import("./seeds/seedBrandImages");
+      const { sampleOnly, cloudinaryOnly, cloudinaryFolder } = req.body || {};
+      const results = await seedBrandImages({ sampleOnly, cloudinaryOnly, cloudinaryFolder });
+      res.json({ success: true, message: "Brand images seeded successfully", results });
+    } catch (error: any) {
+      console.error("[Admin] Brand images seed failed:", error);
+      res.status(500).json({ error: "Seed failed", details: error.message });
+    }
+  });
+
+  // Admin: Seed Performing Templates
+  app.post("/api/admin/seed-templates", async (req, res) => {
+    try {
+      console.log("[Admin] Seeding performing templates...");
+      const { seedPerformingTemplates } = await import("./seeds/seedTemplates");
+      const results = await seedPerformingTemplates();
+      res.json({ success: true, message: "Performing templates seeded successfully", results });
+    } catch (error: any) {
+      console.error("[Admin] Templates seed failed:", error);
+      res.status(500).json({ error: "Seed failed", details: error.message });
+    }
+  });
+
+  // Admin: Run All Seeds
+  app.post("/api/admin/seed-all", async (req, res) => {
+    try {
+      console.log("[Admin] Running all seeds...");
+      const { runAllSeeds } = await import("./seeds/runAllSeeds");
+      const options = req.body || {};
+      const results = await runAllSeeds(options);
+      res.json({ success: true, message: "All seeds completed", results });
+    } catch (error: any) {
+      console.error("[Admin] Seed all failed:", error);
+      res.status(500).json({ error: "Seed failed", details: error.message });
+    }
+  });
+
+  // =============================================================================
+  // NDS Website Scraper Endpoints
+  // =============================================================================
+
+  // Get available categories for scraping
+  app.get("/api/admin/scraper/categories", async (req, res) => {
+    try {
+      const { getAvailableCategories } = await import("./services/ndsWebsiteScraper");
+      const categories = getAvailableCategories();
+      res.json({ success: true, categories });
+    } catch (error: any) {
+      console.error("[Scraper] Failed to get categories:", error);
+      res.status(500).json({ error: "Failed to get categories", details: error.message });
+    }
+  });
+
+  // Scrape all products from NDS website
+  app.post("/api/admin/scraper/scrape-all", async (req, res) => {
+    try {
+      console.log("[Scraper] Starting full website scrape...");
+      const { scrapeNDSWebsite } = await import("./services/ndsWebsiteScraper");
+      const { categories, dryRun, limit } = req.body || {};
+      const results = await scrapeNDSWebsite({ categories, dryRun, limit });
+      res.json({ success: true, message: "Scraping completed", results });
+    } catch (error: any) {
+      console.error("[Scraper] Full scrape failed:", error);
+      res.status(500).json({ error: "Scraping failed", details: error.message });
+    }
+  });
+
+  // Scrape a single category
+  app.post("/api/admin/scraper/scrape-category/:category", async (req, res) => {
+    try {
+      const { category } = req.params;
+      console.log(`[Scraper] Scraping category: ${category}`);
+      const { scrapeSingleCategory } = await import("./services/ndsWebsiteScraper");
+      const results = await scrapeSingleCategory(category);
+      res.json({ success: true, message: `Category ${category} scraped`, results });
+    } catch (error: any) {
+      console.error(`[Scraper] Category scrape failed:`, error);
+      res.status(500).json({ error: "Scraping failed", details: error.message });
+    }
+  });
+
   // =============================================================================
   // File Search RAG Endpoints
   // =============================================================================
@@ -2080,8 +2270,8 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   // INSTALLATION SCENARIOS
   // ============================================
 
-  // Create installation scenario
-  app.post("/api/installation-scenarios", requireAuth, async (req, res) => {
+  // Create installation scenario (with validation)
+  app.post("/api/installation-scenarios", requireAuth, validate(insertInstallationScenarioSchema), async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const scenario = await storage.createInstallationScenario({
@@ -2107,43 +2297,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
     }
   });
 
-  // Get single installation scenario
-  app.get("/api/installation-scenarios/:id", requireAuth, async (req, res) => {
-    try {
-      const scenario = await storage.getInstallationScenarioById(req.params.id);
-      if (!scenario) {
-        return res.status(404).json({ error: "Installation scenario not found" });
-      }
-      res.json(scenario);
-    } catch (error: any) {
-      console.error("[Installation Scenarios] Get error:", error);
-      res.status(500).json({ error: "Failed to get installation scenario" });
-    }
-  });
-
-  // Update installation scenario
-  app.put("/api/installation-scenarios/:id", requireAuth, async (req, res) => {
-    try {
-      const scenario = await storage.updateInstallationScenario(req.params.id, req.body);
-      res.json(scenario);
-    } catch (error: any) {
-      console.error("[Installation Scenarios] Update error:", error);
-      res.status(500).json({ error: "Failed to update installation scenario" });
-    }
-  });
-
-  // Delete installation scenario
-  app.delete("/api/installation-scenarios/:id", requireAuth, async (req, res) => {
-    try {
-      await storage.deleteInstallationScenario(req.params.id);
-      res.json({ success: true });
-    } catch (error: any) {
-      console.error("[Installation Scenarios] Delete error:", error);
-      res.status(500).json({ error: "Failed to delete installation scenario" });
-    }
-  });
-
-  // Get scenarios by room type
+  // Get scenarios by room type (MUST be before :id catch-all)
   app.get("/api/installation-scenarios/room-type/:roomType", requireAuth, async (req, res) => {
     try {
       const scenarios = await storage.getScenariosByRoomType(req.params.roomType);
@@ -2154,7 +2308,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
     }
   });
 
-  // Get scenarios for products
+  // Get scenarios for products (MUST be before :id catch-all)
   app.post("/api/installation-scenarios/for-products", requireAuth, async (req, res) => {
     try {
       const { productIds } = req.body;
@@ -2169,14 +2323,73 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
     }
   });
 
+  // Get single installation scenario (catch-all - must be after specific routes)
+  app.get("/api/installation-scenarios/:id", requireAuth, async (req, res) => {
+    try {
+      const scenario = await storage.getInstallationScenarioById(req.params.id);
+      if (!scenario) {
+        return res.status(404).json({ error: "Installation scenario not found" });
+      }
+      res.json(scenario);
+    } catch (error: any) {
+      console.error("[Installation Scenarios] Get error:", error);
+      res.status(500).json({ error: "Failed to get installation scenario" });
+    }
+  });
+
+  // Update installation scenario (with ownership check)
+  app.put("/api/installation-scenarios/:id", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const existing = await storage.getInstallationScenarioById(req.params.id);
+      if (!existing) {
+        return res.status(404).json({ error: "Installation scenario not found" });
+      }
+      if (existing.userId !== userId) {
+        return res.status(403).json({ error: "Not authorized to update this scenario" });
+      }
+      const scenario = await storage.updateInstallationScenario(req.params.id, req.body);
+      res.json(scenario);
+    } catch (error: any) {
+      console.error("[Installation Scenarios] Update error:", error);
+      res.status(500).json({ error: "Failed to update installation scenario" });
+    }
+  });
+
+  // Delete installation scenario (with ownership check)
+  app.delete("/api/installation-scenarios/:id", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const existing = await storage.getInstallationScenarioById(req.params.id);
+      if (!existing) {
+        return res.status(404).json({ error: "Installation scenario not found" });
+      }
+      if (existing.userId !== userId) {
+        return res.status(403).json({ error: "Not authorized to delete this scenario" });
+      }
+      await storage.deleteInstallationScenario(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[Installation Scenarios] Delete error:", error);
+      res.status(500).json({ error: "Failed to delete installation scenario" });
+    }
+  });
+
   // ============================================
   // PRODUCT RELATIONSHIPS
   // ============================================
 
-  // Create product relationship
-  app.post("/api/product-relationships", requireAuth, async (req, res) => {
+  // Create product relationship (with validation and self-relationship check)
+  app.post("/api/product-relationships", requireAuth, validate(insertProductRelationshipSchema), async (req, res) => {
     try {
       const userId = (req.session as any).userId;
+      const { sourceProductId, targetProductId } = req.body;
+
+      // Prevent self-relationships
+      if (sourceProductId === targetProductId) {
+        return res.status(400).json({ error: "Cannot create a relationship between a product and itself" });
+      }
+
       const relationship = await storage.createProductRelationship({
         ...req.body,
         userId,
@@ -2278,7 +2491,9 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       });
 
       // Parse metadata from body
-      const category = req.body.category || "general";
+      // Valid categories: historical_ad, product_hero, installation, detail, lifestyle, comparison
+      const validCategories = ['historical_ad', 'product_hero', 'installation', 'detail', 'lifestyle', 'comparison'];
+      const category = validCategories.includes(req.body.category) ? req.body.category : "product_hero";
       const tags = req.body.tags ? JSON.parse(req.body.tags) : [];
       const productIds = req.body.productIds ? JSON.parse(req.body.productIds) : [];
       const suggestedUse = req.body.suggestedUse ? JSON.parse(req.body.suggestedUse) : [];
@@ -2480,45 +2695,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
     }
   });
 
-  // Get single performing ad template
-  app.get("/api/performing-ad-templates/:id", requireAuth, async (req, res) => {
-    try {
-      const template = await storage.getPerformingAdTemplate(req.params.id);
-      if (!template) {
-        return res.status(404).json({ error: "Template not found" });
-      }
-      res.json(template);
-    } catch (error: any) {
-      console.error("[Performing Templates] Get error:", error);
-      res.status(500).json({ error: "Failed to fetch performing ad template" });
-    }
-  });
-
-  // Get templates by category
-  app.get("/api/performing-ad-templates/category/:category", requireAuth, async (req, res) => {
-    try {
-      const userId = (req.session as any).userId;
-      const templates = await storage.getPerformingAdTemplatesByCategory(userId, req.params.category);
-      res.json(templates);
-    } catch (error: any) {
-      console.error("[Performing Templates] Get by category error:", error);
-      res.status(500).json({ error: "Failed to fetch templates by category" });
-    }
-  });
-
-  // Get templates by platform
-  app.get("/api/performing-ad-templates/platform/:platform", requireAuth, async (req, res) => {
-    try {
-      const userId = (req.session as any).userId;
-      const templates = await storage.getPerformingAdTemplatesByPlatform(userId, req.params.platform);
-      res.json(templates);
-    } catch (error: any) {
-      console.error("[Performing Templates] Get by platform error:", error);
-      res.status(500).json({ error: "Failed to fetch templates by platform" });
-    }
-  });
-
-  // Get featured templates
+  // Get featured templates (MUST be before :id catch-all)
   app.get("/api/performing-ad-templates/featured", requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
@@ -2530,7 +2707,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
     }
   });
 
-  // Get top performing templates
+  // Get top performing templates (MUST be before :id catch-all)
   app.get("/api/performing-ad-templates/top", requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
@@ -2543,7 +2720,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
     }
   });
 
-  // Search templates with filters
+  // Search templates with filters (MUST be before :id catch-all)
   app.post("/api/performing-ad-templates/search", requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
@@ -2553,6 +2730,44 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
     } catch (error: any) {
       console.error("[Performing Templates] Search error:", error);
       res.status(500).json({ error: "Failed to search templates" });
+    }
+  });
+
+  // Get templates by category (MUST be before :id catch-all)
+  app.get("/api/performing-ad-templates/category/:category", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const templates = await storage.getPerformingAdTemplatesByCategory(userId, req.params.category);
+      res.json(templates);
+    } catch (error: any) {
+      console.error("[Performing Templates] Get by category error:", error);
+      res.status(500).json({ error: "Failed to fetch templates by category" });
+    }
+  });
+
+  // Get templates by platform (MUST be before :id catch-all)
+  app.get("/api/performing-ad-templates/platform/:platform", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const templates = await storage.getPerformingAdTemplatesByPlatform(userId, req.params.platform);
+      res.json(templates);
+    } catch (error: any) {
+      console.error("[Performing Templates] Get by platform error:", error);
+      res.status(500).json({ error: "Failed to fetch templates by platform" });
+    }
+  });
+
+  // Get single performing ad template (catch-all - must be after specific routes)
+  app.get("/api/performing-ad-templates/:id", requireAuth, async (req, res) => {
+    try {
+      const template = await storage.getPerformingAdTemplate(req.params.id);
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      res.json(template);
+    } catch (error: any) {
+      console.error("[Performing Templates] Get error:", error);
+      res.status(500).json({ error: "Failed to fetch performing ad template" });
     }
   });
 
@@ -3145,6 +3360,366 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   });
 
   // Start Google Cloud Monitoring auto-sync on server startup
+  // ===== RAG API ENDPOINTS =====
+
+  // ----- Installation Scenario RAG -----
+
+  // POST /api/installation/suggest-steps - AI-powered installation step suggestions
+  app.post("/api/installation/suggest-steps", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const { productId, roomType, includeRelatedProducts, maxSteps } = req.body;
+
+      if (!productId) {
+        return res.status(400).json({ error: "productId is required" });
+      }
+
+      const result = await installationScenarioRAG.suggestInstallationSteps({
+        productId,
+        roomType,
+        userId,
+        includeRelatedProducts: includeRelatedProducts ?? true,
+        maxSteps: maxSteps ?? 10,
+      });
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("[Installation RAG] Error suggesting steps:", error);
+      res.status(500).json({ error: "Failed to suggest installation steps" });
+    }
+  });
+
+  // GET /api/installation/room-context/:roomType - Get room-specific installation context
+  app.get("/api/installation/room-context/:roomType", requireAuth, async (req, res) => {
+    try {
+      const roomType = req.params.roomType as RoomType;
+
+      if (!ROOM_TYPES.includes(roomType)) {
+        return res.status(400).json({
+          error: `Invalid roomType. Must be one of: ${ROOM_TYPES.join(", ")}`,
+        });
+      }
+
+      const context = getRoomInstallationContext(roomType);
+      res.json(context);
+    } catch (error: any) {
+      console.error("[Installation RAG] Error getting room context:", error);
+      res.status(500).json({ error: "Failed to get room context" });
+    }
+  });
+
+  // POST /api/installation/suggest-accessories - Suggest accessories for installation
+  app.post("/api/installation/suggest-accessories", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const { productId, roomType } = req.body;
+
+      if (!productId) {
+        return res.status(400).json({ error: "productId is required" });
+      }
+
+      const accessories = await installationScenarioRAG.suggestAccessories(
+        productId,
+        roomType,
+        userId
+      );
+
+      res.json(accessories);
+    } catch (error: any) {
+      console.error("[Installation RAG] Error suggesting accessories:", error);
+      res.status(500).json({ error: "Failed to suggest accessories" });
+    }
+  });
+
+  // POST /api/installation/tips - Get installation tips
+  app.post("/api/installation/tips", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const { productId, roomType } = req.body;
+
+      if (!productId) {
+        return res.status(400).json({ error: "productId is required" });
+      }
+
+      const tips = await installationScenarioRAG.getInstallationTips(
+        productId,
+        roomType,
+        userId
+      );
+
+      res.json(tips);
+    } catch (error: any) {
+      console.error("[Installation RAG] Error getting tips:", error);
+      res.status(500).json({ error: "Failed to get installation tips" });
+    }
+  });
+
+  // ----- Relationship Discovery RAG -----
+
+  // POST /api/products/:productId/suggest-relationships - AI-powered relationship suggestions
+  app.post("/api/products/:productId/suggest-relationships", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const { productId } = req.params;
+      const { maxSuggestions, minScore, includeExisting } = req.body;
+
+      const suggestions = await suggestRelationships(productId, userId, {
+        maxSuggestions: maxSuggestions ?? 10,
+        minScore: minScore ?? 50,
+        includeExisting: includeExisting ?? false,
+      });
+
+      res.json(suggestions);
+    } catch (error: any) {
+      console.error("[Relationship RAG] Error suggesting relationships:", error);
+      res.status(500).json({ error: "Failed to suggest relationships" });
+    }
+  });
+
+  // POST /api/products/find-similar - Find similar products
+  app.post("/api/products/find-similar", requireAuth, async (req, res) => {
+    try {
+      const { productId, maxResults, minSimilarity } = req.body;
+
+      if (!productId) {
+        return res.status(400).json({ error: "productId is required" });
+      }
+
+      // Get the product first
+      const product = await storage.getProductById(productId);
+      if (!product) {
+        return res.status(404).json({ error: "Product not found" });
+      }
+
+      const similar = await findSimilarProducts(product, {
+        maxResults: maxResults ?? 10,
+        minSimilarity: minSimilarity ?? 30,
+      });
+
+      res.json(similar);
+    } catch (error: any) {
+      console.error("[Relationship RAG] Error finding similar products:", error);
+      res.status(500).json({ error: "Failed to find similar products" });
+    }
+  });
+
+  // POST /api/relationships/analyze - Analyze relationship between two products
+  app.post("/api/relationships/analyze", requireAuth, async (req, res) => {
+    try {
+      const { sourceProductId, targetProductId } = req.body;
+
+      if (!sourceProductId || !targetProductId) {
+        return res.status(400).json({ error: "sourceProductId and targetProductId are required" });
+      }
+
+      const analysis = await analyzeRelationshipType(sourceProductId, targetProductId);
+      res.json(analysis);
+    } catch (error: any) {
+      console.error("[Relationship RAG] Error analyzing relationship:", error);
+      res.status(500).json({ error: "Failed to analyze relationship" });
+    }
+  });
+
+  // POST /api/relationships/batch-suggest - Batch suggest relationships for multiple products
+  app.post("/api/relationships/batch-suggest", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const { productIds } = req.body;
+
+      if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+        return res.status(400).json({ error: "productIds array is required" });
+      }
+
+      const suggestions = await batchSuggestRelationships(productIds, userId);
+      res.json(suggestions);
+    } catch (error: any) {
+      console.error("[Relationship RAG] Error batch suggesting:", error);
+      res.status(500).json({ error: "Failed to batch suggest relationships" });
+    }
+  });
+
+  // POST /api/relationships/auto-create - Auto-create relationships based on AI suggestions
+  app.post("/api/relationships/auto-create", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const { productId, minScore, maxToCreate, dryRun } = req.body;
+
+      if (!productId) {
+        return res.status(400).json({ error: "productId is required" });
+      }
+
+      const result = await autoCreateRelationships(productId, userId, {
+        minScore: minScore ?? 70,
+        maxToCreate: maxToCreate ?? 5,
+        dryRun: dryRun ?? false,
+      });
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("[Relationship RAG] Error auto-creating relationships:", error);
+      res.status(500).json({ error: "Failed to auto-create relationships" });
+    }
+  });
+
+  // ----- Brand Image Recommendation RAG -----
+
+  // POST /api/brand-images/recommend - AI-powered image recommendations
+  app.post("/api/brand-images/recommend", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const { productIds, useCase, platform, mood, maxResults, aspectRatio, categoryFilter } = req.body;
+
+      if (!useCase) {
+        return res.status(400).json({ error: "useCase is required" });
+      }
+
+      const recommendations = await brandImageRecommendationRAG.recommendImages({
+        productIds,
+        useCase,
+        platform,
+        mood,
+        userId,
+        maxResults: maxResults ?? 10,
+        aspectRatio,
+        categoryFilter,
+      });
+
+      res.json(recommendations);
+    } catch (error: any) {
+      console.error("[Brand Image RAG] Error recommending images:", error);
+      res.status(500).json({ error: "Failed to recommend images" });
+    }
+  });
+
+  // POST /api/brand-images/match-product/:productId - Match images to a specific product
+  app.post("/api/brand-images/match-product/:productId", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const { productId } = req.params;
+      const { maxResults, categoryFilter } = req.body;
+
+      const matches = await brandImageRecommendationRAG.matchImagesForProduct(
+        productId,
+        userId,
+        {
+          maxResults: maxResults ?? 10,
+          categoryFilter,
+        }
+      );
+
+      res.json(matches);
+    } catch (error: any) {
+      console.error("[Brand Image RAG] Error matching images:", error);
+      res.status(500).json({ error: "Failed to match images for product" });
+    }
+  });
+
+  // POST /api/brand-images/suggest-category - Suggest image categories based on use case
+  app.post("/api/brand-images/suggest-category", requireAuth, async (req, res) => {
+    try {
+      const { useCase, platform, mood, maxSuggestions } = req.body;
+
+      if (!useCase) {
+        return res.status(400).json({ error: "useCase is required" });
+      }
+
+      const suggestions = brandImageRecommendationRAG.suggestImageCategory(
+        useCase,
+        platform,
+        mood
+      );
+
+      // Limit results if maxSuggestions specified
+      const limitedSuggestions = maxSuggestions
+        ? suggestions.slice(0, maxSuggestions)
+        : suggestions;
+
+      res.json(limitedSuggestions);
+    } catch (error: any) {
+      console.error("[Brand Image RAG] Error suggesting category:", error);
+      res.status(500).json({ error: "Failed to suggest image category" });
+    }
+  });
+
+  // ----- Template Pattern RAG -----
+
+  // POST /api/templates/match-context - Match templates to user context
+  app.post("/api/templates/match-context", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const { industry, objective, platform, aspectRatio, mood, style } = req.body;
+
+      if (!industry || !objective || !platform || !aspectRatio) {
+        return res.status(400).json({
+          error: "industry, objective, platform, and aspectRatio are required",
+        });
+      }
+
+      const result = await matchTemplateForContext({
+        industry,
+        objective,
+        platform,
+        aspectRatio,
+        mood,
+        style,
+        userId,
+      });
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("[Template RAG] Error matching templates:", error);
+      res.status(500).json({ error: "Failed to match templates" });
+    }
+  });
+
+  // GET /api/templates/analyze-patterns/:templateId - Analyze visual patterns of a template
+  app.get("/api/templates/analyze-patterns/:templateId", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const { templateId } = req.params;
+
+      const analysis = await analyzeTemplatePatterns(templateId, userId);
+
+      if (!analysis) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+
+      res.json(analysis);
+    } catch (error: any) {
+      console.error("[Template RAG] Error analyzing patterns:", error);
+      res.status(500).json({ error: "Failed to analyze template patterns" });
+    }
+  });
+
+  // POST /api/templates/suggest-customizations - Suggest customizations for brand alignment
+  app.post("/api/templates/suggest-customizations", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const { templateId, brandGuidelines } = req.body;
+
+      if (!templateId) {
+        return res.status(400).json({ error: "templateId is required" });
+      }
+
+      const suggestions = await suggestTemplateCustomizations(
+        templateId,
+        userId,
+        brandGuidelines || {}
+      );
+
+      if (!suggestions) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+
+      res.json(suggestions);
+    } catch (error: any) {
+      console.error("[Template RAG] Error suggesting customizations:", error);
+      res.status(500).json({ error: "Failed to suggest customizations" });
+    }
+  });
+
+  // ===== END RAG API ENDPOINTS =====
+
   // Uses lazy-loading to prevent import-time errors
   (async () => {
     try {

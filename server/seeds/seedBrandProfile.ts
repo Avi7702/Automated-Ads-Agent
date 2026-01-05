@@ -16,54 +16,92 @@ export async function seedBrandProfile() {
     }
     const userId = users[0].id;
 
-    // 2. Define NDS Brand Data (Extracted from NDS Branding Docs)
+    // 2. Define NDS Brand Data (LLM-Optimized - Compiled from 13 Agent Analyses)
+    // Source: docs/NDS-BRAND-PROFILE-COMPLETE.md
     const ndsProfile = {
         userId: userId,
         brandName: "Next Day Steel",
-        industry: "Construction Materials & Reinforcement",
+        industry: "Construction Materials & Steel Reinforcement",
         brandValues: [
-            "Speed & Reliability",
-            "Problem-Solving Attitude",
-            "Inclusivity (DIY to Enterprise)",
-            "Practical & Direct",
-            "Customer-First"
+            "Speed & Reliability - Order by 1pm, delivered next day",
+            "Problem-Solving Attitude - Solutions-focused, not problems-focused",
+            "Inclusivity - DIY to Enterprise, no minimum orders, equal service",
+            "Practical & Direct - Clear, specific, no fluff",
+            "Customer-First - Time-respectful, helpful, never rushed",
+            "Professional Competence - Knowledgeable without being corporate",
+            "Honesty - Confident about capabilities, honest about limitations"
         ],
         targetAudience: {
-            demographics: "SME Construction Companies, Groundworkers, Piling Contractors, Active DIYers",
-            psychographics: "Valuates speed over bureaucracy, needs certainty, practical-minded, time-poor",
+            demographics: "SME Contractors, Groundworkers, DIY Homeowners, Procurement Officers, Maintenance Managers",
+            psychographics: "Values speed over bureaucracy, needs certainty, practical-minded, time-poor, weather-dependent schedules",
             painPoints: [
-                "Project delays due to material shortages",
-                "Unreliable delivery windows",
-                "Suppliers who won't break bulk/serve small orders",
-                "Complex ordering processes"
+                "Material shortages causing project delays",
+                "Unreliable delivery windows before pour day",
+                "Suppliers who won't serve small orders",
+                "Complex ordering processes",
+                "Lack of technical support",
+                "Emergency/gap-fill needs"
+            ],
+            personas: [
+                "SME Contractor (Gary) - 35-55, small company owner, values reliability",
+                "DIY/Homeowner (Sarah) - 30-60, wants trade-quality at fair prices",
+                "Groundworker (Dave) - 25-45, tight schedules, gap-fill needs",
+                "Procurement Officer (James) - 30-50, process-driven, needs documentation",
+                "Maintenance Manager (Michelle) - 35-55, reactive needs, emergency situations"
             ]
         },
         preferredStyles: [
-            "Industrial",
-            "Site-Realistic",
-            "Clean Lines",
-            "Construction Site Context",
-            "High Clarity"
+            "Industrial - Construction site context, real materials",
+            "Site-Realistic - Actual installation photos, workers on site",
+            "Clean Lines - Uncluttered, professional layouts",
+            "High Clarity - Sharp focus, good lighting",
+            "Technical Accuracy - Correct terminology, proper specs"
         ],
         colorPreferences: [
-            "Orange (Safety)",
-            "Silver/Grey (Steel)",
-            "Black (Text/Contrast)",
-            "White (Backgrounds)"
+            "Orange #FF6B35 - Safety, CTAs, urgency",
+            "Silver/Grey #7A7A7A - Steel, product imagery",
+            "Black #1A1A1A - Headlines, body text",
+            "White #FFFFFF - Backgrounds, readability"
         ],
         voice: {
+            summary: "Professional, helpful, and knowledgeable steel supplier voice. We speak with confident expertise but remain approachable and never condescending. Solutions-focused, time-respectful, building trust through specific commitments.",
             principles: [
-                "Competent without being corporate",
-                "Efficient but never rushed",
-                "Solutions-focused",
-                "Approachable Expert"
+                "Professional Helper - Competent without being corporate, solutions-focused",
+                "Approachable Expert - Friendly but not casual, industry-aware",
+                "Reliable Partner - Makes specific promises, follows through"
             ],
             wordsToUse: [
-                "Next Day", "Guaranteed", "Reliable", "On-site", "Solution", "Reinforcement", "Mesh", "Rebar"
+                "Next Day", "Guaranteed", "Reliable", "On-site", "Solution",
+                "Reinforcement", "Mesh", "Rebar", "CARES-approved", "BS4449 certified",
+                "We can", "We will", "We deliver", "By [specific time]"
             ],
             wordsToAvoid: [
-                "Maybe", "Try to", "Usually", "Hopefully", "Bespoke (use Custom)", "Artisanal", "Luxury"
+                "Maybe", "Try to", "Usually", "Hopefully", "Probably",
+                "Bespoke (use Custom)", "Artisanal", "Luxury", "ASAP",
+                "To be honest", "Sorry to bother you", "Obviously"
+            ],
+            sentencePatterns: [
+                "I can arrange... (not 'I'll try to arrange')",
+                "We deliver next-day to... (not 'We usually deliver')",
+                "Let me take your requirements now so...",
+                "I'll WhatsApp you our details so you can reply when convenient"
+            ],
+            forbiddenPatterns: [
+                "Never recommend products - defer to structural engineers",
+                "Never give engineering advice or specifications",
+                "Never promise Saturday delivery",
+                "Never claim same-day universally (only London depot)"
             ]
+        },
+        industryTerminology: {
+            products: ["T8-T40 rebar", "A142/A193/A252/A393 mesh", "Spacers", "Tie wire", "Couplers"],
+            standards: ["BS4449", "BS4483", "BS8666", "CARES certified"],
+            terms: ["Shape codes", "Stirrups", "Kickers", "Cover", "Lap", "Cut-to-length"]
+        },
+        platformGuidelines: {
+            linkedin: "Professional authority, technical accuracy, 1300-2000 chars, 3-5 hashtags",
+            instagram: "Behind-the-scenes, authentic, 138-150 chars, 8-11 hashtags",
+            facebook: "Community-focused, friendly, 40-80 chars, 1-2 hashtags"
         },
         updatedAt: new Date()
     };

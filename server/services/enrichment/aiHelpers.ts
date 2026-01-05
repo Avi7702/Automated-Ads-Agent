@@ -20,9 +20,11 @@ import type {
 // ============================================
 
 // Text model for comparisons and verification (fast, accurate)
+// MODEL RECENCY RULE: Before changing any model ID, verify today's date and confirm the model is current within the last 3-4 weeks.
 const TEXT_MODEL = process.env.GEMINI_TEXT_MODEL || "gemini-2.5-flash";
 
 // Vision model for image comparisons (best spatial reasoning)
+// MODEL RECENCY RULE: Before changing any model ID, verify today's date and confirm the model is current within the last 3-4 weeks.
 const VISION_MODEL = process.env.GEMINI_VISION_MODEL || "gemini-3-pro-preview";
 
 // ============================================
