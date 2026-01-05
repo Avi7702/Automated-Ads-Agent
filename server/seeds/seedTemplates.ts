@@ -554,3 +554,17 @@ export async function seedPerformingTemplates() {
 
   return { created, updated, errors };
 }
+
+// Run if called directly (check for CLI execution)
+const isMainModule = process.argv[1]?.includes('seedTemplates');
+if (isMainModule) {
+  seedPerformingTemplates()
+    .then((result) => {
+      console.log("\n🎉 Done!", result);
+      process.exit(0);
+    })
+    .catch((err) => {
+      console.error("❌ Seed failed:", err);
+      process.exit(1);
+    });
+}
