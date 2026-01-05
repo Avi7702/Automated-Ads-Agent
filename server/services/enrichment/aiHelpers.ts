@@ -555,13 +555,30 @@ function calculateSimilarity(s1: string, s2: string): number {
 // ============================================
 
 /**
+ * Normalize product image URL - handles Shopify {width} placeholders
+ */
+function normalizeImageUrl(url: string, width: number = 800): string {
+  if (!url) return url;
+
+  // Handle Shopify URLs with {width} placeholder (e.g., nextdaysteel.co.uk)
+  if (url.includes("{width}")) {
+    return url.replace("{width}", String(width));
+  }
+
+  return url;
+}
+
+/**
  * Fetch image as base64 from URL
  */
 export async function fetchImageAsBase64(url: string): Promise<string> {
   try {
-    const response = await fetch(url);
+    // Normalize URL before fetching (handles Shopify {width} placeholder)
+    const normalizedUrl = normalizeImageUrl(url);
+
+    const response = await fetch(normalizedUrl);
     if (!response.ok) {
-      throw new Error(`Failed to fetch image: ${response.status}`);
+      throw new Error(`Failed to fetch image: ${response.status} for URL: ${normalizedUrl}`);
     }
     const arrayBuffer = await response.arrayBuffer();
     return Buffer.from(arrayBuffer).toString("base64");

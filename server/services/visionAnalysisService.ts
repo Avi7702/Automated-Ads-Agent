@@ -232,12 +232,29 @@ Be accurate and specific. If uncertain about a field, use your best judgment but
 }
 
 /**
+ * Normalize product image URL - handles Shopify {width} placeholders
+ */
+function normalizeImageUrl(url: string, width: number = 800): string {
+  if (!url) return url;
+
+  // Handle Shopify URLs with {width} placeholder (e.g., nextdaysteel.co.uk)
+  if (url.includes("{width}")) {
+    return url.replace("{width}", String(width));
+  }
+
+  return url;
+}
+
+/**
  * Fetch an image URL and convert to base64
  */
 async function fetchImageAsBase64(url: string): Promise<string> {
-  const response = await fetch(url);
+  // Normalize URL before fetching (handles Shopify {width} placeholder)
+  const normalizedUrl = normalizeImageUrl(url);
+
+  const response = await fetch(normalizedUrl);
   if (!response.ok) {
-    throw new Error(`Failed to fetch image: ${response.status}`);
+    throw new Error(`Failed to fetch image: ${response.status} for URL: ${normalizedUrl}`);
   }
   const buffer = await response.arrayBuffer();
   return Buffer.from(buffer).toString("base64");

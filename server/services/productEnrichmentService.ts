@@ -425,10 +425,27 @@ Return ONLY the JSON object, no additional text.`;
 }
 
 /**
+ * Normalize product image URL - handles Shopify {width} placeholders
+ */
+function normalizeImageUrl(url: string, width: number = 800): string {
+  if (!url) return url;
+
+  // Handle Shopify URLs with {width} placeholder (e.g., nextdaysteel.co.uk)
+  if (url.includes("{width}")) {
+    return url.replace("{width}", String(width));
+  }
+
+  return url;
+}
+
+/**
  * Fetch image as base64 for vision API
  */
 async function fetchImageAsBase64(url: string): Promise<string> {
-  const response = await fetch(url);
+  // Normalize URL before fetching (handles Shopify {width} placeholder)
+  const normalizedUrl = normalizeImageUrl(url);
+
+  const response = await fetch(normalizedUrl);
   const arrayBuffer = await response.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
   return buffer.toString("base64");
