@@ -264,10 +264,24 @@ export const quotaMonitoringService = {
     const minuteReset = new Date(Math.ceil(Date.now() / 60000) * 60000);
     const dayReset = new Date(dayStart.getTime() + 86400000);
 
-    // Generate warnings
-    if (rpmPercentage >= 80) warnings.push(`Approaching minute rate limit (${Math.round(rpmPercentage)}%)`);
-    if (rpdPercentage >= 80) warnings.push(`Approaching daily request limit (${Math.round(rpdPercentage)}%)`);
-    if (tokensPercentage >= 80) warnings.push(`Approaching daily token limit (${Math.round(tokensPercentage)}%)`);
+    // Generate warnings with issue + solution
+    if (rpmPercentage >= 100) {
+      warnings.push(`⛔ RATE LIMITED: Minute limit exceeded (${Math.round(rpmPercentage)}%) | Solution: Wait ${60 - new Date().getSeconds()}s for reset, or upgrade to paid tier at https://aistudio.google.com`);
+    } else if (rpmPercentage >= 80) {
+      warnings.push(`⚠️ Approaching minute rate limit (${Math.round(rpmPercentage)}%) | Solution: Slow down requests or wait for reset in ${60 - new Date().getSeconds()}s`);
+    }
+
+    if (rpdPercentage >= 100) {
+      warnings.push(`⛔ DAILY LIMIT EXCEEDED: ${todayAggregate.requestCount}/${GEMINI_FREE_TIER_LIMITS.rpd} requests | Solution: Wait until midnight UTC for reset, or upgrade to paid tier`);
+    } else if (rpdPercentage >= 80) {
+      warnings.push(`⚠️ Approaching daily request limit (${Math.round(rpdPercentage)}%) | Solution: ${GEMINI_FREE_TIER_LIMITS.rpd - todayAggregate.requestCount} requests remaining today. Resets at midnight UTC`);
+    }
+
+    if (tokensPercentage >= 100) {
+      warnings.push(`⛔ TOKEN LIMIT EXCEEDED | Solution: Wait until midnight UTC for reset, or upgrade to paid tier`);
+    } else if (tokensPercentage >= 80) {
+      warnings.push(`⚠️ Approaching daily token limit (${Math.round(tokensPercentage)}%) | Solution: Reduce prompt sizes or wait until midnight UTC`);
+    }
 
     // Determine overall status
     let status: QuotaStatus['status'] = 'healthy';
