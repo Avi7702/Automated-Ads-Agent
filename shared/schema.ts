@@ -749,3 +749,94 @@ export const insertGoogleQuotaSyncHistorySchema = createInsertSchema(googleQuota
 });
 export type InsertGoogleQuotaSyncHistory = z.infer<typeof insertGoogleQuotaSyncHistorySchema>;
 export type GoogleQuotaSyncHistory = typeof googleQuotaSyncHistory.$inferSelect;
+
+// ============================================
+// API KEY MANAGEMENT TABLES (Phase 7)
+// ============================================
+
+/**
+ * User API Keys - Encrypted storage for user-provided API keys
+ * Allows users to use their own API keys instead of environment defaults
+ * Keys are encrypted with AES-256-GCM at rest
+ */
+export const userApiKeys = pgTable("user_api_keys", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+
+  // Service identification
+  service: varchar("service", { length: 50 }).notNull(), // gemini, cloudinary, firecrawl, redis
+
+  // Encrypted key storage (AES-256-GCM)
+  encryptedKey: text("encrypted_key").notNull(), // Base64 encoded ciphertext
+  iv: text("iv").notNull(), // Base64 encoded initialization vector (12 bytes)
+  authTag: text("auth_tag").notNull(), // Base64 encoded authentication tag (16 bytes)
+
+  // Display preview (first 4 + last 6 chars, e.g., "AIza...xyz789")
+  keyPreview: varchar("key_preview", { length: 20 }),
+
+  // Validation status
+  isValid: boolean("is_valid").default(true).notNull(),
+  lastValidatedAt: timestamp("last_validated_at"),
+
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  // Each user can only have one key per service
+  uniqueUserService: unique().on(table.userId, table.service),
+}));
+
+/**
+ * API Key Audit Log - Tracks all key operations for security compliance
+ * Records create, update, delete, validate, and use events
+ */
+export const apiKeyAuditLog = pgTable("api_key_audit_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+
+  // Action details
+  service: varchar("service", { length: 50 }).notNull(), // gemini, cloudinary, firecrawl, redis
+  action: varchar("action", { length: 20 }).notNull(), // create, update, delete, validate, use
+
+  // Request context (for security auditing)
+  ipAddress: varchar("ip_address", { length: 45 }), // IPv6 max length
+  userAgent: text("user_agent"),
+
+  // Outcome
+  success: boolean("success").notNull(),
+  errorMessage: text("error_message"),
+
+  // Timestamp
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// API Key Management enum constraints
+const apiKeyServiceEnum = z.enum(['gemini', 'cloudinary', 'firecrawl', 'redis']);
+const apiKeyActionEnum = z.enum(['create', 'update', 'delete', 'validate', 'use']);
+
+// Insert schemas
+export const insertUserApiKeySchema = createInsertSchema(userApiKeys, {
+  service: apiKeyServiceEnum,
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertApiKeyAuditLogSchema = createInsertSchema(apiKeyAuditLog, {
+  service: apiKeyServiceEnum,
+  action: apiKeyActionEnum,
+}).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Type exports
+export type InsertUserApiKey = z.infer<typeof insertUserApiKeySchema>;
+export type UserApiKey = typeof userApiKeys.$inferSelect;
+
+export type InsertApiKeyAuditLog = z.infer<typeof insertApiKeyAuditLogSchema>;
+export type ApiKeyAuditLog = typeof apiKeyAuditLog.$inferSelect;
+
+// Re-export enums for use in validation
+export { apiKeyServiceEnum, apiKeyActionEnum };

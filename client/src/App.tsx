@@ -21,6 +21,7 @@ import InstallationScenarios from "@/pages/InstallationScenarios";
 import BrandImageLibrary from "@/pages/BrandImageLibrary";
 import TemplateLibrary from "@/pages/TemplateLibrary";
 import SystemMap from "@/pages/SystemMap";
+import ApiKeySettings from "@/pages/ApiKeySettings";
 
 function Router() {
   return (
@@ -74,6 +75,12 @@ function Router() {
       <Route path="/template-library">
         <ProtectedRoute>
           <TemplateLibrary />
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/settings/api-keys">
+        <ProtectedRoute>
+          <ApiKeySettings />
         </ProtectedRoute>
       </Route>
 

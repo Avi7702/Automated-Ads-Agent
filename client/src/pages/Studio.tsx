@@ -873,9 +873,8 @@ export default function Studio() {
       />
 
       {/* Main Content - 2 Column Layout on Desktop */}
-      <main className="container max-w-7xl mx-auto px-6 pt-24 pb-32 lg:pb-32 relative z-10">
-        {/* Extra padding on mobile for fixed bottom preview bar */}
-        <div className="pb-20 lg:pb-0">
+      {/* pb-24 on mobile accounts for the ~60px fixed bottom preview bar */}
+      <main className="container max-w-7xl mx-auto px-6 pt-24 pb-24 lg:pb-12 relative z-10">
         {/* Desktop: 2-column grid, Mobile: single column */}
         <div className="lg:grid lg:grid-cols-[1fr_400px] lg:gap-8">
           {/* Left Column - All Inputs (scrollable) */}
@@ -907,21 +906,29 @@ export default function Studio() {
                 <h3 className="font-medium">Quick Start</h3>
                 <span className="text-xs text-muted-foreground">Skip the setup</span>
               </div>
-              <div className="flex gap-3">
-                <Input
+              <div className="flex flex-col gap-3">
+                <Textarea
                   value={quickStartPrompt}
                   onChange={(e) => setQuickStartPrompt(e.target.value)}
-                  placeholder="Just describe what you want to create..."
-                  className="flex-1"
-                  onKeyDown={(e) => e.key === "Enter" && handleQuickStartGenerate()}
+                  placeholder="Describe what you want to create... e.g., 'A minimalist product shot with soft natural lighting on a clean white background' or 'Dynamic lifestyle image showing the product in use outdoors'"
+                  className="flex-1 min-h-[120px] resize-none text-base"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleQuickStartGenerate();
+                    }
+                  }}
                 />
-                <Button
-                  onClick={handleQuickStartGenerate}
-                  disabled={!quickStartPrompt.trim()}
-                >
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Generate Now
-                </Button>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-muted-foreground">Press Enter to generate, Shift+Enter for new line</span>
+                  <Button
+                    onClick={handleQuickStartGenerate}
+                    disabled={!quickStartPrompt.trim()}
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Generate Now
+                  </Button>
+                </div>
               </div>
               <p className="text-xs text-muted-foreground mt-3">
                 Or scroll down for the full studio experience with product selection and templates.
@@ -1284,7 +1291,7 @@ export default function Studio() {
 
                   {/* Product Grid - with internal scroll */}
                   <div className="max-h-[300px] overflow-y-auto rounded-lg border border-border/50 p-2">
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
                       {filteredProducts.map((product) => {
                         const isSelected = selectedProducts.some((p) => p.id === product.id);
                         return (
@@ -1293,7 +1300,7 @@ export default function Studio() {
                             onClick={() => toggleProductSelection(product)}
                             disabled={!isSelected && selectedProducts.length >= 6}
                             className={cn(
-                              "relative aspect-square rounded-xl overflow-hidden border-2 transition-all",
+                              "relative aspect-square min-h-[80px] rounded-xl overflow-hidden border-2 transition-all",
                               isSelected
                                 ? "border-primary ring-2 ring-primary/20"
                                 : "border-border hover:border-primary/50",
@@ -1353,7 +1360,7 @@ export default function Studio() {
 
                   {/* Templates Horizontal Scroll */}
                   {templates.length > 0 ? (
-                    <div className="flex gap-3 overflow-x-auto pb-2">
+                    <div className="flex gap-4 overflow-x-auto pb-3 px-1 -mx-1 snap-x snap-mandatory scroll-smooth touch-pan-x">
                       {templates
                         .filter(t => templateCategory === "all" || t.category === templateCategory)
                         .map((template) => (
@@ -1369,10 +1376,10 @@ export default function Studio() {
                               }
                             }}
                             className={cn(
-                              "flex-shrink-0 p-3 rounded-xl border-2 transition-all text-left min-w-[180px] max-w-[200px]",
+                              "flex-shrink-0 p-4 rounded-xl border-2 transition-all text-left min-w-[200px] max-w-[220px] snap-start touch-manipulation",
                               selectedTemplate?.id === template.id
                                 ? "border-primary bg-primary/10 ring-2 ring-primary/20"
-                                : "border-border hover:border-primary/50 bg-card/50"
+                                : "border-border hover:border-primary/50 bg-card/50 active:scale-[0.98]"
                             )}
                           >
                             <div className="flex items-center justify-between mb-2">
@@ -1565,11 +1572,11 @@ export default function Studio() {
                 </ErrorBoundary>
 
                 {/* Platform & Aspect Ratio */}
-                <div className="flex flex-wrap gap-4">
+                <div className="flex flex-col sm:flex-row flex-wrap gap-4">
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Platform:</span>
                     <Select value={platform} onValueChange={setPlatform}>
-                      <SelectTrigger className="w-[140px]">
+                      <SelectTrigger className="w-full sm:w-[140px]">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1584,7 +1591,7 @@ export default function Studio() {
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Size:</span>
                     <Select value={aspectRatio} onValueChange={setAspectRatio}>
-                      <SelectTrigger className="w-[180px]">
+                      <SelectTrigger className="w-full sm:w-[180px]">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1599,7 +1606,7 @@ export default function Studio() {
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Quality:</span>
                     <Select value={resolution} onValueChange={(v: "1K" | "2K" | "4K") => setResolution(v)}>
-                      <SelectTrigger className="w-[100px]">
+                      <SelectTrigger className="w-full sm:w-[100px]">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1717,7 +1724,6 @@ export default function Studio() {
               </div>
             </div>
           </div>
-        </div>
         </div>
       </main>
 

@@ -126,7 +126,15 @@
       "Bash(npm run build:server:*)",
       "Bash(claude mcp add:*)",
       "Bash(npx:*)",
-      "Bash(claude mcp list:*)"
+      "Bash(claude mcp list:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: Fix image loading for Shopify URLs and wire recipe flow to transform\n\n- Add getProductImageUrl\\(\\) utility to normalize product image URLs\n  - Handles Shopify {width} placeholder URLs \\(132 products\\)\n  - Handles fake res.cloudinary.com/placeholder URLs \\(20 products\\)\n  - Applied across ProductCard, ProductRelationships, ProductLibrary,\n    ProductEnrichmentForm, BrandImageLibrary, and Studio components\n\n- Wire GenerationRecipe from IdeaBankPanel to /api/transform\n  - Add onRecipeAvailable callback prop to IdeaBankPanel\n  - Store recipe in Studio state and append to FormData\n  - Backend receives relationships, scenarios, brand context\n\n- Fix scenario query bugs\n  - storage.ts: Include secondaryProductIds in query using && overlap\n  - routes.ts: Fix active filter \\(was filtering all truthy, now checks isActive !== false\\)\n\n- Add baseline scenario generation script \\(server/seeds/generateBaselineScenarios.ts\\)\n- Remove deprecated components and tests \\(cleanup\\)\n- Add auth infrastructure \\(Login, ProtectedRoute, AuthContext\\)\n- Add e2e test infrastructure \\(Playwright setup\\)\n- Add documentation \\(System logic map, Data inventory, Component schema\\)\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(npx tsx -e:*)",
+      "Bash(node test-gemini-api.cjs:*)",
+      "Bash(npm run build:client:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfix: Add trust proxy for secure cookies behind Railway proxy\n\nWithout trust proxy, Express doesn''t know it''s behind a reverse proxy\nand refuses to set secure cookies because it thinks the connection is\nHTTP instead of HTTPS. This caused login to silently fail on Railway.\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfix: Normalize Shopify {width} placeholder URLs on server-side\n\nProduct images from Shopify/NDS have {width} placeholder in URLs.\nClient had getProductImageUrl\\(\\) to handle this, but server didn''t.\nVision analysis was failing silently because fetch received invalid URLs.\n\nAdded normalizeImageUrl\\(\\) to:\n- visionAnalysisService.ts\n- productEnrichmentService.ts\n- enrichment/aiHelpers.ts\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(npm run db:push:*)",
+      "Bash(npx drizzle-kit:*)"
     ]
   }
 }

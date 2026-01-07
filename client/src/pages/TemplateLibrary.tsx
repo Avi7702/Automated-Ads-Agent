@@ -523,7 +523,7 @@ export default function TemplateLibrary() {
 
           {/* Category Filter */}
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-full sm:w-40">
               <SelectValue placeholder="Category" />
             </SelectTrigger>
             <SelectContent>
@@ -537,7 +537,7 @@ export default function TemplateLibrary() {
 
           {/* Platform Filter */}
           <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-full sm:w-40">
               <SelectValue placeholder="Platform" />
             </SelectTrigger>
             <SelectContent>

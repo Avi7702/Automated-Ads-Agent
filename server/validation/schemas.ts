@@ -71,6 +71,13 @@ export const generateCopySchema = z.object({
   }).optional(),
 });
 
+// API Key Management schemas
+export const saveApiKeySchema = z.object({
+  apiKey: z.string().min(1, 'API key is required'),
+  cloudName: z.string().optional(),
+  apiSecret: z.string().optional(),
+});
+
 // Type exports for use in routes
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
@@ -78,3 +85,4 @@ export type ProductInput = z.infer<typeof productSchema>;
 export type TransformInput = z.infer<typeof transformSchema>;
 export type EditInput = z.infer<typeof editSchema>;
 export type GenerateCopyInput = z.infer<typeof generateCopySchema>;
+export type SaveApiKeyInput = z.infer<typeof saveApiKeySchema>;

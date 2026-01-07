@@ -1,8 +1,15 @@
 import { BrandProfileDisplay } from "@/components/BrandProfileDisplay";
 import { Link } from "wouter";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, KeyRound, Building2, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/layout/Header";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export default function BrandProfile() {
   return (
@@ -25,7 +32,52 @@ export default function BrandProfile() {
           </Link>
         </div>
 
-        <h1 className="text-2xl font-semibold text-foreground mb-6">Brand Profile</h1>
+        <h1 className="text-2xl font-semibold text-foreground mb-6">Settings</h1>
+
+        {/* Settings Navigation Cards */}
+        <div className="grid gap-4 md:grid-cols-2 mb-8 max-w-3xl">
+          <Card className="group cursor-default border-primary/20 bg-primary/5">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Building2 className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base">Brand Profile</CardTitle>
+                    <CardDescription className="text-xs">
+                      Your brand identity and voice
+                    </CardDescription>
+                  </div>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+
+          <Link href="/settings/api-keys">
+            <Card className="group cursor-pointer hover:border-primary/30 transition-colors">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-muted">
+                      <KeyRound className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">API Keys</CardTitle>
+                      <CardDescription className="text-xs">
+                        Manage external service keys
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                </div>
+              </CardHeader>
+            </Card>
+          </Link>
+        </div>
+
+        {/* Brand Profile Content */}
+        <h2 className="text-lg font-medium text-foreground mb-4">Brand Profile</h2>
         <BrandProfileDisplay className="max-w-3xl" />
       </main>
     </div>

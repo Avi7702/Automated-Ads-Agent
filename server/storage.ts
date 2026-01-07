@@ -39,6 +39,9 @@ import {
   type InsertGoogleQuotaSnapshot,
   type GoogleQuotaSyncHistory,
   type InsertGoogleQuotaSyncHistory,
+  // API Key Management types (Phase 7)
+  type UserApiKey,
+  type ApiKeyAuditLog,
   generations,
   generationUsage,
   products,
@@ -61,7 +64,11 @@ import {
   // Google Cloud Monitoring sync tables
   googleQuotaSnapshots,
   googleQuotaSyncHistory,
+  // API Key Management tables (Phase 7)
+  userApiKeys,
+  apiKeyAuditLog,
 } from "@shared/schema";
+import { decryptApiKey } from "./services/encryptionService";
 import { db } from "./db";
 import { and, eq, desc, ilike, inArray, or, arrayContains, gte, lte, sql } from "drizzle-orm";
 
@@ -208,6 +215,40 @@ export interface IStorage {
   createSyncHistoryEntry(entry: InsertGoogleQuotaSyncHistory): Promise<GoogleQuotaSyncHistory>;
   updateSyncHistoryEntry(id: string, updates: Partial<InsertGoogleQuotaSyncHistory>): Promise<GoogleQuotaSyncHistory>;
   getRecentSyncHistory(limit?: number): Promise<GoogleQuotaSyncHistory[]>;
+
+  // ============================================
+  // API KEY MANAGEMENT OPERATIONS (Phase 7)
+  // ============================================
+
+  // API Key CRUD operations
+  getUserApiKey(userId: string, service: string): Promise<UserApiKey | null>;
+  getAllUserApiKeys(userId: string): Promise<UserApiKey[]>;
+  saveUserApiKey(data: {
+    userId: string;
+    service: string;
+    encryptedKey: string;
+    iv: string;
+    authTag: string;
+    keyPreview: string;
+    isValid?: boolean;
+  }): Promise<UserApiKey>;
+  updateUserApiKeyValidity(userId: string, service: string, isValid: boolean): Promise<void>;
+  deleteUserApiKey(userId: string, service: string): Promise<void>;
+
+  // Audit logging
+  logApiKeyAction(entry: {
+    userId: string;
+    service: string;
+    action: 'create' | 'update' | 'delete' | 'validate' | 'use';
+    ipAddress?: string;
+    userAgent?: string;
+    success: boolean;
+    errorMessage?: string;
+  }): Promise<void>;
+  getApiKeyAuditLog(userId: string, service?: string, limit?: number): Promise<ApiKeyAuditLog[]>;
+
+  // Key resolution with fallback
+  resolveApiKey(userId: string, service: string): Promise<{ key: string | null; source: 'user' | 'environment' | 'none' }>;
 }
 
 export class DbStorage implements IStorage {
@@ -1175,6 +1216,210 @@ export class DbStorage implements IStorage {
       .from(googleQuotaSyncHistory)
       .orderBy(desc(googleQuotaSyncHistory.startedAt))
       .limit(limit);
+  }
+
+  // ============================================
+  // API KEY MANAGEMENT OPERATIONS (Phase 7)
+  // ============================================
+
+  /**
+   * Get a user's API key for a specific service
+   */
+  async getUserApiKey(userId: string, service: string): Promise<UserApiKey | null> {
+    const [key] = await db
+      .select()
+      .from(userApiKeys)
+      .where(
+        and(
+          eq(userApiKeys.userId, userId),
+          eq(userApiKeys.service, service)
+        )
+      )
+      .limit(1);
+    return key || null;
+  }
+
+  /**
+   * Get all API keys for a user
+   */
+  async getAllUserApiKeys(userId: string): Promise<UserApiKey[]> {
+    return await db
+      .select()
+      .from(userApiKeys)
+      .where(eq(userApiKeys.userId, userId))
+      .orderBy(userApiKeys.service);
+  }
+
+  /**
+   * Save or update a user's API key (upsert)
+   * Uses the unique constraint on (userId, service) for conflict detection
+   */
+  async saveUserApiKey(data: {
+    userId: string;
+    service: string;
+    encryptedKey: string;
+    iv: string;
+    authTag: string;
+    keyPreview: string;
+    isValid?: boolean;
+  }): Promise<UserApiKey> {
+    const now = new Date();
+    const insertData = {
+      userId: data.userId,
+      service: data.service,
+      encryptedKey: data.encryptedKey,
+      iv: data.iv,
+      authTag: data.authTag,
+      keyPreview: data.keyPreview,
+      isValid: data.isValid ?? true,
+      lastValidatedAt: now,
+    };
+
+    // Try upsert using onConflictDoUpdate
+    const [result] = await db
+      .insert(userApiKeys)
+      .values(insertData)
+      .onConflictDoUpdate({
+        target: [userApiKeys.userId, userApiKeys.service],
+        set: {
+          encryptedKey: data.encryptedKey,
+          iv: data.iv,
+          authTag: data.authTag,
+          keyPreview: data.keyPreview,
+          isValid: data.isValid ?? true,
+          lastValidatedAt: now,
+          updatedAt: now,
+        },
+      })
+      .returning();
+
+    return result;
+  }
+
+  /**
+   * Update the validity status of a user's API key
+   */
+  async updateUserApiKeyValidity(userId: string, service: string, isValid: boolean): Promise<void> {
+    await db
+      .update(userApiKeys)
+      .set({
+        isValid,
+        lastValidatedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(userApiKeys.userId, userId),
+          eq(userApiKeys.service, service)
+        )
+      );
+  }
+
+  /**
+   * Delete a user's API key for a specific service
+   */
+  async deleteUserApiKey(userId: string, service: string): Promise<void> {
+    await db
+      .delete(userApiKeys)
+      .where(
+        and(
+          eq(userApiKeys.userId, userId),
+          eq(userApiKeys.service, service)
+        )
+      );
+  }
+
+  /**
+   * Log an API key action for audit purposes
+   */
+  async logApiKeyAction(entry: {
+    userId: string;
+    service: string;
+    action: 'create' | 'update' | 'delete' | 'validate' | 'use';
+    ipAddress?: string;
+    userAgent?: string;
+    success: boolean;
+    errorMessage?: string;
+  }): Promise<void> {
+    await db
+      .insert(apiKeyAuditLog)
+      .values({
+        userId: entry.userId,
+        service: entry.service,
+        action: entry.action,
+        ipAddress: entry.ipAddress,
+        userAgent: entry.userAgent,
+        success: entry.success,
+        errorMessage: entry.errorMessage,
+      });
+  }
+
+  /**
+   * Get audit log entries for a user's API keys
+   */
+  async getApiKeyAuditLog(userId: string, service?: string, limit: number = 100): Promise<ApiKeyAuditLog[]> {
+    const conditions = [eq(apiKeyAuditLog.userId, userId)];
+
+    if (service) {
+      conditions.push(eq(apiKeyAuditLog.service, service));
+    }
+
+    return await db
+      .select()
+      .from(apiKeyAuditLog)
+      .where(and(...conditions))
+      .orderBy(desc(apiKeyAuditLog.createdAt))
+      .limit(limit);
+  }
+
+  /**
+   * Resolve API key with fallback to environment variable
+   *
+   * Resolution order:
+   * 1. User's custom key (if exists and valid) -> decrypt and return
+   * 2. Environment variable fallback
+   * 3. None (key not available)
+   *
+   * Environment variable mapping:
+   * - gemini -> GEMINI_API_KEY
+   * - cloudinary -> CLOUDINARY_API_KEY (also uses CLOUDINARY_API_SECRET)
+   * - firecrawl -> FIRECRAWL_API_KEY
+   * - redis -> REDIS_URL
+   */
+  async resolveApiKey(userId: string, service: string): Promise<{ key: string | null; source: 'user' | 'environment' | 'none' }> {
+    // Try to get user's custom key first
+    const userKey = await this.getUserApiKey(userId, service);
+
+    if (userKey && userKey.isValid) {
+      try {
+        // Decrypt the user's key
+        const decryptedKey = decryptApiKey({
+          ciphertext: userKey.encryptedKey,
+          iv: userKey.iv,
+          authTag: userKey.authTag,
+        });
+        return { key: decryptedKey, source: 'user' };
+      } catch {
+        // Decryption failed - key is corrupted or encryption key changed
+        // Fall through to environment variable
+      }
+    }
+
+    // Fall back to environment variable
+    const envVarMap: Record<string, string | undefined> = {
+      gemini: process.env.GEMINI_API_KEY,
+      cloudinary: process.env.CLOUDINARY_API_KEY,
+      firecrawl: process.env.FIRECRAWL_API_KEY,
+      redis: process.env.REDIS_URL,
+    };
+
+    const envKey = envVarMap[service];
+
+    if (envKey) {
+      return { key: envKey, source: 'environment' };
+    }
+
+    return { key: null, source: 'none' };
   }
 }
 

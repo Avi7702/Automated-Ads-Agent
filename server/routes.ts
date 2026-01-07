@@ -20,6 +20,9 @@ import { installationScenarioRAG, getRoomInstallationContext, ROOM_TYPES, type R
 import { suggestRelationships, findSimilarProducts, analyzeRelationshipType, batchSuggestRelationships, autoCreateRelationships } from "./services/relationshipDiscoveryRAG";
 import { brandImageRecommendationRAG } from "./services/brandImageRecommendationRAG";
 import { matchTemplateForContext, analyzeTemplatePatterns, suggestTemplateCustomizations } from "./services/templatePatternRAG";
+import { encryptApiKey, generateKeyPreview, validateMasterKeyConfigured, EncryptionConfigError } from "./services/encryptionService";
+import { validateApiKey, isValidService, getSupportedServices, type ServiceName } from "./services/apiKeyValidationService";
+import { saveApiKeySchema } from "./validation/schemas";
 
 // Lazy-load Google Cloud Monitoring to prevent any import-time errors
 let googleCloudMonitoringService: any = null;
@@ -1578,7 +1581,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       res.status(201).json(template);
     } catch (error: any) {
       if (error.name === "ZodError") {
-        return res.status(400).json({ error: "Invalid template data", details: error.errors });
+        return res.status(400).json({ error: "Invalid template data", details: error.issues });
       }
       console.error("[Create Ad Template] Error:", error);
       res.status(500).json({ error: "Failed to create ad template" });
@@ -1602,7 +1605,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       res.json(template);
     } catch (error: any) {
       if (error.name === "ZodError") {
-        return res.status(400).json({ error: "Invalid template data", details: error.errors });
+        return res.status(400).json({ error: "Invalid template data", details: error.issues });
       }
       console.error("[Update Ad Template] Error:", error);
       res.status(500).json({ error: "Failed to update ad template" });
@@ -1715,7 +1718,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
     } catch (error: any) {
       console.error("[Generate Copy] Error:", error);
       if (error.name === "ZodError") {
-        return res.status(400).json({ error: "Validation failed", details: error.errors });
+        return res.status(400).json({ error: "Validation failed", details: error.issues });
       }
       res.status(500).json({ error: "Failed to generate copy", details: error.message });
     }
@@ -3625,16 +3628,10 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       const suggestions = brandImageRecommendationRAG.suggestImageCategory(
         useCase,
-        platform,
-        mood
+        { platform, mood, maxSuggestions }
       );
 
-      // Limit results if maxSuggestions specified
-      const limitedSuggestions = maxSuggestions
-        ? suggestions.slice(0, maxSuggestions)
-        : suggestions;
-
-      res.json(limitedSuggestions);
+      res.json(suggestions);
     } catch (error: any) {
       console.error("[Brand Image RAG] Error suggesting category:", error);
       res.status(500).json({ error: "Failed to suggest image category" });
@@ -3675,14 +3672,14 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   // GET /api/templates/analyze-patterns/:templateId - Analyze visual patterns of a template
   app.get("/api/templates/analyze-patterns/:templateId", requireAuth, async (req, res) => {
     try {
-      const userId = (req.session as any).userId;
       const { templateId } = req.params;
 
-      const analysis = await analyzeTemplatePatterns(templateId, userId);
-
-      if (!analysis) {
+      const template = await storage.getPerformingAdTemplate(templateId);
+      if (!template) {
         return res.status(404).json({ error: "Template not found" });
       }
+
+      const analysis = await analyzeTemplatePatterns(template);
 
       res.json(analysis);
     } catch (error: any) {
@@ -3694,7 +3691,6 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   // POST /api/templates/suggest-customizations - Suggest customizations for brand alignment
   app.post("/api/templates/suggest-customizations", requireAuth, async (req, res) => {
     try {
-      const userId = (req.session as any).userId;
       const { templateId, brandGuidelines } = req.body;
 
       if (!templateId) {
@@ -3703,7 +3699,6 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       const suggestions = await suggestTemplateCustomizations(
         templateId,
-        userId,
         brandGuidelines || {}
       );
 
@@ -3719,6 +3714,416 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   });
 
   // ===== END RAG API ENDPOINTS =====
+
+  // ===== API KEY MANAGEMENT ENDPOINTS (Phase 7) =====
+
+  /**
+   * GET /api/settings/api-keys
+   * List all API key configurations for the current user
+   * Returns status and preview (not actual keys) for each supported service
+   */
+  app.get("/api/settings/api-keys", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).session.userId;
+      const supportedServices = getSupportedServices();
+
+      // Get all user's custom keys
+      const userKeys = await storage.getAllUserApiKeys(userId);
+      const userKeyMap = new Map(userKeys.map(k => [k.service, k]));
+
+      // Environment variable mapping for checking fallbacks
+      const envVarMap: Record<string, string | undefined> = {
+        gemini: process.env.GEMINI_API_KEY,
+        cloudinary: process.env.CLOUDINARY_API_KEY,
+        firecrawl: process.env.FIRECRAWL_API_KEY,
+        redis: process.env.REDIS_URL,
+      };
+
+      const keys = supportedServices.map(service => {
+        const userKey = userKeyMap.get(service);
+        const hasEnvVar = !!envVarMap[service];
+
+        if (userKey) {
+          return {
+            service,
+            configured: true,
+            source: 'user' as const,
+            keyPreview: userKey.keyPreview,
+            isValid: userKey.isValid,
+            lastValidated: userKey.lastValidatedAt?.toISOString() || null,
+          };
+        } else if (hasEnvVar) {
+          return {
+            service,
+            configured: true,
+            source: 'environment' as const,
+            keyPreview: null,
+            isValid: null,
+            lastValidated: null,
+          };
+        } else {
+          return {
+            service,
+            configured: false,
+            source: null,
+            keyPreview: null,
+            isValid: null,
+            lastValidated: null,
+          };
+        }
+      });
+
+      res.json({ keys });
+    } catch (error: any) {
+      console.error("[API Keys] Error listing keys:", error);
+      res.status(500).json({ error: "Failed to retrieve API key configurations" });
+    }
+  });
+
+  /**
+   * POST /api/settings/api-keys/:service
+   * Save or update an API key for a specific service
+   * Flow: validate format -> test API -> encrypt -> save -> log audit -> return preview
+   */
+  app.post("/api/settings/api-keys/:service", requireAuth, async (req, res) => {
+    const userId = (req as any).session.userId;
+    const { service } = req.params;
+    const ipAddress = (req.ip || req.headers['x-forwarded-for'] as string || '').split(',')[0].trim();
+    const userAgent = req.headers['user-agent'] || '';
+
+    try {
+      // Validate service name
+      if (!isValidService(service)) {
+        return res.status(400).json({
+          success: false,
+          error: `Invalid service: ${service}`,
+          solution: `Supported services: ${getSupportedServices().join(', ')}`,
+        });
+      }
+
+      // Validate request body
+      const parseResult = saveApiKeySchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({
+          success: false,
+          error: parseResult.error.issues[0]?.message || 'Invalid request body',
+        });
+      }
+
+      const { apiKey, cloudName, apiSecret } = parseResult.data;
+      const trimmedKey = apiKey.trim();
+
+      // Check if master encryption key is configured
+      if (!validateMasterKeyConfigured()) {
+        console.error("[API Keys] Master encryption key not configured");
+        return res.status(500).json({
+          success: false,
+          error: "Encryption not configured",
+          solution: "Contact administrator to configure API_KEY_ENCRYPTION_KEY",
+        });
+      }
+
+      // Validate the API key with the service
+      let validationResult;
+      if (service === 'cloudinary') {
+        // Cloudinary requires additional parameters
+        if (!cloudName || !apiSecret) {
+          return res.status(400).json({
+            success: false,
+            error: "Cloudinary requires cloudName, apiKey, and apiSecret",
+            solution: "Provide all three Cloudinary credentials",
+          });
+        }
+        validationResult = await validateApiKey(service as ServiceName, trimmedKey, {
+          cloudName: cloudName.trim(),
+          apiKey: trimmedKey,
+          apiSecret: apiSecret.trim(),
+        });
+      } else {
+        validationResult = await validateApiKey(service as ServiceName, trimmedKey);
+      }
+
+      if (!validationResult.valid) {
+        // Log failed validation attempt
+        await storage.logApiKeyAction({
+          userId,
+          service,
+          action: 'validate',
+          ipAddress,
+          userAgent,
+          success: false,
+          errorMessage: validationResult.error,
+        });
+
+        return res.status(400).json({
+          success: false,
+          error: validationResult.error || 'API key validation failed',
+          solution: validationResult.solution,
+        });
+      }
+
+      // Encrypt the API key
+      let encryptedData;
+      try {
+        // For Cloudinary, we store all credentials as a JSON object
+        const keyToEncrypt = service === 'cloudinary'
+          ? JSON.stringify({ cloudName: cloudName!.trim(), apiKey: trimmedKey, apiSecret: apiSecret!.trim() })
+          : trimmedKey;
+        encryptedData = encryptApiKey(keyToEncrypt);
+      } catch (error: any) {
+        console.error("[API Keys] Encryption failed:", error);
+        return res.status(500).json({
+          success: false,
+          error: "Encryption failed",
+          solution: "Contact support. This is an internal error.",
+        });
+      }
+
+      // Generate key preview
+      const keyPreview = generateKeyPreview(trimmedKey);
+
+      // Check if this is a create or update operation
+      const existingKey = await storage.getUserApiKey(userId, service);
+      const action = existingKey ? 'update' : 'create';
+
+      // Save to database
+      await storage.saveUserApiKey({
+        userId,
+        service,
+        encryptedKey: encryptedData.ciphertext,
+        iv: encryptedData.iv,
+        authTag: encryptedData.authTag,
+        keyPreview,
+        isValid: true,
+      });
+
+      // Log successful action
+      await storage.logApiKeyAction({
+        userId,
+        service,
+        action,
+        ipAddress,
+        userAgent,
+        success: true,
+      });
+
+      const serviceName = service.charAt(0).toUpperCase() + service.slice(1);
+      res.json({
+        success: true,
+        keyPreview,
+        message: `${serviceName} API key saved successfully`,
+      });
+    } catch (error: any) {
+      console.error("[API Keys] Error saving key:", error);
+
+      // Log error
+      await storage.logApiKeyAction({
+        userId,
+        service,
+        action: 'create',
+        ipAddress,
+        userAgent,
+        success: false,
+        errorMessage: error.message,
+      });
+
+      res.status(500).json({
+        success: false,
+        error: "Failed to save API key",
+        solution: "Please try again. If the problem persists, contact support.",
+      });
+    }
+  });
+
+  /**
+   * DELETE /api/settings/api-keys/:service
+   * Remove a user's custom API key for a service
+   * Will fall back to environment variable if available
+   */
+  app.delete("/api/settings/api-keys/:service", requireAuth, async (req, res) => {
+    const userId = (req as any).session.userId;
+    const { service } = req.params;
+    const ipAddress = (req.ip || req.headers['x-forwarded-for'] as string || '').split(',')[0].trim();
+    const userAgent = req.headers['user-agent'] || '';
+
+    try {
+      // Validate service name
+      if (!isValidService(service)) {
+        return res.status(400).json({
+          success: false,
+          error: `Invalid service: ${service}`,
+          solution: `Supported services: ${getSupportedServices().join(', ')}`,
+        });
+      }
+
+      // Check if user has a custom key
+      const existingKey = await storage.getUserApiKey(userId, service);
+      if (!existingKey) {
+        return res.status(404).json({
+          success: false,
+          error: "No custom API key found for this service",
+        });
+      }
+
+      // Delete the key
+      await storage.deleteUserApiKey(userId, service);
+
+      // Log the action
+      await storage.logApiKeyAction({
+        userId,
+        service,
+        action: 'delete',
+        ipAddress,
+        userAgent,
+        success: true,
+      });
+
+      // Check if environment fallback exists
+      const envVarMap: Record<string, string | undefined> = {
+        gemini: process.env.GEMINI_API_KEY,
+        cloudinary: process.env.CLOUDINARY_API_KEY,
+        firecrawl: process.env.FIRECRAWL_API_KEY,
+        redis: process.env.REDIS_URL,
+      };
+      const hasEnvFallback = !!envVarMap[service];
+
+      const serviceName = service.charAt(0).toUpperCase() + service.slice(1);
+      res.json({
+        success: true,
+        message: hasEnvFallback
+          ? `${serviceName} custom key removed. Using environment variable.`
+          : `${serviceName} API key removed.`,
+        fallbackAvailable: hasEnvFallback,
+      });
+    } catch (error: any) {
+      console.error("[API Keys] Error deleting key:", error);
+
+      await storage.logApiKeyAction({
+        userId,
+        service,
+        action: 'delete',
+        ipAddress,
+        userAgent,
+        success: false,
+        errorMessage: error.message,
+      });
+
+      res.status(500).json({
+        success: false,
+        error: "Failed to delete API key",
+      });
+    }
+  });
+
+  /**
+   * POST /api/settings/api-keys/:service/validate
+   * Re-validate an existing API key without updating it
+   * Updates the lastValidatedAt and isValid fields in the database
+   */
+  app.post("/api/settings/api-keys/:service/validate", requireAuth, async (req, res) => {
+    const userId = (req as any).session.userId;
+    const { service } = req.params;
+    const ipAddress = (req.ip || req.headers['x-forwarded-for'] as string || '').split(',')[0].trim();
+    const userAgent = req.headers['user-agent'] || '';
+
+    try {
+      // Validate service name
+      if (!isValidService(service)) {
+        return res.status(400).json({
+          valid: false,
+          error: `Invalid service: ${service}`,
+          solution: `Supported services: ${getSupportedServices().join(', ')}`,
+        });
+      }
+
+      // Resolve the API key (user's key or environment fallback)
+      const resolved = await storage.resolveApiKey(userId, service);
+
+      if (resolved.source === 'none' || !resolved.key) {
+        return res.status(404).json({
+          valid: false,
+          error: "No API key configured for this service",
+          solution: `Add a ${service} API key in settings or configure the environment variable`,
+        });
+      }
+
+      // Validate the resolved key
+      let validationResult;
+      if (service === 'cloudinary' && resolved.source === 'user') {
+        // For user-stored Cloudinary keys, they're stored as JSON with all credentials
+        try {
+          const credentials = JSON.parse(resolved.key);
+          validationResult = await validateApiKey(service as ServiceName, credentials.apiKey, credentials);
+        } catch {
+          validationResult = {
+            valid: false,
+            error: "Stored credentials are corrupted",
+            solution: "Re-enter your Cloudinary credentials",
+          };
+        }
+      } else if (service === 'cloudinary' && resolved.source === 'environment') {
+        // For environment Cloudinary, need all env vars
+        validationResult = await validateApiKey(service as ServiceName, resolved.key, {
+          cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
+          apiKey: resolved.key,
+          apiSecret: process.env.CLOUDINARY_API_SECRET || '',
+        });
+      } else {
+        validationResult = await validateApiKey(service as ServiceName, resolved.key);
+      }
+
+      // Update validity in database if this is a user key
+      if (resolved.source === 'user') {
+        await storage.updateUserApiKeyValidity(userId, service, validationResult.valid);
+      }
+
+      // Log the validation attempt
+      await storage.logApiKeyAction({
+        userId,
+        service,
+        action: 'validate',
+        ipAddress,
+        userAgent,
+        success: validationResult.valid,
+        errorMessage: validationResult.error,
+      });
+
+      if (validationResult.valid) {
+        res.json({
+          valid: true,
+          source: resolved.source,
+          details: validationResult.details,
+        });
+      } else {
+        res.json({
+          valid: false,
+          error: validationResult.error,
+          solution: validationResult.solution,
+          source: resolved.source,
+        });
+      }
+    } catch (error: any) {
+      console.error("[API Keys] Error validating key:", error);
+
+      await storage.logApiKeyAction({
+        userId,
+        service,
+        action: 'validate',
+        ipAddress,
+        userAgent,
+        success: false,
+        errorMessage: error.message,
+      });
+
+      res.status(500).json({
+        valid: false,
+        error: "Failed to validate API key",
+        solution: "Please try again. If the problem persists, contact support.",
+      });
+    }
+  });
+
+  // ===== END API KEY MANAGEMENT ENDPOINTS =====
 
   // Uses lazy-loading to prevent import-time errors
   (async () => {
