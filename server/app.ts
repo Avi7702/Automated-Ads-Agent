@@ -9,6 +9,7 @@ import { requestIdMiddleware } from "./middleware/requestId";
 import { defaultTimeout, haltOnTimeout } from "./middleware/timeout";
 import { initGracefulShutdown, onShutdown } from "./utils/gracefulShutdown";
 import { validateEnvOrExit } from "./lib/validateEnv";
+import { initSentry, sentryRequestHandler, sentryErrorHandler, captureException } from "./lib/sentry";
 
 export function log(message: string, source = "express") {
   // Use structured logger in production, formatted console in development
@@ -128,20 +129,36 @@ app.use((req, res, next) => {
   next();
 });
 
+// Sentry request handler - must be before routes
+app.use(sentryRequestHandler);
+
 export default async function runApp(
   setup: (app: Express, server: Server) => Promise<void>,
 ) {
+  // Initialize Sentry error monitoring
+  initSentry();
+
   // Validate environment variables before starting
   validateEnvOrExit();
 
   const server = await registerRoutes(app);
 
+  // Sentry error handler - must be before custom error handler
+  app.use(sentryErrorHandler);
+
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
+    // Log error with structured logger
+    logger.error({ err, status, module: 'ErrorHandler' }, message);
+
+    // Capture in Sentry if it's a server error
+    if (status >= 500) {
+      captureException(err, { status, message });
+    }
+
     res.status(status).json({ message });
-    throw err;
   });
 
   // importantly run the final setup after setting up all the other routes so
