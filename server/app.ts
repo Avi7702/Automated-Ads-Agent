@@ -8,6 +8,7 @@ import { logger, apiLogger } from "./lib/logger";
 import { requestIdMiddleware } from "./middleware/requestId";
 import { defaultTimeout, haltOnTimeout } from "./middleware/timeout";
 import { initGracefulShutdown, onShutdown } from "./utils/gracefulShutdown";
+import { validateEnvOrExit } from "./lib/validateEnv";
 
 export function log(message: string, source = "express") {
   // Use structured logger in production, formatted console in development
@@ -130,6 +131,9 @@ app.use((req, res, next) => {
 export default async function runApp(
   setup: (app: Express, server: Server) => Promise<void>,
 ) {
+  // Validate environment variables before starting
+  validateEnvOrExit();
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
