@@ -13,7 +13,7 @@
  * - Success cases (200/201)
  */
 
-import { describe, it, expect, beforeAll, vi } from 'vitest';
+
 import request from 'supertest';
 import type { Express } from 'express';
 import { createTestApp } from './helpers/testApp';

@@ -49,6 +49,7 @@ export const logger = pino({
       url: req.url,
       path: req.path,
       query: req.query,
+      requestId: req.requestId,
       headers: {
         'user-agent': req.headers?.['user-agent'],
         'content-type': req.headers?.['content-type'],

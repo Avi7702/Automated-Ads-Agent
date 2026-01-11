@@ -1,9 +1,13 @@
 import { type Server } from "node:http";
 
 import express, { type Express, type Request, Response, NextFunction } from "express";
+import helmet from "helmet";
 import session from "express-session";
 import { registerRoutes } from "./routes";
 import { logger, apiLogger } from "./lib/logger";
+import { requestIdMiddleware } from "./middleware/requestId";
+import { defaultTimeout, haltOnTimeout } from "./middleware/timeout";
+import { initGracefulShutdown, onShutdown } from "./utils/gracefulShutdown";
 
 export function log(message: string, source = "express") {
   // Use structured logger in production, formatted console in development
@@ -15,17 +19,43 @@ export const app = express();
 // Trust proxy for Railway/Heroku/etc - required for secure cookies behind reverse proxy
 app.set('trust proxy', 1);
 
+// Security headers
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Vite dev needs these
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://*.cloudinary.com"],
+      connectSrc: ["'self'", "https://generativelanguage.googleapis.com", "wss:", "ws:"],
+      fontSrc: ["'self'", "data:"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Allow Cloudinary images
+}));
+
+// Request ID for tracing
+app.use(requestIdMiddleware);
+
+// Request timeout (30s default)
+app.use(defaultTimeout);
+app.use(haltOnTimeout);
+
 declare module 'http' {
   interface IncomingMessage {
     rawBody: unknown
   }
 }
 app.use(express.json({
+  limit: '10mb',
   verify: (req, _res, buf) => {
     req.rawBody = buf;
   }
 }));
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
 // Session middleware - uses Redis if available, falls back to memory store
 let sessionStore: session.Store | undefined;
@@ -121,5 +151,14 @@ export default async function runApp(
   const port = parseInt(process.env.PORT || '5000', 10);
   server.listen(port, "0.0.0.0", () => {
     log(`serving on port ${port}`);
+  });
+
+  // Initialize graceful shutdown
+  initGracefulShutdown(server);
+
+  // Register DB cleanup on shutdown (if using direct connection)
+  onShutdown(async () => {
+    logger.info('Closing database connections');
+    // If using Drizzle/pg pool: await pool.end();
   });
 }

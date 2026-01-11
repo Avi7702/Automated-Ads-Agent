@@ -162,12 +162,12 @@ export class BoundedMap<K, V> {
     let oldestKey: K | null = null;
     let oldestTime = Infinity;
 
-    for (const [key, entry] of this.map.entries()) {
+    this.map.forEach((entry, key) => {
       if (entry.lastAccess < oldestTime) {
         oldestTime = entry.lastAccess;
         oldestKey = key;
       }
-    }
+    });
 
     if (oldestKey !== null) {
       this.map.delete(oldestKey);
@@ -182,14 +182,18 @@ export class BoundedMap<K, V> {
     if (!this.isExpired) return;
 
     let removed = 0;
-    const now = Date.now();
+    const keysToDelete: K[] = [];
 
-    for (const [key, entry] of this.map.entries()) {
-      if (this.isExpired(entry.value, String(key))) {
-        this.map.delete(key);
-        removed++;
+    this.map.forEach((entry, key) => {
+      if (this.isExpired!(entry.value, String(key))) {
+        keysToDelete.push(key);
       }
-    }
+    });
+
+    keysToDelete.forEach(key => {
+      this.map.delete(key);
+      removed++;
+    });
 
     this.cleanupCount++;
     this.lastCleanupTime = new Date();

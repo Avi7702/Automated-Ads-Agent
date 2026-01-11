@@ -11,7 +11,7 @@
  * 5. Storage layer CRUD operations
  */
 
-import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
+
 import { z } from 'zod';
 
 // Import schemas (will be created)

@@ -18,7 +18,7 @@
  * - productKnowledgeService.buildEnhancedContext: Enhanced context building
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi, Mock } from 'vitest';
+
 
 // Mock dependencies before importing the service
 vi.mock('../storage', () => ({

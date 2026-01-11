@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, vi, beforeEach } from 'vitest';
+
 import { storage } from '../storage';
 import type { GenerateCopyInput } from '../validation/schemas';
 
@@ -99,9 +99,9 @@ describe('Copywriting Service', () => {
         generationId: testGenerationId,
         platform: 'instagram',
         tone: 'casual',
-        productName: 'EcoDry Towels',
-        productDescription: 'Ultra-absorbent, eco-friendly bamboo towels that dry 3x faster',
-        industry: 'Home Goods',
+        productName: 'T12 Rebar',
+        productDescription: '12mm reinforcement bar for concrete foundations, BS 4449 compliant',
+        industry: 'Construction Steel Supply',
         variations: 1,
       };
 
@@ -119,9 +119,9 @@ describe('Copywriting Service', () => {
         generationId: testGenerationId,
         platform: 'linkedin',
         tone: 'professional',
-        productName: 'ProductivityAI',
-        productDescription: 'AI-powered productivity tool that automates repetitive tasks',
-        industry: 'SaaS',
+        productName: 'Steel Mesh A393',
+        productDescription: 'Welded reinforcement mesh for structural slabs, 8mm wires at 200mm centers',
+        industry: 'Building Materials',
         variations: 1,
       };
 
@@ -136,10 +136,10 @@ describe('Copywriting Service', () => {
       const request: GenerateCopyInput = {
         generationId: testGenerationId,
         platform: 'facebook',
-        tone: 'fun',
-        productName: 'SnackBox',
-        productDescription: 'Healthy snack subscription delivered monthly',
-        industry: 'Food & Beverage',
+        tone: 'professional',
+        productName: 'Spacer Wheels',
+        productDescription: 'Plastic spacers for precise rebar positioning, 25mm-75mm cover range',
+        industry: 'Construction Steel Supply',
         variations: 1,
       };
 
@@ -155,9 +155,9 @@ describe('Copywriting Service', () => {
         generationId: testGenerationId,
         platform: 'twitter',
         tone: 'casual',
-        productName: 'QuickNote',
-        productDescription: 'Lightning-fast note-taking app',
-        industry: 'Productivity',
+        productName: 'Tie Wire Coils',
+        productDescription: 'Annealed wire for binding rebar, 1.6mm gauge, 2kg coils',
+        industry: 'Building Materials',
         variations: 1,
       };
 
@@ -172,10 +172,10 @@ describe('Copywriting Service', () => {
       const request: GenerateCopyInput = {
         generationId: testGenerationId,
         platform: 'tiktok',
-        tone: 'fun',
-        productName: 'DanceShoes',
-        productDescription: 'Professional dance shoes for all styles',
-        industry: 'Apparel',
+        tone: 'professional',
+        productName: 'Continuous High Chairs',
+        productDescription: 'Support spacers for mesh reinforcement, maintains consistent cover',
+        industry: 'Construction Steel Supply',
         variations: 1,
       };
 
@@ -194,9 +194,9 @@ describe('Copywriting Service', () => {
         generationId: testGenerationId,
         platform: 'instagram',
         tone: 'professional',
-        productName: 'FitTracker Pro',
-        productDescription: 'Advanced fitness tracking with AI coaching',
-        industry: 'Health & Fitness',
+        productName: 'A252 Mesh Reinforcement',
+        productDescription: 'Structural mesh sheets for ground-bearing slabs, 7mm wires at 200mm centers',
+        industry: 'Building Materials',
         framework: 'aida',
         variations: 1,
       };
@@ -235,9 +235,9 @@ describe('Copywriting Service', () => {
         generationId: testGenerationId,
         platform: 'facebook',
         tone: 'casual',
-        productName: 'MealPrep Kit',
-        productDescription: 'Complete meal prep solution for busy professionals',
-        industry: 'Food & Beverage',
+        productName: 'Concrete Cover Spacers',
+        productDescription: 'Plastic clip-on spacers for vertical and horizontal applications, UV stabilized',
+        industry: 'Building Materials',
         framework: 'bab',
         variations: 1,
       };
@@ -254,9 +254,9 @@ describe('Copywriting Service', () => {
         generationId: testGenerationId,
         platform: 'linkedin',
         tone: 'professional',
-        productName: 'CloudSync Pro',
-        productDescription: 'Real-time cloud synchronization for teams',
-        industry: 'SaaS',
+        productName: 'Rebar Couplers',
+        productDescription: 'Mechanical splice connections for continuous reinforcement, parallel thread system',
+        industry: 'Construction Steel Supply',
         framework: 'fab',
         variations: 1,
       };
@@ -273,9 +273,9 @@ describe('Copywriting Service', () => {
         generationId: testGenerationId,
         platform: 'instagram',
         tone: 'casual',
-        productName: 'TravelPack',
-        productDescription: 'All-in-one travel backpack with smart organization',
-        industry: 'Travel & Luggage',
+        productName: 'Waterproof Membrane',
+        productDescription: 'DPM for foundations, 1200 gauge polyethylene sheeting for moisture protection',
+        industry: 'Building Materials',
         framework: 'auto',
         campaignObjective: 'awareness',
         variations: 1,
@@ -296,9 +296,9 @@ describe('Copywriting Service', () => {
         generationId: testGenerationId,
         platform: 'instagram',
         tone: 'casual',
-        productName: 'SolarCharger',
-        productDescription: 'Portable solar charger for outdoor adventures',
-        industry: 'Electronics',
+        productName: 'Screed Rails',
+        productDescription: 'K-Form leveling rails for precision floor screeding, adjustable height system',
+        industry: 'Construction Steel Supply',
         variations: 3,
       };
 
@@ -369,13 +369,13 @@ describe('Copywriting Service', () => {
         generationId: testGenerationId,
         platform: 'facebook',
         tone: 'casual',
-        productName: 'BabyMonitor Pro',
-        productDescription: 'Smart baby monitor with AI alerts',
-        industry: 'Parenting',
+        productName: 'Rebar Safety Caps',
+        productDescription: 'Protective end caps for exposed rebar, high-visibility orange, meets OSHA requirements',
+        industry: 'Construction Steel Supply',
         targetAudience: {
-          demographics: 'New parents, ages 25-40',
-          psychographics: 'Safety-conscious, tech-savvy',
-          painPoints: ['Sleep deprivation', 'Anxiety about baby safety'],
+          demographics: 'Site managers, ages 30-55',
+          psychographics: 'Safety-focused, compliance-driven',
+          painPoints: ['Worker safety concerns', 'OSHA compliance requirements'],
         },
         variations: 1,
       };
@@ -421,12 +421,12 @@ describe('Copywriting Service', () => {
         generationId: testGenerationId,
         platform: 'instagram',
         tone: 'professional',
-        productName: 'FitnessCoach AI',
-        productDescription: 'AI-powered personal fitness coaching',
-        industry: 'Health & Fitness',
+        productName: 'Tying Tools',
+        productDescription: 'Rebar binding hand tools for fast wire installation, ergonomic grip design',
+        industry: 'Building Materials',
         socialProof: {
-          testimonial: 'Lost 30 pounds in 3 months! - Sarah M.',
-          stats: '100K+ users, 4.9/5 stars',
+          testimonial: 'Reduced our tying time by 40% on the last project - J. Smith, Site Foreman',
+          stats: '5000+ contractors, trusted by major UK builders',
         },
         variations: 1,
       };
@@ -469,9 +469,9 @@ describe('Copywriting Service', () => {
         generationId: testGenerationId,
         platform: 'instagram',
         tone: 'casual',
-        productName: 'SmartWallet',
-        productDescription: 'RFID-blocking smart wallet with tracking',
-        industry: 'Accessories',
+        productName: 'Wire Dispenser',
+        productDescription: 'Reel-easy wire holder for efficient tie wire dispensing, belt-mountable',
+        industry: 'Building Materials',
         variations: 1,
       };
 
@@ -499,10 +499,10 @@ describe('Copywriting Service', () => {
       const request: GenerateCopyInput = {
         generationId: testGenerationId,
         platform: 'instagram',
-        tone: 'fun',
-        productName: 'YogaMat Plus',
-        productDescription: 'Premium eco-friendly yoga mat',
-        industry: 'Fitness',
+        tone: 'technical',
+        productName: 'Rebar Bender',
+        productDescription: 'Portable rebar bending tool for on-site fabrication, handles up to 16mm bar',
+        industry: 'Construction Steel Supply',
         variations: 1,
       };
 
@@ -526,9 +526,9 @@ describe('Copywriting Service', () => {
         generationId: testGenerationId,
         platform: 'instagram',
         tone: 'casual',
-        productName: 'GreenBottle',
-        productDescription: 'Sustainable water bottle made from recycled materials',
-        industry: 'Sustainability',
+        productName: 'Steel Fixing Chairs',
+        productDescription: 'Pre-formed wire chairs for rebar support, multiple height options available',
+        industry: 'Construction Steel Supply',
         campaignObjective: 'awareness',
         variations: 1,
       };
@@ -546,9 +546,9 @@ describe('Copywriting Service', () => {
         generationId: testGenerationId,
         platform: 'facebook',
         tone: 'professional',
-        productName: 'SalesPro CRM',
-        productDescription: 'CRM that increases sales by 50%',
-        industry: 'SaaS',
+        productName: 'Reinforcement Bundle',
+        productDescription: 'Complete rebar package for residential foundations, includes mesh, spacers, and tie wire',
+        industry: 'Building Materials',
         campaignObjective: 'conversion',
         variations: 1,
       };

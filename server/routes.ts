@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { db, pool } from "./db";
 import { seedBrandProfile } from "./seeds/seedBrandProfile";
 import multer from "multer";
 
@@ -12,6 +13,8 @@ import path from "path";
 import { v2 as cloudinary } from "cloudinary";
 import { authService } from "./services/authService";
 import { requireAuth, optionalAuth } from "./middleware/auth";
+import { extendedTimeout, haltOnTimeout } from "./middleware/timeout";
+import { isServerShuttingDown } from "./utils/gracefulShutdown";
 import { createRateLimiter } from "./middleware/rateLimit";
 import { telemetry } from "./instrumentation";
 import { computeAdaptiveEstimate, estimateGenerationCostMicros, normalizeResolution } from "./services/pricingEstimator";
@@ -80,7 +83,43 @@ const genaiImage = genAI;
 const genai = genaiText;
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Health check endpoint (no rate limiting)
+  // Liveness probe - is the process running?
+  app.get("/api/health/live", (req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
+  // Readiness probe - can we handle traffic?
+  app.get("/api/health/ready", async (req, res) => {
+    if (isServerShuttingDown()) {
+      return res.status(503).json({
+        status: "shutting_down",
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    try {
+      // Check database connectivity with a simple query
+      await pool.query("SELECT 1");
+
+      res.json({
+        status: "ready",
+        timestamp: new Date().toISOString(),
+        checks: {
+          database: "ok"
+        }
+      });
+    } catch (err) {
+      res.status(503).json({
+        status: "not_ready",
+        timestamp: new Date().toISOString(),
+        checks: {
+          database: "failed"
+        }
+      });
+    }
+  });
+
+  // Legacy health endpoint for backwards compatibility
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
@@ -302,7 +341,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Image transformation endpoint (supports both image transformation and text-only generation)
-  app.post("/api/transform", requireAuth, upload.array("images", 6), async (req, res) => {
+  // Extended timeout (120s) for image generation which can take 30-90+ seconds
+  app.post("/api/transform", extendedTimeout, haltOnTimeout, requireAuth, upload.array("images", 6), async (req, res) => {
     const startTime = Date.now();
     const userId = req.user?.id;
     let success = false;
@@ -840,7 +880,8 @@ Consider these product relationships and usage contexts when generating the imag
   });
 
   // Edit generation - Multi-turn image editing using stored conversation history
-  app.post("/api/generations/:id/edit", async (req, res) => {
+  // Extended timeout (120s) for image editing which can take 30-90+ seconds
+  app.post("/api/generations/:id/edit", extendedTimeout, haltOnTimeout, async (req, res) => {
     const startTime = Date.now();
     const userId = (req as any).session?.userId;
     let success = false;
@@ -1497,13 +1538,13 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   // GET /api/ad-templates/categories - Get available categories (must be before :id route)
   app.get("/api/ad-templates/categories", async (_req, res) => {
     try {
-      // Return the predefined categories from PRD
+      // Return construction-focused categories for NDS
       const categories = [
-        { id: "lifestyle", label: "Lifestyle", description: "Home and living scenes" },
-        { id: "professional", label: "Professional", description: "Studio and work environments" },
-        { id: "outdoor", label: "Outdoor", description: "Garden, patio, and landscape" },
-        { id: "luxury", label: "Luxury", description: "High-end showroom and premium" },
-        { id: "seasonal", label: "Seasonal", description: "Holiday and seasonal themes" },
+        { id: "product_showcase", label: "Product Showcase", description: "Rebar, mesh, and materials display" },
+        { id: "installation", label: "Installation", description: "On-site installation and usage" },
+        { id: "worksite", label: "Worksite", description: "Construction site environments" },
+        { id: "professional", label: "Professional", description: "Studio and professional shots" },
+        { id: "outdoor", label: "Outdoor", description: "Outdoor construction contexts" },
       ];
       res.json(categories);
     } catch (error: any) {
@@ -2819,7 +2860,19 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
     try {
       // Use authenticated userId or default system user for single-tenant mode
       const userId = (req.session as any)?.userId || "system-user";
-      const { productId, productIds, uploadDescriptions, userGoal, enableWebSearch, maxSuggestions } = req.body;
+      const {
+        productId, productIds, uploadDescriptions, userGoal,
+        enableWebSearch, maxSuggestions,
+        mode = 'freestyle',  // NEW: default to freestyle for backward compatibility
+        templateId           // NEW: required when mode = 'template'
+      } = req.body;
+
+      // Validate template mode requirements
+      if (mode === 'template' && !templateId) {
+        return res.status(400).json({
+          error: 'templateId is required when mode is "template"'
+        });
+      }
 
       // Support both single productId and multiple productIds
       const ids = productIds || (productId ? [productId] : []);
@@ -2847,6 +2900,8 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
               uploadDescriptions: validUploadDescriptions,
               enableWebSearch: enableWebSearch || false,
               maxSuggestions: 2, // Fewer per product when multiple
+              mode,
+              templateId,
             })
           )
         );
@@ -2896,6 +2951,8 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
         uploadDescriptions: validUploadDescriptions,
         enableWebSearch: enableWebSearch || false,
         maxSuggestions: Math.min(maxSuggestions || 3, 5),
+        mode,
+        templateId,
       });
 
       if (!result.success) {
@@ -2904,6 +2961,20 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
         return res.status(statusCode).json({ error: result.error.message, code: result.error.code });
       }
 
+      // Response shape changes based on mode
+      if (mode === 'template') {
+        // Type assertion: service returns IdeaBankTemplateResponse when mode='template'
+        const templateResponse = result.response as import('@shared/types/ideaBank').IdeaBankTemplateResponse;
+        return res.json({
+          slotSuggestions: templateResponse.slotSuggestions,
+          template: templateResponse.template,
+          mergedPrompt: templateResponse.mergedPrompt,
+          analysisStatus: templateResponse.analysisStatus,
+          recipe: templateResponse.recipe
+        });
+      }
+
+      // Existing freestyle response
       res.json(result.response);
     } catch (error: any) {
       console.error("[Idea Bank Suggest] Error:", error);
