@@ -17,8 +17,12 @@ export function getProductImageUrl(url: string | null | undefined, width: number
   if (!url) return fallback;
 
   // Handle Shopify URLs with {width} placeholder (e.g., nextdaysteel.co.uk)
+  // Also handle URL-encoded version %7Bwidth%7D
   if (url.includes("{width}")) {
     return url.replace("{width}", String(width));
+  }
+  if (url.includes("%7Bwidth%7D")) {
+    return url.replace("%7Bwidth%7D", String(width));
   }
 
   // Handle fake placeholder Cloudinary URLs
