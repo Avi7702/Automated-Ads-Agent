@@ -14,7 +14,7 @@
  * - General web results - trustLevel: 4
  */
 
-import { genAI } from "../../lib/gemini";
+import { generateContentWithRetry } from "../../lib/geminiClient";
 import {
   SOURCE_TRUST_LEVELS,
   DEFAULT_PIPELINE_CONFIG,
@@ -180,7 +180,7 @@ Focus on:
 Return only the JSON array, no additional text.`;
 
   try {
-    const response = await genAI.models.generateContent({
+    const response = await generateContentWithRetry({
       model: SEARCH_MODEL,
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: {
@@ -189,7 +189,7 @@ Return only the JSON array, no additional text.`;
         // Enable Google Search grounding
         tools: [{ googleSearch: {} }],
       },
-    });
+    }, { operation: 'enrichment_source_discovery' });
 
     const text = response.text || "";
 

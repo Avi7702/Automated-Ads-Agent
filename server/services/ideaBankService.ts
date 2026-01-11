@@ -12,7 +12,7 @@
  * Security: KB-first policy, web search disabled by default
  */
 
-import { genAI } from "../lib/gemini";
+import { generateContentWithRetry } from "../lib/geminiClient";
 import { storage } from "../storage";
 import { visionAnalysisService, type VisionAnalysisResult } from "./visionAnalysisService";
 import { queryFileSearchStore } from "./fileSearchService";
@@ -506,14 +506,14 @@ async function generateLLMSuggestions(params: {
     maxSuggestions,
   });
 
-  const response = await genAI.models.generateContent({
+  const response = await generateContentWithRetry({
     model: REASONING_MODEL,
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     config: {
       temperature: 0.7,
       maxOutputTokens: 8000,
     },
-  });
+  }, { operation: 'idea_suggestion' });
 
   const text = response.text || "";
   console.log("[IdeaBank] LLM raw response length:", text.length);
@@ -758,14 +758,14 @@ async function generateTemplateSlotSuggestions(params: {
     maxSuggestions,
   });
 
-  const response = await genAI.models.generateContent({
+  const response = await generateContentWithRetry({
     model: REASONING_MODEL,
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     config: {
       temperature: 0.7,
       maxOutputTokens: 8000,
     },
-  });
+  }, { operation: 'idea_refinement' });
 
   const text = response.text || "";
   console.log("[IdeaBank Template] LLM raw response length:", text.length);

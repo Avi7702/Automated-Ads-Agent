@@ -11,7 +11,7 @@
  */
 
 import { storage } from "../storage";
-import { GoogleGenAI } from "@google/genai";
+import { generateContentWithRetry } from "../lib/geminiClient";
 import type { Product } from "@shared/schema";
 import {
   extractFromSource,
@@ -22,8 +22,6 @@ import {
 import { verifyExtraction } from "./enrichment/gate2-extraction";
 import { SOURCE_TRUST_LEVELS, type ExtractedData } from "./enrichment/types";
 
-// Initialize Gemini client
-const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 // ============================================
 // TYPES
@@ -65,7 +63,7 @@ export interface EnrichmentDraft {
 async function fetchUrlContent(url: string): Promise<string> {
   try {
     // Use Gemini to fetch and summarize the page content
-    const response = await genAI.models.generateContent({
+    const response = await generateContentWithRetry({
       model: "gemini-2.0-flash",
       contents: [
         {
@@ -84,7 +82,7 @@ Return the extracted content as plain text with clear sections.`,
       config: {
         tools: [{ urlContext: {} }],
       },
-    });
+    }, { operation: 'enrichment_url' });
 
     const text = response.text || "";
     if (!text || text.length < 50) {
@@ -169,13 +167,13 @@ Return a JSON object with these fields:
 Only include fields you can confidently extract from the content. Return valid JSON only.`;
 
   try {
-    const response = await genAI.models.generateContent({
+    const response = await generateContentWithRetry({
       model: "gemini-2.0-flash",
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: {
         responseMimeType: "application/json",
       },
-    });
+    }, { operation: 'enrichment_url' });
 
     const text = response.text || "{}";
     const parsed = JSON.parse(text);
@@ -240,9 +238,17 @@ export async function enrichFromUrl(
       };
     }
 
-    // 2. Validate URL
+    // 2. Validate URL (must be HTTP or HTTPS)
     try {
-      new URL(productUrl);
+      const parsedUrl = new URL(productUrl);
+      if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+        return {
+          success: false,
+          productId,
+          enrichmentDraft: null,
+          error: "URL must use HTTP or HTTPS protocol",
+        };
+      }
     } catch {
       return {
         success: false,

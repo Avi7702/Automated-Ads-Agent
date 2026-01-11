@@ -11,7 +11,7 @@
  * Implements caching via productAnalyses table to avoid redundant API calls.
  */
 
-import { genAI } from "../lib/gemini";
+import { generateContentWithRetry } from "../lib/geminiClient";
 import { storage } from "../storage";
 import type { ProductAnalysis, InsertProductAnalysis, Product } from "@shared/schema";
 import { createRateLimitMap } from "../utils/memoryManager";
@@ -168,9 +168,6 @@ export async function analyzeProductImage(
  * Call Gemini Vision API to analyze a product image
  */
 async function callGeminiVision(imageUrl: string, productName: string): Promise<VisionAnalysisResult> {
-  // Use the shared client
-  const model = genAI.models.generateContent;
-
   const prompt = `Analyze this product image for an advertising platform. The product is named "${productName}".
 
 Extract the following information in JSON format:
@@ -188,7 +185,7 @@ Extract the following information in JSON format:
 
 Be accurate and specific. If uncertain about a field, use your best judgment but lower the confidence score.`;
 
-  const response = await genAI.models.generateContent({
+  const response = await generateContentWithRetry({
     model: VISION_MODEL,
     contents: [
       {
@@ -207,7 +204,7 @@ Be accurate and specific. If uncertain about a field, use your best judgment but
     config: {
       temperature: 0.3, // Lower temperature for more consistent results
     },
-  });
+  }, { operation: 'vision_analysis' });
 
   const text = response.text || "";
 
@@ -350,7 +347,7 @@ Example good descriptions:
 - "Construction site showing freshly poured concrete foundation with rebar reinforcement visible"
 - "Professional flooring installation with oak hardwood planks being laid in herringbone pattern"`;
 
-    const response = await genAI.models.generateContent({
+    const response = await generateContentWithRetry({
       model: VISION_MODEL,
       contents: [
         {
@@ -369,7 +366,7 @@ Example good descriptions:
       config: {
         temperature: 0.3,
       },
-    });
+    }, { operation: 'vision_analysis' });
 
     const text = response.text || "";
 

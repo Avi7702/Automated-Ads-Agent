@@ -14,6 +14,7 @@
  */
 
 import { genAI } from '../lib/gemini';
+import { generateContentWithRetry } from '../lib/geminiClient';
 import fs from 'fs/promises';
 import path from 'path';
 import { telemetry } from '../instrumentation';
@@ -286,7 +287,7 @@ export async function queryFileSearchStore(params: {
     // Use Gemini's File Search tool with new SDK pattern
     // Note: File Search tools may not be fully typed in the SDK yet
     // MODEL RECENCY RULE: Before changing any model ID, verify today's date and confirm the model is current within the last 3-4 weeks.
-    const response = await (genAI.models.generateContent as any)({
+    const response = await (generateContentWithRetry as any)({
       model: 'gemini-3-flash-preview',
       contents: [{ role: 'user', parts: [{ text: query }] }],
       tools: [
@@ -297,7 +298,7 @@ export async function queryFileSearchStore(params: {
           },
         },
       ],
-    });
+    }, { operation: 'rag_query' });
 
     const citations = (response as any).citations || [];
     resultsCount = citations.length;

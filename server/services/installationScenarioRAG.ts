@@ -14,7 +14,7 @@
  * 4. Match products to installation scenarios from the database
  */
 
-import { genAI } from '../lib/gemini';
+import { generateContentWithRetry } from '../lib/geminiClient';
 import { storage } from '../storage';
 import { telemetry } from '../instrumentation';
 import { queryFileSearchStore, FileCategory } from './fileSearchService';
@@ -306,13 +306,13 @@ export async function suggestInstallationSteps(
       context.maxSteps
     );
 
-    const response = await genAI.models.generateContent({
+    const response = await generateContentWithRetry({
       model: TEXT_MODEL,
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: {
         temperature: 0.3, // Lower temperature for more consistent results
       }
-    });
+    }, { operation: 'installation_scenario' });
 
     const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
@@ -404,13 +404,13 @@ export async function suggestAccessories(
     // Build accessory prompt
     const prompt = buildAccessoryPrompt(product, roomType, kbContext);
 
-    const response = await genAI.models.generateContent({
+    const response = await generateContentWithRetry({
       model: TEXT_MODEL,
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: {
         temperature: 0.2,
       }
-    });
+    }, { operation: 'installation_scenario' });
 
     const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
 

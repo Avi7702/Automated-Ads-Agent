@@ -12,7 +12,7 @@
  * - Performance-weighted scoring
  */
 
-import { genAI } from '../lib/gemini';
+import { generateContentWithRetry } from '../lib/geminiClient';
 import { storage } from '../storage';
 import { telemetry } from '../instrumentation';
 import type { PerformingAdTemplate } from '@shared/schema';
@@ -517,7 +517,7 @@ Context about this template:
 Respond ONLY with valid JSON.`;
 
   try {
-    const response = await genAI.models.generateContent({
+    const response = await generateContentWithRetry({
       model: 'gemini-2.0-flash',
       contents: [
         {
@@ -533,7 +533,7 @@ Respond ONLY with valid JSON.`;
           ],
         },
       ],
-    });
+    }, { operation: 'template_matching' });
 
     const text = response.text || '';
     const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -611,10 +611,10 @@ Provide suggestions as JSON:
 Respond ONLY with valid JSON.`;
 
   try {
-    const response = await genAI.models.generateContent({
+    const response = await generateContentWithRetry({
       model: 'gemini-2.0-flash',
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    });
+    }, { operation: 'template_matching' });
 
     const text = response.text || '';
     const jsonMatch = text.match(/\{[\s\S]*\}/);

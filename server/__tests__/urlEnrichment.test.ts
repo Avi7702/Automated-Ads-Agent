@@ -12,21 +12,17 @@ vi.mock('../storage', () => ({
   },
 }));
 
-// Mock the shared gemini client
-vi.mock('../lib/gemini', () => ({
-  genAI: {
-    models: {
-      generateContent: vi.fn().mockResolvedValue({
-        text: JSON.stringify({
-          description: 'Test product description',
-          specifications: { material: 'steel' },
-          features: { size: 'large' },
-          benefits: ['durable', 'lightweight'],
-          tags: ['construction', 'outdoor'],
-        }),
-      }),
-    },
-  },
+// Mock the gemini client with retry wrapper
+vi.mock('../lib/geminiClient', () => ({
+  generateContentWithRetry: vi.fn().mockResolvedValue({
+    text: JSON.stringify({
+      description: 'Test product description',
+      specifications: { material: 'steel' },
+      features: { size: 'large' },
+      benefits: ['durable', 'lightweight'],
+      tags: ['construction', 'outdoor'],
+    }),
+  }),
 }));
 
 import { enrichFromUrl, saveEnrichmentDraft, type EnrichmentDraft } from '../services/enrichmentServiceWithUrl';

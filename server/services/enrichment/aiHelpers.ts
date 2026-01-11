@@ -5,7 +5,7 @@
  * These functions power the 4-gate verification system.
  */
 
-import { genAI } from "../../lib/gemini";
+import { generateContentWithRetry } from "../../lib/geminiClient";
 import type {
   ComparisonResult,
   EquivalenceResult,
@@ -73,11 +73,11 @@ Consider:
 }`;
 
   try {
-    const response = await genAI.models.generateContent({
+    const response = await generateContentWithRetry({
       model: TEXT_MODEL,
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: { temperature: 0.1 },
-    });
+    }, { operation: 'enrichment_ai' });
 
     const text = response.text || "";
     const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -120,7 +120,7 @@ Compare the two images and determine:
 }`;
 
   try {
-    const response = await genAI.models.generateContent({
+    const response = await generateContentWithRetry({
       model: VISION_MODEL,
       contents: [
         {
@@ -133,7 +133,7 @@ Compare the two images and determine:
         },
       ],
       config: { temperature: 0.1 },
-    });
+    }, { operation: 'enrichment_ai' });
 
     const text = response.text || "";
     const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -192,11 +192,11 @@ Extract the following information about the product. Be accurate - only include 
 Only include fields that have explicit information in the source content. Leave fields empty ("" or []) if not found.`;
 
   try {
-    const response = await genAI.models.generateContent({
+    const response = await generateContentWithRetry({
       model: TEXT_MODEL,
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: { temperature: 0.1, maxOutputTokens: 2000 },
-    });
+    }, { operation: 'enrichment_ai' });
 
     const text = response.text || "";
     const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -249,11 +249,11 @@ Find and extract ONLY the ${fieldName} information. Return the exact value as it
 Return ONLY the extracted value, nothing else. If not found, return "NOT_FOUND".`;
 
   try {
-    const response = await genAI.models.generateContent({
+    const response = await generateContentWithRetry({
       model: TEXT_MODEL,
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: { temperature: 0.1, maxOutputTokens: 500 },
-    });
+    }, { operation: 'enrichment_ai' });
 
     const text = (response.text || "").trim();
     return text === "NOT_FOUND" ? "" : text;
@@ -297,11 +297,11 @@ Determine if the source content:
 }`;
 
   try {
-    const response = await genAI.models.generateContent({
+    const response = await generateContentWithRetry({
       model: TEXT_MODEL,
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: { temperature: 0.1 },
-    });
+    }, { operation: 'enrichment_ai' });
 
     const text = response.text || "";
     const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -355,11 +355,11 @@ Determine if all these values represent the SAME measurement or property:
 }`;
 
   try {
-    const response = await genAI.models.generateContent({
+    const response = await generateContentWithRetry({
       model: TEXT_MODEL,
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: { temperature: 0.1 },
-    });
+    }, { operation: 'enrichment_ai' });
 
     const text = response.text || "";
     const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -418,11 +418,11 @@ Ignore marketing language and subjective statements.
 }`;
 
   try {
-    const response = await genAI.models.generateContent({
+    const response = await generateContentWithRetry({
       model: TEXT_MODEL,
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: { temperature: 0.1, maxOutputTokens: 1500 },
-    });
+    }, { operation: 'enrichment_ai' });
 
     const text = response.text || "";
     const jsonMatch = text.match(/\{[\s\S]*\}/);

@@ -10,7 +10,7 @@
  * Human-in-the-loop: All AI-generated data requires user verification
  */
 
-import { genAI } from "../lib/gemini";
+import { generateContentWithRetry } from "../lib/geminiClient";
 import { storage } from "../storage";
 import { visionAnalysisService } from "./visionAnalysisService";
 import type { Product, InsertProduct } from "@shared/schema";
@@ -286,7 +286,7 @@ async function generateDraftViaLLM(
     config.tools = [{ googleSearch: {} }];
   }
 
-  const response = await genAI.models.generateContent({
+  const response = await generateContentWithRetry({
     model: ENRICHMENT_MODEL,
     contents: [
       {
@@ -303,7 +303,7 @@ async function generateDraftViaLLM(
       },
     ],
     config,
-  });
+  }, { operation: 'product_enrichment' });
 
   const text = response.text || "";
 

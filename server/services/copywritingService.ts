@@ -1,4 +1,4 @@
-import { genAI } from '../lib/gemini';
+import { generateContentWithRetry } from '../lib/geminiClient';
 import type { GenerateCopyInput } from '../validation/schemas';
 import { getFileSearchStoreForGeneration, queryFileSearchStore, FileCategory } from './fileSearchService';
 
@@ -144,7 +144,7 @@ class CopywritingService {
     }
 
     // MODEL RECENCY RULE: Before changing any model ID, verify today's date and confirm the model is current within the last 3-4 weeks.
-    const response = await genAI.models.generateContent({
+    const response = await generateContentWithRetry({
       model: 'gemini-3-pro-preview',
       contents: [
         {
@@ -158,7 +158,7 @@ class CopywritingService {
         responseSchema: this.getResponseSchema(request.platform),
       },
       ...(tools && { tools }),
-    });
+    }, { operation: 'ad_copy_generation' });
     const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const generatedCopy = JSON.parse(text);
 

@@ -13,7 +13,7 @@
  * - upgrades: Products that are premium alternatives
  */
 
-import { genAI } from '../lib/gemini';
+import { generateContentWithRetry } from '../lib/geminiClient';
 import { storage } from '../storage';
 import { telemetry } from '../instrumentation';
 import { queryFileSearchStore, FileCategory } from './fileSearchService';
@@ -217,13 +217,13 @@ export async function suggestRelationships(
     );
 
     // 10. Call Gemini for relationship analysis
-    const response = await genAI.models.generateContent({
+    const response = await generateContentWithRetry({
       model: TEXT_MODEL,
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: {
         temperature: 0.3, // Lower temperature for more consistent results
       }
-    });
+    }, { operation: 'relationship_discovery' });
 
     const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
@@ -418,13 +418,13 @@ export async function analyzeRelationshipType(
     );
 
     // Call Gemini for analysis
-    const response = await genAI.models.generateContent({
+    const response = await generateContentWithRetry({
       model: TEXT_MODEL,
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: {
         temperature: 0.2, // Low temperature for analytical tasks
       }
-    });
+    }, { operation: 'relationship_discovery' });
 
     const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
 

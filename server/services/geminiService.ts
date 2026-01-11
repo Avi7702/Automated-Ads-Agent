@@ -1,4 +1,4 @@
-import { genAI } from '../lib/gemini';
+import { generateContentWithRetry } from '../lib/geminiClient';
 import { telemetry } from '../instrumentation';
 
 export interface ConversationMessage {
@@ -69,13 +69,13 @@ export class GeminiService {
       ];
 
       // Generate content using the new SDK pattern
-      const response = await genAI.models.generateContent({
+      const response = await generateContentWithRetry({
         model: this.modelName,
         contents: parts,
         config: {
           responseModalities: ['TEXT', 'IMAGE']
         }
-      });
+      }, { operation: 'image_generation' });
 
       // Extract image data from response
       const candidate = response.candidates?.[0];
@@ -164,13 +164,13 @@ export class GeminiService {
       }));
 
       // Generate content using the new SDK pattern
-      const response = await genAI.models.generateContent({
+      const response = await generateContentWithRetry({
         model: this.modelName,
         contents,
         config: {
           responseModalities: ['TEXT', 'IMAGE']
         }
-      });
+      }, { operation: 'image_editing' });
 
       // Extract image data from response
       const candidate = response.candidates?.[0];
