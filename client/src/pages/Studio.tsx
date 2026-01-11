@@ -886,7 +886,7 @@ export default function Studio() {
         {/* Desktop: 2-column grid, Mobile: single column */}
         <div className="lg:grid lg:grid-cols-[1fr_400px] lg:gap-8">
           {/* Left Column - All Inputs (scrollable) */}
-          <div className="space-y-8">
+          <div className="space-y-8 min-w-0 overflow-hidden">
           {/* Hero Section */}
           <motion.div
             ref={heroRef}
@@ -1807,8 +1807,8 @@ export default function Studio() {
           </div>
 
           {/* Right Column - LinkedIn Preview (Always Visible, Sticky on Desktop) */}
-          <div className="hidden lg:block">
-            <div className="sticky top-24 max-h-[calc(100vh-120px)] overflow-y-auto">
+          <div className="hidden lg:block min-w-0">
+            <div className="sticky top-24 max-h-[calc(100vh-120px)] overflow-y-auto w-full">
               <div className="rounded-2xl border border-border bg-card/30 backdrop-blur-sm p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <Eye className="w-5 h-5 text-primary" />
