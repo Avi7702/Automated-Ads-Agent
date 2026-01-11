@@ -373,7 +373,7 @@ export default function Studio() {
 
   // Generation path selection: Freestyle vs Template mode
   const [generationMode, setGenerationMode] = useState<'freestyle' | 'template'>('freestyle');
-  const [selectedTemplateIdForMode, setSelectedTemplateIdForMode] = useState<string | null>(null);
+  const [selectedTemplateForMode, setSelectedTemplateForMode] = useState<AdSceneTemplate | null>(null);
 
   // Refs for scroll tracking
   const generateButtonRef = useRef<HTMLDivElement>(null);
@@ -1231,7 +1231,7 @@ export default function Studio() {
                   <button
                     onClick={() => {
                       setGenerationMode('freestyle');
-                      setSelectedTemplateIdForMode(null);
+                      setSelectedTemplateForMode(null);
                     }}
                     className={cn(
                       "p-6 rounded-xl border-2 transition-all text-left group",
@@ -1307,11 +1307,11 @@ export default function Studio() {
                           <Layout className="w-4 h-4 text-primary" />
                           <span className="font-medium">Select a Template</span>
                         </div>
-                        {selectedTemplateIdForMode && (
+                        {selectedTemplateForMode?.id && (
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => setSelectedTemplateIdForMode(null)}
+                            onClick={() => setSelectedTemplateForMode(null)}
                           >
                             <X className="w-4 h-4 mr-1" />
                             Clear
@@ -1320,9 +1320,9 @@ export default function Studio() {
                       </div>
                       <TemplateLibrary
                         onSelectTemplate={(template: AdSceneTemplate) => {
-                          setSelectedTemplateIdForMode(template.id);
+                          setSelectedTemplateForMode(template);
                         }}
-                        selectedTemplateId={selectedTemplateIdForMode || undefined}
+                        selectedTemplateId={selectedTemplateForMode?.id || undefined}
                         className="max-h-[400px] overflow-y-auto"
                       />
                     </div>
@@ -1691,7 +1691,7 @@ export default function Studio() {
                     selectedPromptId={selectedSuggestion?.id}
                     isGenerating={state === "generating"}
                     mode={generationMode}
-                    templateId={selectedTemplateIdForMode || undefined}
+                    templateId={selectedTemplateForMode?.id || undefined}
                     onSlotSuggestionSelect={(suggestion: TemplateSlotSuggestion, mergedPrompt: string) => {
                       // When user selects a slot suggestion in template mode,
                       // set the merged prompt for generation
@@ -1819,7 +1819,7 @@ export default function Studio() {
                   authorName={authUser?.email?.split("@")[0] || "Your Company"}
                   authorHeadline="Building Products | Construction Solutions"
                   postText={generatedCopy || null}
-                  imageUrl={generatedImage || null}
+                  imageUrl={generatedImage || selectedTemplateForMode?.previewImageUrl || null}
                   isEditable={true}
                   onTextChange={(text) => setGeneratedCopy(text)}
                   onGenerateCopy={generationId ? handleGenerateCopy : undefined}
