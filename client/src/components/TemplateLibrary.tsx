@@ -20,7 +20,7 @@ const categories = [
   { value: "installation", label: "Installation" },
   { value: "worksite", label: "Worksite" },
   { value: "professional", label: "Professional" },
-  { value: "outdoor", label: "Outdoor" },
+  { value: "educational", label: "Educational" },
 ];
 
 export function TemplateLibrary({

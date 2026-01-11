@@ -21,11 +21,11 @@ export function TemplateCard({ template, onSelect, isSelected }: TemplateCardPro
   // Get category color (light mode readable + dark mode optimized)
   const getCategoryColor = (category: string) => {
     const colors: Record<string, string> = {
-      lifestyle: "bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30",
+      product_showcase: "bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30",
       professional: "bg-purple-500/20 text-purple-700 dark:text-purple-300 border-purple-500/30",
-      outdoor: "bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30",
-      luxury: "bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30",
-      seasonal: "bg-pink-500/20 text-pink-700 dark:text-pink-300 border-pink-500/30",
+      installation: "bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30",
+      worksite: "bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30",
+      educational: "bg-pink-500/20 text-pink-700 dark:text-pink-300 border-pink-500/30",
     };
     return colors[category] || "bg-gray-500/20 text-gray-700 dark:text-gray-300 border-gray-500/30";
   };
