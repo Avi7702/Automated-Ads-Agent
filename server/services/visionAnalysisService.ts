@@ -14,9 +14,11 @@
 import { genAI } from "../lib/gemini";
 import { storage } from "../storage";
 import type { ProductAnalysis, InsertProductAnalysis, Product } from "@shared/schema";
+import { createRateLimitMap } from "../utils/memoryManager";
 
 // Rate limiting: max 10 analysis requests per minute per user
-const userAnalysisCount = new Map<string, { count: number; resetAt: number }>();
+// Now bounded with automatic cleanup of expired entries (max 10000 users)
+const userAnalysisCount = createRateLimitMap<{ count: number; resetAt: number }>('VisionRateLimit', 10000);
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 10;
 

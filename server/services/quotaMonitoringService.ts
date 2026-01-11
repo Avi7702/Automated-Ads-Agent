@@ -5,6 +5,7 @@
 
 import { storage } from "../storage";
 import type { InsertGeminiQuotaMetrics, InsertGeminiRateLimitEvent, GeminiQuotaAlert } from "@shared/schema";
+import { createQuotaMetricsMap } from "../utils/memoryManager";
 
 // Gemini Free Tier Limits (December 2025)
 export const GEMINI_FREE_TIER_LIMITS = {
@@ -46,11 +47,12 @@ export interface TrackApiCallParams {
 }
 
 // In-memory tracking for minute-level metrics (faster than DB queries)
-const inMemoryMetrics: Map<string, {
+// Now bounded with automatic cleanup of expired entries (max 5000 brands)
+const inMemoryMetrics = createQuotaMetricsMap<{
   requestsThisMinute: number;
   tokensThisMinute: number;
   windowStart: number;
-}> = new Map();
+}>('QuotaMetrics', 5000);
 
 /**
  * Get the start of the current minute window

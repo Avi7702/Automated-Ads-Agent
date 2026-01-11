@@ -2,13 +2,15 @@ import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { storage } from '../storage';
 import type { User } from '../../shared/schema';
+import { createAuthFailedLoginsMap } from '../utils/memoryManager';
 
 const BCRYPT_ROUNDS = 12;
 const LOCKOUT_THRESHOLD = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 
-// In-memory failed login tracking (in production, use Redis)
-const failedLogins = new Map<string, { count: number; lockedUntil?: number }>();
+// In-memory failed login tracking
+// Now bounded with automatic cleanup of expired lockouts (max 5000 entries)
+const failedLogins = createAuthFailedLoginsMap(5000);
 
 export interface AuthResult {
   success: boolean;

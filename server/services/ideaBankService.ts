@@ -31,6 +31,7 @@ import type {
   GenerationRecipeScenario,
 } from "@shared/types/ideaBank";
 import type { Product, AdSceneTemplate, BrandProfile } from "@shared/schema";
+import { createRateLimitMap } from "../utils/memoryManager";
 
 // LLM model for reasoning - use Gemini 3 Flash for speed
 // MODEL RECENCY RULE: Before changing any model ID, verify today's date and confirm the model is current within the last 3-4 weeks.
@@ -38,7 +39,8 @@ const REASONING_MODEL = process.env.GEMINI_REASONING_MODEL || "gemini-3-flash-pr
 
 
 // Rate limiting for suggest endpoint
-const userSuggestCount = new Map<string, { count: number; resetAt: number }>();
+// Now bounded with automatic cleanup of expired entries (max 10000 users)
+const userSuggestCount = createRateLimitMap<{ count: number; resetAt: number }>('IdeaBankRateLimit', 10000);
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 20;
 
