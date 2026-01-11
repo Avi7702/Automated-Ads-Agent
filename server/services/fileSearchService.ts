@@ -13,6 +13,7 @@
  * Docs: https://ai.google.dev/gemini-api/docs/file-search
  */
 
+import { logger } from '../lib/logger';
 import { genAI } from '../lib/gemini';
 import { generateContentWithRetry } from '../lib/geminiClient';
 import fs from 'fs/promises';
@@ -97,7 +98,7 @@ export async function initializeFileSearchStore(): Promise<any | null> {
     // Check if store already exists
     const stores = await (genAI as any).fileSearchStores?.list?.();
     if (!stores || !Array.isArray(stores)) {
-      console.log('[FileSearch] File Search Store API not available');
+      logger.info({ module: 'FileSearch' }, 'File Search Store API not available');
       return null;
     }
 
@@ -106,22 +107,22 @@ export async function initializeFileSearchStore(): Promise<any | null> {
     );
 
     if (existingStore) {
-      console.log('✅ Found existing File Search Store:', existingStore.name);
+      logger.info({ module: 'FileSearch', storeName: existingStore.name }, 'Found existing File Search Store');
       return existingStore;
     }
 
     // Create new store
-    console.log('📁 Creating new File Search Store...');
+    logger.info({ module: 'FileSearch' }, 'Creating new File Search Store');
     const newStore = await (genAI as any).fileSearchStores.create({
       config: {
         displayName: FILE_SEARCH_STORE_NAME,
       },
     });
 
-    console.log('✅ Created File Search Store:', newStore.name);
+    logger.info({ module: 'FileSearch', storeName: newStore.name }, 'Created File Search Store');
     return newStore;
   } catch (error) {
-    console.error('❌ Error initializing File Search Store:', error);
+    logger.error({ module: 'FileSearch', err: error }, 'Error initializing File Search Store');
     return null;
   }
 }
@@ -167,7 +168,7 @@ export async function uploadReferenceFile(params: {
     }
 
     // Upload file to File Search Store
-    console.log(`📤 Uploading ${fileName} to File Search Store...`);
+    logger.info({ module: 'FileSearch', fileName }, 'Uploading file to File Search Store');
     const operation = await (genAI as any).fileSearchStores.uploadToFileSearchStore({
       file: filePath,
       fileSearchStoreName: store.name,
@@ -185,7 +186,7 @@ export async function uploadReferenceFile(params: {
 
     // Wait for operation to complete
     const result = await operation.result();
-    console.log(`✅ Uploaded ${fileName}:`, result.name);
+    logger.info({ module: 'FileSearch', fileName, fileId: result.name }, 'Uploaded file');
 
     success = true;
 
@@ -199,7 +200,7 @@ export async function uploadReferenceFile(params: {
   } catch (error) {
     success = false;
     errorType = error instanceof Error ? error.name : 'UnknownError';
-    console.error(`❌ Error uploading file ${filePath}:`, error);
+    logger.error({ module: 'FileSearch', filePath, err: error }, 'Error uploading file');
     throw error;
   } finally {
     // Track upload metrics
@@ -234,7 +235,7 @@ export async function listReferenceFiles(category?: FileCategory) {
 
     return files;
   } catch (error) {
-    console.error('❌ Error listing files:', error);
+    logger.error({ module: 'FileSearch', err: error }, 'Error listing files');
     throw error;
   }
 }
@@ -250,10 +251,10 @@ export async function deleteReferenceFile(fileId: string) {
       fileName: fileId,
     });
 
-    console.log(`✅ Deleted file: ${fileId}`);
+    logger.info({ module: 'FileSearch', fileId }, 'Deleted file');
     return { success: true };
   } catch (error) {
-    console.error(`❌ Error deleting file ${fileId}:`, error);
+    logger.error({ module: 'FileSearch', fileId, err: error }, 'Error deleting file');
     throw error;
   }
 }
@@ -313,7 +314,7 @@ export async function queryFileSearchStore(params: {
   } catch (error) {
     success = false;
     errorType = error instanceof Error ? error.name : 'UnknownError';
-    console.error('❌ Error querying File Search Store:', error);
+    logger.error({ module: 'FileSearch', err: error }, 'Error querying File Search Store');
     throw error;
   } finally {
     // Track query metrics
@@ -371,10 +372,10 @@ export async function uploadDirectoryToFileSearch(params: {
       }
     }
 
-    console.log(`✅ Uploaded ${results.length} files from ${directoryPath}`);
+    logger.info({ module: 'FileSearch', directoryPath, fileCount: results.length }, 'Uploaded files from directory');
     return results;
   } catch (error) {
-    console.error(`❌ Error uploading directory ${directoryPath}:`, error);
+    logger.error({ module: 'FileSearch', directoryPath, err: error }, 'Error uploading directory');
     throw error;
   }
 }
@@ -384,7 +385,7 @@ export async function uploadDirectoryToFileSearch(params: {
  * Call this once to bootstrap the system with NDS examples
  */
 export async function seedFileSearchStore() {
-  console.log('🌱 Seeding File Search Store with initial reference materials...');
+  logger.info({ module: 'FileSearch' }, 'Seeding File Search Store with initial reference materials');
 
   try {
     // Create reference materials directory if it doesn't exist
@@ -397,35 +398,11 @@ export async function seedFileSearchStore() {
       await fs.mkdir(path.join(refDir, category), { recursive: true });
     }
 
-    console.log(`
-✅ Created reference materials directory structure:
-   ${refDir}/
-   ├── brand_guidelines/
-   ├── ad_examples/
-   ├── product_catalog/
-   ├── competitor_research/
-   ├── performance_data/
-   ├── general/
-   ├── installation_guides/
-   ├── product_relationships/
-   ├── brand_image_guidelines/
-   └── template_library/
-
-📝 Next steps:
-   1. Add your NDS ad examples to: ${refDir}/ad_examples/
-   2. Add brand guidelines to: ${refDir}/brand_guidelines/
-   3. Add product catalogs to: ${refDir}/product_catalog/
-   4. Add installation guides to: ${refDir}/installation_guides/
-   5. Add product relationship docs to: ${refDir}/product_relationships/
-   6. Run: POST /api/file-search/upload-directory to index them
-
-💡 Supported formats: PDF, DOCX, TXT, MD, CSV, XLSX, PPTX, and more
-   Max file size: 100 MB per file
-    `);
+    logger.info({ module: 'FileSearch', referenceDir: refDir }, 'Created reference materials directory structure');
 
     return { success: true, referenceDir: refDir };
   } catch (error) {
-    console.error('❌ Error seeding File Search Store:', error);
+    logger.error({ module: 'FileSearch', err: error }, 'Error seeding File Search Store');
     throw error;
   }
 }

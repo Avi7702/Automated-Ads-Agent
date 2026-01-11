@@ -10,6 +10,7 @@
  * single user-provided URL instead of auto-discovering sources.
  */
 
+import { logger } from "../lib/logger";
 import { storage } from "../storage";
 import { generateContentWithRetry } from "../lib/geminiClient";
 import type { Product } from "@shared/schema";
@@ -91,7 +92,7 @@ Return the extracted content as plain text with clear sections.`,
 
     return text;
   } catch (error: any) {
-    console.error(`[UrlEnrichment] Failed to fetch URL content: ${error.message}`);
+    logger.error({ module: 'UrlEnrichment', err: error }, 'Failed to fetch URL content');
     throw new Error(`Failed to fetch URL: ${error.message}`);
   }
 }
@@ -186,7 +187,7 @@ Only include fields you can confidently extract from the content. Return valid J
       tags: Array.isArray(parsed.tags) ? parsed.tags : [],
     };
   } catch (error: any) {
-    console.error(`[UrlEnrichment] AI extraction failed: ${error.message}`);
+    logger.error({ module: 'UrlEnrichment', err: error }, 'AI extraction failed');
 
     // Fallback: use existing extraction methods
     const extractedData: ExtractedData = {
@@ -224,7 +225,7 @@ export async function enrichFromUrl(
 ): Promise<UrlEnrichmentOutput> {
   const { productId, productUrl } = input;
 
-  console.log(`[UrlEnrichment] Starting enrichment for ${productId} from ${productUrl}`);
+  logger.info({ module: 'UrlEnrichment', productId, productUrl }, 'Starting enrichment');
 
   try {
     // 1. Validate and fetch product
@@ -259,11 +260,11 @@ export async function enrichFromUrl(
     }
 
     // 3. Fetch URL content
-    console.log(`[UrlEnrichment] Fetching content from URL...`);
+    logger.info({ module: 'UrlEnrichment' }, 'Fetching content from URL');
     const content = await fetchUrlContent(productUrl);
 
     // 4. Extract product data using AI
-    console.log(`[UrlEnrichment] Extracting product data...`);
+    logger.info({ module: 'UrlEnrichment' }, 'Extracting product data');
     const extracted = await extractProductData(content, product.name);
 
     // 5. Calculate confidence based on data quality
@@ -306,7 +307,7 @@ export async function enrichFromUrl(
       generatedAt: new Date().toISOString(),
     };
 
-    console.log(`[UrlEnrichment] Enrichment complete with ${confidence.toFixed(0)}% confidence`);
+    logger.info({ module: 'UrlEnrichment', confidence: Math.round(confidence) }, 'Enrichment complete');
 
     return {
       success: true,
@@ -314,7 +315,7 @@ export async function enrichFromUrl(
       enrichmentDraft,
     };
   } catch (error: any) {
-    console.error(`[UrlEnrichment] Error: ${error.message}`);
+    logger.error({ module: 'UrlEnrichment', err: error }, 'Enrichment error');
     return {
       success: false,
       productId,
@@ -339,7 +340,7 @@ export async function saveEnrichmentDraft(
     });
     return true;
   } catch (error: any) {
-    console.error(`[UrlEnrichment] Failed to save draft: ${error.message}`);
+    logger.error({ module: 'UrlEnrichment', err: error }, 'Failed to save draft');
     return false;
   }
 }

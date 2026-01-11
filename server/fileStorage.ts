@@ -2,6 +2,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 import { v2 as cloudinary } from "cloudinary";
+import { logger } from './lib/logger';
 
 const STORAGE_BASE = path.join(process.cwd(), "attached_assets", "generations");
 const ORIGINALS_DIR = path.join(STORAGE_BASE, "originals");
@@ -20,9 +21,9 @@ if (isCloudinaryConfigured) {
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET,
   });
-  console.log("[fileStorage] Cloudinary configured for persistent storage");
+  logger.info({ module: 'fileStorage' }, 'Cloudinary configured for persistent storage');
 } else {
-  console.warn("[fileStorage] Cloudinary not configured - using local storage (images will be lost on deploy)");
+  logger.warn({ module: 'fileStorage' }, 'Cloudinary not configured - using local storage (images will be lost on deploy)');
 }
 
 async function ensureDirectories() {
@@ -105,11 +106,11 @@ export async function saveGeneratedImage(
         );
       });
 
-      console.log(`[fileStorage] Uploaded to Cloudinary: ${uploadResult.public_id}`);
+      logger.info({ module: 'fileStorage', publicId: uploadResult.public_id }, 'Uploaded to Cloudinary');
       // Return the secure URL for the image
       return uploadResult.secure_url;
     } catch (error) {
-      console.error("[fileStorage] Cloudinary upload failed, falling back to local:", error);
+      logger.error({ module: 'fileStorage', err: error }, 'Cloudinary upload failed, falling back to local');
       // Fall through to local storage
     }
   }
@@ -142,7 +143,7 @@ export async function deleteFile(pathOrUrl: string): Promise<void> {
   // Check if this is a Cloudinary URL
   if (pathOrUrl.startsWith("https://res.cloudinary.com/")) {
     if (!isCloudinaryConfigured) {
-      console.warn("[fileStorage] Cannot delete Cloudinary file - not configured");
+      logger.warn({ module: 'fileStorage' }, 'Cannot delete Cloudinary file - not configured');
       return;
     }
 
@@ -158,13 +159,13 @@ export async function deleteFile(pathOrUrl: string): Promise<void> {
         cloudinary.uploader.destroy(publicId, { resource_type: "image" }, (error, result) => {
           if (error) reject(error);
           else {
-            console.log(`[fileStorage] Deleted from Cloudinary: ${publicId}`);
+            logger.info({ module: 'fileStorage', publicId }, 'Deleted from Cloudinary');
             resolve();
           }
         });
       });
     } catch (error) {
-      console.error(`[fileStorage] Failed to delete from Cloudinary: ${pathOrUrl}`, error);
+      logger.error({ module: 'fileStorage', pathOrUrl, err: error }, 'Failed to delete from Cloudinary');
     }
     return;
   }
@@ -174,14 +175,14 @@ export async function deleteFile(pathOrUrl: string): Promise<void> {
 
   // Verify the path is within the storage directory
   if (!isPathSafe(STORAGE_BASE, filepath)) {
-    console.error(`[fileStorage] Attempted path traversal: ${pathOrUrl}`);
+    logger.error({ module: 'fileStorage', pathOrUrl }, 'Attempted path traversal');
     throw new Error('Invalid file path');
   }
 
   try {
     await fs.unlink(filepath);
   } catch (error) {
-    console.error(`Failed to delete file ${pathOrUrl}:`, error);
+    logger.error({ module: 'fileStorage', pathOrUrl, err: error }, 'Failed to delete file');
   }
 }
 

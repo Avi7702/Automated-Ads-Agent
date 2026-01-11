@@ -1,8 +1,10 @@
 /**
  * OpenTelemetry Instrumentation for Automated-Ads-Agent
- * 
+ *
  * This module is OPTIONAL - the app works without OpenTelemetry packages installed.
  */
+
+import { logger } from './lib/logger';
 
 const OTEL_PACKAGES_AVAILABLE = (() => {
   try {
@@ -14,7 +16,7 @@ const OTEL_PACKAGES_AVAILABLE = (() => {
 })();
 
 if (!OTEL_PACKAGES_AVAILABLE) {
-  console.log('Telemetry disabled - OpenTelemetry packages not installed');
+  logger.info({ module: 'otel' }, 'Telemetry disabled - OpenTelemetry packages not installed');
 }
 
 let NodeSDK: any, getNodeAutoInstrumentations: any, OTLPTraceExporter: any;
@@ -482,24 +484,25 @@ if (OTEL_ENABLED && OTEL_PACKAGES_AVAILABLE) {
   // Initialize custom metrics after SDK starts
   initializeCustomMetrics();
 
-  console.log(`📊 OpenTelemetry initialized`);
-  console.log(`   Service: ${SERVICE_NAME} v${SERVICE_VERSION}`);
-  console.log(`   Environment: ${DEPLOYMENT_ENV}`);
-  console.log(`   Exporting to: ${OTEL_ENDPOINT}`);
-  if (Object.keys(headers).length > 0) {
-    console.log(`   Auth headers configured: ${Object.keys(headers).join(', ')}`);
-  }
+  logger.info({
+    module: 'otel',
+    serviceName: SERVICE_NAME,
+    serviceVersion: SERVICE_VERSION,
+    environment: DEPLOYMENT_ENV,
+    endpoint: OTEL_ENDPOINT,
+    authHeaders: Object.keys(headers).length > 0 ? Object.keys(headers) : undefined
+  }, 'OpenTelemetry initialized');
 
   // Graceful shutdown
   process.on('SIGTERM', () => {
     otelSdk
       .shutdown()
-      .then(() => console.log('OpenTelemetry SDK shut down successfully'))
-      .catch((error: any) => console.error('Error shutting down OpenTelemetry SDK', error))
+      .then(() => logger.info({ module: 'otel' }, 'OpenTelemetry SDK shut down successfully'))
+      .catch((error: any) => logger.error({ module: 'otel', err: error }, 'Error shutting down OpenTelemetry SDK'))
       .finally(() => process.exit(0));
   });
 } else {
-  console.log('📊 OpenTelemetry disabled (OTEL_ENABLED=false)');
+  logger.info({ module: 'otel' }, 'OpenTelemetry disabled (OTEL_ENABLED=false)');
 }
 
 export {};

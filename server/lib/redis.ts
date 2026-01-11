@@ -1,4 +1,5 @@
 import Redis from 'ioredis';
+import { logger } from './logger';
 
 let redisClient: Redis | null = null;
 
@@ -10,7 +11,7 @@ export function getRedisClient(): Redis {
       maxRetriesPerRequest: 3,
       retryStrategy: (times) => {
         if (times > 3) {
-          console.error('Redis connection failed after 3 retries');
+          logger.error({ module: 'Redis', retries: times }, 'Connection failed after 3 retries');
           return null;
         }
         return Math.min(times * 100, 3000);
@@ -19,11 +20,11 @@ export function getRedisClient(): Redis {
     });
 
     redisClient.on('error', (err) => {
-      console.error('Redis error:', err.message);
+      logger.error({ module: 'Redis', err }, 'Redis error occurred');
     });
 
     redisClient.on('connect', () => {
-      console.log('Redis connected');
+      logger.info({ module: 'Redis' }, 'Redis connected');
     });
   }
 

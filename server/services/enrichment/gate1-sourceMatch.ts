@@ -14,6 +14,7 @@
  * - SKIP: confidence < 60 (don't use this source)
  */
 
+import { logger } from "../../lib/logger";
 import {
   aiCompareDescriptions,
   aiCompareImages,
@@ -78,7 +79,7 @@ export async function verifySourceMatch(
           }
         } catch (imgErr) {
           // Individual image comparison failed, continue with others
-          console.warn(`[Gate1] Failed to compare image ${sourceImageUrl}:`, imgErr);
+          logger.warn({ module: 'Gate1', imageUrl: sourceImageUrl, err: imgErr }, 'Failed to compare image');
         }
       }
 
@@ -88,7 +89,7 @@ export async function verifySourceMatch(
         mismatchReasons.push(`Visual mismatch: ${visualSimilarity.reasoning}`);
       }
     } catch (err) {
-      console.warn("[Gate1] Visual comparison failed:", err);
+      logger.warn({ module: 'Gate1', err }, 'Visual comparison failed');
       // Continue without visual comparison
     }
   }
@@ -119,7 +120,7 @@ export async function verifySourceMatch(
         mismatchReasons.push(`Semantic mismatch: ${semanticMatch.reasoning}`);
       }
     } catch (err) {
-      console.warn("[Gate1] Semantic comparison failed:", err);
+      logger.warn({ module: 'Gate1', err }, 'Semantic comparison failed');
       // Continue without semantic comparison
     }
   }
@@ -180,7 +181,7 @@ export async function verifySourcesBatch(
     sources.map(source =>
       verifySourceMatch(vision, source, productImageUrl, config)
         .catch(err => {
-          console.error(`[Gate1] Verification failed for ${source.url}:`, err);
+          logger.error({ module: 'Gate1', sourceUrl: source.url, err }, 'Verification failed');
           // Return a failed result for this source
           return {
             sourceUrl: source.url,

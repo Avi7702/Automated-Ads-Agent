@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { generateContentWithRetry } from '../lib/geminiClient';
 import type { GenerateCopyInput } from '../validation/schemas';
 import { getFileSearchStoreForGeneration, queryFileSearchStore, FileCategory } from './fileSearchService';
@@ -113,12 +114,12 @@ class CopywritingService {
       if (searchResult) {
         ragContext = searchResult.context;
         citations = searchResult.citations || [];
-        console.log(`📚 Retrieved RAG context (${ragContext.length} chars) with ${citations.length} citations`);
+        logger.info({ module: 'Copywriting', contextLength: ragContext.length, citationCount: citations.length }, 'Retrieved RAG context');
       } else {
-        console.log('ℹ️ No RAG context found for this query');
+        logger.info({ module: 'Copywriting' }, 'No RAG context found for this query');
       }
     } catch (error) {
-      console.warn('⚠️ File Search not available, continuing without RAG context:', error);
+      logger.warn({ module: 'Copywriting', err: error }, 'File Search not available, continuing without RAG context');
       // Continue without RAG if File Search fails - graceful degradation
     }
 

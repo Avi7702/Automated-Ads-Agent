@@ -8,6 +8,8 @@
  * - Memory usage monitoring
  */
 
+import { logger } from '../lib/logger';
+
 export interface BoundedMapOptions<V> {
   /** Maximum number of entries (default: 10000) */
   maxSize?: number;
@@ -199,7 +201,7 @@ export class BoundedMap<K, V> {
     this.lastCleanupTime = new Date();
 
     if (removed > 0) {
-      console.log(`[${this.name}] Cleanup removed ${removed} expired entries. Size: ${this.map.size}/${this.maxSize}`);
+      logger.info({ module: this.name, removed, size: this.map.size, maxSize: this.maxSize }, 'Cleanup removed expired entries');
     }
   }
 
@@ -310,9 +312,7 @@ export function startMemoryMonitoring(
     const heapPercent = Math.round((usage.heapUsed / usage.heapTotal) * 100);
 
     if (heapPercent >= warningThresholdPercent) {
-      console.warn(
-        `[MemoryManager] HIGH MEMORY WARNING: ${heapUsedMB}MB / ${heapTotalMB}MB (${heapPercent}%)`
-      );
+      logger.warn({ module: 'MemoryManager', heapUsedMB, heapTotalMB, heapPercent }, 'HIGH MEMORY WARNING');
     }
   }, checkIntervalMs);
 

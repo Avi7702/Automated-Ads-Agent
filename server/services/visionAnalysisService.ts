@@ -15,6 +15,7 @@ import { generateContentWithRetry } from "../lib/geminiClient";
 import { storage } from "../storage";
 import type { ProductAnalysis, InsertProductAnalysis, Product } from "@shared/schema";
 import { createRateLimitMap } from "../utils/memoryManager";
+import { logger } from "../lib/logger";
 
 // Rate limiting: max 10 analysis requests per minute per user
 // Now bounded with automatic cleanup of expired entries (max 10000 users)
@@ -118,7 +119,7 @@ export async function analyzeProductImage(
         };
       }
     } catch (err) {
-      console.error("[VisionAnalysis] Cache lookup failed:", err);
+      logger.error({ module: 'VisionAnalysis', err }, 'Cache lookup failed');
       // Continue to fresh analysis if cache fails
     }
   }
@@ -153,7 +154,7 @@ export async function analyzeProductImage(
 
     return { success: true, analysis: analysisResult };
   } catch (err) {
-    console.error("[VisionAnalysis] Gemini API error:", err);
+    logger.error({ module: 'VisionAnalysis', err }, 'Gemini API error');
     return {
       success: false,
       error: {
@@ -280,7 +281,7 @@ export async function getCachedAnalysis(productId: string): Promise<ProductAnaly
     const analysis = await storage.getProductAnalysisByProductId(productId);
     return analysis || null;
   } catch (err) {
-    console.error("[VisionAnalysis] Failed to get cached analysis:", err);
+    logger.error({ module: 'VisionAnalysis', err }, 'Failed to get cached analysis');
     return null;
   }
 }
@@ -292,7 +293,7 @@ export async function invalidateAnalysisCache(productId: string): Promise<void> 
   try {
     await storage.deleteProductAnalysis(productId);
   } catch (err) {
-    console.error("[VisionAnalysis] Failed to invalidate cache:", err);
+    logger.error({ module: 'VisionAnalysis', err }, 'Failed to invalidate cache');
   }
 }
 
@@ -386,7 +387,7 @@ Example good descriptions:
       },
     };
   } catch (err) {
-    console.error("[VisionAnalysis] Arbitrary image analysis error:", err);
+    logger.error({ module: 'VisionAnalysis', err }, 'Arbitrary image analysis error');
     return {
       success: false,
       error: {

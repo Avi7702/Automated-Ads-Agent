@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { logger } from "../lib/logger";
 import Firecrawl from "@mendable/firecrawl-js";
 import { v2 as cloudinary } from "cloudinary";
 import { db } from "../db";
@@ -112,7 +113,7 @@ interface ScrapeResult {
  * Scrape a single collection page to get product list
  */
 async function scrapeCollectionPage(categoryUrl: string): Promise<string[]> {
-  console.log(`📄 Scraping collection: ${categoryUrl}`);
+  logger.info({ module: 'NDSScraper', categoryUrl }, 'Scraping collection');
 
   try {
     const result = await firecrawl.scrape(`${NDS_BASE_URL}${categoryUrl}`, {
@@ -142,10 +143,10 @@ async function scrapeCollectionPage(categoryUrl: string): Promise<string[]> {
       }
     }
 
-    console.log(`   Found ${productUrls.length} product URLs`);
+    logger.info({ module: 'NDSScraper', urlCount: productUrls.length }, 'Found product URLs');
     return productUrls;
   } catch (error) {
-    console.error(`Error scraping collection ${categoryUrl}:`, error);
+    logger.error({ module: 'NDSScraper', categoryUrl, err: error }, 'Error scraping collection');
     return [];
   }
 }
@@ -154,7 +155,7 @@ async function scrapeCollectionPage(categoryUrl: string): Promise<string[]> {
  * Scrape a single product page for details
  */
 async function scrapeProductPage(productUrl: string, category: string): Promise<ScrapedProduct | null> {
-  console.log(`   🔍 Scraping product: ${productUrl}`);
+  logger.info({ module: 'NDSScraper', productUrl }, 'Scraping product');
 
   try {
     const result = await firecrawl.scrape(productUrl, {
@@ -225,7 +226,7 @@ async function scrapeProductPage(productUrl: string, category: string): Promise<
       sku,
     };
   } catch (error) {
-    console.error(`Error scraping product ${productUrl}:`, error);
+    logger.error({ module: 'NDSScraper', productUrl, err: error }, 'Error scraping product');
     return null;
   }
 }
@@ -281,7 +282,7 @@ async function uploadImageToCloudinary(
       publicId: result.public_id,
     };
   } catch (error) {
-    console.error(`Failed to upload image for ${productName}:`, error);
+    logger.error({ module: 'NDSScraper', productName, err: error }, 'Failed to upload image');
     return null;
   }
 }
@@ -326,15 +327,15 @@ async function saveProductToDatabase(
 
     if (existing) {
       await db.update(products).set(productData).where(eq(products.id, existing.id));
-      console.log(`   🔄 Updated: ${product.name}`);
+      logger.info({ module: 'NDSScraper', productName: product.name, id: existing.id }, 'Updated product');
       return { action: "updated", id: existing.id };
     } else {
       const [newProduct] = await db.insert(products).values(productData).returning();
-      console.log(`   ✨ Created: ${product.name}`);
+      logger.info({ module: 'NDSScraper', productName: product.name, id: newProduct.id }, 'Created product');
       return { action: "created", id: newProduct.id };
     }
   } catch (error) {
-    console.error(`Failed to save product ${product.name}:`, error);
+    logger.error({ module: 'NDSScraper', productName: product.name, err: error }, 'Failed to save product');
     return { action: "error", error };
   }
 }
@@ -370,9 +371,7 @@ function generateTags(product: ScrapedProduct): string[] {
  * Scrape a single category
  */
 async function scrapeCategory(category: (typeof CATEGORIES)[0]): Promise<ScrapeResult> {
-  console.log(`\n${"═".repeat(60)}`);
-  console.log(`📦 SCRAPING: ${category.displayName}`);
-  console.log(`${"═".repeat(60)}`);
+  logger.info({ module: 'NDSScraper', category: category.displayName }, 'Starting category scrape');
 
   const result: ScrapeResult = {
     category: category.name,
@@ -389,12 +388,11 @@ async function scrapeCategory(category: (typeof CATEGORIES)[0]): Promise<ScrapeR
       return result;
     }
 
-    console.log(`\n📋 Processing ${productUrls.length} products...`);
+    logger.info({ module: 'NDSScraper', productCount: productUrls.length }, 'Processing products');
 
     // Scrape each product (with rate limiting)
     for (let i = 0; i < productUrls.length; i++) {
       const url = productUrls[i];
-      console.log(`\n[${i + 1}/${productUrls.length}]`);
 
       const product = await scrapeProductPage(url, category.name);
 
@@ -445,10 +443,7 @@ export async function scrapeNDSWebsite(options?: {
   errors: string[];
   byCategory: Record<string, { count: number; errors: string[] }>;
 }> {
-  console.log("\n" + "═".repeat(70));
-  console.log("  NDS WEBSITE SCRAPER");
-  console.log("  Scraping products from nextdaysteel.co.uk");
-  console.log("═".repeat(70));
+  logger.info({ module: 'NDSScraper' }, 'Starting NDS website scrape');
 
   if (!process.env.FIRECRAWL_API_KEY) {
     throw new Error("FIRECRAWL_API_KEY not set in environment variables");
@@ -467,9 +462,7 @@ export async function scrapeNDSWebsite(options?: {
     ? CATEGORIES.filter((c) => options.categories!.includes(c.name))
     : CATEGORIES;
 
-  console.log(`\n📋 Categories to scrape: ${categoriesToScrape.map((c) => c.displayName).join(", ")}`);
-  if (options?.dryRun) console.log("🔍 DRY RUN MODE - No database changes");
-  if (options?.limit) console.log(`📊 Limit: ${options.limit} products per category`);
+  logger.info({ module: 'NDSScraper', categories: categoriesToScrape.map((c) => c.displayName), dryRun: options?.dryRun, limit: options?.limit }, 'Categories to scrape');
 
   for (const category of categoriesToScrape) {
     const categoryResult = await scrapeCategory(category);
@@ -484,15 +477,7 @@ export async function scrapeNDSWebsite(options?: {
   }
 
   // Print summary
-  console.log("\n" + "═".repeat(70));
-  console.log("  SCRAPING COMPLETE - SUMMARY");
-  console.log("═".repeat(70));
-  console.log(`\n  Total Products Scraped: ${results.totalProducts}`);
-  console.log(`  Total Errors: ${results.errors.length}`);
-  console.log("\n  By Category:");
-  for (const [cat, data] of Object.entries(results.byCategory)) {
-    console.log(`    ${cat}: ${data.count} products, ${data.errors.length} errors`);
-  }
+  logger.info({ module: 'NDSScraper', totalProducts: results.totalProducts, totalErrors: results.errors.length, byCategory: results.byCategory }, 'Scraping complete');
 
   return results;
 }

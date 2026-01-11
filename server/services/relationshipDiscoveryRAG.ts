@@ -15,6 +15,7 @@
 
 import { generateContentWithRetry } from '../lib/geminiClient';
 import { storage } from '../storage';
+import { logger } from '../lib/logger';
 import { telemetry } from '../instrumentation';
 import { queryFileSearchStore, FileCategory } from './fileSearchService';
 import type { Product, ProductAnalysis, ProductRelationship } from '@shared/schema';
@@ -485,7 +486,7 @@ async function queryKnowledgeBase(
 
   } catch (error) {
     // KB query failures are non-fatal - log and continue
-    console.warn('[RelationshipRAG] KB query failed:', error);
+    logger.warn({ module: 'RelationshipRAG', err: error }, 'KB query failed');
     return null;
   }
 }
@@ -632,7 +633,7 @@ function parseRelationshipSuggestions(
     // Extract JSON from response
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      console.warn('[RelationshipRAG] No JSON found in response');
+      logger.warn({ module: 'RelationshipRAG' }, 'No JSON found in response');
       return [];
     }
 
@@ -669,7 +670,7 @@ function parseRelationshipSuggestions(
     return suggestions;
 
   } catch (error) {
-    console.error('[RelationshipRAG] Failed to parse suggestions:', error);
+    logger.error({ module: 'RelationshipRAG', err: error }, 'Failed to parse suggestions');
     return [];
   }
 }
@@ -731,7 +732,7 @@ function parseRelationshipAnalysis(responseText: string): RelationshipAnalysisRe
     };
 
   } catch (error) {
-    console.error('[RelationshipRAG] Failed to parse analysis:', error);
+    logger.error({ module: 'RelationshipRAG', err: error }, 'Failed to parse analysis');
     return defaultResult;
   }
 }
@@ -758,7 +759,7 @@ export async function batchSuggestRelationships(
         suggestRelationships(productId, userId, options)
           .then(suggestions => ({ productId, suggestions }))
           .catch(error => {
-            console.error(`[RelationshipRAG] Failed for ${productId}:`, error);
+            logger.error({ module: 'RelationshipRAG', productId, err: error }, 'Batch suggestion failed for product');
             return { productId, suggestions: [] };
           })
       )

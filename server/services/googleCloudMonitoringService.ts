@@ -15,6 +15,7 @@
  * @see https://cloud.google.com/monitoring/alerts/using-quota-metrics
  */
 
+import { logger } from "../lib/logger";
 import { storage } from "../storage";
 
 // Lazy-load jsonwebtoken to prevent import errors from crashing the server
@@ -27,7 +28,7 @@ async function ensureJwtLoaded(): Promise<void> {
       const pkg = await import("jsonwebtoken");
       jwtSign = pkg.default?.sign || pkg.sign;
     } catch (error) {
-      console.error('[GoogleCloudMonitoring] Failed to load jsonwebtoken:', error);
+      logger.error({ module: 'GoogleCloudMonitoring', err: error }, 'Failed to load jsonwebtoken');
       throw new Error('jsonwebtoken module not available');
     }
   }
@@ -143,7 +144,7 @@ async function getAccessToken(): Promise<string> {
       const credentials = JSON.parse(process.env.GOOGLE_CLOUD_CREDENTIALS_JSON);
       return await getAccessTokenFromServiceAccount(credentials);
     } catch (error) {
-      console.error('[GoogleCloudMonitoring] Failed to parse inline credentials:', error);
+      logger.error({ module: 'GoogleCloudMonitoring', err: error }, 'Failed to parse inline credentials');
     }
   }
 
@@ -156,7 +157,7 @@ async function getAccessToken(): Promise<string> {
       const credentials = JSON.parse(credentialsJson);
       return await getAccessTokenFromServiceAccount(credentials);
     } catch (error) {
-      console.error('[GoogleCloudMonitoring] Failed to load credentials file:', error);
+      logger.error({ module: 'GoogleCloudMonitoring', err: error }, 'Failed to load credentials file');
     }
   }
 
@@ -251,7 +252,7 @@ async function queryTimeSeries(
 
   if (!response.ok) {
     const error = await response.text();
-    console.error('[GoogleCloudMonitoring] API error:', error);
+    logger.error({ module: 'GoogleCloudMonitoring', status: response.status, error }, 'API error');
     throw new Error(`Cloud Monitoring API error: ${response.status} ${response.statusText}`);
   }
 
@@ -361,7 +362,7 @@ export async function fetchGoogleQuotaSnapshot(): Promise<GoogleQuotaSnapshot> {
           unit: metric.unit,
         });
       } catch (error: any) {
-        console.error(`[GoogleCloudMonitoring] Failed to fetch ${metric.displayName}:`, error.message);
+        logger.error({ module: 'GoogleCloudMonitoring', metric: metric.displayName, err: error }, 'Failed to fetch metric');
         errors.push(`${metric.displayName}: ${error.message}`);
       }
     }
@@ -392,14 +393,14 @@ export async function fetchGoogleQuotaSnapshot(): Promise<GoogleQuotaSnapshot> {
         brandId: null, // Global snapshot
       });
     } catch (dbError) {
-      console.warn('[GoogleCloudMonitoring] Failed to persist snapshot to database:', dbError);
+      logger.warn({ module: 'GoogleCloudMonitoring', err: dbError }, 'Failed to persist snapshot to database');
     }
 
-    console.log(`[GoogleCloudMonitoring] Sync completed: ${quotas.length} metrics fetched, status: ${result.syncStatus}`);
+    logger.info({ module: 'GoogleCloudMonitoring', metricCount: quotas.length, status: result.syncStatus }, 'Sync completed');
 
     return result;
   } catch (error: any) {
-    console.error('[GoogleCloudMonitoring] Sync failed:', error);
+    logger.error({ module: 'GoogleCloudMonitoring', err: error }, 'Sync failed');
 
     const result: GoogleQuotaSnapshot = {
       syncedAt,
@@ -465,18 +466,18 @@ export function startAutoSync(): void {
   }
 
   if (!isGoogleCloudConfigured()) {
-    console.log('[GoogleCloudMonitoring] Auto-sync disabled: Google Cloud credentials not configured');
+    logger.info({ module: 'GoogleCloudMonitoring' }, 'Auto-sync disabled: Google Cloud credentials not configured');
     return;
   }
 
-  console.log(`[GoogleCloudMonitoring] Starting auto-sync every ${SYNC_INTERVAL_MS / 1000 / 60} minutes`);
+  logger.info({ module: 'GoogleCloudMonitoring', intervalMinutes: SYNC_INTERVAL_MS / 1000 / 60 }, 'Starting auto-sync');
 
   // Initial sync
-  fetchGoogleQuotaSnapshot().catch(console.error);
+  fetchGoogleQuotaSnapshot().catch((err) => logger.error({ module: 'GoogleCloudMonitoring', err }, 'Initial sync failed'));
 
   // Schedule recurring syncs
   syncTimer = setInterval(() => {
-    fetchGoogleQuotaSnapshot().catch(console.error);
+    fetchGoogleQuotaSnapshot().catch((err) => logger.error({ module: 'GoogleCloudMonitoring', err }, 'Scheduled sync failed'));
   }, SYNC_INTERVAL_MS);
 }
 
@@ -487,7 +488,7 @@ export function stopAutoSync(): void {
   if (syncTimer) {
     clearInterval(syncTimer);
     syncTimer = null;
-    console.log('[GoogleCloudMonitoring] Auto-sync stopped');
+    logger.info({ module: 'GoogleCloudMonitoring' }, 'Auto-sync stopped');
   }
 }
 
@@ -495,7 +496,7 @@ export function stopAutoSync(): void {
  * Trigger a manual sync
  */
 export async function triggerManualSync(): Promise<GoogleQuotaSnapshot> {
-  console.log('[GoogleCloudMonitoring] Manual sync triggered');
+  logger.info({ module: 'GoogleCloudMonitoring' }, 'Manual sync triggered');
   return fetchGoogleQuotaSnapshot();
 }
 

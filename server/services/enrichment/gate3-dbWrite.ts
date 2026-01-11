@@ -11,6 +11,7 @@
  * 5. Retry if needed
  */
 
+import { logger } from "../../lib/logger";
 import { storage } from "../../storage";
 import {
   DEFAULT_PIPELINE_CONFIG,
@@ -85,8 +86,9 @@ export async function verifyDatabaseWrite(
 
       // If we have discrepancies but haven't exhausted retries, try again
       if (retryCount < config.maxDbWriteRetries) {
-        console.warn(
-          `[Gate3] Write verification failed with ${discrepancies.length} discrepancies, retrying...`
+        logger.warn(
+          { module: 'Gate3', discrepancyCount: discrepancies.length },
+          'Write verification failed, retrying'
         );
         retryCount++;
         await delay(config.retryDelayMs);
@@ -102,7 +104,7 @@ export async function verifyDatabaseWrite(
       };
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
-      console.error(`[Gate3] Database operation failed:`, lastError);
+      logger.error({ module: 'Gate3', err: lastError }, 'Database operation failed');
 
       if (retryCount < config.maxDbWriteRetries) {
         retryCount++;

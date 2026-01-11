@@ -18,6 +18,7 @@
  * - Confidence levels reflect data quality (HIGH/MEDIUM/LOW)
  */
 
+import { logger } from "../../lib/logger";
 import { storage } from "../../storage";
 import { visionAnalysisService } from "../visionAnalysisService";
 import type { Product } from "@shared/schema";
@@ -78,7 +79,7 @@ export async function runEnrichmentPipeline(
 
   const adaptations: string[] = [];
 
-  console.log(`[Pipeline] Starting enrichment for product ${input.productId}`);
+  logger.info({ module: 'Pipeline', productId: input.productId }, 'Starting enrichment');
 
   try {
     // ============================================
@@ -94,7 +95,7 @@ export async function runEnrichmentPipeline(
       };
     }
 
-    console.log(`[Pipeline] Processing: ${product.name}`);
+    logger.info({ module: 'Pipeline', productName: product.name }, 'Processing product');
 
     // ============================================
     // 2. VISION ANALYSIS (Step 1)
@@ -128,12 +129,12 @@ export async function runEnrichmentPipeline(
         adaptations.push("Vision analysis failed - using minimal data");
       }
     } catch (err) {
-      console.error("[Pipeline] Vision analysis error:", err);
+      logger.error({ module: 'Pipeline', err }, 'Vision analysis error');
       visionResult = createMinimalVisionResult(product.name);
       adaptations.push("Vision analysis error - using minimal data");
     }
 
-    console.log(`[Pipeline] Vision: ${visionResult.category}/${visionResult.subcategory}`);
+    logger.info({ module: 'Pipeline', category: visionResult.category, subcategory: visionResult.subcategory }, 'Vision analysis complete');
 
     // ============================================
     // 3. SOURCE DISCOVERY (Step 2)
@@ -142,12 +143,12 @@ export async function runEnrichmentPipeline(
 
     try {
       sources = await discoverSources(product.name, visionResult, config);
-      console.log(`[Pipeline] Discovered ${sources.length} sources`);
+      logger.info({ module: 'Pipeline', sourceCount: sources.length }, 'Discovered sources');
 
       // Fetch full content for each source
       sources = await fetchSourceContentsBatch(sources);
     } catch (err) {
-      console.error("[Pipeline] Source discovery error:", err);
+      logger.error({ module: 'Pipeline', err }, 'Source discovery error');
       sources = [];
       adaptations.push("Source discovery failed - using vision-only data");
     }
@@ -168,7 +169,7 @@ export async function runEnrichmentPipeline(
         );
 
         verifiedSources = getPassedSources(sources, gate1Results);
-        console.log(`[Pipeline] Gate 1: ${verifiedSources.length}/${sources.length} sources verified`);
+        logger.info({ module: 'Pipeline', verified: verifiedSources.length, total: sources.length }, 'Gate 1 verification complete');
 
         if (verifiedSources.length === 0) {
           adaptations.push("No sources passed Gate 1 - using vision-only data");
@@ -176,7 +177,7 @@ export async function runEnrichmentPipeline(
           adaptations.push(`${sources.length - verifiedSources.length} sources failed Gate 1`);
         }
       } catch (err) {
-        console.error("[Pipeline] Gate 1 error:", err);
+        logger.error({ module: 'Pipeline', err }, 'Gate 1 error');
         adaptations.push("Gate 1 error - using vision-only data");
       }
     }
@@ -189,9 +190,9 @@ export async function runEnrichmentPipeline(
     if (verifiedSources.length > 0) {
       try {
         extractions = await extractFromSourcesBatch(verifiedSources, product.name);
-        console.log(`[Pipeline] Extracted data from ${extractions.length} sources`);
+        logger.info({ module: 'Pipeline', extractionCount: extractions.length }, 'Extracted data from sources');
       } catch (err) {
-        console.error("[Pipeline] Extraction error:", err);
+        logger.error({ module: 'Pipeline', err }, 'Extraction error');
         adaptations.push("Data extraction failed - using vision-only data");
       }
     }
@@ -226,13 +227,13 @@ export async function runEnrichmentPipeline(
         extractions = verifiedExtractions;
 
         const passedCount = gate2Results.filter(r => r.passed).length;
-        console.log(`[Pipeline] Gate 2: ${passedCount}/${gate2Results.length} extractions verified`);
+        logger.info({ module: 'Pipeline', passed: passedCount, total: gate2Results.length }, 'Gate 2 verification complete');
 
         if (passedCount < gate2Results.length) {
           adaptations.push("Some extractions had unverified fields - using only verified data");
         }
       } catch (err) {
-        console.error("[Pipeline] Gate 2 error:", err);
+        logger.error({ module: 'Pipeline', err }, 'Gate 2 error');
         adaptations.push("Gate 2 error - using unverified extractions");
       }
     }
@@ -250,7 +251,7 @@ export async function runEnrichmentPipeline(
       }
 
       aggregated = aggregateExtractions(extractions, trustMap);
-      console.log(`[Pipeline] Aggregated: ${aggregated.productName}`);
+      logger.info({ module: 'Pipeline', productName: aggregated.productName }, 'Aggregation complete');
     } else {
       // Fall back to vision-only aggregation
       aggregated = createVisionOnlyAggregation(visionResult, product.name);
@@ -270,7 +271,7 @@ export async function runEnrichmentPipeline(
     if (extractions.length > 1) {
       try {
         gate4Result = await verifyCrossSourceTruth(extractions, aggregated);
-        console.log(`[Pipeline] Gate 4: ${gate4Result.overallVerdict}`);
+        logger.info({ module: 'Pipeline', verdict: gate4Result.overallVerdict }, 'Gate 4 verification complete');
 
         // Handle conflicts
         if (gate4Result.conflicts.length > 0) {
@@ -309,7 +310,7 @@ export async function runEnrichmentPipeline(
           adaptations.push(`${contradictedCount} contradicted claims removed from description`);
         }
       } catch (err) {
-        console.error("[Pipeline] Gate 4 error:", err);
+        logger.error({ module: 'Pipeline', err }, 'Gate 4 error');
         adaptations.push("Gate 4 error - using aggregated data as-is");
       }
     }
@@ -338,13 +339,13 @@ export async function runEnrichmentPipeline(
 
     try {
       gate3Result = await verifyDatabaseWrite(writePayload, config);
-      console.log(`[Pipeline] Gate 3: ${gate3Result.passed ? "PASSED" : "FAILED"}`);
+      logger.info({ module: 'Pipeline', passed: gate3Result.passed }, 'Gate 3 database write verification');
 
       if (!gate3Result.passed) {
         adaptations.push(`Database write had ${gate3Result.discrepancies.length} discrepancies after ${gate3Result.retryCount} retries`);
       }
     } catch (err) {
-      console.error("[Pipeline] Gate 3 error:", err);
+      logger.error({ module: 'Pipeline', err }, 'Gate 3 error');
       gate3Result = {
         passed: false,
         productId: input.productId,
@@ -406,7 +407,7 @@ export async function runEnrichmentPipeline(
     };
 
     const duration = Date.now() - startTime;
-    console.log(`[Pipeline] Completed in ${duration}ms with ${overallConfidence} confidence`);
+    logger.info({ module: 'Pipeline', durationMs: duration, confidence: overallConfidence }, 'Pipeline completed');
 
     return {
       success: gate3Result.passed,
@@ -414,7 +415,7 @@ export async function runEnrichmentPipeline(
       report,
     };
   } catch (err) {
-    console.error("[Pipeline] Fatal error:", err);
+    logger.error({ module: 'Pipeline', err }, 'Fatal error');
 
     return {
       success: false,
@@ -453,7 +454,7 @@ export async function runEnrichmentBatch(
       });
       results.set(productId, result);
     } catch (err) {
-      console.error(`[Pipeline] Batch error for ${productId}:`, err);
+      logger.error({ module: 'Pipeline', productId, err }, 'Batch error');
       results.set(productId, {
         success: false,
         productId,
@@ -487,7 +488,7 @@ export async function runEnrichmentForPendingProducts(
     !p.enrichmentStatus
   );
 
-  console.log(`[Pipeline] Found ${needsEnrichment.length} products needing enrichment`);
+  logger.info({ module: 'Pipeline', count: needsEnrichment.length }, 'Found products needing enrichment');
 
   if (needsEnrichment.length === 0) {
     return new Map();

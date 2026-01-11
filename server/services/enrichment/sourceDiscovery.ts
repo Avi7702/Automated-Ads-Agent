@@ -14,6 +14,7 @@
  * - General web results - trustLevel: 4
  */
 
+import { logger } from "../../lib/logger";
 import { generateContentWithRetry } from "../../lib/geminiClient";
 import {
   SOURCE_TRUST_LEVELS,
@@ -76,7 +77,7 @@ export async function discoverSources(
         break;
       }
     } catch (err) {
-      console.error(`[SourceDiscovery] Search failed for query "${query}":`, err);
+      logger.error({ module: 'SourceDiscovery', query, err }, 'Search failed for query');
       // Continue with other queries
     }
   }
@@ -241,7 +242,7 @@ Return only the JSON array, no additional text.`;
           });
         }
       } catch (parseErr) {
-        console.warn("[SourceDiscovery] Failed to parse search results:", parseErr);
+        logger.warn({ module: 'SourceDiscovery', err: parseErr }, 'Failed to parse search results');
       }
     }
 
@@ -272,7 +273,7 @@ Return only the JSON array, no additional text.`;
 
     return sources;
   } catch (err) {
-    console.error("[SourceDiscovery] Grounded search failed:", err);
+    logger.error({ module: 'SourceDiscovery', err }, 'Grounded search failed');
     return [];
   }
 }
@@ -458,7 +459,7 @@ export async function fetchSourceContent(
     });
 
     if (!response.ok) {
-      console.warn(`[SourceDiscovery] Failed to fetch ${source.url}: ${response.status}`);
+      logger.warn({ module: 'SourceDiscovery', url: source.url, status: response.status }, 'Failed to fetch source');
       return source;
     }
 
@@ -476,7 +477,7 @@ export async function fetchSourceContent(
       extractedImages: Array.from(new Set([...source.extractedImages, ...imageUrls])),
     };
   } catch (err) {
-    console.warn(`[SourceDiscovery] Content fetch failed for ${source.url}:`, err);
+    logger.warn({ module: 'SourceDiscovery', url: source.url, err }, 'Content fetch failed');
     return source;
   }
 }

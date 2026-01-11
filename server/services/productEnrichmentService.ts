@@ -12,6 +12,7 @@
 
 import { generateContentWithRetry } from "../lib/geminiClient";
 import { storage } from "../storage";
+import { logger } from "../lib/logger";
 import { visionAnalysisService } from "./visionAnalysisService";
 import type { Product, InsertProduct } from "@shared/schema";
 
@@ -123,7 +124,7 @@ export async function generateEnrichmentDraft(
       };
     }
   } catch (err) {
-    console.error("[Enrichment] Vision analysis failed:", err);
+    logger.error({ module: 'Enrichment', err }, 'Vision analysis failed');
     // Continue - vision is not required
   }
 
@@ -341,7 +342,7 @@ async function generateDraftViaLLM(
       generatedAt: new Date().toISOString(),
     };
   } catch (err) {
-    console.error("[Enrichment] Failed to parse LLM response:", err);
+    logger.error({ module: 'Enrichment', err }, 'Failed to parse LLM response');
     // Return basic draft from vision data
     return {
       description: `${visionData.category || "Product"} - ${visionData.subcategory || ""}`.trim(),

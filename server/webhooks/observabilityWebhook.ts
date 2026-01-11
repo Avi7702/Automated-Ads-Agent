@@ -11,6 +11,7 @@
 
 import { Router } from 'express';
 import { telemetry } from '../instrumentation';
+import { logger } from '../lib/logger';
 
 const router = Router();
 
@@ -36,9 +37,9 @@ interface ObservabilityAlert {
 async function createGitHubIssue(title: string, body: string, labels: string[] = ['bug', 'auto-created']) {
   const token = process.env.GITHUB_TOKEN;
   const repo = process.env.GITHUB_REPO; // format: "owner/repo"
-  
+
   if (!token || !repo) {
-    console.log('[Webhook] GitHub not configured, skipping issue creation');
+    logger.info({ module: 'Webhook' }, 'GitHub not configured, skipping issue creation');
     return null;
   }
 
@@ -55,14 +56,14 @@ async function createGitHubIssue(title: string, body: string, labels: string[] =
 
     if (response.ok) {
       const issue = await response.json();
-      console.log(`[Webhook] Created GitHub Issue #${issue.number}: ${title}`);
+      logger.info({ module: 'Webhook', issueNumber: issue.number, title }, 'Created GitHub Issue');
       return issue;
     } else {
-      console.error('[Webhook] Failed to create GitHub issue:', await response.text());
+      logger.error({ module: 'Webhook', response: await response.text() }, 'Failed to create GitHub issue');
       return null;
     }
   } catch (error) {
-    console.error('[Webhook] Error creating GitHub issue:', error);
+    logger.error({ module: 'Webhook', err: error }, 'Error creating GitHub issue');
     return null;
   }
 }
@@ -70,14 +71,14 @@ async function createGitHubIssue(title: string, body: string, labels: string[] =
 // Slack notification (requires SLACK_WEBHOOK_URL env var)
 async function notifySlack(message: string, severity: string) {
   const webhookUrl = process.env.SLACK_WEBHOOK_URL;
-  
+
   if (!webhookUrl) {
-    console.log('[Webhook] Slack not configured, skipping notification');
+    logger.info({ module: 'Webhook' }, 'Slack not configured, skipping notification');
     return;
   }
 
   const emoji = severity === 'critical' ? '🚨' : severity === 'warning' ? '⚠️' : 'ℹ️';
-  
+
   try {
     await fetch(webhookUrl, {
       method: 'POST',
@@ -87,7 +88,7 @@ async function notifySlack(message: string, severity: string) {
       }),
     });
   } catch (error) {
-    console.error('[Webhook] Error sending Slack notification:', error);
+    logger.error({ module: 'Webhook', err: error }, 'Error sending Slack notification');
   }
 }
 
@@ -95,8 +96,8 @@ async function notifySlack(message: string, severity: string) {
 router.post('/observability', async (req, res) => {
   try {
     const alert: ObservabilityAlert = req.body;
-    
-    console.log(`[Webhook] Received alert: ${alert.alertName} (${alert.severity})`);
+
+    logger.info({ module: 'Webhook', alertName: alert.alertName, severity: alert.severity }, 'Received alert');
 
     // Handle different alert types
     switch (alert.alertName) {
@@ -149,12 +150,12 @@ This issue was automatically created by the observability system when error rate
       // =============================================
       case 'user_spending_limit': {
         const userId = alert.data.userId;
-        
+
         if (userId) {
           // Here you would disable the user in your database
           // await storage.setUserLimit(userId, { exceeded: true });
-          
-          console.log(`[Webhook] Would disable user ${userId} for exceeding spending limit`);
+
+          logger.info({ module: 'Webhook', userId }, 'Would disable user for exceeding spending limit');
           
           await notifySlack(
             `User ${userId} exceeded spending limit ($${alert.data.currentValue}). Account flagged.`,
@@ -169,13 +170,13 @@ This issue was automatically created by the observability system when error rate
       // =============================================
       case 'brute_force_detected': {
         const ip = alert.data.ip;
-        
+
         if (ip) {
           // Here you would block the IP in Redis
           // await redis.sadd('blocked_ips', ip);
           // await redis.expire(`blocked_ip:${ip}`, 86400); // 24 hours
-          
-          console.log(`[Webhook] Would block IP ${ip} for brute force attempt`);
+
+          logger.info({ module: 'Webhook', ip }, 'Would block IP for brute force attempt');
           
           await notifySlack(
             `Brute force detected from IP ${ip}. ${alert.data.errorCount} failed attempts. IP blocked.`,
@@ -209,12 +210,12 @@ This issue was automatically created by the observability system when error rate
       }
 
       default:
-        console.log(`[Webhook] Unhandled alert type: ${alert.alertName}`);
+        logger.info({ module: 'Webhook', alertName: alert.alertName }, 'Unhandled alert type');
     }
 
     res.json({ received: true, alertName: alert.alertName });
   } catch (error) {
-    console.error('[Webhook] Error processing alert:', error);
+    logger.error({ module: 'Webhook', err: error }, 'Error processing alert');
     res.status(500).json({ error: 'Failed to process alert' });
   }
 });

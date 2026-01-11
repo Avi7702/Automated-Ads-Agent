@@ -16,6 +16,7 @@
 
 import { generateContentWithRetry } from '../lib/geminiClient';
 import { storage } from '../storage';
+import { logger } from '../lib/logger';
 import { telemetry } from '../instrumentation';
 import { queryFileSearchStore, FileCategory } from './fileSearchService';
 import type { Product, ProductAnalysis, InstallationScenario } from '@shared/schema';
@@ -514,7 +515,7 @@ export async function getInstallationTips(
     return tips.sort((a, b) => b.relevance - a.relevance);
 
   } catch (error) {
-    console.error('[InstallationRAG] Error getting tips:', error);
+    logger.error({ module: 'InstallationRAG', err: error }, 'Error getting tips');
     return tips;
   }
 }
@@ -549,7 +550,7 @@ async function queryInstallationKnowledgeBase(
     return result?.context || null;
 
   } catch (error) {
-    console.warn('[InstallationRAG] KB query failed:', error);
+    logger.warn({ module: 'InstallationRAG', err: error }, 'KB query failed');
     return null;
   }
 }
@@ -580,7 +581,7 @@ async function queryAccessoryKnowledgeBase(
     return result?.context || null;
 
   } catch (error) {
-    console.warn('[InstallationRAG] Accessory KB query failed:', error);
+    logger.warn({ module: 'InstallationRAG', err: error }, 'Accessory KB query failed');
     return null;
   }
 }
@@ -608,7 +609,7 @@ async function queryTipsKnowledgeBase(
     return result?.context || null;
 
   } catch (error) {
-    console.warn('[InstallationRAG] Tips KB query failed:', error);
+    logger.warn({ module: 'InstallationRAG', err: error }, 'Tips KB query failed');
     return null;
   }
 }
@@ -919,7 +920,7 @@ function parseInstallationSuggestions(
     };
 
   } catch (error) {
-    console.error('[InstallationRAG] Failed to parse suggestions:', error);
+    logger.error({ module: 'InstallationRAG', err: error }, 'Failed to parse suggestions');
     return defaultResult;
   }
 }
@@ -944,7 +945,7 @@ function parseAccessoryRecommendations(responseText: string): AccessoryRecommend
     }));
 
   } catch (error) {
-    console.error('[InstallationRAG] Failed to parse accessory recommendations:', error);
+    logger.error({ module: 'InstallationRAG', err: error }, 'Failed to parse accessory recommendations');
     return [];
   }
 }

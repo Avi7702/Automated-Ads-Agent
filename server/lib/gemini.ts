@@ -1,10 +1,11 @@
 import { GoogleGenAI } from "@google/genai";
+import { logger } from './logger';
 
 const apiKey = process.env.GOOGLE_API_KEY_TEST || process.env.GOOGLE_API_KEY;
 
 if (!apiKey) {
     // Warn but don't crash, in case we are just building or running tests without keys
-    console.warn("Warning: Neither GOOGLE_API_KEY_TEST nor GOOGLE_API_KEY is set. Gemini features will fail.");
+    logger.warn({ module: 'gemini' }, 'Neither GOOGLE_API_KEY_TEST nor GOOGLE_API_KEY is set. Gemini features will fail.');
 }
 
 // Single instance of the client

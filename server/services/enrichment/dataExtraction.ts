@@ -5,6 +5,7 @@
  * Uses AI to intelligently parse and structure information.
  */
 
+import { logger } from "../../lib/logger";
 import { aiExtractProductData } from "./aiHelpers";
 import type {
   ExtractedData,
@@ -49,7 +50,7 @@ export async function extractFromSourcesBatch(
     sources.map(source =>
       extractFromSource(source, productNameHint)
         .catch(err => {
-          console.error(`[DataExtraction] Failed for ${source.url}:`, err);
+          logger.error({ module: 'DataExtraction', url: source.url, err }, 'Extraction failed');
           // Return minimal extraction on error
           return {
             sourceUrl: source.url,

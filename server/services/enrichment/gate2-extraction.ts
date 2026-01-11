@@ -11,6 +11,7 @@
  * Threshold: 90% of fields must be verified for source to pass
  */
 
+import { logger } from "../../lib/logger";
 import { aiReExtractField, aiVerifyClaim, valuesAgree } from "./aiHelpers";
 import {
   DEFAULT_PIPELINE_CONFIG,
@@ -193,7 +194,7 @@ async function verifyField(
       }
     }
   } catch (err) {
-    console.warn(`[Gate2] AI verification failed for ${fieldName}:`, err);
+    logger.warn({ module: 'Gate2', fieldName, err }, 'AI verification failed');
     // Fall through to semantic-only verification
   }
 
@@ -229,7 +230,7 @@ async function verifyField(
       };
     }
   } catch (err) {
-    console.warn(`[Gate2] Semantic verification failed for ${fieldName}:`, err);
+    logger.warn({ module: 'Gate2', fieldName, err }, 'Semantic verification failed');
   }
 
   // ============================================
@@ -372,7 +373,7 @@ export async function verifyExtractionsBatch(
     sourcesWithExtractions.map(({ source, extracted }) =>
       verifyExtraction(source, extracted, config)
         .catch(err => {
-          console.error(`[Gate2] Verification failed for ${source.url}:`, err);
+          logger.error({ module: 'Gate2', sourceUrl: source.url, err }, 'Verification failed');
           return {
             sourceUrl: source.url,
             passed: false,

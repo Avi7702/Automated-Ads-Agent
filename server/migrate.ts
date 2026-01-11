@@ -1,6 +1,7 @@
 
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { db } from "./db";
+import { logger } from './lib/logger';
 
 // For simple prototyping/dev, we use db push behavior by syncing schema
 // But since drizzle-kit push is a CLI command, for programmatic usage in prod
@@ -21,29 +22,29 @@ export async function pushSchema() {
     const forceSchemaPush = process.env.FORCE_SCHEMA_PUSH === 'true';
 
     if (skipSchemaPush || (isProduction && !forceSchemaPush)) {
-        console.log("[db] Schema push skipped - tables should already exist");
-        console.log("[db] Set FORCE_SCHEMA_PUSH=true to run schema push");
+        logger.info({ module: 'db' }, 'Schema push skipped - tables should already exist');
+        logger.info({ module: 'db' }, 'Set FORCE_SCHEMA_PUSH=true to run schema push');
         return;
     }
 
     try {
-        console.log("[db] Pushing schema to database...");
+        logger.info({ module: 'db' }, 'Pushing schema to database...');
         // We use drizzle-kit push command with --force to skip interactive confirmation.
         // This requires drizzle.config.ts to be present and correct.
         const { stdout, stderr } = await execAsync("npx drizzle-kit push --force", {
             timeout: 30000, // 30 second timeout
         });
-        console.log("[db] Schema push output:", stdout);
-        if (stderr) console.error("[db] Schema push stderr:", stderr);
-        console.log("[db] Schema push completed successfully");
+        logger.info({ module: 'db', output: stdout }, 'Schema push output');
+        if (stderr) logger.error({ module: 'db', stderr }, 'Schema push stderr');
+        logger.info({ module: 'db' }, 'Schema push completed successfully');
     } catch (error: any) {
         // Check if it's a timeout error
         if (error.killed) {
-            console.error("[db] Schema push timed out after 30 seconds - skipping");
+            logger.error({ module: 'db' }, 'Schema push timed out after 30 seconds - skipping');
         } else {
-            console.error("[db] Failed to push schema:", error.message || error);
+            logger.error({ module: 'db', err: error }, 'Failed to push schema');
         }
         // Don't exit process, let app try to start
-        console.log("[db] Continuing without schema push - tables may already exist");
+        logger.info({ module: 'db' }, 'Continuing without schema push - tables may already exist');
     }
 }

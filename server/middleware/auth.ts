@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { storage } from '../storage';
 import type { User } from '../../shared/schema';
+import { logger } from '../lib/logger';
 
 // Extend Express Request type to include user
 declare global {
@@ -47,7 +48,7 @@ export async function requireAuth(
     await new Promise<void>((resolve) => {
       req.session.destroy((err) => {
         if (err) {
-          console.error('[Auth] Failed to destroy session:', err);
+          logger.error({ module: 'Auth', err }, 'Failed to destroy session');
         }
         resolve();
       });

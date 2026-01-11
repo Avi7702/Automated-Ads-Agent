@@ -5,6 +5,7 @@
  * These functions power the 4-gate verification system.
  */
 
+import { logger } from "../../lib/logger";
 import { generateContentWithRetry } from "../../lib/geminiClient";
 import type {
   ComparisonResult,
@@ -92,7 +93,7 @@ Consider:
       reasoning: String(parsed.reasoning || ""),
     };
   } catch (err) {
-    console.error("[aiHelpers] aiCompareDescriptions failed:", err);
+    logger.error({ module: 'aiHelpers', err }, 'aiCompareDescriptions failed');
     return { similar: false, confidence: 0, reasoning: `Error: ${err}` };
   }
 }
@@ -148,7 +149,7 @@ Compare the two images and determine:
       reasoning: String(parsed.reasoning || ""),
     };
   } catch (err) {
-    console.error("[aiHelpers] aiCompareImages failed:", err);
+    logger.error({ module: 'aiHelpers', err }, 'aiCompareImages failed');
     return { similar: false, confidence: 0, reasoning: `Error: ${err}` };
   }
 }
@@ -216,7 +217,7 @@ Only include fields that have explicit information in the source content. Leave 
       rawExtract: pageContent,
     };
   } catch (err) {
-    console.error("[aiHelpers] aiExtractProductData failed:", err);
+    logger.error({ module: 'aiHelpers', err }, 'aiExtractProductData failed');
     return {
       sourceUrl: "",
       productName: "",
@@ -258,7 +259,7 @@ Return ONLY the extracted value, nothing else. If not found, return "NOT_FOUND".
     const text = (response.text || "").trim();
     return text === "NOT_FOUND" ? "" : text;
   } catch (err) {
-    console.error("[aiHelpers] aiReExtractField failed:", err);
+    logger.error({ module: 'aiHelpers', err }, 'aiReExtractField failed');
     return "";
   }
 }
@@ -317,7 +318,7 @@ Determine if the source content:
       reasoning: String(parsed.reasoning || ""),
     };
   } catch (err) {
-    console.error("[aiHelpers] aiVerifyClaim failed:", err);
+    logger.error({ module: 'aiHelpers', err }, 'aiVerifyClaim failed');
     return { supports: false, contradicts: false, neutral: true, reasoning: `Error: ${err}` };
   }
 }
@@ -380,7 +381,7 @@ Determine if all these values represent the SAME measurement or property:
       reasoning: String(parsed.reasoning || ""),
     };
   } catch (err) {
-    console.error("[aiHelpers] aiCheckEquivalence failed:", err);
+    logger.error({ module: 'aiHelpers', err }, 'aiCheckEquivalence failed');
     return {
       allEquivalent: false,
       compatible: false,
@@ -440,7 +441,7 @@ Ignore marketing language and subjective statements.
       importance: (c.importance as "high" | "medium" | "low") || "medium",
     }));
   } catch (err) {
-    console.error("[aiHelpers] aiExtractClaims failed:", err);
+    logger.error({ module: 'aiHelpers', err }, 'aiExtractClaims failed');
     return [];
   }
 }
@@ -583,7 +584,7 @@ export async function fetchImageAsBase64(url: string): Promise<string> {
     const arrayBuffer = await response.arrayBuffer();
     return Buffer.from(arrayBuffer).toString("base64");
   } catch (err) {
-    console.error("[aiHelpers] fetchImageAsBase64 failed:", err);
+    logger.error({ module: 'aiHelpers', err }, 'fetchImageAsBase64 failed');
     throw err;
   }
 }

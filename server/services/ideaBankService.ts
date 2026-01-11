@@ -12,6 +12,7 @@
  * Security: KB-first policy, web search disabled by default
  */
 
+import { logger } from "../lib/logger";
 import { generateContentWithRetry } from "../lib/geminiClient";
 import { storage } from "../storage";
 import { visionAnalysisService, type VisionAnalysisResult } from "./visionAnalysisService";
@@ -203,7 +204,7 @@ export async function generateSuggestions(
     try {
       enhancedContext = await productKnowledgeService.buildEnhancedContext(productId, userId);
     } catch (err) {
-      console.error("[IdeaBank] Failed to build enhanced context:", err);
+      logger.error({ module: 'IdeaBank', err }, 'Failed to build enhanced context');
       // Continue without enhanced context - not a fatal error
     }
   }
@@ -219,7 +220,7 @@ export async function generateSuggestions(
       kbCitations = kbResult.citations || [];
     }
   } catch (err) {
-    console.error("[IdeaBank] KB query failed:", err);
+    logger.error({ module: 'IdeaBank', err }, 'KB query failed');
     // Continue without KB context - not a fatal error
   }
 
@@ -315,7 +316,7 @@ export async function generateSuggestions(
       return { success: true, response };
     }
   } catch (err) {
-    console.error("[IdeaBank] LLM generation failed:", err);
+    logger.error({ module: 'IdeaBank', err }, 'LLM generation failed');
     return {
       success: false,
       error: {
@@ -516,7 +517,7 @@ async function generateLLMSuggestions(params: {
   }, { operation: 'idea_suggestion' });
 
   const text = response.text || "";
-  console.log("[IdeaBank] LLM raw response length:", text.length);
+  logger.info({ module: 'IdeaBank', responseLength: text.length }, 'LLM raw response received');
 
   // Parse JSON response - try multiple patterns
   let jsonContent: string | null = null;
@@ -534,7 +535,7 @@ async function generateLLMSuggestions(params: {
   }
 
   if (!jsonContent || !jsonContent.startsWith('[')) {
-    console.error("[IdeaBank] Failed to parse response. Full text:", text);
+    logger.error({ module: 'IdeaBank', responseText: text }, 'Failed to parse response');
     throw new Error("Failed to parse suggestions response");
   }
 
@@ -768,7 +769,7 @@ async function generateTemplateSlotSuggestions(params: {
   }, { operation: 'idea_refinement' });
 
   const text = response.text || "";
-  console.log("[IdeaBank Template] LLM raw response length:", text.length);
+  logger.info({ module: 'IdeaBankTemplate', responseLength: text.length }, 'LLM raw response received');
 
   // Parse JSON response
   let jsonContent: string | null = null;
@@ -784,7 +785,7 @@ async function generateTemplateSlotSuggestions(params: {
   }
 
   if (!jsonContent || !jsonContent.startsWith('[')) {
-    console.error("[IdeaBank Template] Failed to parse response. Full text:", text);
+    logger.error({ module: 'IdeaBankTemplate', responseText: text }, 'Failed to parse response');
     throw new Error("Failed to parse template slot suggestions response");
   }
 

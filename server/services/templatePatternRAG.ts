@@ -14,6 +14,7 @@
 
 import { generateContentWithRetry } from '../lib/geminiClient';
 import { storage } from '../storage';
+import { logger } from '../lib/logger';
 import { telemetry } from '../instrumentation';
 import type { PerformingAdTemplate } from '@shared/schema';
 
@@ -187,7 +188,7 @@ export async function matchTemplateForContext(
   } catch (error) {
     success = false;
     errorType = error instanceof Error ? error.name : 'UnknownError';
-    console.error('[TemplatePatternRAG] Error matching templates:', error);
+    logger.error({ module: 'TemplatePatternRAG', err: error }, 'Error matching templates');
     throw error;
   } finally {
     const durationMs = Date.now() - startTime;
@@ -251,7 +252,7 @@ export async function analyzeTemplatePatterns(
   } catch (error) {
     success = false;
     errorType = error instanceof Error ? error.name : 'UnknownError';
-    console.error('[TemplatePatternRAG] Error analyzing template patterns:', error);
+    logger.error({ module: 'TemplatePatternRAG', err: error }, 'Error analyzing template patterns');
 
     // Return fallback analysis from metadata
     return {
@@ -322,7 +323,7 @@ export async function suggestTemplateCustomizations(
   } catch (error) {
     success = false;
     errorType = error instanceof Error ? error.name : 'UnknownError';
-    console.error('[TemplatePatternRAG] Error suggesting customizations:', error);
+    logger.error({ module: 'TemplatePatternRAG', err: error }, 'Error suggesting customizations');
     throw error;
   } finally {
     const durationMs = Date.now() - startTime;
@@ -542,7 +543,7 @@ Respond ONLY with valid JSON.`;
       return JSON.parse(jsonMatch[0]);
     }
   } catch (error) {
-    console.error('[TemplatePatternRAG] Vision analysis failed:', error);
+    logger.error({ module: 'TemplatePatternRAG', err: error }, 'Vision analysis failed');
   }
 
   // Return fallback analysis
@@ -630,7 +631,7 @@ Respond ONLY with valid JSON.`;
       };
     }
   } catch (error) {
-    console.error('[TemplatePatternRAG] Customization suggestion generation failed:', error);
+    logger.error({ module: 'TemplatePatternRAG', err: error }, 'Customization suggestion generation failed');
   }
 
   // Return basic suggestions

@@ -26,6 +26,7 @@ import { matchTemplateForContext, analyzeTemplatePatterns, suggestTemplateCustom
 import { encryptApiKey, generateKeyPreview, validateMasterKeyConfigured, EncryptionConfigError } from "./services/encryptionService";
 import { validateApiKey, isValidService, getSupportedServices, type ServiceName } from "./services/apiKeyValidationService";
 import { saveApiKeySchema } from "./validation/schemas";
+import { logger } from "./lib/logger";
 
 // Lazy-load Google Cloud Monitoring to prevent any import-time errors
 let googleCloudMonitoringService: any = null;
@@ -35,7 +36,7 @@ async function getGoogleCloudService() {
       const module = await import("./services/googleCloudMonitoringService");
       googleCloudMonitoringService = module.googleCloudMonitoringService;
     } catch (error) {
-      console.error("[GoogleCloudMonitoring] Failed to load module:", error);
+      logger.error({ module: 'GoogleCloudMonitoring', err: error }, 'Failed to load module');
     }
   }
   return googleCloudMonitoringService;
@@ -51,7 +52,7 @@ const upload = multer({
 
 // Validate and initialize Cloudinary
 if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
-  console.warn("[Cloudinary] Missing credentials - product library features disabled");
+  logger.warn({ module: 'Cloudinary' }, 'Missing credentials - product library features disabled');
 }
 
 const isCloudinaryConfigured = !!(
@@ -170,7 +171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ id: user.id, email: user.email });
     } catch (error: any) {
-      console.error("[Auth Register] Error:", error);
+      logger.error({ module: 'Auth', action: 'register', err: error }, 'Registration error');
 
       telemetry.trackAuth({
         action: 'register',
@@ -233,7 +234,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ id: user.id, email: user.email });
     } catch (error: any) {
-      console.error("[Auth Login] Error:", error);
+      logger.error({ module: 'Auth', action: 'login', err: error }, 'Login error');
 
       telemetry.trackAuth({
         action: 'login',
@@ -265,7 +266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json({ id: user.id, email: user.email });
     } catch (error: any) {
-      console.error("[Auth Me] Error:", error);
+      logger.error({ module: 'Auth', action: 'me', err: error }, 'Get user error');
       res.status(500).json({ error: "Failed to get user" });
     }
   });
@@ -285,7 +286,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       (req as any).session.userId = user.id;
       res.json({ id: user.id, email: user.email, isDemo: true });
     } catch (error: any) {
-      console.error("[Auth Demo] Error:", error);
+      logger.error({ module: 'Auth', action: 'demo', err: error }, 'Demo login error');
       res.status(500).json({ error: "Demo login failed" });
     }
   });
@@ -335,7 +336,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         usedFallback: estimate.usedFallback,
       });
     } catch (error: any) {
-      console.error('[Pricing Estimate] Error:', error);
+      logger.error({ module: 'PricingEstimate', err: error }, 'Failed to estimate price');
       res.status(500).json({ error: 'Failed to estimate price' });
     }
   });
@@ -367,7 +368,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           recipe = typeof recipeJson === 'string' ? JSON.parse(recipeJson) : recipeJson;
         } catch (e) {
-          console.warn('[Transform] Failed to parse recipe JSON:', e);
+          logger.warn({ module: 'Transform', err: e }, 'Failed to parse recipe JSON');
         }
       }
 
@@ -386,7 +387,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const selectedResolution = normalizeResolution(resolution) || '2K';
-      console.log(`[Transform] Processing ${hasFiles ? files.length : 0} image(s) with prompt: "${prompt.substring(0, 100)}..." [Mode: ${generationMode}]`);
+      logger.info({ module: 'Transform', imageCount: hasFiles ? files.length : 0, promptPreview: prompt.substring(0, 100), mode: generationMode }, 'Processing request');
 
       // Fetch template if using template-based mode
       let template = null;
@@ -503,7 +504,7 @@ Guidelines:
       // INJECT BRAND PROFILE (if available)
       const brandProfile = userId ? await storage.getBrandProfileByUserId(userId) : null;
       if (brandProfile) {
-        console.log(`[Transform] Applying Brand Profile: ${brandProfile.brandName}`);
+        logger.info({ module: 'Transform', brandName: brandProfile.brandName }, 'Applying Brand Profile');
         const brandContext = `
 
 BRAND GUIDELINES (${brandProfile.brandName}):
@@ -558,7 +559,7 @@ Brand Context:
 
 Consider these product relationships and usage contexts when generating the image.`;
         enhancedPrompt += recipeContext;
-        console.log(`[Transform] Recipe context applied: ${recipe.relationships?.length || 0} relationships, ${recipe.scenarios?.length || 0} scenarios`);
+        logger.info({ module: 'Transform', relationshipsCount: recipe.relationships?.length || 0, scenariosCount: recipe.scenarios?.length || 0 }, 'Recipe context applied');
       }
 
       // Build user message parts
@@ -581,7 +582,7 @@ Consider these product relationships and usage contexts when generating the imag
         for (const refUrl of templateReferenceUrls.slice(0, 3)) { // Max 3 reference images
           // Skip invalid or potentially malicious URLs
           if (!isAllowedUrl(refUrl)) {
-            console.warn(`[Transform] Skipping disallowed URL: ${refUrl}`);
+            logger.warn({ module: 'Transform', url: refUrl }, 'Skipping disallowed URL');
             continue;
           }
 
@@ -603,7 +604,7 @@ Consider these product relationships and usage contexts when generating the imag
               });
             }
           } catch (err) {
-            console.warn(`[Transform] Failed to fetch template reference image: ${refUrl}`, err);
+            logger.warn({ module: 'Transform', url: refUrl, err }, 'Failed to fetch template reference image');
           }
         }
       }
@@ -639,7 +640,7 @@ Consider these product relationships and usage contexts when generating the imag
       const requestedResolution = validResolutions.includes(req.body.resolution)
         ? req.body.resolution
         : "2K";
-      console.log(`[Transform] Using model: ${modelName}, resolution: ${requestedResolution} (direct Google API)`);
+      logger.info({ module: 'Transform', model: modelName, resolution: requestedResolution }, 'Using model (direct Google API)');
 
       const result = await genaiImage.models.generateContent({
         model: modelName,
@@ -651,10 +652,10 @@ Consider these product relationships and usage contexts when generating the imag
         }
       });
 
-      console.log(`[Transform] Model response - modelVersion: ${result.modelVersion}, candidates: ${result.candidates?.length}`);
+      logger.info({ module: 'Transform', modelVersion: result.modelVersion, candidates: result.candidates?.length }, 'Model response received');
       const usageMetadata = (result as any).usageMetadata;
       if (usageMetadata) {
-        console.log(`[Transform] Captured usageMetadata: ${JSON.stringify(usageMetadata)}`);
+        logger.info({ module: 'Transform', usageMetadata }, 'Captured usageMetadata');
       }
 
       // Check if we got an image back
@@ -701,7 +702,7 @@ Consider these product relationships and usage contexts when generating the imag
           editPrompt: null,
         });
 
-        console.log(`[Transform] Saved generation ${generation.id} with conversation history`);
+        logger.info({ module: 'Transform', generationId: generation.id }, 'Saved generation with conversation history');
         // Persist usage/cost estimate for adaptive pricing
         try {
           const durationMsForUsage = Date.now() - startTime;
@@ -727,7 +728,7 @@ Consider these product relationships and usage contexts when generating the imag
             estimationSource: cost.estimationSource,
           });
         } catch (e) {
-          console.warn("[Transform] Failed to persist generation usage (run db:push?):", e);
+          logger.warn({ module: 'Transform', err: e }, 'Failed to persist generation usage (run db:push?)');
         }
 
         success = true;
@@ -748,7 +749,7 @@ Consider these product relationships and usage contexts when generating the imag
       }
 
     } catch (error: any) {
-      console.error("[Transform] Error:", error);
+      logger.error({ module: 'Transform', err: error }, 'Transform error');
       errorType = errorType || (error.name || 'unknown');
 
       telemetry.trackError({
@@ -797,7 +798,7 @@ Consider these product relationships and usage contexts when generating the imag
           isRateLimited: errorType === 'RESOURCE_EXHAUSTED' || errorType === 'rate_limit',
         });
       } catch (trackError) {
-        console.warn('[Transform] Failed to track quota:', trackError);
+        logger.warn({ module: 'Transform', err: trackError }, 'Failed to track quota');
       }
     }
   });
@@ -809,7 +810,7 @@ Consider these product relationships and usage contexts when generating the imag
       const allGenerations = await storage.getGenerations(limit);
       res.json(allGenerations);
     } catch (error: any) {
-      console.error("[Generations] Error:", error);
+      logger.error({ module: 'Generations', err: error }, 'Error fetching generations');
       res.status(500).json({ error: "Failed to fetch generations" });
     }
   });
@@ -826,7 +827,7 @@ Consider these product relationships and usage contexts when generating the imag
         canEdit: !!generation.conversationHistory
       });
     } catch (error: any) {
-      console.error("[Generation] Error:", error);
+      logger.error({ module: 'Generation', err: error }, 'Error fetching generation');
       res.status(500).json({ error: "Failed to fetch generation" });
     }
   });
@@ -850,7 +851,7 @@ Consider these product relationships and usage contexts when generating the imag
         totalEdits: history.length - 1 // Subtract 1 because the original is included
       });
     } catch (error: any) {
-      console.error("[Generation History] Error:", error);
+      logger.error({ module: 'GenerationHistory', err: error }, 'Error fetching generation history');
       res.status(500).json({ error: "Failed to fetch generation history" });
     }
   });
@@ -874,7 +875,7 @@ Consider these product relationships and usage contexts when generating the imag
 
       res.json({ success: true });
     } catch (error: any) {
-      console.error("[Delete Generation] Error:", error);
+      logger.error({ module: 'DeleteGeneration', err: error }, 'Error deleting generation');
       res.status(500).json({ error: "Failed to delete generation" });
     }
   });
@@ -942,7 +943,7 @@ Consider these product relationships and usage contexts when generating the imag
         });
       }
 
-      console.log(`[Edit] Editing generation ${id} with prompt: "${editPrompt}"`);
+      logger.info({ module: 'Edit', generationId: id, prompt: editPrompt }, 'Editing generation');
 
       // Append the new edit request to the history
       // This is the key to multi-turn editing - we send the FULL history
@@ -962,17 +963,17 @@ Consider these product relationships and usage contexts when generating the imag
       }
 
       const modelName = "gemini-3-pro-image-preview";
-      console.log(`[Edit] Using model: ${modelName} (direct Google API)`);
+      logger.info({ module: 'Edit', model: modelName }, 'Using model (direct Google API)');
 
       const result = await genaiImage.models.generateContent({
         model: modelName,
         contents: history,
       });
 
-      console.log(`[Edit] Model response - modelVersion: ${result.modelVersion}, candidates: ${result.candidates?.length}`);
+      logger.info({ module: 'Edit', modelVersion: result.modelVersion, candidates: result.candidates?.length }, 'Model response received');
       const usageMetadata = (result as any).usageMetadata;
       if (usageMetadata) {
-        console.log(`[Edit] Captured usageMetadata: ${JSON.stringify(usageMetadata)}`);
+        logger.info({ module: 'Edit', usageMetadata }, 'Captured usageMetadata');
       }
 
       // Extract the new image
@@ -1014,7 +1015,7 @@ Consider these product relationships and usage contexts when generating the imag
         resolution: parentGeneration.resolution || "2K",
       });
 
-      console.log(`[Edit] Created new generation ${newGeneration.id} from parent ${id}`);
+      logger.info({ module: 'Edit', generationId: newGeneration.id, parentId: id }, 'Created new generation from parent');
       // Persist usage/cost estimate for adaptive pricing
       try {
         const durationMsForUsage = Date.now() - startTime;
@@ -1043,7 +1044,7 @@ Consider these product relationships and usage contexts when generating the imag
           estimationSource: cost.estimationSource,
         });
       } catch (e) {
-        console.warn("[Edit] Failed to persist generation usage (run db:push?):", e);
+        logger.warn({ module: 'Edit', err: e }, 'Failed to persist generation usage (run db:push?)');
       }
 
       success = true;
@@ -1057,7 +1058,7 @@ Consider these product relationships and usage contexts when generating the imag
       });
 
     } catch (error: any) {
-      console.error("[Edit] Error:", error);
+      logger.error({ module: 'Edit', err: error }, 'Edit error');
       errorType = errorType || (error.name || 'unknown');
 
       telemetry.trackError({
@@ -1106,7 +1107,7 @@ Consider these product relationships and usage contexts when generating the imag
           isRateLimited: errorType === 'RESOURCE_EXHAUSTED' || errorType === 'rate_limit',
         });
       } catch (trackError) {
-        console.warn('[Edit] Failed to track quota:', trackError);
+        logger.warn({ module: 'Edit', err: trackError }, 'Failed to track quota');
       }
     }
   });
@@ -1132,7 +1133,7 @@ Consider these product relationships and usage contexts when generating the imag
         });
       }
 
-      console.log(`[Analyze] Analyzing generation ${id} with question: "${question}"`);
+      logger.info({ module: 'Analyze', generationId: id, question }, 'Analyzing generation');
 
       // Helper to get MIME type from file path
       const getMimeType = (filePath: string): string => {
@@ -1161,7 +1162,7 @@ Consider these product relationships and usage contexts when generating the imag
             mimeType: getMimeType(imagePath)
           });
         } catch (e) {
-          console.warn(`[Analyze] Could not load original image: ${imagePath}`);
+          logger.warn({ module: 'Analyze', imagePath }, 'Could not load original image');
         }
       }
 
@@ -1220,7 +1221,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         });
       }
 
-      console.log(`[Analyze] Response generated (${responseText.length} chars)`);
+      logger.info({ module: 'Analyze', responseLength: responseText.length }, 'Response generated');
 
       return res.json({
         success: true,
@@ -1228,7 +1229,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       });
 
     } catch (error: any) {
-      console.error("[Analyze] Error:", error);
+      logger.error({ module: 'Analyze', err: error }, 'Analyze error');
       return res.status(500).json({
         success: false,
         error: error.message || "Failed to analyze image"
@@ -1265,7 +1266,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         return res.status(400).json({ error: "Product name is required" });
       }
 
-      console.log(`[Product Upload] Uploading ${name} to Cloudinary...`);
+      logger.info({ module: 'ProductUpload', productName: name }, 'Uploading to Cloudinary');
 
       // Upload to Cloudinary using buffer
       const uploadResult = await new Promise<any>((resolve, reject) => {
@@ -1290,10 +1291,10 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         category: category || null,
       });
 
-      console.log(`[Product Upload] Saved product ${product.id}`);
+      logger.info({ module: 'ProductUpload', productId: product.id }, 'Saved product');
       res.json(product);
     } catch (error: any) {
-      console.error("[Product Upload] Error:", error);
+      logger.error({ module: 'ProductUpload', err: error }, 'Upload error');
       res.status(500).json({ error: "Failed to upload product", details: error.message });
     }
   });
@@ -1304,7 +1305,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       const products = await storage.getProducts();
       res.json(products);
     } catch (error: any) {
-      console.error("[Products] Error:", error);
+      logger.error({ module: 'Products', err: error }, 'Error fetching products');
       res.status(500).json({ error: "Failed to fetch products" });
     }
   });
@@ -1318,7 +1319,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       }
       res.json(product);
     } catch (error: any) {
-      console.error("[Product] Error:", error);
+      logger.error({ module: 'Product', err: error }, 'Error fetching product');
       res.status(500).json({ error: "Failed to fetch product" });
     }
   });
@@ -1339,7 +1340,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
 
       res.json({ success: true });
     } catch (error: any) {
-      console.error("[Delete Product] Error:", error);
+      logger.error({ module: 'DeleteProduct', err: error }, 'Error deleting product');
       res.status(500).json({ error: "Failed to delete product" });
     }
   });
@@ -1353,10 +1354,10 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         await storage.deleteProduct(product.id);
       }
 
-      console.log(`[Products] Cleared ${products.length} products from database`);
+      logger.info({ module: 'Products', clearedCount: products.length }, 'Cleared products from database');
       res.json({ success: true, deleted: products.length });
     } catch (error: any) {
-      console.error("[Clear Products] Error:", error);
+      logger.error({ module: 'ClearProducts', err: error }, 'Error clearing products');
       res.status(500).json({ error: "Failed to clear products" });
     }
   });
@@ -1368,7 +1369,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         return res.status(503).json({ error: "Cloudinary is not configured" });
       }
 
-      console.log("[Cloudinary Sync] Starting sync...");
+      logger.info({ module: 'CloudinarySync' }, 'Starting sync');
 
       // Fetch all images from Cloudinary (max 500 for now)
       const result = await cloudinary.api.resources({
@@ -1378,7 +1379,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         prefix: req.body.folder || '', // Optional folder filter
       });
 
-      console.log(`[Cloudinary Sync] Found ${result.resources.length} images`);
+      logger.info({ module: 'CloudinarySync', imageCount: result.resources.length }, 'Found images');
 
       // Get existing products to avoid duplicates
       const existingProducts = await storage.getProducts();
@@ -1410,7 +1411,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         imported++;
       }
 
-      console.log(`[Cloudinary Sync] Imported: ${imported}, Skipped: ${skipped}`);
+      logger.info({ module: 'CloudinarySync', imported, skipped }, 'Sync complete');
 
       res.json({
         success: true,
@@ -1419,7 +1420,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         total: result.resources.length,
       });
     } catch (error: any) {
-      console.error("[Cloudinary Sync] Error:", error);
+      logger.error({ module: 'CloudinarySync', err: error }, 'Sync error');
       res.status(500).json({ error: "Failed to sync from Cloudinary", details: error.message });
     }
   });
@@ -1441,7 +1442,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
 
       res.json(template);
     } catch (error: any) {
-      console.error("[Prompt Template] Error:", error);
+      logger.error({ module: 'PromptTemplate', err: error }, 'Error creating template');
       res.status(500).json({ error: "Failed to create prompt template" });
     }
   });
@@ -1453,7 +1454,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       const templates = await storage.getPromptTemplates(category);
       res.json(templates);
     } catch (error: any) {
-      console.error("[Prompt Templates] Error:", error);
+      logger.error({ module: 'PromptTemplates', err: error }, 'Error fetching templates');
       res.status(500).json({ error: "Failed to fetch prompt templates" });
     }
   });
@@ -1489,14 +1490,14 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 ["professional desk setup with morning sunlight", "outdoor adventure scene in mountains", "minimalist lifestyle flat lay", "urban street photography aesthetic"]`;
 
       const modelName = "gemini-3-flash-preview";
-      console.log(`[Prompt Suggestions] Using model: ${modelName}`);
+      logger.info({ module: 'PromptSuggestions', model: modelName }, 'Using model');
 
       const result = await genai.models.generateContent({
         model: modelName,
         contents: suggestionPrompt,
       });
 
-      console.log(`[Prompt Suggestions] Model response - modelVersion: ${result.modelVersion}`);
+      logger.info({ module: 'PromptSuggestions', modelVersion: result.modelVersion }, 'Model response received');
 
       const responseText = result.text || "[]";
 
@@ -1517,7 +1518,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       res.json(suggestions);
     } catch (error: any) {
-      console.error("[Prompt Suggestions] Error:", error);
+      logger.error({ module: 'PromptSuggestions', err: error }, 'Error generating suggestions');
       res.status(500).json({ error: "Failed to generate suggestions", details: error.message });
     }
   });
@@ -1528,7 +1529,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       await storage.deletePromptTemplate(req.params.id);
       res.json({ success: true });
     } catch (error: any) {
-      console.error("[Delete Prompt Template] Error:", error);
+      logger.error({ module: 'DeletePromptTemplate', err: error }, 'Error deleting template');
       res.status(500).json({ error: "Failed to delete prompt template" });
     }
   });
@@ -1548,7 +1549,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       ];
       res.json(categories);
     } catch (error: any) {
-      console.error("[Get Template Categories] Error:", error);
+      logger.error({ module: 'GetTemplateCategories', err: error }, 'Error fetching categories');
       res.status(500).json({ error: "Failed to fetch categories" });
     }
   });
@@ -1587,7 +1588,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       res.json(templates);
     } catch (error: any) {
-      console.error("[Get Ad Templates] Error:", error);
+      logger.error({ module: 'GetAdTemplates', err: error }, 'Error fetching ad templates');
       res.status(500).json({ error: "Failed to fetch ad templates" });
     }
   });
@@ -1601,7 +1602,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       }
       res.json(template);
     } catch (error: any) {
-      console.error("[Get Ad Template] Error:", error);
+      logger.error({ module: 'GetAdTemplate', err: error }, 'Error fetching ad template');
       res.status(500).json({ error: "Failed to fetch ad template" });
     }
   });
@@ -1624,7 +1625,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       if (error.name === "ZodError") {
         return res.status(400).json({ error: "Invalid template data", details: error.issues });
       }
-      console.error("[Create Ad Template] Error:", error);
+      logger.error({ module: 'CreateAdTemplate', err: error }, 'Error creating ad template');
       res.status(500).json({ error: "Failed to create ad template" });
     }
   });
@@ -1648,7 +1649,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       if (error.name === "ZodError") {
         return res.status(400).json({ error: "Invalid template data", details: error.issues });
       }
-      console.error("[Update Ad Template] Error:", error);
+      logger.error({ module: 'UpdateAdTemplate', err: error }, 'Error updating ad template');
       res.status(500).json({ error: "Failed to update ad template" });
     }
   });
@@ -1664,7 +1665,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       await storage.deleteAdSceneTemplate(req.params.id);
       res.json({ success: true });
     } catch (error: any) {
-      console.error("[Delete Ad Template] Error:", error);
+      logger.error({ module: 'DeleteAdTemplate', err: error }, 'Error deleting ad template');
       res.status(500).json({ error: "Failed to delete ad template" });
     }
   });
@@ -1744,7 +1745,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       const failedCount = saveResults.filter(r => r.status === 'rejected').length;
       if (failedCount > 0) {
-        console.warn(`[Generate Copy] ${failedCount}/${variations.length} variations failed to save`);
+        logger.warn({ module: 'GenerateCopy', failedCount, totalCount: variations.length }, 'Some variations failed to save');
       }
 
       if (savedCopies.length === 0) {
@@ -1757,7 +1758,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
         recommended: 0, // First variation is recommended
       });
     } catch (error: any) {
-      console.error("[Generate Copy] Error:", error);
+      logger.error({ module: 'GenerateCopy', err: error }, 'Error generating copy');
       if (error.name === "ZodError") {
         return res.status(400).json({ error: "Validation failed", details: error.issues });
       }
@@ -1771,7 +1772,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const copies = await storage.getAdCopyByGenerationId(req.params.generationId);
       res.json({ copies });
     } catch (error: any) {
-      console.error("[Get Copy by Generation] Error:", error);
+      logger.error({ module: 'GetCopyByGeneration', err: error }, 'Error fetching copy');
       res.status(500).json({ error: "Failed to fetch copy" });
     }
   });
@@ -1785,7 +1786,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       }
       res.json({ copy });
     } catch (error: any) {
-      console.error("[Get Copy] Error:", error);
+      logger.error({ module: 'GetCopy', err: error }, 'Error fetching copy');
       res.status(500).json({ error: "Failed to fetch copy" });
     }
   });
@@ -1796,7 +1797,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       await storage.deleteAdCopy(req.params.id);
       res.json({ success: true });
     } catch (error: any) {
-      console.error("[Delete Copy] Error:", error);
+      logger.error({ module: 'DeleteCopy', err: error }, 'Error deleting copy');
       res.status(500).json({ error: "Failed to delete copy" });
     }
   });
@@ -1817,7 +1818,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const updatedUser = await storage.updateUserBrandVoice(userId, brandVoice);
       res.json({ success: true, brandVoice: updatedUser.brandVoice });
     } catch (error: any) {
-      console.error("[Update Brand Voice] Error:", error);
+      logger.error({ module: 'UpdateBrandVoice', err: error }, 'Error updating brand voice');
       res.status(500).json({ error: "Failed to update brand voice" });
     }
   });
@@ -1825,11 +1826,11 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   // Admin: Force verification of Brand Profile Seed
   app.post("/api/admin/seed-brand", async (req, res) => {
     try {
-      console.log("[Admin] Force seeding brand profile...");
+      logger.info({ module: 'Admin' }, 'Force seeding brand profile');
       await seedBrandProfile();
       res.json({ success: true, message: "Brand Profile seeded successfully" });
     } catch (error: any) {
-      console.error("[Admin] Seed failed:", error);
+      logger.error({ module: 'Admin', err: error }, 'Seed failed');
       res.status(500).json({ error: "Seed failed", details: error.message });
     }
   });
@@ -1837,13 +1838,13 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   // Admin: Seed Products
   app.post("/api/admin/seed-products", async (req, res) => {
     try {
-      console.log("[Admin] Seeding products...");
+      logger.info({ module: 'Admin' }, 'Seeding products');
       const { seedProducts } = await import("./seeds/seedProducts");
       const { sampleOnly, cloudinaryOnly, cloudinaryFolder } = req.body || {};
       const results = await seedProducts({ sampleOnly, cloudinaryOnly, cloudinaryFolder });
       res.json({ success: true, message: "Products seeded successfully", results });
     } catch (error: any) {
-      console.error("[Admin] Product seed failed:", error);
+      logger.error({ module: 'Admin', err: error }, 'Product seed failed');
       res.status(500).json({ error: "Seed failed", details: error.message });
     }
   });
@@ -1851,12 +1852,12 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   // Admin: Seed Installation Scenarios
   app.post("/api/admin/seed-installation-scenarios", async (req, res) => {
     try {
-      console.log("[Admin] Seeding installation scenarios...");
+      logger.info({ module: 'Admin' }, 'Seeding installation scenarios');
       const { seedInstallationScenarios } = await import("./seeds/seedInstallationScenarios");
       const results = await seedInstallationScenarios();
       res.json({ success: true, message: "Installation scenarios seeded successfully", results });
     } catch (error: any) {
-      console.error("[Admin] Installation scenarios seed failed:", error);
+      logger.error({ module: 'Admin', err: error }, 'Installation scenarios seed failed');
       res.status(500).json({ error: "Seed failed", details: error.message });
     }
   });
@@ -1864,12 +1865,12 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   // Admin: Seed Product Relationships
   app.post("/api/admin/seed-relationships", async (req, res) => {
     try {
-      console.log("[Admin] Seeding product relationships...");
+      logger.info({ module: 'Admin' }, 'Seeding product relationships');
       const { seedProductRelationships } = await import("./seeds/seedRelationships");
       const results = await seedProductRelationships();
       res.json({ success: true, message: "Product relationships seeded successfully", results });
     } catch (error: any) {
-      console.error("[Admin] Relationships seed failed:", error);
+      logger.error({ module: 'Admin', err: error }, 'Relationships seed failed');
       res.status(500).json({ error: "Seed failed", details: error.message });
     }
   });
@@ -1877,13 +1878,13 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   // Admin: Seed Brand Images
   app.post("/api/admin/seed-brand-images", async (req, res) => {
     try {
-      console.log("[Admin] Seeding brand images...");
+      logger.info({ module: 'Admin' }, 'Seeding brand images');
       const { seedBrandImages } = await import("./seeds/seedBrandImages");
       const { sampleOnly, cloudinaryOnly, cloudinaryFolder } = req.body || {};
       const results = await seedBrandImages({ sampleOnly, cloudinaryOnly, cloudinaryFolder });
       res.json({ success: true, message: "Brand images seeded successfully", results });
     } catch (error: any) {
-      console.error("[Admin] Brand images seed failed:", error);
+      logger.error({ module: 'Admin', err: error }, 'Brand images seed failed');
       res.status(500).json({ error: "Seed failed", details: error.message });
     }
   });
@@ -1891,12 +1892,12 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   // Admin: Seed Performing Templates
   app.post("/api/admin/seed-templates", async (req, res) => {
     try {
-      console.log("[Admin] Seeding performing templates...");
+      logger.info({ module: 'Admin' }, 'Seeding performing templates');
       const { seedPerformingTemplates } = await import("./seeds/seedTemplates");
       const results = await seedPerformingTemplates();
       res.json({ success: true, message: "Performing templates seeded successfully", results });
     } catch (error: any) {
-      console.error("[Admin] Templates seed failed:", error);
+      logger.error({ module: 'Admin', err: error }, 'Templates seed failed');
       res.status(500).json({ error: "Seed failed", details: error.message });
     }
   });
@@ -1904,13 +1905,13 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   // Admin: Run All Seeds
   app.post("/api/admin/seed-all", async (req, res) => {
     try {
-      console.log("[Admin] Running all seeds...");
+      logger.info({ module: 'Admin' }, 'Running all seeds');
       const { runAllSeeds } = await import("./seeds/runAllSeeds");
       const options = req.body || {};
       const results = await runAllSeeds(options);
       res.json({ success: true, message: "All seeds completed", results });
     } catch (error: any) {
-      console.error("[Admin] Seed all failed:", error);
+      logger.error({ module: 'Admin', err: error }, 'Seed all failed');
       res.status(500).json({ error: "Seed failed", details: error.message });
     }
   });
@@ -1926,7 +1927,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const categories = getAvailableCategories();
       res.json({ success: true, categories });
     } catch (error: any) {
-      console.error("[Scraper] Failed to get categories:", error);
+      logger.error({ module: 'Scraper', err: error }, 'Failed to get categories');
       res.status(500).json({ error: "Failed to get categories", details: error.message });
     }
   });
@@ -1934,13 +1935,13 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   // Scrape all products from NDS website
   app.post("/api/admin/scraper/scrape-all", async (req, res) => {
     try {
-      console.log("[Scraper] Starting full website scrape...");
+      logger.info({ module: 'Scraper' }, 'Starting full website scrape');
       const { scrapeNDSWebsite } = await import("./services/ndsWebsiteScraper");
       const { categories, dryRun, limit } = req.body || {};
       const results = await scrapeNDSWebsite({ categories, dryRun, limit });
       res.json({ success: true, message: "Scraping completed", results });
     } catch (error: any) {
-      console.error("[Scraper] Full scrape failed:", error);
+      logger.error({ module: 'Scraper', err: error }, 'Full scrape failed');
       res.status(500).json({ error: "Scraping failed", details: error.message });
     }
   });
@@ -1949,12 +1950,12 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   app.post("/api/admin/scraper/scrape-category/:category", async (req, res) => {
     try {
       const { category } = req.params;
-      console.log(`[Scraper] Scraping category: ${category}`);
+      logger.info({ module: 'Scraper', category }, 'Scraping category');
       const { scrapeSingleCategory } = await import("./services/ndsWebsiteScraper");
       const results = await scrapeSingleCategory(category);
       res.json({ success: true, message: `Category ${category} scraped`, results });
     } catch (error: any) {
-      console.error(`[Scraper] Category scrape failed:`, error);
+      logger.error({ module: 'Scraper', err: error }, 'Category scrape failed');
       res.status(500).json({ error: "Scraping failed", details: error.message });
     }
   });
@@ -1970,7 +1971,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const store = await initializeFileSearchStore();
       res.json({ success: true, store: { name: store.name, displayName: store.config?.displayName } });
     } catch (error: any) {
-      console.error("[Initialize File Search] Error:", error);
+      logger.error({ module: 'InitializeFileSearch', err: error }, 'Error initializing file search');
       res.status(500).json({ error: "Failed to initialize File Search Store" });
     }
   });
@@ -2007,7 +2008,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       res.json({ success: true, file: result });
     } catch (error: any) {
-      console.error("[Upload Reference File] Error:", error);
+      logger.error({ module: 'UploadReferenceFile', err: error }, 'Error uploading reference file');
       res.status(500).json({ error: "Failed to upload file" });
     }
   });
@@ -2029,7 +2030,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       res.json({ success: true, files: results, count: results.length });
     } catch (error: any) {
-      console.error("[Upload Directory] Error:", error);
+      logger.error({ module: 'UploadDirectory', err: error }, 'Error uploading directory');
       res.status(500).json({ error: "Failed to upload directory" });
     }
   });
@@ -2043,7 +2044,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const files = await listReferenceFiles(category as any);
       res.json({ success: true, files, count: files.length });
     } catch (error: any) {
-      console.error("[List Reference Files] Error:", error);
+      logger.error({ module: 'ListReferenceFiles', err: error }, 'Error listing reference files');
       res.status(500).json({ error: "Failed to list files" });
     }
   });
@@ -2057,7 +2058,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       await deleteReferenceFile(fileId);
       res.json({ success: true });
     } catch (error: any) {
-      console.error("[Delete Reference File] Error:", error);
+      logger.error({ module: 'DeleteReferenceFile', err: error }, 'Error deleting reference file');
       res.status(500).json({ error: "Failed to delete file" });
     }
   });
@@ -2069,7 +2070,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const result = await seedFileSearchStore();
       res.json(result);
     } catch (error: any) {
-      console.error("[Seed File Search] Error:", error);
+      logger.error({ module: 'SeedFileSearch', err: error }, 'Error seeding file search');
       res.status(500).json({ error: "Failed to seed File Search Store" });
     }
   });
@@ -2104,7 +2105,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
         fromCache: !forceRefresh,
       });
     } catch (error: any) {
-      console.error("[Product Analyze] Error:", error);
+      logger.error({ module: 'ProductAnalyze', err: error }, 'Error analyzing product');
       res.status(500).json({ error: "Failed to analyze product" });
     }
   });
@@ -2123,7 +2124,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       res.json({ analysis });
     } catch (error: any) {
-      console.error("[Product Analysis Get] Error:", error);
+      logger.error({ module: 'ProductAnalysisGet', err: error }, 'Error getting product analysis');
       res.status(500).json({ error: "Failed to get product analysis" });
     }
   });
@@ -2164,7 +2165,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
         confidence: result.analysis.confidence,
       });
     } catch (error: any) {
-      console.error("[Analyze Image] Error:", error);
+      logger.error({ module: 'AnalyzeImage', err: error }, 'Error analyzing image');
       res.status(500).json({ error: "Failed to analyze image" });
     }
   });
@@ -2191,7 +2192,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
         draft: result.draft,
       });
     } catch (error: any) {
-      console.error("[Product Enrichment] Error:", error);
+      logger.error({ module: 'ProductEnrichment', err: error }, 'Error enriching product');
       res.status(500).json({ error: "Failed to generate enrichment draft" });
     }
   });
@@ -2229,7 +2230,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
         draft: result.enrichmentDraft,
       });
     } catch (error: any) {
-      console.error("[URL Enrichment] Error:", error);
+      logger.error({ module: 'URLEnrichment', err: error }, 'Error enriching from URL');
       res.status(500).json({ error: "Failed to enrich product from URL" });
     }
   });
@@ -2257,7 +2258,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
         isReady: productEnrichmentService.isProductReady(product),
       });
     } catch (error: any) {
-      console.error("[Product Enrichment Get] Error:", error);
+      logger.error({ module: 'ProductEnrichmentGet', err: error }, 'Error getting product enrichment');
       res.status(500).json({ error: "Failed to get enrichment data" });
     }
   });
@@ -2281,7 +2282,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       res.json({ success: true, message: "Product enrichment verified" });
     } catch (error: any) {
-      console.error("[Product Enrichment Verify] Error:", error);
+      logger.error({ module: 'ProductEnrichmentVerify', err: error }, 'Error verifying product enrichment');
       res.status(500).json({ error: "Failed to verify enrichment" });
     }
   });
@@ -2305,7 +2306,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       res.json({ products: productsWithInfo });
     } catch (error: any) {
-      console.error("[Products Pending Enrichment] Error:", error);
+      logger.error({ module: 'ProductsPendingEnrichment', err: error }, 'Error fetching products pending enrichment');
       res.status(500).json({ error: "Failed to get products needing enrichment" });
     }
   });
@@ -2324,7 +2325,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       });
       res.status(201).json(scenario);
     } catch (error: any) {
-      console.error("[Installation Scenarios] Create error:", error);
+      logger.error({ module: 'InstallationScenarios', err: error }, 'Create error');
       res.status(500).json({ error: "Failed to create installation scenario" });
     }
   });
@@ -2336,7 +2337,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const scenarios = await storage.getInstallationScenariosByUser(userId);
       res.json(scenarios);
     } catch (error: any) {
-      console.error("[Installation Scenarios] List error:", error);
+      logger.error({ module: 'InstallationScenarios', err: error }, 'List error');
       res.status(500).json({ error: "Failed to get installation scenarios" });
     }
   });
@@ -2347,7 +2348,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const scenarios = await storage.getScenariosByRoomType(req.params.roomType);
       res.json(scenarios);
     } catch (error: any) {
-      console.error("[Installation Scenarios] Room type query error:", error);
+      logger.error({ module: 'InstallationScenarios', err: error }, 'Room type query error');
       res.status(500).json({ error: "Failed to get scenarios by room type" });
     }
   });
@@ -2362,7 +2363,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const scenarios = await storage.getInstallationScenariosForProducts(productIds);
       res.json(scenarios);
     } catch (error: any) {
-      console.error("[Installation Scenarios] Products query error:", error);
+      logger.error({ module: 'InstallationScenarios', err: error }, 'Products query error');
       res.status(500).json({ error: "Failed to get scenarios for products" });
     }
   });
@@ -2376,7 +2377,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       }
       res.json(scenario);
     } catch (error: any) {
-      console.error("[Installation Scenarios] Get error:", error);
+      logger.error({ module: 'InstallationScenarios', err: error }, 'Get error');
       res.status(500).json({ error: "Failed to get installation scenario" });
     }
   });
@@ -2395,7 +2396,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const scenario = await storage.updateInstallationScenario(req.params.id, req.body);
       res.json(scenario);
     } catch (error: any) {
-      console.error("[Installation Scenarios] Update error:", error);
+      logger.error({ module: 'InstallationScenarios', err: error }, 'Update error');
       res.status(500).json({ error: "Failed to update installation scenario" });
     }
   });
@@ -2414,7 +2415,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       await storage.deleteInstallationScenario(req.params.id);
       res.json({ success: true });
     } catch (error: any) {
-      console.error("[Installation Scenarios] Delete error:", error);
+      logger.error({ module: 'InstallationScenarios', err: error }, 'Delete error');
       res.status(500).json({ error: "Failed to delete installation scenario" });
     }
   });
@@ -2440,7 +2441,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       });
       res.status(201).json(relationship);
     } catch (error: any) {
-      console.error("[Product Relationships] Create error:", error);
+      logger.error({ module: 'ProductRelationships', err: error }, 'Create error');
       if (error.code === "23505") { // Unique constraint violation
         return res.status(409).json({ error: "This relationship already exists" });
       }
@@ -2454,7 +2455,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const relationships = await storage.getProductRelationships([req.params.productId]);
       res.json(relationships);
     } catch (error: any) {
-      console.error("[Product Relationships] Get error:", error);
+      logger.error({ module: 'ProductRelationships', err: error }, 'Get error');
       res.status(500).json({ error: "Failed to get product relationships" });
     }
   });
@@ -2468,7 +2469,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       );
       res.json(relationships);
     } catch (error: any) {
-      console.error("[Product Relationships] Get by type error:", error);
+      logger.error({ module: 'ProductRelationships', err: error }, 'Get by type error');
       res.status(500).json({ error: "Failed to get product relationships" });
     }
   });
@@ -2479,7 +2480,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       await storage.deleteProductRelationship(req.params.id);
       res.json({ success: true });
     } catch (error: any) {
-      console.error("[Product Relationships] Delete error:", error);
+      logger.error({ module: 'ProductRelationships', err: error }, 'Delete error');
       res.status(500).json({ error: "Failed to delete product relationship" });
     }
   });
@@ -2494,7 +2495,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const relationships = await storage.getProductRelationships(productIds);
       res.json(relationships);
     } catch (error: any) {
-      console.error("[Product Relationships] Bulk get error:", error);
+      logger.error({ module: 'ProductRelationships', err: error }, 'Bulk get error');
       res.status(500).json({ error: "Failed to get product relationships" });
     }
   });
@@ -2558,7 +2559,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       res.status(201).json(brandImage);
     } catch (error: any) {
-      console.error("[Brand Images] Upload error:", error);
+      logger.error({ module: 'BrandImages', err: error }, 'Upload error');
       res.status(500).json({ error: "Failed to upload brand image" });
     }
   });
@@ -2570,7 +2571,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const images = await storage.getBrandImagesByUser(userId);
       res.json(images);
     } catch (error: any) {
-      console.error("[Brand Images] List error:", error);
+      logger.error({ module: 'BrandImages', err: error }, 'List error');
       res.status(500).json({ error: "Failed to get brand images" });
     }
   });
@@ -2582,7 +2583,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const images = await storage.getBrandImagesByCategory(userId, req.params.category);
       res.json(images);
     } catch (error: any) {
-      console.error("[Brand Images] Category query error:", error);
+      logger.error({ module: 'BrandImages', err: error }, 'Category query error');
       res.status(500).json({ error: "Failed to get brand images by category" });
     }
   });
@@ -2598,7 +2599,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const images = await storage.getBrandImagesForProducts(productIds, userId);
       res.json(images);
     } catch (error: any) {
-      console.error("[Brand Images] Products query error:", error);
+      logger.error({ module: 'BrandImages', err: error }, 'Products query error');
       res.status(500).json({ error: "Failed to get brand images for products" });
     }
   });
@@ -2609,7 +2610,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const image = await storage.updateBrandImage(req.params.id, req.body);
       res.json(image);
     } catch (error: any) {
-      console.error("[Brand Images] Update error:", error);
+      logger.error({ module: 'BrandImages', err: error }, 'Update error');
       res.status(500).json({ error: "Failed to update brand image" });
     }
   });
@@ -2633,7 +2634,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
         try {
           await cloudinary.uploader.destroy(imageToDelete.cloudinaryPublicId);
         } catch (cloudinaryError) {
-          console.warn("[Brand Images] Cloudinary delete warning:", cloudinaryError);
+          logger.warn({ module: 'BrandImages', err: cloudinaryError }, 'Cloudinary delete warning');
           // Continue with database deletion even if Cloudinary fails
         }
       }
@@ -2641,7 +2642,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       await storage.deleteBrandImage(req.params.id);
       res.json({ success: true });
     } catch (error: any) {
-      console.error("[Brand Images] Delete error:", error);
+      logger.error({ module: 'BrandImages', err: error }, 'Delete error');
       res.status(500).json({ error: "Failed to delete brand image" });
     }
   });
@@ -2722,7 +2723,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const template = await storage.createPerformingAdTemplate(templateData);
       res.json(template);
     } catch (error: any) {
-      console.error("[Performing Templates] Create error:", error);
+      logger.error({ module: 'PerformingTemplates', err: error }, 'Create error');
       res.status(500).json({ error: "Failed to create performing ad template" });
     }
   });
@@ -2734,7 +2735,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const templates = await storage.getPerformingAdTemplates(userId);
       res.json(templates);
     } catch (error: any) {
-      console.error("[Performing Templates] List error:", error);
+      logger.error({ module: 'PerformingTemplates', err: error }, 'List error');
       res.status(500).json({ error: "Failed to fetch performing ad templates" });
     }
   });
@@ -2746,7 +2747,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const templates = await storage.getFeaturedPerformingAdTemplates(userId);
       res.json(templates);
     } catch (error: any) {
-      console.error("[Performing Templates] Get featured error:", error);
+      logger.error({ module: 'PerformingTemplates', err: error }, 'Get featured error');
       res.status(500).json({ error: "Failed to fetch featured templates" });
     }
   });
@@ -2759,7 +2760,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const templates = await storage.getTopPerformingAdTemplates(userId, limit);
       res.json(templates);
     } catch (error: any) {
-      console.error("[Performing Templates] Get top error:", error);
+      logger.error({ module: 'PerformingTemplates', err: error }, 'Get top error');
       res.status(500).json({ error: "Failed to fetch top templates" });
     }
   });
@@ -2772,7 +2773,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const templates = await storage.searchPerformingAdTemplates(userId, filters);
       res.json(templates);
     } catch (error: any) {
-      console.error("[Performing Templates] Search error:", error);
+      logger.error({ module: 'PerformingTemplates', err: error }, 'Search error');
       res.status(500).json({ error: "Failed to search templates" });
     }
   });
@@ -2784,7 +2785,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const templates = await storage.getPerformingAdTemplatesByCategory(userId, req.params.category);
       res.json(templates);
     } catch (error: any) {
-      console.error("[Performing Templates] Get by category error:", error);
+      logger.error({ module: 'PerformingTemplates', err: error }, 'Get by category error');
       res.status(500).json({ error: "Failed to fetch templates by category" });
     }
   });
@@ -2796,7 +2797,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const templates = await storage.getPerformingAdTemplatesByPlatform(userId, req.params.platform);
       res.json(templates);
     } catch (error: any) {
-      console.error("[Performing Templates] Get by platform error:", error);
+      logger.error({ module: 'PerformingTemplates', err: error }, 'Get by platform error');
       res.status(500).json({ error: "Failed to fetch templates by platform" });
     }
   });
@@ -2810,7 +2811,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       }
       res.json(template);
     } catch (error: any) {
-      console.error("[Performing Templates] Get error:", error);
+      logger.error({ module: 'PerformingTemplates', err: error }, 'Get error');
       res.status(500).json({ error: "Failed to fetch performing ad template" });
     }
   });
@@ -2821,7 +2822,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const template = await storage.updatePerformingAdTemplate(req.params.id, req.body);
       res.json(template);
     } catch (error: any) {
-      console.error("[Performing Templates] Update error:", error);
+      logger.error({ module: 'PerformingTemplates', err: error }, 'Update error');
       res.status(500).json({ error: "Failed to update performing ad template" });
     }
   });
@@ -2843,14 +2844,14 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
         try {
           await cloudinary.uploader.destroy(template.previewPublicId);
         } catch (cloudinaryError) {
-          console.warn("[Performing Templates] Cloudinary delete warning:", cloudinaryError);
+          logger.warn({ module: 'PerformingTemplates', err: cloudinaryError }, 'Cloudinary delete warning');
         }
       }
 
       await storage.deletePerformingAdTemplate(req.params.id);
       res.json({ success: true });
     } catch (error: any) {
-      console.error("[Performing Templates] Delete error:", error);
+      logger.error({ module: 'PerformingTemplates', err: error }, 'Delete error');
       res.status(500).json({ error: "Failed to delete performing ad template" });
     }
   });
@@ -2977,7 +2978,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       // Existing freestyle response
       res.json(result.response);
     } catch (error: any) {
-      console.error("[Idea Bank Suggest] Error:", error);
+      logger.error({ module: 'IdeaBankSuggest', err: error }, 'Error suggesting ideas');
       res.status(500).json({ error: "Failed to generate suggestions" });
     }
   });
@@ -3001,7 +3002,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
         productAnalysis: result.analysis,
       });
     } catch (error: any) {
-      console.error("[Idea Bank Templates] Error:", error);
+      logger.error({ module: 'IdeaBankTemplates', err: error }, 'Error fetching templates');
       res.status(500).json({ error: "Failed to get matched templates" });
     }
   });
@@ -3022,7 +3023,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       res.json({ templates, total: templates.length });
     } catch (error: any) {
-      console.error("[Templates List] Error:", error);
+      logger.error({ module: 'TemplatesList', err: error }, 'Error listing templates');
       res.status(500).json({ error: "Failed to list templates" });
     }
   });
@@ -3038,7 +3039,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       res.json(template);
     } catch (error: any) {
-      console.error("[Template Get] Error:", error);
+      logger.error({ module: 'TemplateGet', err: error }, 'Error getting template');
       res.status(500).json({ error: "Failed to get template" });
     }
   });
@@ -3055,7 +3056,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const templates = await storage.searchAdSceneTemplates(q);
       res.json({ templates, total: templates.length });
     } catch (error: any) {
-      console.error("[Templates Search] Error:", error);
+      logger.error({ module: 'TemplatesSearch', err: error }, 'Error searching templates');
       res.status(500).json({ error: "Failed to search templates" });
     }
   });
@@ -3079,7 +3080,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const template = await storage.saveAdSceneTemplate(templateData);
       res.status(201).json(template);
     } catch (error: any) {
-      console.error("[Template Create] Error:", error);
+      logger.error({ module: 'TemplateCreate', err: error }, 'Error creating template');
       res.status(500).json({ error: "Failed to create template" });
     }
   });
@@ -3103,7 +3104,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const updated = await storage.updateAdSceneTemplate(req.params.id, req.body);
       res.json(updated);
     } catch (error: any) {
-      console.error("[Template Update] Error:", error);
+      logger.error({ module: 'TemplateUpdate', err: error }, 'Error updating template');
       res.status(500).json({ error: "Failed to update template" });
     }
   });
@@ -3127,7 +3128,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       await storage.deleteAdSceneTemplate(req.params.id);
       res.json({ success: true });
     } catch (error: any) {
-      console.error("[Template Delete] Error:", error);
+      logger.error({ module: 'TemplateDelete', err: error }, 'Error deleting template');
       res.status(500).json({ error: "Failed to delete template" });
     }
   });
@@ -3148,7 +3149,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       res.json(profile);
     } catch (error: any) {
-      console.error("[Brand Profile Get] Error:", error);
+      logger.error({ module: 'BrandProfileGet', err: error }, 'Error getting brand profile');
       res.status(500).json({ error: "Failed to get brand profile" });
     }
   });
@@ -3171,7 +3172,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
         res.status(201).json(created);
       }
     } catch (error: any) {
-      console.error("[Brand Profile Update] Error:", error);
+      logger.error({ module: 'BrandProfileUpdate', err: error }, 'Error updating brand profile');
       res.status(500).json({ error: "Failed to update brand profile" });
     }
   });
@@ -3183,7 +3184,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       await storage.deleteBrandProfile(userId);
       res.json({ success: true });
     } catch (error: any) {
-      console.error("[Brand Profile Delete] Error:", error);
+      logger.error({ module: 'BrandProfileDelete', err: error }, 'Error deleting brand profile');
       res.status(500).json({ error: "Failed to delete brand profile" });
     }
   });
@@ -3199,7 +3200,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const status = await quotaMonitoringService.getQuotaStatus(brandId);
       res.json(status);
     } catch (error: any) {
-      console.error("[Quota Status] Error:", error);
+      logger.error({ module: 'QuotaStatus', err: error }, 'Error fetching quota status');
       res.status(500).json({ error: "Failed to get quota status" });
     }
   });
@@ -3219,7 +3220,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       res.json({ history });
     } catch (error: any) {
-      console.error("[Quota History] Error:", error);
+      logger.error({ module: 'QuotaHistory', err: error }, 'Error fetching quota history');
       res.status(500).json({ error: "Failed to get quota history" });
     }
   });
@@ -3237,7 +3238,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       res.json(breakdown);
     } catch (error: any) {
-      console.error("[Quota Breakdown] Error:", error);
+      logger.error({ module: 'QuotaBreakdown', err: error }, 'Error fetching quota breakdown');
       res.status(500).json({ error: "Failed to get quota breakdown" });
     }
   });
@@ -3249,7 +3250,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const status = await quotaMonitoringService.getRateLimitStatus(brandId);
       res.json(status);
     } catch (error: any) {
-      console.error("[Rate Limit Status] Error:", error);
+      logger.error({ module: 'RateLimitStatus', err: error }, 'Error fetching rate limit status');
       res.status(500).json({ error: "Failed to get rate limit status" });
     }
   });
@@ -3261,7 +3262,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const alerts = await quotaMonitoringService.getAlerts(brandId);
       res.json({ alerts });
     } catch (error: any) {
-      console.error("[Quota Alerts Get] Error:", error);
+      logger.error({ module: 'QuotaAlertsGet', err: error }, 'Error getting quota alerts');
       res.status(500).json({ error: "Failed to get quota alerts" });
     }
   });
@@ -3285,7 +3286,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       res.json(alert);
     } catch (error: any) {
-      console.error("[Quota Alerts Update] Error:", error);
+      logger.error({ module: 'QuotaAlertsUpdate', err: error }, 'Error updating quota alerts');
       res.status(500).json({ error: "Failed to update quota alert" });
     }
   });
@@ -3297,7 +3298,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const triggered = await quotaMonitoringService.checkAlerts(brandId);
       res.json({ triggered });
     } catch (error: any) {
-      console.error("[Check Alerts] Error:", error);
+      logger.error({ module: 'CheckAlerts', err: error }, 'Error checking alerts');
       res.status(500).json({ error: "Failed to check alerts" });
     }
   });
@@ -3325,7 +3326,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
         } : null,
       });
     } catch (error: any) {
-      console.error("[Google Quota Status] Error:", error);
+      logger.error({ module: 'GoogleQuotaStatus', err: error }, 'Error fetching Google quota status');
       res.status(500).json({ error: "Failed to get Google quota status" });
     }
   });
@@ -3348,7 +3349,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       res.json(snapshot);
     } catch (error: any) {
-      console.error("[Google Quota Snapshot] Error:", error);
+      logger.error({ module: 'GoogleQuotaSnapshot', err: error }, 'Error fetching Google quota snapshot');
       res.status(500).json({ error: "Failed to get Google quota snapshot" });
     }
   });
@@ -3394,7 +3395,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
         syncHistoryId: syncEntry.id,
       });
     } catch (error: any) {
-      console.error("[Google Quota Manual Sync] Error:", error);
+      logger.error({ module: 'GoogleQuotaManualSync', err: error }, 'Error syncing Google quota');
       res.status(500).json({ error: "Failed to sync Google quota data" });
     }
   });
@@ -3406,7 +3407,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const history = await storage.getRecentSyncHistory(limit);
       res.json({ history });
     } catch (error: any) {
-      console.error("[Google Quota Sync History] Error:", error);
+      logger.error({ module: 'GoogleQuotaSyncHistory', err: error }, 'Error fetching sync history');
       res.status(500).json({ error: "Failed to get sync history" });
     }
   });
@@ -3428,7 +3429,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       res.json({ snapshots });
     } catch (error: any) {
-      console.error("[Google Quota Snapshots History] Error:", error);
+      logger.error({ module: 'GoogleQuotaSnapshotsHistory', err: error }, 'Error fetching snapshots history');
       res.status(500).json({ error: "Failed to get snapshot history" });
     }
   });
@@ -3458,7 +3459,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       res.json(result);
     } catch (error: any) {
-      console.error("[Installation RAG] Error suggesting steps:", error);
+      logger.error({ module: 'InstallationRAG', err: error }, 'Error suggesting steps');
       res.status(500).json({ error: "Failed to suggest installation steps" });
     }
   });
@@ -3477,7 +3478,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const context = getRoomInstallationContext(roomType);
       res.json(context);
     } catch (error: any) {
-      console.error("[Installation RAG] Error getting room context:", error);
+      logger.error({ module: 'InstallationRAG', err: error }, 'Error getting room context');
       res.status(500).json({ error: "Failed to get room context" });
     }
   });
@@ -3500,7 +3501,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       res.json(accessories);
     } catch (error: any) {
-      console.error("[Installation RAG] Error suggesting accessories:", error);
+      logger.error({ module: 'InstallationRAG', err: error }, 'Error suggesting accessories');
       res.status(500).json({ error: "Failed to suggest accessories" });
     }
   });
@@ -3523,7 +3524,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       res.json(tips);
     } catch (error: any) {
-      console.error("[Installation RAG] Error getting tips:", error);
+      logger.error({ module: 'InstallationRAG', err: error }, 'Error getting tips');
       res.status(500).json({ error: "Failed to get installation tips" });
     }
   });
@@ -3545,7 +3546,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       res.json(suggestions);
     } catch (error: any) {
-      console.error("[Relationship RAG] Error suggesting relationships:", error);
+      logger.error({ module: 'RelationshipRAG', err: error }, 'Error suggesting relationships');
       res.status(500).json({ error: "Failed to suggest relationships" });
     }
   });
@@ -3572,7 +3573,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       res.json(similar);
     } catch (error: any) {
-      console.error("[Relationship RAG] Error finding similar products:", error);
+      logger.error({ module: 'RelationshipRAG', err: error }, 'Error finding similar products');
       res.status(500).json({ error: "Failed to find similar products" });
     }
   });
@@ -3589,7 +3590,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const analysis = await analyzeRelationshipType(sourceProductId, targetProductId);
       res.json(analysis);
     } catch (error: any) {
-      console.error("[Relationship RAG] Error analyzing relationship:", error);
+      logger.error({ module: 'RelationshipRAG', err: error }, 'Error analyzing relationship');
       res.status(500).json({ error: "Failed to analyze relationship" });
     }
   });
@@ -3607,7 +3608,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const suggestions = await batchSuggestRelationships(productIds, userId);
       res.json(suggestions);
     } catch (error: any) {
-      console.error("[Relationship RAG] Error batch suggesting:", error);
+      logger.error({ module: 'RelationshipRAG', err: error }, 'Error batch suggesting');
       res.status(500).json({ error: "Failed to batch suggest relationships" });
     }
   });
@@ -3630,7 +3631,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       res.json(result);
     } catch (error: any) {
-      console.error("[Relationship RAG] Error auto-creating relationships:", error);
+      logger.error({ module: 'RelationshipRAG', err: error }, 'Error auto-creating relationships');
       res.status(500).json({ error: "Failed to auto-create relationships" });
     }
   });
@@ -3660,7 +3661,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       res.json(recommendations);
     } catch (error: any) {
-      console.error("[Brand Image RAG] Error recommending images:", error);
+      logger.error({ module: 'BrandImageRAG', err: error }, 'Error recommending images');
       res.status(500).json({ error: "Failed to recommend images" });
     }
   });
@@ -3683,7 +3684,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       res.json(matches);
     } catch (error: any) {
-      console.error("[Brand Image RAG] Error matching images:", error);
+      logger.error({ module: 'BrandImageRAG', err: error }, 'Error matching images');
       res.status(500).json({ error: "Failed to match images for product" });
     }
   });
@@ -3704,7 +3705,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       res.json(suggestions);
     } catch (error: any) {
-      console.error("[Brand Image RAG] Error suggesting category:", error);
+      logger.error({ module: 'BrandImageRAG', err: error }, 'Error suggesting category');
       res.status(500).json({ error: "Failed to suggest image category" });
     }
   });
@@ -3735,7 +3736,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       res.json(result);
     } catch (error: any) {
-      console.error("[Template RAG] Error matching templates:", error);
+      logger.error({ module: 'TemplateRAG', err: error }, 'Error matching templates');
       res.status(500).json({ error: "Failed to match templates" });
     }
   });
@@ -3754,7 +3755,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       res.json(analysis);
     } catch (error: any) {
-      console.error("[Template RAG] Error analyzing patterns:", error);
+      logger.error({ module: 'TemplateRAG', err: error }, 'Error analyzing patterns');
       res.status(500).json({ error: "Failed to analyze template patterns" });
     }
   });
@@ -3779,7 +3780,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       res.json(suggestions);
     } catch (error: any) {
-      console.error("[Template RAG] Error suggesting customizations:", error);
+      logger.error({ module: 'TemplateRAG', err: error }, 'Error suggesting customizations');
       res.status(500).json({ error: "Failed to suggest customizations" });
     }
   });
@@ -3846,7 +3847,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       res.json({ keys });
     } catch (error: any) {
-      console.error("[API Keys] Error listing keys:", error);
+      logger.error({ module: 'APIKeys', err: error }, 'Error listing keys');
       res.status(500).json({ error: "Failed to retrieve API key configurations" });
     }
   });
@@ -3886,7 +3887,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
 
       // Check if master encryption key is configured
       if (!validateMasterKeyConfigured()) {
-        console.error("[API Keys] Master encryption key not configured");
+        logger.error({ module: 'APIKeys' }, 'Master encryption key not configured');
         return res.status(500).json({
           success: false,
           error: "Encryption not configured",
@@ -3942,7 +3943,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
           : trimmedKey;
         encryptedData = encryptApiKey(keyToEncrypt);
       } catch (error: any) {
-        console.error("[API Keys] Encryption failed:", error);
+        logger.error({ module: 'APIKeys', err: error }, 'Encryption failed');
         return res.status(500).json({
           success: false,
           error: "Encryption failed",
@@ -3985,7 +3986,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
         message: `${serviceName} API key saved successfully`,
       });
     } catch (error: any) {
-      console.error("[API Keys] Error saving key:", error);
+      logger.error({ module: 'APIKeys', err: error }, 'Error saving key');
 
       // Log error
       await storage.logApiKeyAction({
@@ -4067,7 +4068,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
         fallbackAvailable: hasEnvFallback,
       });
     } catch (error: any) {
-      console.error("[API Keys] Error deleting key:", error);
+      logger.error({ module: 'APIKeys', err: error }, 'Error deleting key');
 
       await storage.logApiKeyAction({
         userId,
@@ -4174,7 +4175,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
         });
       }
     } catch (error: any) {
-      console.error("[API Keys] Error validating key:", error);
+      logger.error({ module: 'APIKeys', err: error }, 'Error validating key');
 
       await storage.logApiKeyAction({
         userId,
@@ -4202,10 +4203,10 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       const service = await getGoogleCloudService();
       if (service) {
         service.startAutoSync();
-        console.log('[GoogleCloudMonitoring] Auto-sync started');
+        logger.info({ module: 'GoogleCloudMonitoring' }, 'Auto-sync started');
       }
     } catch (error) {
-      console.error('[GoogleCloudMonitoring] Failed to start auto-sync:', error);
+      logger.error({ module: 'GoogleCloudMonitoring', err: error }, 'Failed to start auto-sync');
     }
   })();
 
