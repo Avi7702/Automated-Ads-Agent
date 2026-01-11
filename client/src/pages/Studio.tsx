@@ -311,7 +311,7 @@ export default function Studio() {
 
   // Selection state
   const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<PromptTemplate | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<AdSceneTemplate | null>(null);
   const [templateCategory, setTemplateCategory] = useState<string>("all");
   const [prompt, setPrompt] = useState("");
   const [platform, setPlatform] = useState("LinkedIn");
@@ -400,13 +400,14 @@ export default function Studio() {
     },
   });
 
-  // Fetch prompt templates
-  const { data: templates = [] } = useQuery<PromptTemplate[]>({
-    queryKey: ["prompt-templates"],
+  // Fetch ad scene templates
+  const { data: templates = [] } = useQuery<AdSceneTemplate[]>({
+    queryKey: ["templates"],
     queryFn: async () => {
-      const res = await fetch("/api/prompt-templates");
+      const res = await fetch("/api/templates");
       if (!res.ok) return [];
-      return res.json();
+      const data = await res.json();
+      return data.templates || [];
     },
   });
 
@@ -1493,7 +1494,7 @@ export default function Studio() {
                               } else {
                                 setSelectedTemplate(template);
                                 // Pre-fill the prompt with the template
-                                setPrompt(template.prompt);
+                                setPrompt(template.promptBlueprint);
                               }
                             }}
                             className={cn(
@@ -1513,7 +1514,7 @@ export default function Studio() {
                             </div>
                             <p className="text-sm font-medium truncate">{template.title}</p>
                             <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
-                              {template.prompt}
+                              {template.description || template.promptBlueprint}
                             </p>
                             {template.tags && template.tags.length > 0 && (
                               <div className="flex flex-wrap gap-1 mt-2">
