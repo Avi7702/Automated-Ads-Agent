@@ -16,11 +16,11 @@ interface TemplateLibraryProps {
 
 const categories = [
   { value: "all", label: "All Templates" },
-  { value: "lifestyle", label: "Lifestyle" },
+  { value: "product_showcase", label: "Product Showcase" },
+  { value: "installation", label: "Installation" },
+  { value: "worksite", label: "Worksite" },
   { value: "professional", label: "Professional" },
   { value: "outdoor", label: "Outdoor" },
-  { value: "luxury", label: "Luxury" },
-  { value: "seasonal", label: "Seasonal" },
 ];
 
 export function TemplateLibrary({

@@ -24,7 +24,7 @@ All backend implementation is **COMPLETE** and production-ready. This is a full 
 
 Created comprehensive `generateCopySchema` with:
 - All 5 platforms: instagram, linkedin, twitter, facebook, tiktok
-- All 6 tones: professional, casual, fun, luxury, minimal, authentic
+- All 6 tones: professional, casual, technical, urgent, minimal, authentic
 - All 4 frameworks: aida, pas, bab, fab (+ auto)
 - All 4 campaign objectives: awareness, consideration, conversion, engagement
 - Full validation for all optional advanced features
@@ -280,10 +280,10 @@ curl -X POST http://localhost:5000/api/copy/generate \
   -d '{
     "generationId": "uuid-here",
     "platform": "instagram",
-    "tone": "casual",
-    "productName": "EcoDry Towels",
-    "productDescription": "Ultra-absorbent bamboo towels that dry 3x faster",
-    "industry": "Home Goods"
+    "tone": "professional",
+    "productName": "T12 Rebar",
+    "productDescription": "12mm high-tensile steel reinforcing bar for concrete construction",
+    "industry": "Construction Steel Supply"
   }'
 ```
 
@@ -296,30 +296,30 @@ curl -X POST http://localhost:5000/api/copy/generate \
     "generationId": "uuid-here",
     "platform": "linkedin",
     "tone": "professional",
-    "productName": "ProductivityAI",
-    "productDescription": "AI-powered productivity tool that automates repetitive tasks",
-    "industry": "SaaS",
+    "productName": "Steel Mesh A393",
+    "productDescription": "Heavy-duty reinforcement mesh for concrete slabs and foundations",
+    "industry": "Construction Steel Supply",
     "framework": "pas",
     "campaignObjective": "conversion",
     "variations": 3,
     "productBenefits": [
-      "Increase team productivity by 40%",
-      "Automated workflow management",
-      "Real-time collaboration"
+      "Same-day delivery across London",
+      "No minimum order requirements",
+      "Cut-to-size available"
     ],
-    "uniqueValueProp": "The only PM tool with built-in AI assistant",
+    "uniqueValueProp": "Next Day Steel - reliable delivery when you need it",
     "targetAudience": {
-      "demographics": "Product managers, ages 28-45, tech companies",
-      "psychographics": "Efficiency-focused, data-driven decision makers",
-      "painPoints": ["Too many manual tasks", "Difficulty tracking progress"]
+      "demographics": "Contractors, builders, construction site managers aged 25-55",
+      "psychographics": "Value reliability, fast delivery, quality materials",
+      "painPoints": ["Supplier delays", "Minimum order requirements", "Inconsistent quality"]
     },
     "brandVoice": {
-      "principles": ["Innovative", "Trustworthy", "Results-driven"],
-      "wordsToAvoid": ["cheap", "easy", "simple"],
-      "wordsToUse": ["premium", "powerful", "enterprise-grade"]
+      "principles": ["Reliable", "Professional", "Fast"],
+      "wordsToAvoid": ["cheap", "budget", "discount"],
+      "wordsToUse": ["quality", "reliable", "next-day", "professional-grade"]
     },
     "socialProof": {
-      "stats": "Used by 10K+ teams, 4.8/5 stars"
+      "stats": "Trusted by 500+ London contractors, 4.9/5 rating"
     }
   }'
 ```

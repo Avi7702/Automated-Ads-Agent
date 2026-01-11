@@ -29,6 +29,72 @@ export interface IdeaBankSuggestion {
 }
 
 // ============================================
+// IDEA BANK MODE TYPES (World-Class Orchestration)
+// ============================================
+
+/**
+ * IdeaBankMode - Determines how Idea Bank generates suggestions
+ * - 'freestyle': AI suggests complete prompts (scene + product details)
+ * - 'template': AI suggests content to fill template slots
+ */
+export type IdeaBankMode = 'freestyle' | 'template';
+
+/**
+ * TemplateContext - Template data passed to Idea Bank in template mode
+ * Extracted from AdSceneTemplate for LLM context
+ */
+export interface TemplateContext {
+  id: string;
+  title: string;
+  promptBlueprint: string;
+  placementHints?: PlacementHints;
+  lightingStyle?: string;
+  mood?: string;
+  environment?: string;
+  category: string;
+  aspectRatioHints?: string[];
+  platformHints?: string[];
+  bestForProductTypes?: string[];
+}
+
+/**
+ * TemplateSlotSuggestion - AI suggestions for filling template slots
+ * Returned when mode = 'template'
+ */
+export interface TemplateSlotSuggestion {
+  // Product-specific content to fill template slots
+  productHighlights: string[];      // Key features to show (3-5)
+  productPlacement: string;         // How to position product in scene
+  detailsToEmphasize: string[];     // Visual details to highlight
+  scaleReference?: string;          // Optional scale indicator (e.g., "worker hands")
+
+  // Copy suggestions for template text slots
+  headerText?: string;              // Headline (max 60 chars)
+  bodyText?: string;                // Supporting copy (max 150 chars)
+  ctaSuggestion?: string;           // Call to action (max 30 chars)
+
+  // Technical guidance for generation
+  colorHarmony: string[];           // Colors that complement the product
+  lightingNotes: string;            // How to light this specific product
+
+  // Meta
+  confidence: number;               // 0-100 confidence score
+  reasoning: string;                // Why these suggestions work
+}
+
+/**
+ * IdeaBankTemplateResponse - Response when mode = 'template'
+ * Different from freestyle response which returns complete prompts
+ */
+export interface IdeaBankTemplateResponse {
+  slotSuggestions: TemplateSlotSuggestion[];
+  template: TemplateContext;
+  mergedPrompt: string;             // Template blueprint + product insights merged
+  analysisStatus: AnalysisStatus;
+  recipe?: GenerationRecipe;
+}
+
+// ============================================
 // API REQUEST/RESPONSE TYPES
 // ============================================
 
@@ -41,6 +107,10 @@ export interface IdeaBankSuggestRequest {
   userGoal?: string; // User-provided context/goal
   enableWebSearch?: boolean; // KB-first policy, default false
   maxSuggestions?: number;
+
+  // Mode awareness (World-Class Orchestration)
+  mode?: IdeaBankMode;    // 'freestyle' (default) or 'template'
+  templateId?: string;    // Required when mode = 'template'
 }
 
 export interface AnalysisStatus {
@@ -111,11 +181,11 @@ export interface ProductAnalyzeBatchResponse {
 // ============================================
 
 export type TemplateCategory =
-  | 'lifestyle'
+  | 'product_showcase'
+  | 'installation'
+  | 'worksite'
   | 'professional'
-  | 'outdoor'
-  | 'luxury'
-  | 'seasonal';
+  | 'educational';
 
 export type TemplateIntent =
   | 'showcase'
@@ -130,11 +200,11 @@ export type TemplateEnvironment =
   | 'worksite';
 
 export type TemplateMood =
-  | 'luxury'
-  | 'cozy'
   | 'industrial'
+  | 'professional'
+  | 'bold'
   | 'minimal'
-  | 'vibrant';
+  | 'urgent';
 
 export interface PlacementHints {
   position?: 'center' | 'left' | 'right' | 'top' | 'bottom';

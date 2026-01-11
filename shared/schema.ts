@@ -88,7 +88,7 @@ export const adCopy = pgTable("ad_copy", {
 
   // Platform and tone context
   platform: varchar("platform", { length: 50 }).notNull(), // instagram, linkedin, twitter, facebook, tiktok
-  tone: varchar("tone", { length: 50 }).notNull(), // professional, casual, fun, luxury, minimal, authentic
+  tone: varchar("tone", { length: 50 }).notNull(), // professional, casual, technical, urgent, minimal, authentic
   framework: varchar("framework", { length: 50 }), // aida, pas, bab, fab, auto
   campaignObjective: varchar("campaign_objective", { length: 50 }), // awareness, consideration, conversion, engagement
 
@@ -136,7 +136,7 @@ export const adSceneTemplates = pgTable("ad_scene_templates", {
   referenceImages: jsonb("reference_images"), // [{ url: string, publicId: string }]
 
   // Categorization
-  category: varchar("category", { length: 50 }).notNull(), // lifestyle, professional, outdoor, luxury, seasonal
+  category: varchar("category", { length: 50 }).notNull(), // product_showcase, installation, worksite, professional, outdoor
   tags: text("tags").array().default(sql`ARRAY[]::text[]`),
 
   // Platform targeting hints
@@ -151,8 +151,8 @@ export const adSceneTemplates = pgTable("ad_scene_templates", {
   // Extended metadata for matching
   intent: varchar("intent", { length: 50 }), // showcase, installation, before-after, scale-demo
   environment: varchar("environment", { length: 50 }), // indoor, outdoor, studio, worksite
-  mood: varchar("mood", { length: 50 }), // luxury, cozy, industrial, minimal, vibrant
-  bestForProductTypes: text("best_for_product_types").array(), // flooring, furniture, decor, etc.
+  mood: varchar("mood", { length: 50 }), // industrial, professional, bold, minimal, urgent
+  bestForProductTypes: text("best_for_product_types").array(), // rebar, mesh, spacers, tie-wire, membranes, etc.
 
   // Access control
   isGlobal: boolean("is_global").default(true).notNull(),
@@ -172,7 +172,7 @@ export const brandProfiles = pgTable("brand_profiles", {
   // Brand identity
   brandName: text("brand_name"),
   industry: varchar("industry", { length: 100 }),
-  brandValues: text("brand_values").array(), // eco-friendly, luxury, accessible, innovative
+  brandValues: text("brand_values").array(), // reliable, quality, fast-delivery, no-minimums, professional
 
   // Target audience (enhanced)
   targetAudience: jsonb("target_audience"), // { demographics: string, psychographics: string, painPoints: string[] }
@@ -356,7 +356,7 @@ export const performingAdTemplates = pgTable("performing_ad_templates", {
 
   // Visual patterns for AI matching
   visualPatterns: text("visual_patterns").array(), // detected patterns for similarity search
-  mood: varchar("mood", { length: 50 }), // luxury, cozy, bold, minimal, vibrant
+  mood: varchar("mood", { length: 50 }), // industrial, professional, bold, minimal, urgent
   style: varchar("style", { length: 50 }), // modern, classic, playful, professional
 
   // Implementation
@@ -520,13 +520,13 @@ export type InsertBrandImage = z.infer<typeof insertBrandImageSchema>;
 export type BrandImage = typeof brandImages.$inferSelect;
 
 // Performing Ad Templates enum constraints
-const templateCategoryEnum = z.enum(['ecommerce', 'saas', 'services', 'awareness']);
+const templateCategoryEnum = z.enum(['product_showcase', 'installation', 'urgency', 'testimonial', 'educational']);
 const sourcePlatformEnum = z.enum(['adspy', 'bigspy', 'envato', 'canva', 'figma', 'manual']);
 const engagementTierEnum = z.enum(['top-5', 'top-10', 'top-25', 'unranked']);
 const estimatedBudgetEnum = z.enum(['under-1k', '1k-5k', '5k-20k', '20k+']);
 const backgroundTypeEnum = z.enum(['solid', 'gradient', 'image', 'video']);
 const templateFormatEnum = z.enum(['figma', 'canva', 'html-css', 'react', 'image']);
-const templateMoodEnum = z.enum(['luxury', 'cozy', 'bold', 'minimal', 'vibrant']);
+const templateMoodEnum = z.enum(['industrial', 'professional', 'bold', 'minimal', 'urgent']);
 const templateStyleEnum = z.enum(['modern', 'classic', 'playful', 'professional']);
 
 export const insertPerformingAdTemplateSchema = createInsertSchema(performingAdTemplates, {

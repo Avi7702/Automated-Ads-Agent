@@ -15,11 +15,11 @@ Individual template card component with rich hover interactions.
 **Features:**
 - Preview image display with smooth scale animation on hover
 - Category badge with color coding:
-  - `lifestyle` - Blue
+  - `product_showcase` - Blue
   - `professional` - Purple
-  - `outdoor` - Green
-  - `luxury` - Amber
-  - `seasonal` - Pink
+  - `installation` - Green
+  - `worksite` - Amber
+  - `educational` - Pink
 - Selection state with visual indicator (checkmark)
 - Two-state display:
   - **Default**: Shows preview image, title, description, and category
@@ -42,7 +42,7 @@ Main library component with filtering, searching, and grid display.
 
 **Features:**
 - **Search Bar**: Real-time client-side filtering by title, description, tags, or category
-- **Category Filter Tabs**: Pre-defined categories (All, Lifestyle, Professional, Outdoor, Luxury, Seasonal)
+- **Category Filter Tabs**: Pre-defined categories (All, Product Showcase, Professional, Installation, Worksite, Educational)
 - **Global Templates Toggle**: Filter to show only global templates
 - **Responsive Grid**: 1-4 columns based on screen size
 - **Loading States**: Animated spinner during data fetch
@@ -108,22 +108,22 @@ Fetches templates with optional filters:
 [
   {
     "id": "uuid",
-    "title": "Cozy Living Room",
-    "description": "Warm, inviting lifestyle shot perfect for home decor",
+    "title": "Construction Site Install",
+    "description": "Professional installation shot showing rebar in concrete forms",
     "previewImageUrl": "https://...",
     "previewPublicId": "...",
     "referenceImages": [...],
-    "category": "lifestyle",
-    "tags": ["cozy", "warm", "residential"],
-    "platformHints": ["instagram", "facebook"],
+    "category": "installation",
+    "tags": ["rebar", "construction", "professional"],
+    "platformHints": ["instagram", "linkedin"],
     "aspectRatioHints": ["1:1", "4:5"],
-    "promptBlueprint": "{{product}} in a cozy living room...",
+    "promptBlueprint": "{{product}} being installed on construction site...",
     "placementHints": { "position": "center", "scale": "medium" },
     "lightingStyle": "natural",
     "intent": "showcase",
-    "environment": "indoor",
-    "mood": "cozy",
-    "bestForProductTypes": ["furniture", "decor"],
+    "environment": "outdoor",
+    "mood": "professional",
+    "bestForProductTypes": ["rebar", "mesh", "spacers"],
     "isGlobal": true,
     "createdBy": null,
     "createdAt": "2025-12-24T..."
@@ -157,11 +157,11 @@ Category badges use semantic colors:
 ```typescript
 const getCategoryColor = (category: string) => {
   const colors: Record<string, string> = {
-    lifestyle: "bg-blue-500/20 text-blue-300 border-blue-500/30",
+    product_showcase: "bg-blue-500/20 text-blue-300 border-blue-500/30",
     professional: "bg-purple-500/20 text-purple-300 border-purple-500/30",
-    outdoor: "bg-green-500/20 text-green-300 border-green-500/30",
-    luxury: "bg-amber-500/20 text-amber-300 border-amber-500/30",
-    seasonal: "bg-pink-500/20 text-pink-300 border-pink-500/30",
+    installation: "bg-green-500/20 text-green-300 border-green-500/30",
+    worksite: "bg-amber-500/20 text-amber-300 border-amber-500/30",
+    educational: "bg-pink-500/20 text-pink-300 border-pink-500/30",
   };
   return colors[category] || "bg-gray-500/20 text-gray-300 border-gray-500/30";
 };

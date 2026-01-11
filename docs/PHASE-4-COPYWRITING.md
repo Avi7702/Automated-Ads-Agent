@@ -23,7 +23,7 @@ export const adCopy = pgTable('ad_copy', {
 
   // Context
   platform: varchar('platform', { length: 50 }).notNull(), // instagram, linkedin, twitter, facebook
-  tone: varchar('tone', { length: 50 }).notNull(), // professional, casual, fun, luxury, minimal
+  tone: varchar('tone', { length: 50 }).notNull(), // professional, casual, technical, urgent, minimal
   industry: varchar('industry', { length: 100 }), // optional product industry
 
   // Metadata
@@ -70,7 +70,7 @@ interface CopyGenerationRequest {
   productDescription?: string;
   prompt: string; // Original image generation prompt
   platform: 'instagram' | 'linkedin' | 'twitter' | 'facebook';
-  tone: 'professional' | 'casual' | 'fun' | 'luxury' | 'minimal';
+  tone: 'professional' | 'casual' | 'technical' | 'urgent' | 'minimal';
   industry?: string;
 }
 
@@ -150,8 +150,8 @@ IMPORTANT:
     const guidelines = {
       professional: 'Authoritative, trustworthy, industry expert voice',
       casual: 'Friendly, approachable, conversational, relatable',
-      fun: 'Playful, energetic, enthusiastic, light-hearted',
-      luxury: 'Sophisticated, exclusive, premium, aspirational',
+      technical: 'Precise, specification-focused, data-driven',
+      urgent: 'Time-sensitive, action-oriented, immediate value',
       minimal: 'Clean, concise, understated, no fluff',
     };
     return guidelines[tone as keyof typeof guidelines] || '';
@@ -203,7 +203,7 @@ export const copywritingService = new CopywritingService();
 **Acceptance Criteria:**
 - Service generates copy using Gemini 2.0 Flash
 - Handles all 4 platforms (Instagram, LinkedIn, Twitter, Facebook)
-- Handles all 5 tones (professional, casual, fun, luxury, minimal)
+- Handles all 5 tones (professional, casual, technical, urgent, minimal)
 - Returns properly formatted JSON
 - Validates output structure
 
@@ -243,7 +243,7 @@ async deleteCopy(id: number): Promise<void> {
 export const generateCopySchema = z.object({
   generationId: z.number().int().positive(),
   platform: z.enum(['instagram', 'linkedin', 'twitter', 'facebook']),
-  tone: z.enum(['professional', 'casual', 'fun', 'luxury', 'minimal']),
+  tone: z.enum(['professional', 'casual', 'technical', 'urgent', 'minimal']),
   industry: z.string().max(100).optional(),
 });
 
@@ -479,8 +479,8 @@ ${selectedCopy.hashtags.join(' ')}
                 <SelectContent>
                   <SelectItem value="professional">Professional</SelectItem>
                   <SelectItem value="casual">Casual</SelectItem>
-                  <SelectItem value="fun">Fun</SelectItem>
-                  <SelectItem value="luxury">Luxury</SelectItem>
+                  <SelectItem value="technical">Technical</SelectItem>
+                  <SelectItem value="urgent">Urgent</SelectItem>
                   <SelectItem value="minimal">Minimal</SelectItem>
                 </SelectContent>
               </Select>
@@ -636,7 +636,7 @@ describe('CopywritingService', () => {
   describe('generateCopy', () => {
     it('should generate copy for Instagram professional tone', async () => {
       const result = await copywritingService.generateCopy({
-        prompt: 'Premium concrete patio in modern backyard',
+        prompt: 'T12 rebar bundle for concrete reinforcement',
         platform: 'instagram',
         tone: 'professional',
       });
@@ -650,11 +650,11 @@ describe('CopywritingService', () => {
       expect(result.hashtags.length).toBeGreaterThanOrEqual(5);
     }, 30000);
 
-    it('should generate copy for LinkedIn luxury tone', async () => {
+    it('should generate copy for LinkedIn professional tone', async () => {
       const result = await copywritingService.generateCopy({
-        prompt: 'High-end office renovation',
+        prompt: 'Commercial construction steel delivery',
         platform: 'linkedin',
-        tone: 'luxury',
+        tone: 'professional',
       });
 
       expect(result.headline.length).toBeLessThanOrEqual(60);
@@ -663,7 +663,7 @@ describe('CopywritingService', () => {
 
     it('should format hashtags with # symbol', async () => {
       const result = await copywritingService.generateCopy({
-        prompt: 'Modern kitchen design',
+        prompt: 'Rebar installation on construction site',
         platform: 'instagram',
         tone: 'casual',
       });

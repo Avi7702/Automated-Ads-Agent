@@ -40,7 +40,7 @@ test.describe('Brand Profile Injection', () => {
 
       // Select an industry
       await page.locator('button[id="industry"]').click();
-      await page.locator('text=Technology').click();
+      await page.locator('text=Construction').click();
 
       // Select some brand values
       await page.locator('label').filter({ hasText: 'innovative' }).click();
@@ -58,7 +58,7 @@ test.describe('Brand Profile Injection', () => {
 
       const profile = await profileResponse.json();
       expect(profile.brandName).toBe('Test Brand Co');
-      expect(profile.industry).toBe('Technology');
+      expect(profile.industry).toBe('Construction');
       expect(profile.brandValues).toContain('innovative');
       expect(profile.brandValues).toContain('professional');
     });
@@ -68,9 +68,9 @@ test.describe('Brand Profile Injection', () => {
       await request.put('/api/brand-profile', {
         data: {
           brandName: 'Existing Brand',
-          industry: 'E-commerce',
-          brandValues: ['sustainable', 'premium'],
-          preferredStyles: ['modern', 'minimalist'],
+          industry: 'Building Materials',
+          brandValues: ['reliable', 'quality'],
+          preferredStyles: ['professional', 'industrial'],
         },
       });
 
@@ -83,15 +83,15 @@ test.describe('Brand Profile Injection', () => {
       await expect(brandNameInput).toHaveValue('Existing Brand');
 
       // Verify industry is selected (check the trigger text)
-      await expect(page.locator('button[id="industry"]')).toContainText('E-commerce');
+      await expect(page.locator('button[id="industry"]')).toContainText('Building Materials');
 
       // Verify brand values are checked
-      await expect(page.locator('input#value-sustainable')).toBeChecked();
-      await expect(page.locator('input#value-premium')).toBeChecked();
+      await expect(page.locator('input#value-reliable')).toBeChecked();
+      await expect(page.locator('input#value-quality')).toBeChecked();
 
       // Verify preferred styles are checked
-      await expect(page.locator('input#style-modern')).toBeChecked();
-      await expect(page.locator('input#style-minimalist')).toBeChecked();
+      await expect(page.locator('input#style-professional')).toBeChecked();
+      await expect(page.locator('input#style-industrial')).toBeChecked();
     });
 
     test('Settings page shows delete button for existing profile', async ({ page, request }) => {
@@ -99,7 +99,7 @@ test.describe('Brand Profile Injection', () => {
       await request.put('/api/brand-profile', {
         data: {
           brandName: 'Brand to Delete',
-          industry: 'Technology',
+          industry: 'Construction',
         },
       });
 
@@ -118,8 +118,8 @@ test.describe('Brand Profile Injection', () => {
       const createResponse = await request.put('/api/brand-profile', {
         data: {
           brandName: 'API Test Brand',
-          industry: 'Technology',
-          brandValues: ['innovative', 'premium'],
+          industry: 'Construction Steel Supply',
+          brandValues: ['reliable', 'quality'],
           preferredStyles: ['modern'],
           colorPreferences: ['vibrant'],
         },
@@ -132,9 +132,9 @@ test.describe('Brand Profile Injection', () => {
 
       const profile = await profileResponse.json();
       expect(profile).toHaveProperty('brandName', 'API Test Brand');
-      expect(profile).toHaveProperty('industry', 'Technology');
-      expect(profile.brandValues).toContain('innovative');
-      expect(profile.brandValues).toContain('premium');
+      expect(profile).toHaveProperty('industry', 'Construction Steel Supply');
+      expect(profile.brandValues).toContain('reliable');
+      expect(profile.brandValues).toContain('quality');
       expect(profile.preferredStyles).toContain('modern');
       expect(profile.colorPreferences).toContain('vibrant');
     });
@@ -143,10 +143,10 @@ test.describe('Brand Profile Injection', () => {
       // First, create a brand profile with specific values
       await request.put('/api/brand-profile', {
         data: {
-          brandName: 'Eco Brand',
-          industry: 'Home & Garden',
-          brandValues: ['eco-friendly', 'sustainable'],
-          preferredStyles: ['rustic', 'minimalist'],
+          brandName: 'NDS Steel',
+          industry: 'Construction Steel Supply',
+          brandValues: ['reliable', 'fast-delivery'],
+          preferredStyles: ['professional', 'industrial'],
         },
       });
 
@@ -167,7 +167,7 @@ test.describe('Brand Profile Injection', () => {
       await request.put('/api/brand-profile', {
         data: {
           brandName: 'Original Name',
-          industry: 'Technology',
+          industry: 'Construction',
         },
       });
 
@@ -175,8 +175,8 @@ test.describe('Brand Profile Injection', () => {
       const updateResponse = await request.put('/api/brand-profile', {
         data: {
           brandName: 'Updated Name',
-          industry: 'E-commerce',
-          brandValues: ['luxury'],
+          industry: 'Building Materials',
+          brandValues: ['quality'],
         },
       });
       expect(updateResponse.ok()).toBeTruthy();
@@ -186,8 +186,8 @@ test.describe('Brand Profile Injection', () => {
       const profile = await profileResponse.json();
 
       expect(profile.brandName).toBe('Updated Name');
-      expect(profile.industry).toBe('E-commerce');
-      expect(profile.brandValues).toContain('luxury');
+      expect(profile.industry).toBe('Building Materials');
+      expect(profile.brandValues).toContain('quality');
     });
 
     test('brand profile can be deleted', async ({ request }) => {
@@ -195,7 +195,7 @@ test.describe('Brand Profile Injection', () => {
       await request.put('/api/brand-profile', {
         data: {
           brandName: 'Deletable Brand',
-          industry: 'Technology',
+          industry: 'Construction',
         },
       });
 
@@ -243,9 +243,9 @@ test.describe('Brand Profile Injection', () => {
         data: {
           brandName: 'Audience Test Brand',
           targetAudience: {
-            demographics: 'Women aged 25-40',
-            psychographics: 'Value sustainability',
-            painPoints: ['High prices', 'Poor quality'],
+            demographics: 'Contractors and builders aged 25-55',
+            psychographics: 'Value reliability and fast delivery',
+            painPoints: ['Supplier delays', 'Minimum order requirements'],
           },
         },
       });
@@ -258,12 +258,12 @@ test.describe('Brand Profile Injection', () => {
       await page.locator('button').filter({ hasText: 'Target Audience' }).click();
 
       // Verify demographics field has the value
-      await expect(page.locator('textarea#demographics')).toHaveValue('Women aged 25-40');
-      await expect(page.locator('textarea#psychographics')).toHaveValue('Value sustainability');
+      await expect(page.locator('textarea#demographics')).toHaveValue('Contractors and builders aged 25-55');
+      await expect(page.locator('textarea#psychographics')).toHaveValue('Value reliability and fast delivery');
 
       // Verify pain points are shown as badges
-      await expect(page.locator('text=High prices').first()).toBeVisible();
-      await expect(page.locator('text=Poor quality').first()).toBeVisible();
+      await expect(page.locator('text=Supplier delays').first()).toBeVisible();
+      await expect(page.locator('text=Minimum order requirements').first()).toBeVisible();
     });
   });
 

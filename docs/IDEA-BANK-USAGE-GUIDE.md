@@ -52,12 +52,12 @@ Click "Generate Marketing Content" to create your image.
 │ ┌──────────────────────────┐  ┌──────────────────────────┐ │
 │ │ ⚡ Exact Insert    ● 85% │  │ 💡 Inspiration    ● 72% │ │
 │ │                          │  │                          │ │
-│ │ Create a minimalist      │  │ Showcase the product in  │ │
-│ │ lifestyle shot with the  │  │ a vibrant outdoor        │ │
-│ │ product on a marble      │  │ setting with natural     │ │
-│ │ countertop...            │  │ lighting...              │ │
+│ │ Create a professional    │  │ Showcase the product in  │ │
+│ │ worksite shot with the   │  │ an active construction   │ │
+│ │ product on a concrete    │  │ setting with natural     │ │
+│ │ foundation...            │  │ lighting...              │ │
 │ │                          │  │                          │ │
-│ │ "Based on luxury         │  │ "Perfect for lifestyle   │ │
+│ │ "Based on industrial     │  │ "Perfect for B2B         │ │
 │ │  aesthetic match..."     │  │  brands targeting..."    │ │
 │ │                          │  │                          │ │
 │ │ 📸 Instagram  📐 1:1     │  │ 📸 Facebook  📐 16:9     │ │
@@ -106,7 +106,7 @@ Click "Generate Marketing Content" to create your image.
 - Proven visual styles
 
 **Example:**
-"Place the product on a rustic wooden table with morning light, using the 'Lifestyle Kitchen' template"
+"Place the product on an active construction site with morning light, using the 'Worksite Installation' template"
 
 ### 💡 Inspiration (Purple)
 **What it means:** Creative starting point based on your product's attributes.
@@ -195,9 +195,9 @@ When you select 2-6 products:
 
 **Example:**
 ```
-Selected: [Running Shoes, Water Bottle, Fitness Tracker]
-Suggestion: "Create an active lifestyle scene with all three products
-            arranged on a gym floor with natural light..."
+Selected: [T12 Rebar, Steel Mesh A393, Spacer Wheels]
+Suggestion: "Create a professional worksite scene with all three products
+            arranged on a construction site with morning light..."
 Confidence: 88% (combines data from all 3 products)
 ```
 

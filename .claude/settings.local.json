@@ -134,7 +134,22 @@
       "Bash(git commit -m \"$\\(cat <<''EOF''\nfix: Add trust proxy for secure cookies behind Railway proxy\n\nWithout trust proxy, Express doesn''t know it''s behind a reverse proxy\nand refuses to set secure cookies because it thinks the connection is\nHTTP instead of HTTPS. This caused login to silently fail on Railway.\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nfix: Normalize Shopify {width} placeholder URLs on server-side\n\nProduct images from Shopify/NDS have {width} placeholder in URLs.\nClient had getProductImageUrl\\(\\) to handle this, but server didn''t.\nVision analysis was failing silently because fetch received invalid URLs.\n\nAdded normalizeImageUrl\\(\\) to:\n- visionAnalysisService.ts\n- productEnrichmentService.ts\n- enrichment/aiHelpers.ts\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(npm run db:push:*)",
-      "Bash(npx drizzle-kit:*)"
+      "Bash(npx drizzle-kit:*)",
+      "Bash(git push)",
+      "Bash(for comp in alert badge card chart drawer empty input input-otp kbd resizable skeleton sonner spinner table textarea)",
+      "Bash(if ! grep -r \"ui/$comp\" \"c:\\\\Users\\\\avibm\\\\Automated-Ads-Agent\\\\client\\\\src\" --include=\"*.tsx\")",
+      "Bash(then)",
+      "Bash(echo:*)",
+      "Bash(fi)",
+      "Bash(export GIT_COMMIT_APPROVED=true)",
+      "Bash(export GIT_PUSH_APPROVED=true)",
+      "Bash(GIT_COMMIT_APPROVED=true git commit -m \"$\\(cat <<''EOF''\ntest: Add comprehensive unit tests for critical services\n\n- pricingEstimator.test.ts \\(45 tests\\): Resolution normalization, token\n  extraction, cost calculations, multi-image factors, adaptive estimates\n- quotaMonitoringService.test.ts \\(50+ tests\\): API tracking, quota status\n  thresholds, warning generation, rate limit parsing\n- visionAnalysisService.test.ts \\(40+ tests\\): Rate limiting, cache hit/miss,\n  Gemini API response parsing, URL normalization\n- ideaBankService.test.ts \\(43 tests\\): Suggestion pipeline, template scoring,\n  KB query building, LLM response parsing, recipe generation\n\nTotal: 490 tests passing\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(GIT_PUSH_APPROVED=true git push:*)",
+      "Bash(GIT_COMMIT_APPROVED=true git commit -m \"$\\(cat <<''EOF''\nfeat: Add memory management with bounded maps\n\nPrevents memory leaks from unbounded in-memory maps:\n- New BoundedMap class with LRU eviction when at capacity\n- Automatic cleanup of expired entries every 5 minutes\n- Memory monitoring utility for heap usage warnings\n\nServices updated:\n- quotaMonitoringService: max 5000 brands, expires after 2min window\n- ideaBankService: max 10000 users, expires on resetAt\n- visionAnalysisService: max 10000 users, expires on resetAt\n- authService: max 5000 entries, expires on lockout end\n\nBefore: Unbounded growth -> 800MB leaked after 1M users -> OOM crash\nAfter: Capped at ~6MB total -> never grows beyond limit\n\nIncludes 23 unit tests for memoryManager.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(vision \")",
+      "Bash(xxd:*)",
+      "Bash(do sed -i \"s/^import { describe.*} from ''vitest'';//g\" \"$file\")",
+      "Bash(GIT_COMMIT_APPROVED=true git commit -m \"$\\(cat <<''EOF''\nfeat: Production infrastructure hardening \\(Phase 9\\)\n\n- Add 10MB request body limit to prevent OOM attacks\n- Add helmet.js security headers \\(XSS, clickjacking, MIME protection\\)\n- Add request ID middleware for request tracing across logs\n- Add request timeout \\(30s default, 120s for image generation\\)\n- Add graceful shutdown handler for clean deploys\n- Add /api/health/ready and /api/health/live endpoints\n- Create Gemini API retry wrapper with exponential backoff\n- Fix test imports \\(remove explicit vitest imports, use globals\\)\n- Fix BoundedMap to use forEach instead of for...of for iteration\n\nSecurity headers enabled:\n- Content-Security-Policy with Cloudinary/Gemini allowed\n- X-Content-Type-Options: nosniff\n- X-Frame-Options: DENY\n- Strict-Transport-Security\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }

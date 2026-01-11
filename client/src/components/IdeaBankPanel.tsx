@@ -1,9 +1,18 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, RefreshCw, Eye, Zap, Database, Globe, CheckCircle2, XCircle, Lightbulb, TrendingUp, Check, Play, Loader2, Upload } from "lucide-react";
+import { Sparkles, RefreshCw, Eye, Zap, Database, Globe, CheckCircle2, XCircle, Lightbulb, TrendingUp, Check, Play, Loader2, Upload, Palette, Sun, Target, Type, MessageSquare, MousePointer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { IdeaBankSuggestResponse, IdeaBankSuggestion, GenerationMode, GenerationRecipe } from "@shared/types/ideaBank";
+import type {
+  IdeaBankSuggestResponse,
+  IdeaBankSuggestion,
+  GenerationMode,
+  GenerationRecipe,
+  IdeaBankMode,
+  TemplateSlotSuggestion,
+  TemplateContext,
+  IdeaBankTemplateResponse
+} from "@shared/types/ideaBank";
 import type { Product } from "@shared/schema";
 import type { AnalyzedUpload } from "@/types/analyzedUpload";
 
@@ -18,6 +27,10 @@ interface IdeaBankPanelProps {
   className?: string;
   selectedPromptId?: string;
   isGenerating?: boolean;
+  // Template mode props
+  mode?: IdeaBankMode;
+  templateId?: string;
+  onSlotSuggestionSelect?: (suggestion: TemplateSlotSuggestion, mergedPrompt: string) => void;
 }
 
 // Badge component for mode display
@@ -201,6 +214,165 @@ function SuggestionCard({
   );
 }
 
+// Template slot suggestion card component (for template mode)
+function TemplateSlotCard({
+  suggestion,
+  onUse,
+  index,
+  isSelected,
+  mergedPrompt,
+}: {
+  suggestion: TemplateSlotSuggestion;
+  onUse: (suggestion: TemplateSlotSuggestion, mergedPrompt: string) => void;
+  index: number;
+  isSelected: boolean;
+  mergedPrompt: string;
+}) {
+  const confidencePercentage = Math.round(suggestion.confidence);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.1 }}
+      className={cn(
+        "p-4 rounded-xl border-2 transition-all group cursor-pointer",
+        isSelected
+          ? "border-primary bg-primary/10 ring-2 ring-primary/20 scale-[1.02]"
+          : "border-border bg-card/50 hover:bg-card hover:border-primary/30"
+      )}
+      onClick={() => onUse(suggestion, mergedPrompt)}
+    >
+      <div className="space-y-3">
+        {/* Header with confidence */}
+        <div className="flex items-start justify-between gap-2">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border bg-amber-500/10 text-amber-600 border-amber-500/30">
+            <Target className="w-3 h-3" />
+            Template Slot
+          </span>
+          <div className="flex items-center gap-1.5">
+            <div className={cn(
+              "w-2 h-2 rounded-full",
+              confidencePercentage >= 80 ? "bg-green-500" :
+              confidencePercentage >= 60 ? "bg-yellow-500" :
+              "bg-orange-500"
+            )} />
+            <span className="text-xs text-muted-foreground">{confidencePercentage}%</span>
+          </div>
+        </div>
+
+        {/* Product Highlights */}
+        {suggestion.productHighlights.length > 0 && (
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <Sparkles className="w-3 h-3" />
+              Product Highlights
+            </div>
+            <ul className="text-xs text-foreground/80 space-y-0.5 pl-4">
+              {suggestion.productHighlights.slice(0, 4).map((highlight, idx) => (
+                <li key={idx} className="list-disc">{highlight}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Placement Guidance */}
+        {suggestion.productPlacement && (
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <Target className="w-3 h-3" />
+              Placement
+            </div>
+            <p className="text-xs text-foreground/80 pl-4 line-clamp-2">
+              {suggestion.productPlacement}
+            </p>
+          </div>
+        )}
+
+        {/* Copy Suggestions */}
+        {(suggestion.headerText || suggestion.bodyText || suggestion.ctaSuggestion) && (
+          <div className="space-y-2 p-2 rounded-lg bg-muted/30 border border-border/50">
+            {suggestion.headerText && (
+              <div className="flex items-start gap-2">
+                <Type className="w-3 h-3 mt-0.5 text-primary shrink-0" />
+                <div>
+                  <span className="text-xs font-medium text-muted-foreground">Header: </span>
+                  <span className="text-xs text-foreground">{suggestion.headerText}</span>
+                </div>
+              </div>
+            )}
+            {suggestion.bodyText && (
+              <div className="flex items-start gap-2">
+                <MessageSquare className="w-3 h-3 mt-0.5 text-primary shrink-0" />
+                <div>
+                  <span className="text-xs font-medium text-muted-foreground">Body: </span>
+                  <span className="text-xs text-foreground line-clamp-2">{suggestion.bodyText}</span>
+                </div>
+              </div>
+            )}
+            {suggestion.ctaSuggestion && (
+              <div className="flex items-start gap-2">
+                <MousePointer className="w-3 h-3 mt-0.5 text-green-500 shrink-0" />
+                <div>
+                  <span className="text-xs font-medium text-muted-foreground">CTA: </span>
+                  <span className="text-xs text-foreground font-medium">{suggestion.ctaSuggestion}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Technical Details */}
+        <div className="flex items-center gap-3 flex-wrap text-xs">
+          {suggestion.colorHarmony.length > 0 && (
+            <div className="flex items-center gap-1.5">
+              <Palette className="w-3 h-3 text-purple-500" />
+              <span className="text-muted-foreground">{suggestion.colorHarmony.slice(0, 3).join(", ")}</span>
+            </div>
+          )}
+          {suggestion.lightingNotes && (
+            <div className="flex items-center gap-1.5">
+              <Sun className="w-3 h-3 text-yellow-500" />
+              <span className="text-muted-foreground line-clamp-1">{suggestion.lightingNotes.split(".")[0]}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Reasoning */}
+        {suggestion.reasoning && (
+          <p className="text-xs text-muted-foreground italic border-l-2 border-primary/30 pl-3 line-clamp-2">
+            {suggestion.reasoning}
+          </p>
+        )}
+
+        {/* Action Button */}
+        <Button
+          onClick={(e) => {
+            e.stopPropagation();
+            onUse(suggestion, mergedPrompt);
+          }}
+          variant={isSelected ? "default" : "outline"}
+          size="sm"
+          className="w-full"
+          data-testid={`button-use-slot-suggestion-${index}`}
+        >
+          {isSelected ? (
+            <>
+              <Check className="w-3 h-3 mr-1" />
+              Selected
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-3 h-3 mr-1" />
+              Use This
+            </>
+          )}
+        </Button>
+      </div>
+    </motion.div>
+  );
+}
+
 export function IdeaBankPanel({
   selectedProducts,
   tempUploads = [],
@@ -212,31 +384,58 @@ export function IdeaBankPanel({
   className,
   selectedPromptId,
   isGenerating,
+  mode = 'freestyle',
+  templateId,
+  onSlotSuggestionSelect,
 }: IdeaBankPanelProps) {
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<IdeaBankSuggestResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [legacyMode, setLegacyMode] = useState(false);
 
+  // Template mode state
+  const [slotSuggestions, setSlotSuggestions] = useState<TemplateSlotSuggestion[]>([]);
+  const [mergedPrompt, setMergedPrompt] = useState<string>('');
+  const [templateContext, setTemplateContext] = useState<TemplateContext | null>(null);
+  const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(null);
+
   // Get SELECTED uploads with descriptions (user must click to select)
   const selectedUploads = tempUploads.filter(u => u.selected && u.status === "confirmed" && u.description);
   const analyzingCount = tempUploads.filter(u => u.status === "analyzing").length;
 
-  // Fetch suggestions when products or SELECTED uploads change
+  // Fetch suggestions when products, SELECTED uploads, mode, or templateId change
   useEffect(() => {
     const hasProducts = selectedProducts.length > 0;
     const hasSelectedUploads = selectedUploads.length > 0;
+
+    // Template mode requires templateId
+    if (mode === 'template' && !templateId) {
+      setSlotSuggestions([]);
+      setMergedPrompt('');
+      setTemplateContext(null);
+      return;
+    }
 
     if (hasProducts || hasSelectedUploads) {
       fetchSuggestions();
     } else {
       setResponse(null);
+      setSlotSuggestions([]);
+      setMergedPrompt('');
+      setTemplateContext(null);
       setError(null);
     }
   }, [
     selectedProducts.map(p => p.id).join(","),
     selectedUploads.map(u => u.description).join(","),
+    mode,
+    templateId,
   ]);
+
+  // Reset selected slot when mode changes
+  useEffect(() => {
+    setSelectedSlotIndex(null);
+  }, [mode, templateId]);
 
   const fetchSuggestions = async () => {
     setLoading(true);
@@ -257,15 +456,33 @@ export function IdeaBankPanel({
           productIds: selectedProducts.map(p => p.id),
           uploadDescriptions: uploadDescriptions.length > 0 ? uploadDescriptions : undefined,
           maxSuggestions: 6,
+          mode: mode || 'freestyle',
+          templateId: mode === 'template' ? templateId : undefined,
         }),
       });
 
       if (res.ok) {
         const data = await res.json();
 
-        // Check if it's the new format
-        if (data.suggestions && data.analysisStatus) {
+        // Handle template mode response
+        if (mode === 'template' && data.slotSuggestions) {
+          const templateResponse = data as IdeaBankTemplateResponse;
+          setSlotSuggestions(templateResponse.slotSuggestions);
+          setMergedPrompt(templateResponse.mergedPrompt);
+          setTemplateContext(templateResponse.template);
+          setResponse(null);
+          setLegacyMode(false);
+          // Pass recipe to parent if available
+          if (onRecipeAvailable && templateResponse.recipe) {
+            onRecipeAvailable(templateResponse.recipe);
+          }
+        }
+        // Handle freestyle mode response (new format)
+        else if (data.suggestions && data.analysisStatus) {
           setResponse(data as IdeaBankSuggestResponse);
+          setSlotSuggestions([]);
+          setMergedPrompt('');
+          setTemplateContext(null);
           setLegacyMode(false);
         } else if (Array.isArray(data)) {
           // Legacy format - convert to new format
@@ -290,48 +507,56 @@ export function IdeaBankPanel({
               webSearchUsed: false,
             },
           });
+          setSlotSuggestions([]);
+          setMergedPrompt('');
+          setTemplateContext(null);
           setLegacyMode(true);
         }
       } else {
-        // Try the old prompt-suggestions endpoint as fallback
-        const fallbackRes = await fetch("/api/prompt-suggestions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            productName: selectedProducts.map(p => p.name).join(", "),
-            category: selectedProducts[0]?.category,
-          }),
-        });
-
-        if (fallbackRes.ok) {
-          const data = await fallbackRes.json();
-          const suggestions = Array.isArray(data) ? data : (data.suggestions || []);
-
-          // Convert legacy format
-          setResponse({
-            suggestions: suggestions.map((prompt: string, idx: number) => ({
-              id: `fallback-${idx}`,
-              prompt,
-              mode: "standard" as GenerationMode,
-              reasoning: "Generated from legacy prompt suggestions",
-              confidence: 0.6,
-              sourcesUsed: {
-                visionAnalysis: false,
-                kbRetrieval: false,
-                webSearch: false,
-                templateMatching: true,
-              },
-            })),
-            analysisStatus: {
-              visionComplete: false,
-              kbQueried: false,
-              templatesMatched: suggestions.length,
-              webSearchUsed: false,
-            },
+        // Try the old prompt-suggestions endpoint as fallback (freestyle only)
+        if (mode !== 'template') {
+          const fallbackRes = await fetch("/api/prompt-suggestions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              productName: selectedProducts.map(p => p.name).join(", "),
+              category: selectedProducts[0]?.category,
+            }),
           });
-          setLegacyMode(true);
+
+          if (fallbackRes.ok) {
+            const data = await fallbackRes.json();
+            const suggestions = Array.isArray(data) ? data : (data.suggestions || []);
+
+            // Convert legacy format
+            setResponse({
+              suggestions: suggestions.map((prompt: string, idx: number) => ({
+                id: `fallback-${idx}`,
+                prompt,
+                mode: "standard" as GenerationMode,
+                reasoning: "Generated from legacy prompt suggestions",
+                confidence: 0.6,
+                sourcesUsed: {
+                  visionAnalysis: false,
+                  kbRetrieval: false,
+                  webSearch: false,
+                  templateMatching: true,
+                },
+              })),
+              analysisStatus: {
+                visionComplete: false,
+                kbQueried: false,
+                templatesMatched: suggestions.length,
+                webSearchUsed: false,
+              },
+            });
+            setLegacyMode(true);
+          } else {
+            throw new Error("Failed to fetch suggestions from both endpoints");
+          }
         } else {
-          throw new Error("Failed to fetch suggestions from both endpoints");
+          // Template mode has no fallback
+          throw new Error("Failed to fetch template suggestions");
         }
       }
     } catch (err: any) {
@@ -364,7 +589,12 @@ export function IdeaBankPanel({
         <div className="flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-primary" />
           <h3 className="font-medium">Intelligent Idea Bank</h3>
-          {legacyMode && (
+          {mode === 'template' && (
+            <span className="text-xs text-muted-foreground bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
+              Template Mode
+            </span>
+          )}
+          {legacyMode && mode !== 'template' && (
             <span className="text-xs text-muted-foreground bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/30">
               Legacy Mode
             </span>
@@ -449,8 +679,70 @@ export function IdeaBankPanel({
         </div>
       )}
 
-      {/* Suggestions Grid */}
-      {response && !loading && response.suggestions.length > 0 && (
+      {/* Template Mode - Template Context Info */}
+      {mode === 'template' && templateContext && !loading && (
+        <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <Target className="w-4 h-4 text-amber-600" />
+            <span className="font-medium text-amber-700">{templateContext.title}</span>
+            <span className="text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-600">
+              {templateContext.category}
+            </span>
+          </div>
+          {templateContext.environment && (
+            <p className="text-xs text-muted-foreground">
+              Environment: {templateContext.environment} | Mood: {templateContext.mood || 'N/A'} | Lighting: {templateContext.lightingStyle || 'N/A'}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Template Mode - Slot Suggestions Grid */}
+      {mode === 'template' && slotSuggestions.length > 0 && !loading && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">
+              {slotSuggestions.length} slot {slotSuggestions.length === 1 ? 'suggestion' : 'suggestions'} for this template
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {slotSuggestions.map((suggestion, index) => (
+              <TemplateSlotCard
+                key={`slot-${index}`}
+                suggestion={suggestion}
+                onUse={(slotSuggestion, prompt) => {
+                  setSelectedSlotIndex(index);
+                  if (onSlotSuggestionSelect) {
+                    onSlotSuggestionSelect(slotSuggestion, prompt);
+                  }
+                  // Also update the prompt field for backward compatibility
+                  onSelectPrompt(prompt, `slot-${index}`, slotSuggestion.reasoning);
+                }}
+                index={index}
+                isSelected={selectedSlotIndex === index}
+                mergedPrompt={mergedPrompt}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Template Mode - Empty State */}
+      {mode === 'template' && slotSuggestions.length === 0 && !loading && !error && templateId && (
+        <p className="text-sm text-muted-foreground text-center py-4">
+          No slot suggestions available. Click refresh to try again.
+        </p>
+      )}
+
+      {/* Template Mode - No Template Selected */}
+      {mode === 'template' && !templateId && !loading && (
+        <p className="text-sm text-muted-foreground text-center py-4">
+          Select a template to get AI-powered slot suggestions.
+        </p>
+      )}
+
+      {/* Freestyle Mode - Suggestions Grid */}
+      {mode !== 'template' && response && !loading && response.suggestions.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">
@@ -506,8 +798,8 @@ export function IdeaBankPanel({
         </div>
       )}
 
-      {/* Empty State */}
-      {response && !loading && response.suggestions.length === 0 && (
+      {/* Freestyle Mode - Empty State */}
+      {mode !== 'template' && response && !loading && response.suggestions.length === 0 && (
         <p className="text-sm text-muted-foreground text-center py-4">
           No suggestions available. Click refresh to try again.
         </p>

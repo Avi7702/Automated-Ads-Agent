@@ -93,9 +93,9 @@ Complete guide covering:
 | Category | Purpose | Examples |
 |----------|---------|----------|
 | `brand_guidelines` | Brand voice, tone, style | `nds-brand-guide.pdf` |
-| `ad_examples` | Successful campaigns | `instagram-shoe-ads.pdf` |
+| `ad_examples` | Successful campaigns | `instagram-steel-ads.pdf` |
 | `product_catalog` | Product specs, benefits | `product-catalog.xlsx` |
-| `competitor_research` | Market analysis | `nike-analysis.pdf` |
+| `competitor_research` | Market analysis | `competitor-steel-analysis.pdf` |
 | `performance_data` | A/B test results | `campaign-results.csv` |
 | `general` | Miscellaneous | Any other references |
 
@@ -121,7 +121,7 @@ Complete guide covering:
             ▼
 ┌─────────────────────────────────────┐
 │   Ad Copy Generation Request         │
-│   "Generate Instagram ad for shoes"  │
+│   "Generate Instagram ad for steel"  │
 └───────────┬─────────────────────────┘
             │
             ▼
@@ -177,19 +177,19 @@ POST /api/file-search/upload-directory
 ```bash
 POST /api/copy/generate
 {
-  "productName": "TrailRunner Pro",
-  "productDescription": "Lightweight trail shoes",
+  "productName": "T12 Rebar Bundle",
+  "productDescription": "T12 reinforcement bar",
   "platform": "instagram",
   "variations": 3
 }
 ```
 
 **What Happens:**
-1. System searches uploaded NDS ads for shoe campaigns
-2. Finds: "nike-trail-shoes-instagram-2024.pdf"
-3. Retrieves successful hooks: "Ready to conquer trails?"
-4. Adapts pattern for TrailRunner Pro
-5. Generates: "Trail season calls. TrailRunner Pro answers 🏔️"
+1. System searches uploaded NDS ads for steel campaigns
+2. Finds: "nds-rebar-bundles-instagram-2024.pdf"
+3. Retrieves successful hooks: "Built to last. Delivered fast."
+4. Adapts pattern for T12 Rebar Bundle
+5. Generates: "Strong foundations start here. T12 Rebar - next day delivery."
 
 ## Pricing
 
@@ -266,7 +266,7 @@ curl -X POST http://localhost:3000/api/file-search/upload \
 
 # 3. Generate copy
 curl -X POST http://localhost:3000/api/copy/generate \
-  -d '{"productName": "Test Shoe", "platform": "instagram"}'
+  -d '{"productName": "Test Rebar", "platform": "instagram"}'
 ```
 
 ## Known Limitations

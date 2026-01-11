@@ -64,7 +64,7 @@ curl -X POST http://localhost:3000/api/file-search/upload \
   -H "Cookie: session=YOUR_SESSION_COOKIE" \
   -F "file=@path/to/nds-ad-examples.pdf" \
   -F "category=ad_examples" \
-  -F "description=NDS running shoes campaign 2024"
+  -F "description=NDS rebar delivery campaign 2024"
 ```
 
 **Option B: Upload Directory**
@@ -92,8 +92,8 @@ curl -X POST http://localhost:3000/api/copy/generate \
   -H "Content-Type: application/json" \
   -H "Cookie: session=YOUR_SESSION_COOKIE" \
   -d '{
-    "productName": "TrailRunner Pro",
-    "productDescription": "Lightweight trail running shoes",
+    "productName": "T12 Rebar Bundle",
+    "productDescription": "T12 high-tensile rebar for construction",
     "platform": "instagram",
     "tone": "energetic",
     "variations": 3
@@ -101,7 +101,7 @@ curl -X POST http://localhost:3000/api/copy/generate \
 ```
 
 The AI will:
-1. Search your uploaded NDS examples for similar shoe ads
+1. Search your uploaded NDS examples for similar steel ads
 2. Find successful Instagram patterns
 3. Extract proven hooks and CTAs
 4. Generate copy inspired by what worked before
@@ -130,7 +130,7 @@ Upload brand style guides, voice & tone documents, visual identity guides.
 Upload successful ad campaigns, winning copy variations, high-performing posts.
 
 **Example:**
-- `instagram-shoe-campaign-q4-2024.pdf`
+- `instagram-steel-campaign-q4-2024.pdf`
 - `linkedin-b2b-ads-high-ctr.docx`
 - `facebook-holiday-campaign.txt`
 
@@ -139,15 +139,15 @@ Upload product descriptions, specifications, benefits documentation.
 
 **Example:**
 - `nds-product-catalog-2025.xlsx`
-- `shoe-tech-specs.pdf`
+- `rebar-specifications.pdf`
 - `product-benefits-matrix.csv`
 
 ### 4. `competitor_research`
 Upload competitor ad analysis, market research, industry trends.
 
 **Example:**
-- `nike-instagram-analysis.pdf`
-- `athletic-footwear-trends-2025.docx`
+- `competitor-steel-analysis.pdf`
+- `construction-materials-trends-2025.docx`
 
 ### 5. `performance_data`
 Upload A/B test results, campaign performance reports, engagement data.
@@ -271,13 +271,13 @@ DELETE /api/file-search/files/:fileId
 ### 1. Organize by Category
 Keep files organized by category for faster retrieval:
 ```
-✅ GOOD: ad_examples/instagram-shoes.pdf
+✅ GOOD: ad_examples/instagram-steel-products.pdf
 ❌ BAD: general/everything-mixed.pdf
 ```
 
 ### 2. Use Descriptive Filenames
 ```
-✅ GOOD: nike-instagram-campaign-q4-2024-high-ctr.pdf
+✅ GOOD: nds-instagram-campaign-q4-2024-high-ctr.pdf
 ❌ BAD: document.pdf
 ```
 
@@ -325,7 +325,7 @@ Test what context the AI would retrieve:
 curl -X POST http://localhost:3000/api/file-search/query \
   -H "Content-Type: application/json" \
   -d '{
-    "query": "Instagram ad for running shoes with energetic tone",
+    "query": "Instagram ad for steel rebar with professional tone",
     "category": "ad_examples",
     "maxResults": 3
   }'

@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { cn, getProductImageUrl } from "@/lib/utils";
-import type { Product, PromptTemplate, PerformingAdTemplate } from "@shared/schema";
+import type { Product, PromptTemplate, PerformingAdTemplate, AdSceneTemplate } from "@shared/schema";
 
 // Components
 import { Button } from "@/components/ui/button";
@@ -32,7 +32,8 @@ import {
 } from "@/components/ui/dialog";
 import { IdeaBankPanel } from "@/components/IdeaBankPanel";
 import { LinkedInPostPreview } from "@/components/LinkedInPostPreview";
-import type { GenerationRecipe } from "@shared/types/ideaBank";
+import { TemplateLibrary } from "@/components/TemplateLibrary";
+import type { GenerationRecipe, TemplateSlotSuggestion } from "@shared/types/ideaBank";
 import { UploadZone } from "@/components/UploadZone";
 import type { AnalyzedUpload } from "@/types/analyzedUpload";
 import { HistoryTimeline } from "@/components/HistoryTimeline";
@@ -70,6 +71,8 @@ import {
   Linkedin,
   Facebook,
   Twitter,
+  Wand2,
+  FileImage,
 } from "lucide-react";
 
 // Types
@@ -367,6 +370,10 @@ export default function Studio() {
 
   // GenerationRecipe from IdeaBank - contains relationships, scenarios, brand context
   const [generationRecipe, setGenerationRecipe] = useState<GenerationRecipe | undefined>(undefined);
+
+  // Generation path selection: Freestyle vs Template mode
+  const [generationMode, setGenerationMode] = useState<'freestyle' | 'template'>('freestyle');
+  const [selectedTemplateIdForMode, setSelectedTemplateIdForMode] = useState<string | null>(null);
 
   // Refs for scroll tracking
   const generateButtonRef = useRef<HTMLDivElement>(null);
@@ -1208,6 +1215,120 @@ export default function Studio() {
           {/* Idle State - Full Flow */}
           {state === "idle" && (
             <>
+              {/* Generation Path Selection */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-4"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                  <h3 className="font-medium">Choose Your Path</h3>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Freestyle Mode */}
+                  <button
+                    onClick={() => {
+                      setGenerationMode('freestyle');
+                      setSelectedTemplateIdForMode(null);
+                    }}
+                    className={cn(
+                      "p-6 rounded-xl border-2 transition-all text-left group",
+                      generationMode === 'freestyle'
+                        ? "border-primary bg-primary/10 ring-2 ring-primary/20"
+                        : "border-border hover:border-primary/50 bg-card/50"
+                    )}
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={cn(
+                        "w-10 h-10 rounded-lg flex items-center justify-center",
+                        generationMode === 'freestyle'
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground group-hover:bg-primary/20 group-hover:text-primary"
+                      )}>
+                        <Wand2 className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium">Freestyle</h4>
+                        {generationMode === 'freestyle' && (
+                          <Check className="w-4 h-4 text-primary inline ml-2" />
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      AI suggests complete scene ideas based on your products. Full creative freedom.
+                    </p>
+                  </button>
+
+                  {/* Template Mode */}
+                  <button
+                    onClick={() => setGenerationMode('template')}
+                    className={cn(
+                      "p-6 rounded-xl border-2 transition-all text-left group",
+                      generationMode === 'template'
+                        ? "border-primary bg-primary/10 ring-2 ring-primary/20"
+                        : "border-border hover:border-primary/50 bg-card/50"
+                    )}
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={cn(
+                        "w-10 h-10 rounded-lg flex items-center justify-center",
+                        generationMode === 'template'
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground group-hover:bg-primary/20 group-hover:text-primary"
+                      )}>
+                        <FileImage className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium">Use Template</h4>
+                        {generationMode === 'template' && (
+                          <Check className="w-4 h-4 text-primary inline ml-2" />
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Pick a proven scene template, AI fills in the details with your products.
+                    </p>
+                  </button>
+                </div>
+
+                {/* Template Picker - shown when template mode is selected */}
+                {generationMode === 'template' && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="p-4 rounded-xl border border-border bg-card/30 mt-4 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Layout className="w-4 h-4 text-primary" />
+                          <span className="font-medium">Select a Template</span>
+                        </div>
+                        {selectedTemplateIdForMode && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedTemplateIdForMode(null)}
+                          >
+                            <X className="w-4 h-4 mr-1" />
+                            Clear
+                          </Button>
+                        )}
+                      </div>
+                      <TemplateLibrary
+                        onSelectTemplate={(template: AdSceneTemplate) => {
+                          setSelectedTemplateIdForMode(template.id);
+                        }}
+                        selectedTemplateId={selectedTemplateIdForMode || undefined}
+                        className="max-h-[400px] overflow-y-auto"
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </motion.div>
+
               {/* Upload Section - Temporary Images */}
               <Section
                 id="upload"
@@ -1568,6 +1689,18 @@ export default function Studio() {
                     }}
                     selectedPromptId={selectedSuggestion?.id}
                     isGenerating={state === "generating"}
+                    mode={generationMode}
+                    templateId={selectedTemplateIdForMode || undefined}
+                    onSlotSuggestionSelect={(suggestion: TemplateSlotSuggestion, mergedPrompt: string) => {
+                      // When user selects a slot suggestion in template mode,
+                      // set the merged prompt for generation
+                      setPrompt(mergedPrompt);
+                      setSelectedSuggestion({
+                        id: `slot-${Date.now()}`,
+                        prompt: mergedPrompt,
+                        reasoning: suggestion.reasoning,
+                      });
+                    }}
                   />
                 </ErrorBoundary>
 

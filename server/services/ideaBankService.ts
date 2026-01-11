@@ -29,6 +29,11 @@ import type {
   GenerationRecipeProduct,
   GenerationRecipeRelationship,
   GenerationRecipeScenario,
+  IdeaBankMode,
+  TemplateContext,
+  TemplateSlotSuggestion,
+  IdeaBankTemplateResponse,
+  PlacementHints,
 } from "@shared/types/ideaBank";
 import type { Product, AdSceneTemplate, BrandProfile } from "@shared/schema";
 import { createRateLimitMap } from "../utils/memoryManager";
@@ -51,10 +56,13 @@ export interface IdeaBankRequest {
   enableWebSearch?: boolean; // Default: false (KB-first policy)
   maxSuggestions?: number; // Default: 3, max: 5
   uploadDescriptions?: string[]; // Descriptions of temporary uploaded images
+  // Template mode support
+  mode?: IdeaBankMode; // 'freestyle' (default) or 'template'
+  templateId?: string; // Required when mode = 'template'
 }
 
 export interface IdeaBankError {
-  code: "RATE_LIMITED" | "PRODUCT_NOT_FOUND" | "ANALYSIS_FAILED" | "KB_ERROR" | "LLM_ERROR";
+  code: "RATE_LIMITED" | "PRODUCT_NOT_FOUND" | "ANALYSIS_FAILED" | "KB_ERROR" | "LLM_ERROR" | "TEMPLATE_NOT_FOUND" | "TEMPLATE_REQUIRED";
   message: string;
 }
 
@@ -80,11 +88,14 @@ function checkRateLimit(userId: string): boolean {
 
 /**
  * Generate ad idea suggestions for a product and/or uploaded images
+ * Supports two modes:
+ * - 'freestyle' (default): AI suggests complete prompts
+ * - 'template': AI suggests content to fill template slots
  */
 export async function generateSuggestions(
   request: IdeaBankRequest
-): Promise<{ success: true; response: IdeaBankSuggestResponse } | { success: false; error: IdeaBankError }> {
-  const { productId, userId, userGoal, enableWebSearch = false, maxSuggestions = 3, uploadDescriptions = [] } = request;
+): Promise<{ success: true; response: IdeaBankSuggestResponse | IdeaBankTemplateResponse } | { success: false; error: IdeaBankError }> {
+  const { productId, userId, userGoal, enableWebSearch = false, maxSuggestions = 3, uploadDescriptions = [], mode = 'freestyle', templateId } = request;
   const buildStartTime = Date.now(); // Track for recipe debug timing
 
   // Rate limit check
@@ -95,6 +106,46 @@ export async function generateSuggestions(
         code: "RATE_LIMITED",
         message: "Too many suggestion requests. Please wait before trying again.",
       },
+    };
+  }
+
+  // Template mode validation and context fetching
+  let templateContext: TemplateContext | null = null;
+
+  if (mode === 'template') {
+    if (!templateId) {
+      return {
+        success: false,
+        error: {
+          code: "TEMPLATE_REQUIRED",
+          message: "templateId is required when mode is 'template'",
+        },
+      };
+    }
+
+    const template = await storage.getAdSceneTemplateById(templateId);
+    if (!template) {
+      return {
+        success: false,
+        error: {
+          code: "TEMPLATE_NOT_FOUND",
+          message: "Template not found",
+        },
+      };
+    }
+
+    templateContext = {
+      id: template.id,
+      title: template.title,
+      promptBlueprint: template.promptBlueprint,
+      placementHints: template.placementHints as PlacementHints | undefined,
+      lightingStyle: template.lightingStyle || undefined,
+      mood: template.mood || undefined,
+      environment: template.environment || undefined,
+      category: template.category,
+      aspectRatioHints: template.aspectRatioHints || undefined,
+      platformHints: template.platformHints || undefined,
+      bestForProductTypes: template.bestForProductTypes || undefined,
     };
   }
 
@@ -172,49 +223,97 @@ export async function generateSuggestions(
     // Continue without KB context - not a fatal error
   }
 
-  // 5. Match templates based on product analysis (if available)
-  const matchedTemplates = productAnalysis ? await matchTemplates(productAnalysis) : [];
+  // 5. Match templates based on product analysis (if available) - only for freestyle mode
+  const matchedTemplates = productAnalysis && mode === 'freestyle' ? await matchTemplates(productAnalysis) : [];
 
-  // 6. Generate suggestions via LLM
+  // 6. Branch based on mode
   try {
-    const suggestions = await generateLLMSuggestions({
-      product,
-      productAnalysis,
-      uploadDescriptions,
-      enhancedContext,
-      brandProfile,
-      kbContext,
-      kbCitations,
-      matchedTemplates,
-      userGoal,
-      maxSuggestions: Math.min(maxSuggestions, 5),
-      enableWebSearch,
-    });
+    if (mode === 'template' && templateContext) {
+      // TEMPLATE MODE: Generate slot suggestions for the selected template
+      const slotSuggestions = await generateTemplateSlotSuggestions({
+        templateContext,
+        product,
+        productAnalysis,
+        uploadDescriptions,
+        enhancedContext,
+        brandProfile,
+        kbContext,
+        userGoal,
+        maxSuggestions: Math.min(maxSuggestions, 3), // Limit to 3 for template mode
+      });
 
-    // Build GenerationRecipe for context passing to /api/transform
-    const recipe = buildGenerationRecipe({
-      product,
-      enhancedContext,
-      matchedTemplates,
-      brandProfile,
-      buildStartTime,
-    });
+      // Merge template with the best slot suggestion
+      const bestSlot = slotSuggestions[0];
+      const productName = product?.name || 'product';
+      const mergedPrompt = mergeTemplateWithInsights(templateContext, bestSlot, productName);
 
-    // Build response
-    const response: IdeaBankSuggestResponse = {
-      suggestions,
-      analysisStatus: {
-        visionComplete: !!productAnalysis,
-        kbQueried: !!kbContext,
-        templatesMatched: matchedTemplates.length,
-        webSearchUsed: false, // Web search disabled for now
-        productKnowledgeUsed: !!enhancedContext, // Phase 0.5
-        uploadDescriptionsUsed: uploadDescriptions.length, // Phase 9
-      },
-      recipe, // Include recipe for /api/transform context
-    };
+      // Build GenerationRecipe for template mode
+      const recipe = buildGenerationRecipe({
+        product,
+        enhancedContext,
+        matchedTemplates: [], // No template matching in template mode
+        brandProfile,
+        buildStartTime,
+      });
 
-    return { success: true, response };
+      // Build template response
+      const response: IdeaBankTemplateResponse = {
+        slotSuggestions,
+        template: templateContext,
+        mergedPrompt,
+        analysisStatus: {
+          visionComplete: !!productAnalysis,
+          kbQueried: !!kbContext,
+          templatesMatched: 1, // The selected template
+          webSearchUsed: false,
+          productKnowledgeUsed: !!enhancedContext,
+          uploadDescriptionsUsed: uploadDescriptions.length,
+        },
+        recipe,
+      };
+
+      return { success: true, response };
+    } else {
+      // FREESTYLE MODE: Generate complete prompt suggestions (existing behavior)
+      const suggestions = await generateLLMSuggestions({
+        product,
+        productAnalysis,
+        uploadDescriptions,
+        enhancedContext,
+        brandProfile,
+        kbContext,
+        kbCitations,
+        matchedTemplates,
+        userGoal,
+        maxSuggestions: Math.min(maxSuggestions, 5),
+        enableWebSearch,
+      });
+
+      // Build GenerationRecipe for context passing to /api/transform
+      const recipe = buildGenerationRecipe({
+        product,
+        enhancedContext,
+        matchedTemplates,
+        brandProfile,
+        buildStartTime,
+      });
+
+      // Build response
+      const response: IdeaBankSuggestResponse = {
+        suggestions,
+        analysisStatus: {
+          visionComplete: !!productAnalysis,
+          kbQueried: !!kbContext,
+          templatesMatched: matchedTemplates.length,
+          webSearchUsed: false, // Web search disabled for now
+          productKnowledgeUsed: !!enhancedContext, // Phase 0.5
+          uploadDescriptionsUsed: uploadDescriptions.length, // Phase 9
+        },
+        recipe, // Include recipe for /api/transform context
+      };
+
+      return { success: true, response };
+    }
   } catch (err) {
     console.error("[IdeaBank] LLM generation failed:", err);
     return {
@@ -614,6 +713,313 @@ function validateMode(mode: string): GenerationMode {
   const valid: GenerationMode[] = ["exact_insert", "inspiration", "standard"];
   const normalized = mode?.toLowerCase() as GenerationMode;
   return valid.includes(normalized) ? normalized : "standard";
+}
+
+// ============================================
+// TEMPLATE MODE FUNCTIONS
+// ============================================
+
+/**
+ * Generate template slot suggestions using LLM
+ * This creates product-specific content to fill template slots
+ */
+async function generateTemplateSlotSuggestions(params: {
+  templateContext: TemplateContext;
+  product?: Product;
+  productAnalysis: VisionAnalysisResult | null;
+  uploadDescriptions: string[];
+  enhancedContext: EnhancedProductContext | null;
+  brandProfile: BrandProfile | undefined;
+  kbContext: string | null;
+  userGoal?: string;
+  maxSuggestions: number;
+}): Promise<TemplateSlotSuggestion[]> {
+  const {
+    templateContext,
+    product,
+    productAnalysis,
+    uploadDescriptions,
+    enhancedContext,
+    brandProfile,
+    kbContext,
+    userGoal,
+    maxSuggestions,
+  } = params;
+
+  const prompt = buildTemplateSlotPrompt({
+    templateContext,
+    product,
+    productAnalysis,
+    uploadDescriptions,
+    enhancedContext,
+    brandProfile,
+    kbContext,
+    userGoal,
+    maxSuggestions,
+  });
+
+  const response = await genAI.models.generateContent({
+    model: REASONING_MODEL,
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    config: {
+      temperature: 0.7,
+      maxOutputTokens: 8000,
+    },
+  });
+
+  const text = response.text || "";
+  console.log("[IdeaBank Template] LLM raw response length:", text.length);
+
+  // Parse JSON response
+  let jsonContent: string | null = null;
+
+  const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (codeBlockMatch) {
+    jsonContent = codeBlockMatch[1].trim();
+  } else {
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      jsonContent = jsonMatch[0];
+    }
+  }
+
+  if (!jsonContent || !jsonContent.startsWith('[')) {
+    console.error("[IdeaBank Template] Failed to parse response. Full text:", text);
+    throw new Error("Failed to parse template slot suggestions response");
+  }
+
+  // Try to fix truncated JSON
+  let fixedJson = jsonContent;
+  try {
+    JSON.parse(fixedJson);
+  } catch {
+    const openBrackets = (fixedJson.match(/\[/g) || []).length;
+    const closeBrackets = (fixedJson.match(/\]/g) || []).length;
+    const openBraces = (fixedJson.match(/\{/g) || []).length;
+    const closeBraces = (fixedJson.match(/\}/g) || []).length;
+
+    fixedJson = fixedJson.replace(/,\s*$/, '');
+    for (let i = 0; i < openBraces - closeBraces; i++) {
+      fixedJson += '}';
+    }
+    for (let i = 0; i < openBrackets - closeBrackets; i++) {
+      fixedJson += ']';
+    }
+  }
+
+  const rawSuggestions = JSON.parse(fixedJson) as Array<{
+    productHighlights?: string[];
+    productPlacement?: string;
+    detailsToEmphasize?: string[];
+    scaleReference?: string;
+    headerText?: string;
+    bodyText?: string;
+    ctaSuggestion?: string;
+    colorHarmony?: string[];
+    lightingNotes?: string;
+    confidence?: number;
+    reasoning?: string;
+  }>;
+
+  // Transform and validate slot suggestions
+  return rawSuggestions.slice(0, maxSuggestions).map((s) => ({
+    productHighlights: (s.productHighlights || []).slice(0, 5).map(h => sanitizeString(h)),
+    productPlacement: sanitizeString(s.productPlacement || 'center of frame'),
+    detailsToEmphasize: (s.detailsToEmphasize || []).slice(0, 5).map(d => sanitizeString(d)),
+    scaleReference: s.scaleReference ? sanitizeString(s.scaleReference) : undefined,
+    headerText: s.headerText ? sanitizeString(s.headerText).slice(0, 60) : undefined,
+    bodyText: s.bodyText ? sanitizeString(s.bodyText).slice(0, 150) : undefined,
+    ctaSuggestion: s.ctaSuggestion ? sanitizeString(s.ctaSuggestion).slice(0, 30) : undefined,
+    colorHarmony: (s.colorHarmony || []).slice(0, 5).map(c => sanitizeString(c)),
+    lightingNotes: sanitizeString(s.lightingNotes || 'Natural lighting'),
+    confidence: Math.min(100, Math.max(0, s.confidence || 70)),
+    reasoning: sanitizeString(s.reasoning || 'Product-template compatibility analysis'),
+  }));
+}
+
+/**
+ * Build the prompt for template slot suggestion generation
+ */
+function buildTemplateSlotPrompt(params: {
+  templateContext: TemplateContext;
+  product?: Product;
+  productAnalysis: VisionAnalysisResult | null;
+  uploadDescriptions: string[];
+  enhancedContext: EnhancedProductContext | null;
+  brandProfile: BrandProfile | undefined;
+  kbContext: string | null;
+  userGoal?: string;
+  maxSuggestions: number;
+}): string {
+  const {
+    templateContext,
+    product,
+    productAnalysis,
+    uploadDescriptions,
+    enhancedContext,
+    brandProfile,
+    kbContext,
+    userGoal,
+    maxSuggestions,
+  } = params;
+
+  let prompt = `You are an expert advertising creative director. Your task is to suggest how to fill a template's content slots for a specific product.
+
+## Template Structure
+- Title: ${templateContext.title}
+- Category: ${templateContext.category}
+- Prompt Blueprint: ${templateContext.promptBlueprint}
+`;
+
+  if (templateContext.lightingStyle) {
+    prompt += `- Lighting Style: ${templateContext.lightingStyle}\n`;
+  }
+  if (templateContext.mood) {
+    prompt += `- Mood: ${templateContext.mood}\n`;
+  }
+  if (templateContext.environment) {
+    prompt += `- Environment: ${templateContext.environment}\n`;
+  }
+  if (templateContext.placementHints) {
+    prompt += `- Placement Hints: Position=${templateContext.placementHints.position || 'center'}, Scale=${templateContext.placementHints.scale || 'medium'}\n`;
+  }
+  if (templateContext.aspectRatioHints?.length) {
+    prompt += `- Recommended Aspect Ratios: ${templateContext.aspectRatioHints.join(', ')}\n`;
+  }
+  if (templateContext.platformHints?.length) {
+    prompt += `- Best Platforms: ${templateContext.platformHints.join(', ')}\n`;
+  }
+  if (templateContext.bestForProductTypes?.length) {
+    prompt += `- Best For Product Types: ${templateContext.bestForProductTypes.join(', ')}\n`;
+  }
+
+  // Add product information
+  if (product && productAnalysis) {
+    prompt += `
+## Product Analysis
+- Name: ${product.name}
+- Category: ${productAnalysis.category} / ${productAnalysis.subcategory}
+- Materials: ${productAnalysis.materials.join(", ") || "Not specified"}
+- Colors: ${productAnalysis.colors.join(", ") || "Not specified"}
+- Style: ${productAnalysis.style}
+- Usage Context: ${productAnalysis.usageContext}
+- Target Demographic: ${productAnalysis.targetDemographic}
+`;
+  }
+
+  // Add upload descriptions
+  if (uploadDescriptions.length > 0) {
+    prompt += `
+## Additional Uploaded Images
+${uploadDescriptions.map((desc, i) => `${i + 1}. "${desc}"`).join("\n")}
+`;
+  }
+
+  // Add enhanced context
+  if (enhancedContext) {
+    prompt += `\n## Enhanced Product Knowledge\n${enhancedContext.formattedContext}\n`;
+  }
+
+  // Add user goal
+  if (userGoal) {
+    prompt += `\n## User's Goal\n${sanitizeString(userGoal)}\n`;
+  }
+
+  // Add brand profile
+  if (brandProfile) {
+    prompt += `\n## Brand Guidelines
+- Brand: ${brandProfile.brandName || "Not specified"}
+- Industry: ${brandProfile.industry || "Not specified"}
+- Values: ${brandProfile.brandValues?.join(", ") || "Not specified"}
+- Preferred Styles: ${brandProfile.preferredStyles?.join(", ") || "Not specified"}
+`;
+  }
+
+  // Add KB context
+  if (kbContext) {
+    prompt += `\n## Relevant Context from Knowledge Base\n${kbContext}\n`;
+  }
+
+  prompt += `
+## Your Task
+Generate ${maxSuggestions} different slot suggestions to customize this template for the product. Each suggestion should fill these slots:
+
+### Required Slots:
+- productHighlights: 3-5 key features to visually show (strings array)
+- productPlacement: How/where to position product in the scene (string)
+- detailsToEmphasize: Visual details to highlight in the image (strings array)
+- colorHarmony: Colors that complement the product and work with the template mood (strings array)
+- lightingNotes: How to light this specific product within the template's lighting style (string)
+- confidence: 0-100 score for how well this fills the template (number)
+- reasoning: 2-3 sentences explaining why these suggestions work (string)
+
+### Optional Copy Slots (only include if appropriate for the template):
+- scaleReference: Object or element to show scale (e.g., "worker's hands", "doorframe")
+- headerText: Headline text, max 60 chars (string)
+- bodyText: Supporting copy, max 150 chars (string)
+- ctaSuggestion: Call to action, max 30 chars (string)
+
+## Output Format
+Return a JSON array of ${maxSuggestions} slot suggestions. Each must have all required slots.
+
+Return ONLY the JSON array, no other text.`;
+
+  return prompt;
+}
+
+/**
+ * Merge template blueprint with AI-suggested slot content
+ */
+function mergeTemplateWithInsights(
+  template: TemplateContext,
+  slotSuggestion: TemplateSlotSuggestion,
+  productName: string
+): string {
+  // Start with the template blueprint
+  let mergedPrompt = template.promptBlueprint;
+
+  // Replace {{product}} placeholder if present
+  mergedPrompt = mergedPrompt.replace(/\{\{product\}\}/gi, productName);
+
+  // Build product-specific additions
+  const additions: string[] = [];
+
+  // Add product highlights
+  if (slotSuggestion.productHighlights.length > 0) {
+    additions.push(`Emphasize these product features: ${slotSuggestion.productHighlights.join(', ')}.`);
+  }
+
+  // Add placement guidance
+  if (slotSuggestion.productPlacement) {
+    additions.push(`Product placement: ${slotSuggestion.productPlacement}.`);
+  }
+
+  // Add details to emphasize
+  if (slotSuggestion.detailsToEmphasize.length > 0) {
+    additions.push(`Visual focus on: ${slotSuggestion.detailsToEmphasize.join(', ')}.`);
+  }
+
+  // Add scale reference if provided
+  if (slotSuggestion.scaleReference) {
+    additions.push(`Include ${slotSuggestion.scaleReference} for scale reference.`);
+  }
+
+  // Add color harmony
+  if (slotSuggestion.colorHarmony.length > 0) {
+    additions.push(`Color palette: ${slotSuggestion.colorHarmony.join(', ')}.`);
+  }
+
+  // Add lighting notes
+  if (slotSuggestion.lightingNotes) {
+    additions.push(`Lighting: ${slotSuggestion.lightingNotes}.`);
+  }
+
+  // Append all additions to the merged prompt
+  if (additions.length > 0) {
+    mergedPrompt += '\n\n' + additions.join(' ');
+  }
+
+  return mergedPrompt;
 }
 
 /**
