@@ -36,7 +36,7 @@ export function TemplateCard({ template, onSelect, isSelected }: TemplateCardPro
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={cn(
-        "relative group aspect-[4/5] rounded-2xl overflow-hidden border-2 transition-all duration-300",
+        "relative group w-full aspect-[4/5] rounded-2xl overflow-hidden border-2 transition-all duration-300",
         isSelected
           ? "border-primary ring-2 ring-primary/30 scale-[0.98]"
           : "border-border hover:border-primary/50 hover:scale-[1.02]",
