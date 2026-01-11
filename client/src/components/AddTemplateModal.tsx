@@ -34,7 +34,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 
 // Options
-const CATEGORIES = ["ecommerce", "saas", "services", "awareness"];
+const CATEGORIES = ["product_showcase", "installation", "worksite", "professional", "educational"];
 const ENGAGEMENT_TIERS = ["top-5", "top-10", "top-25", "unranked"];
 const PLATFORMS = ["instagram", "facebook", "linkedin", "twitter", "tiktok"];
 const ASPECT_RATIOS = ["1:1", "4:5", "9:16", "16:9", "4:3"];
@@ -57,7 +57,7 @@ export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    category: "ecommerce",
+    category: "product_showcase",
     sourceUrl: "",
     sourcePlatform: "",
     advertiserName: "",
@@ -83,7 +83,7 @@ export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
     setFormData({
       name: "",
       description: "",
-      category: "ecommerce",
+      category: "product_showcase",
       sourceUrl: "",
       sourcePlatform: "",
       advertiserName: "",
@@ -225,7 +225,7 @@ export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add Template</DialogTitle>
           <DialogDescription>
@@ -284,7 +284,7 @@ export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
           </div>
 
           {/* Basic Info */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="col-span-2">
               <Label htmlFor="name">Name *</Label>
               <Input
@@ -347,7 +347,7 @@ export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
           </div>
 
           {/* Metrics */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="engagementRate">Est. Engagement Rate (%)</Label>
               <Input
@@ -375,7 +375,7 @@ export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
           </div>
 
           {/* Source Info */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="col-span-2">
               <Label htmlFor="sourceUrl">Source URL</Label>
               <Input
@@ -409,7 +409,7 @@ export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
           </div>
 
           {/* Design Options */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <Label>Mood</Label>
               <Select

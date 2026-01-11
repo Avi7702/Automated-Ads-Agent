@@ -80,7 +80,7 @@ export default function Gallery() {
       <Header currentPage="gallery" />
 
       {/* Content */}
-      <main className="container max-w-6xl mx-auto px-6 pt-24 pb-20 relative z-10">
+      <main className="container max-w-6xl mx-auto px-4 sm:px-6 pt-24 pb-20 relative z-10">
         {isLoading ? (
           <div className="flex items-center justify-center min-h-[50vh]">
             <div className="text-muted-foreground">Loading gallery...</div>
@@ -99,7 +99,7 @@ export default function Gallery() {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {generations.map((gen, index) => (
               <motion.div
                 key={gen.id}

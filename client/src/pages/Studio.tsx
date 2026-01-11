@@ -270,7 +270,7 @@ function StickyGenerateBar({
       initial={{ y: 100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: 100, opacity: 0 }}
-      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50"
+      className="fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 mb-safe"
     >
       <Button
         size="lg"
@@ -997,7 +997,7 @@ export default function Studio() {
               </div>
 
               {/* Action Buttons */}
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <Button
                   variant="outline"
                   className="h-14"
@@ -1728,10 +1728,10 @@ export default function Studio() {
       </main>
 
       {/* Mobile LinkedIn Preview - Fixed Bottom Bar */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-md border-t border-border">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-md border-t border-border pb-safe">
         <Collapsible>
           <CollapsibleTrigger asChild>
-            <button className="w-full p-4 flex items-center justify-between hover:bg-muted/50">
+            <button className="w-full p-4 min-h-12 flex items-center justify-between hover:bg-muted/50">
               <div className="flex items-center gap-2">
                 <Eye className="w-5 h-5 text-primary" />
                 <span className="font-medium">LinkedIn Preview</span>

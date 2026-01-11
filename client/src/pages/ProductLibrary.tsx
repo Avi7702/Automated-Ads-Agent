@@ -316,7 +316,7 @@ export default function ProductLibrary() {
       <Header currentPage="settings" />
 
       {/* Content */}
-      <main className="container max-w-6xl mx-auto px-6 pt-24 pb-20 relative z-10">
+      <main className="container max-w-6xl mx-auto px-4 sm:px-6 pt-24 pb-20 relative z-10">
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
@@ -359,7 +359,7 @@ export default function ProductLibrary() {
 
         {/* Loading State */}
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
             {Array.from({ length: 8 }).map((_, index) => (
               <ProductSkeleton key={index} />
             ))}
@@ -397,7 +397,7 @@ export default function ProductLibrary() {
           </div>
         ) : (
           /* Product Grid */
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
             {filteredProducts.map((product, index) => {
               const statusBadge = getEnrichmentStatusBadge(product.enrichmentStatus);
 
@@ -436,7 +436,7 @@ export default function ProductLibrary() {
                         e.stopPropagation();
                         setProductToDelete(product);
                       }}
-                      className="absolute top-3 left-3 w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground"
+                      className="absolute top-3 left-3 w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

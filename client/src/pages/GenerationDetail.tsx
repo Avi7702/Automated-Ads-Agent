@@ -204,7 +204,7 @@ export default function GenerationDetail() {
 
       <Header currentPage="generation" />
 
-      <main className="container max-w-5xl mx-auto px-6 pt-24 pb-20 relative z-10">
+      <main className="container max-w-5xl mx-auto px-4 sm:px-6 pt-24 pb-20 relative z-10">
         <div className="space-y-6">
           {/* Action Bar */}
           <div className="flex items-center justify-between">
@@ -509,7 +509,7 @@ export default function GenerationDetail() {
           )}
 
           {showComparison && generation.originalImagePaths.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {generation.originalImagePaths.map((path, index) => (
                 <div key={index} className="aspect-square rounded-xl overflow-hidden border border-border bg-card">
                   <img
@@ -529,7 +529,7 @@ export default function GenerationDetail() {
               <p className="text-foreground" data-testid="text-prompt-detail">{generation.prompt}</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-border/50">
               <div>
                 <h4 className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Created</h4>
                 <p className="text-sm">{format(new Date(generation.createdAt), "MMM d, yyyy 'at' h:mm a")}</p>

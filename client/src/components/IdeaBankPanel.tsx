@@ -355,7 +355,7 @@ export function IdeaBankPanel({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        "p-6 rounded-2xl border border-border bg-gradient-to-br from-primary/5 to-purple-500/5 space-y-4",
+        "p-4 sm:p-6 rounded-2xl border border-border bg-gradient-to-br from-primary/5 to-purple-500/5 space-y-4",
         className
       )}
     >

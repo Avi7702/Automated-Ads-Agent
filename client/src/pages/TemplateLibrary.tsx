@@ -78,10 +78,11 @@ const engagementTierColors: Record<string, string> = {
 
 // Category colors (light mode readable + dark mode optimized)
 const categoryColors: Record<string, string> = {
-  ecommerce: "bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30",
-  saas: "bg-purple-500/20 text-purple-700 dark:text-purple-400 border-purple-500/30",
-  services: "bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/30",
-  awareness: "bg-pink-500/20 text-pink-700 dark:text-pink-400 border-pink-500/30",
+  product_showcase: "bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/30",
+  installation: "bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30",
+  worksite: "bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30",
+  professional: "bg-purple-500/20 text-purple-700 dark:text-purple-400 border-purple-500/30",
+  educational: "bg-pink-500/20 text-pink-700 dark:text-pink-400 border-pink-500/30",
 };
 
 // Template image with fallback
@@ -187,7 +188,7 @@ function TemplateCard({
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
           <Button
             variant="default"
             size="sm"
@@ -458,7 +459,7 @@ export default function TemplateLibrary() {
   });
 
   // Get unique categories and platforms
-  const categories = ["all", "ecommerce", "saas", "services", "awareness"];
+  const categories = ["all", "product_showcase", "installation", "worksite", "professional", "educational"];
   const platforms = ["all", "instagram", "facebook", "linkedin", "twitter", "tiktok"];
 
   const handleTemplateClick = (template: PerformingAdTemplate) => {
@@ -493,7 +494,7 @@ export default function TemplateLibrary() {
       <Header currentPage="template-library" />
 
       {/* Content */}
-      <main className="container max-w-7xl mx-auto px-6 pt-24 pb-20 relative z-10">
+      <main className="container max-w-7xl mx-auto px-4 sm:px-6 pt-24 pb-20 relative z-10">
         {/* Title and Actions */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div>
@@ -552,7 +553,7 @@ export default function TemplateLibrary() {
 
         {/* Templates Grid */}
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
               <TemplateSkeleton key={i} />
             ))}
@@ -582,7 +583,7 @@ export default function TemplateLibrary() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             <AnimatePresence mode="popLayout">
               {filteredTemplates.map((template) => (
                 <TemplateCard

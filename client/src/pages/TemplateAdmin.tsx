@@ -20,17 +20,17 @@ import type { AdSceneTemplate } from "@shared/schema";
 import { Header } from "@/components/layout/Header";
 
 const categories = [
-  { value: "lifestyle", label: "Lifestyle" },
+  { value: "product_showcase", label: "Product Showcase" },
+  { value: "installation", label: "Installation" },
+  { value: "worksite", label: "Worksite" },
   { value: "professional", label: "Professional" },
   { value: "outdoor", label: "Outdoor" },
-  { value: "luxury", label: "Luxury" },
-  { value: "seasonal", label: "Seasonal" },
 ];
 
 const lightingStyles = ["natural", "studio", "dramatic", "soft", "golden-hour", "warm"];
-const intents = ["showcase", "installation", "before-after", "scale-demo", "product-focus", "lifestyle"];
+const intents = ["showcase", "installation", "before-after", "scale-demo", "product-focus", "worksite"];
 const environments = ["indoor", "outdoor", "studio", "worksite"];
-const moods = ["luxury", "cozy", "industrial", "minimal", "vibrant", "professional", "natural", "fresh", "relaxed", "festive"];
+const moods = ["industrial", "professional", "bold", "minimal", "urgent", "technical", "reliable"];
 
 interface TemplateFormData {
   title: string;
@@ -54,7 +54,7 @@ interface TemplateFormData {
 const emptyFormData: TemplateFormData = {
   title: "",
   description: "",
-  category: "lifestyle",
+  category: "product_showcase",
   promptBlueprint: "",
   tags: [],
   platformHints: [],
@@ -295,6 +295,7 @@ export default function TemplateAdmin() {
         {/* Templates Table */}
         {!showForm && (
           <div className="rounded-xl border border-border overflow-hidden">
+            <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-card/50">
                 <tr className="text-left text-sm text-muted-foreground">
@@ -419,6 +420,7 @@ export default function TemplateAdmin() {
                 )}
               </tbody>
             </table>
+            </div>
           </div>
         )}
 
@@ -441,7 +443,7 @@ export default function TemplateAdmin() {
                 <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
                   Basic Information
                 </h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="col-span-2">
                     <label className="block text-sm font-medium mb-2">Title *</label>
                     <Input
@@ -516,7 +518,7 @@ export default function TemplateAdmin() {
                 <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
                   Platform Targeting
                 </h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">Platforms</label>
                     <div className="flex flex-wrap gap-2">
@@ -565,7 +567,7 @@ export default function TemplateAdmin() {
                 <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
                   Style & Mood
                 </h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">Lighting Style</label>
                     <select
@@ -622,7 +624,7 @@ export default function TemplateAdmin() {
                 <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
                   Placement Hints
                 </h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">Position</label>
                     <select
@@ -661,7 +663,7 @@ export default function TemplateAdmin() {
                 <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
                   Tags & Product Types
                 </h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">Tags</label>
                     <div className="flex gap-2 mb-2">

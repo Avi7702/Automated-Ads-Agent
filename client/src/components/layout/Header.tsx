@@ -59,7 +59,7 @@ export function Header({ currentPage }: HeaderProps) {
         <Button
           variant="ghost"
           size="icon"
-          className="md:hidden min-h-11 min-w-11"
+          className="md:hidden min-h-12 min-w-12"
           onClick={() => setMobileMenuOpen(true)}
           aria-label="Open navigation menu"
         >
@@ -106,7 +106,7 @@ export function Header({ currentPage }: HeaderProps) {
 
         {/* Mobile Navigation Sheet */}
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-          <SheetContent side="left" className="w-[280px] sm:w-[320px]">
+          <SheetContent side="left" className="w-4/5 max-w-sm">
             <SheetHeader>
               <SheetTitle>Navigation</SheetTitle>
               <SheetDescription>
@@ -119,7 +119,7 @@ export function Header({ currentPage }: HeaderProps) {
                   <span
                     onClick={() => setMobileMenuOpen(false)}
                     className={cn(
-                      "flex items-center min-h-11 px-4 py-3 rounded-md text-base font-medium transition-colors cursor-pointer",
+                      "flex items-center min-h-12 px-4 py-3 rounded-md text-base font-medium transition-colors cursor-pointer",
                       activePage === item.id
                         ? "bg-primary/10 text-primary"
                         : "text-foreground hover:bg-muted"

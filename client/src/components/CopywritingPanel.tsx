@@ -18,8 +18,8 @@ const PLATFORMS = [
 const TONES = [
   { value: "professional", label: "Professional" },
   { value: "casual", label: "Casual" },
-  { value: "fun", label: "Fun & Playful" },
-  { value: "luxury", label: "Luxury" },
+  { value: "technical", label: "Technical" },
+  { value: "urgent", label: "Urgent" },
   { value: "minimal", label: "Minimal" },
   { value: "authentic", label: "Authentic" },
 ];
@@ -192,7 +192,7 @@ export function CopywritingPanel({ generationId, prompt }: CopywritingPanelProps
               <Input
                 value={industry}
                 onChange={(e) => setIndustry(e.target.value)}
-                placeholder="e.g., Fashion, Tech, Food"
+                placeholder="e.g., Steel, Construction, Building Materials"
                 data-testid="input-industry"
               />
             </div>
@@ -276,7 +276,7 @@ export function CopywritingPanel({ generationId, prompt }: CopywritingPanelProps
                     className="border rounded-xl p-4 space-y-4 bg-background/50"
                     data-testid={`copy-card-${copy.id}`}
                   >
-                    <div className="flex items-start justify-between">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <span className="text-lg">{PLATFORMS.find(p => p.value === copy.platform)?.icon}</span>
                         <span className="text-sm font-medium capitalize">{copy.platform}</span>
@@ -324,7 +324,7 @@ export function CopywritingPanel({ generationId, prompt }: CopywritingPanelProps
 
                       {copy.qualityScore && (
                         <div className="pt-3 border-t border-border/50">
-                          <div className="flex items-center gap-4 text-xs">
+                          <div className="flex flex-wrap items-center gap-4 text-xs">
                             <span className="text-muted-foreground">Quality Score:</span>
                             <span className={`font-medium ${copy.qualityScore.overall >= 80 ? 'text-green-700 dark:text-green-400' : copy.qualityScore.overall >= 60 ? 'text-yellow-700 dark:text-yellow-400' : 'text-red-700 dark:text-red-400'}`}>
                               {copy.qualityScore.overall}/100
