@@ -886,7 +886,7 @@ export default function Studio() {
         {/* Desktop: 2-column grid, Mobile: single column */}
         <div className="lg:grid lg:grid-cols-[1fr_400px] lg:gap-8">
           {/* Left Column - All Inputs (scrollable) */}
-          <div className="space-y-8 min-w-0 overflow-hidden">
+          <div className="space-y-8 min-w-0">
           {/* Hero Section */}
           <motion.div
             ref={heroRef}
