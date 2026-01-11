@@ -20,8 +20,8 @@ import "dotenv/config";
 import { storage } from "../server/storage";
 
 // Placeholder images - Replace with actual Cloudinary URLs after upload
-const PLACEHOLDER_IMAGE = "https://res.cloudinary.com/demo/image/upload/v1/samples/placeholder";
-const PLACEHOLDER_PUBLIC_ID = "samples/placeholder";
+const PLACEHOLDER_IMAGE = "https://placehold.co/400x500/1a1a2e/ffffff?text=Template";
+const PLACEHOLDER_PUBLIC_ID = "placeholder";
 
 interface TemplateData {
   title: string;
