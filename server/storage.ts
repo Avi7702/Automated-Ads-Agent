@@ -42,6 +42,13 @@ import {
   // API Key Management types (Phase 7)
   type UserApiKey,
   type ApiKeyAuditLog,
+  // Learn from Winners types
+  type LearnedAdPattern,
+  type InsertLearnedAdPattern,
+  type AdAnalysisUpload,
+  type InsertAdAnalysisUpload,
+  type PatternApplicationHistory,
+  type InsertPatternApplicationHistory,
   generations,
   generationUsage,
   products,
@@ -67,6 +74,10 @@ import {
   // API Key Management tables (Phase 7)
   userApiKeys,
   apiKeyAuditLog,
+  // Learn from Winners tables
+  learnedAdPatterns,
+  adAnalysisUploads,
+  patternApplicationHistory,
 } from "@shared/schema";
 import { decryptApiKey } from "./services/encryptionService";
 import { db } from "./db";
@@ -249,6 +260,37 @@ export interface IStorage {
 
   // Key resolution with fallback
   resolveApiKey(userId: string, service: string): Promise<{ key: string | null; source: 'user' | 'environment' | 'none' }>;
+
+  // ============================================
+  // LEARN FROM WINNERS - PATTERN OPERATIONS
+  // ============================================
+
+  // Learned Ad Pattern CRUD operations
+  createLearnedPattern(pattern: InsertLearnedAdPattern): Promise<LearnedAdPattern>;
+  getLearnedPatterns(userId: string, filters?: {
+    category?: string;
+    platform?: string;
+    industry?: string;
+    isActive?: boolean;
+  }): Promise<LearnedAdPattern[]>;
+  getLearnedPatternById(id: string): Promise<LearnedAdPattern | undefined>;
+  getLearnedPatternByHash(userId: string, sourceHash: string): Promise<LearnedAdPattern | undefined>;
+  updateLearnedPattern(id: string, updates: Partial<InsertLearnedAdPattern>): Promise<LearnedAdPattern>;
+  deleteLearnedPattern(id: string): Promise<void>;
+  incrementPatternUsage(id: string): Promise<void>;
+
+  // Ad Analysis Upload CRUD operations
+  createUploadRecord(upload: InsertAdAnalysisUpload): Promise<AdAnalysisUpload>;
+  getUploadById(id: string): Promise<AdAnalysisUpload | undefined>;
+  updateUploadStatus(id: string, status: string, errorMessage?: string): Promise<AdAnalysisUpload>;
+  updateUploadWithPattern(id: string, patternId: string, processingDurationMs: number): Promise<AdAnalysisUpload>;
+  getExpiredUploads(): Promise<AdAnalysisUpload[]>;
+  deleteUpload(id: string): Promise<void>;
+
+  // Pattern Application History operations
+  createApplicationHistory(history: InsertPatternApplicationHistory): Promise<PatternApplicationHistory>;
+  getPatternApplicationHistory(patternId: string): Promise<PatternApplicationHistory[]>;
+  updateApplicationFeedback(id: string, rating: number, wasUsed: boolean, feedback?: string): Promise<PatternApplicationHistory>;
 }
 
 export class DbStorage implements IStorage {
@@ -1420,6 +1462,236 @@ export class DbStorage implements IStorage {
     }
 
     return { key: null, source: 'none' };
+  }
+
+  // ============================================
+  // LEARN FROM WINNERS - PATTERN OPERATIONS
+  // ============================================
+
+  /**
+   * Create a new learned ad pattern
+   */
+  async createLearnedPattern(pattern: InsertLearnedAdPattern): Promise<LearnedAdPattern> {
+    const [result] = await db
+      .insert(learnedAdPatterns)
+      .values(pattern)
+      .returning();
+    return result;
+  }
+
+  /**
+   * Get learned patterns for a user with optional filters
+   */
+  async getLearnedPatterns(userId: string, filters?: {
+    category?: string;
+    platform?: string;
+    industry?: string;
+    isActive?: boolean;
+  }): Promise<LearnedAdPattern[]> {
+    const conditions = [eq(learnedAdPatterns.userId, userId)];
+
+    if (filters?.category) {
+      conditions.push(eq(learnedAdPatterns.category, filters.category));
+    }
+    if (filters?.platform) {
+      conditions.push(eq(learnedAdPatterns.platform, filters.platform));
+    }
+    if (filters?.industry) {
+      conditions.push(eq(learnedAdPatterns.industry, filters.industry));
+    }
+    if (filters?.isActive !== undefined) {
+      conditions.push(eq(learnedAdPatterns.isActive, filters.isActive));
+    }
+
+    return await db
+      .select()
+      .from(learnedAdPatterns)
+      .where(and(...conditions))
+      .orderBy(desc(learnedAdPatterns.createdAt));
+  }
+
+  /**
+   * Get a learned pattern by ID
+   */
+  async getLearnedPatternById(id: string): Promise<LearnedAdPattern | undefined> {
+    const [pattern] = await db
+      .select()
+      .from(learnedAdPatterns)
+      .where(eq(learnedAdPatterns.id, id));
+    return pattern;
+  }
+
+  /**
+   * Get a learned pattern by source hash (for deduplication)
+   */
+  async getLearnedPatternByHash(userId: string, sourceHash: string): Promise<LearnedAdPattern | undefined> {
+    const [pattern] = await db
+      .select()
+      .from(learnedAdPatterns)
+      .where(
+        and(
+          eq(learnedAdPatterns.userId, userId),
+          eq(learnedAdPatterns.sourceHash, sourceHash)
+        )
+      );
+    return pattern;
+  }
+
+  /**
+   * Update a learned pattern
+   */
+  async updateLearnedPattern(id: string, updates: Partial<InsertLearnedAdPattern>): Promise<LearnedAdPattern> {
+    const [result] = await db
+      .update(learnedAdPatterns)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(learnedAdPatterns.id, id))
+      .returning();
+    return result;
+  }
+
+  /**
+   * Delete a learned pattern
+   */
+  async deleteLearnedPattern(id: string): Promise<void> {
+    await db.delete(learnedAdPatterns).where(eq(learnedAdPatterns.id, id));
+  }
+
+  /**
+   * Increment pattern usage count and update lastUsedAt
+   */
+  async incrementPatternUsage(id: string): Promise<void> {
+    await db
+      .update(learnedAdPatterns)
+      .set({
+        usageCount: sql`${learnedAdPatterns.usageCount} + 1`,
+        lastUsedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(learnedAdPatterns.id, id));
+  }
+
+  /**
+   * Create an upload record for tracking pattern extraction progress
+   */
+  async createUploadRecord(upload: InsertAdAnalysisUpload): Promise<AdAnalysisUpload> {
+    const [result] = await db
+      .insert(adAnalysisUploads)
+      .values(upload)
+      .returning();
+    return result;
+  }
+
+  /**
+   * Get an upload record by ID
+   */
+  async getUploadById(id: string): Promise<AdAnalysisUpload | undefined> {
+    const [upload] = await db
+      .select()
+      .from(adAnalysisUploads)
+      .where(eq(adAnalysisUploads.id, id));
+    return upload;
+  }
+
+  /**
+   * Update upload status
+   */
+  async updateUploadStatus(id: string, status: string, errorMessage?: string): Promise<AdAnalysisUpload> {
+    const updateData: Partial<AdAnalysisUpload> = { status };
+    if (errorMessage) {
+      updateData.errorMessage = errorMessage;
+    }
+    if (status === 'scanning' || status === 'extracting') {
+      updateData.processingStartedAt = new Date();
+    }
+
+    const [result] = await db
+      .update(adAnalysisUploads)
+      .set(updateData)
+      .where(eq(adAnalysisUploads.id, id))
+      .returning();
+    return result;
+  }
+
+  /**
+   * Update upload with extracted pattern ID and processing duration
+   */
+  async updateUploadWithPattern(id: string, patternId: string, processingDurationMs: number): Promise<AdAnalysisUpload> {
+    const [result] = await db
+      .update(adAnalysisUploads)
+      .set({
+        status: 'completed',
+        extractedPatternId: patternId,
+        processingCompletedAt: new Date(),
+        processingDurationMs,
+      })
+      .where(eq(adAnalysisUploads.id, id))
+      .returning();
+    return result;
+  }
+
+  /**
+   * Get expired uploads for cleanup
+   */
+  async getExpiredUploads(): Promise<AdAnalysisUpload[]> {
+    return await db
+      .select()
+      .from(adAnalysisUploads)
+      .where(
+        and(
+          lte(adAnalysisUploads.expiresAt, new Date()),
+          sql`${adAnalysisUploads.status} != 'expired'`
+        )
+      );
+  }
+
+  /**
+   * Delete an upload record
+   */
+  async deleteUpload(id: string): Promise<void> {
+    await db.delete(adAnalysisUploads).where(eq(adAnalysisUploads.id, id));
+  }
+
+  /**
+   * Create pattern application history record
+   */
+  async createApplicationHistory(history: InsertPatternApplicationHistory): Promise<PatternApplicationHistory> {
+    const [result] = await db
+      .insert(patternApplicationHistory)
+      .values(history)
+      .returning();
+    return result;
+  }
+
+  /**
+   * Get application history for a pattern
+   */
+  async getPatternApplicationHistory(patternId: string): Promise<PatternApplicationHistory[]> {
+    return await db
+      .select()
+      .from(patternApplicationHistory)
+      .where(eq(patternApplicationHistory.patternId, patternId))
+      .orderBy(desc(patternApplicationHistory.createdAt));
+  }
+
+  /**
+   * Update application history with user feedback
+   */
+  async updateApplicationFeedback(
+    id: string,
+    rating: number,
+    wasUsed: boolean,
+    feedback?: string
+  ): Promise<PatternApplicationHistory> {
+    const [result] = await db
+      .update(patternApplicationHistory)
+      .set({
+        userRating: rating,
+        wasUsed,
+        feedback,
+      })
+      .where(eq(patternApplicationHistory.id, id))
+      .returning();
+    return result;
   }
 }
 

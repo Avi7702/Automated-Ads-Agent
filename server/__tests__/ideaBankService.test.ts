@@ -751,6 +751,7 @@ describe('IdeaBankService', () => {
             webSearchUsed: false,
             productKnowledgeUsed: true,
             uploadDescriptionsUsed: 2,
+            learnedPatternsUsed: 0,
           });
         }
       });

@@ -8,7 +8,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface HeaderProps {
-  currentPage?: "studio" | "gallery" | "products" | "template-library" | "installation-scenarios" | "brand-images" | "settings" | "templates" | "generation";
+  currentPage?: "studio" | "gallery" | "products" | "template-library" | "installation-scenarios" | "brand-images" | "learn-from-winners" | "settings" | "templates" | "generation";
 }
 
 export function Header({ currentPage }: HeaderProps) {
@@ -24,6 +24,7 @@ export function Header({ currentPage }: HeaderProps) {
     if (location === "/template-library") return "template-library";
     if (location === "/installation-scenarios") return "installation-scenarios";
     if (location === "/brand-images") return "brand-images";
+    if (location === "/learn-from-winners") return "learn-from-winners";
     if (location === "/usage") return "usage";
     if (location === "/settings" || location === "/brand-profile") return "settings";
     if (location.startsWith("/templates") || location.startsWith("/admin/templates")) return "templates";
@@ -38,6 +39,7 @@ export function Header({ currentPage }: HeaderProps) {
     { id: "template-library", label: "Templates", href: "/template-library" },
     { id: "installation-scenarios", label: "Scenarios", href: "/installation-scenarios" },
     { id: "brand-images", label: "Brand Images", href: "/brand-images" },
+    { id: "learn-from-winners", label: "Patterns", href: "/learn-from-winners" },
     { id: "usage", label: "Usage", href: "/usage" },
     { id: "settings", label: "Settings", href: "/settings" },
   ];

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, jsonb, serial, boolean, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, jsonb, serial, boolean, unique, index, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -840,3 +840,205 @@ export type ApiKeyAuditLog = typeof apiKeyAuditLog.$inferSelect;
 
 // Re-export enums for use in validation
 export { apiKeyServiceEnum, apiKeyActionEnum };
+
+// ============================================
+// LEARN FROM WINNERS - AD PATTERN EXTRACTION
+// ============================================
+
+/**
+ * Learned Ad Patterns - Extracted abstract patterns from high-performing ads
+ * Stores layout, color, hook, and visual patterns (NO actual text content)
+ * Used to enhance ad generation with proven success patterns
+ */
+export const learnedAdPatterns = pgTable("learned_ad_patterns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+
+  // Core fields
+  name: text("name").notNull(),
+  category: varchar("category", { length: 50 }).notNull(), // product_showcase, testimonial, comparison, educational, promotional
+  platform: varchar("platform", { length: 50 }).notNull(), // linkedin, facebook, instagram, twitter, tiktok
+  industry: varchar("industry", { length: 100 }),
+
+  // Extracted patterns (JSONB) - NO TEXT CONTENT, only abstract patterns
+  layoutPattern: jsonb("layout_pattern").$type<{
+    structure: string; // "hero-top", "split-50-50", "text-overlay", "grid"
+    visualHierarchy: string[]; // ["image", "headline", "cta"]
+    whitespaceUsage: "minimal" | "balanced" | "generous";
+    focalPointPosition: string; // "center", "top-left", "bottom-right"
+  }>(),
+
+  colorPsychology: jsonb("color_psychology").$type<{
+    dominantMood: string; // "trust", "urgency", "premium", "friendly"
+    colorScheme: "monochromatic" | "complementary" | "analogous" | "triadic";
+    contrastLevel: "low" | "medium" | "high";
+    emotionalTone: string; // "warm", "cool", "neutral", "vibrant"
+  }>(),
+
+  hookPatterns: jsonb("hook_patterns").$type<{
+    hookType: string; // "question", "statistic", "pain-point", "benefit", "curiosity"
+    headlineFormula: string; // "How to X without Y", "X% of people..." - formula only, not text
+    ctaStyle: "soft" | "direct" | "urgency";
+    persuasionTechnique: string; // "social-proof", "scarcity", "authority", "reciprocity"
+  }>(),
+
+  visualElements: jsonb("visual_elements").$type<{
+    imageStyle: "photography" | "illustration" | "mixed" | "3d-render" | "abstract";
+    humanPresence: boolean;
+    productVisibility: "prominent" | "subtle" | "none";
+    iconography: boolean;
+    backgroundType: "solid" | "gradient" | "image" | "pattern";
+  }>(),
+
+  // Quality metrics
+  engagementTier: varchar("engagement_tier", { length: 20 }), // top-1, top-5, top-10, unverified
+  confidenceScore: real("confidence_score").default(0.8), // 0.0-1.0 extraction confidence
+
+  // Deduplication
+  sourceHash: text("source_hash").notNull(), // SHA-256 of uploaded image
+
+  // Usage tracking
+  usageCount: integer("usage_count").default(0).notNull(),
+  lastUsedAt: timestamp("last_used_at"),
+
+  // Status
+  isActive: boolean("is_active").default(true).notNull(),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  uniqueSourceHash: unique().on(table.userId, table.sourceHash),
+  idxUserId: index("idx_learned_patterns_user_id").on(table.userId),
+  idxCategory: index("idx_learned_patterns_category").on(table.category),
+  idxPlatform: index("idx_learned_patterns_platform").on(table.platform),
+}));
+
+/**
+ * Ad Analysis Uploads - Tracks image uploads for pattern extraction
+ * Original images deleted after extraction (24-hour TTL max)
+ * Privacy-first: images are processed and discarded
+ */
+export const adAnalysisUploads = pgTable("ad_analysis_uploads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+
+  // Cloudinary storage (deleted after extraction)
+  cloudinaryUrl: text("cloudinary_url").notNull(),
+  cloudinaryPublicId: text("cloudinary_public_id").notNull(),
+
+  // File metadata
+  originalFilename: text("original_filename"),
+  fileSizeBytes: integer("file_size_bytes"),
+  mimeType: varchar("mime_type", { length: 100 }),
+
+  // Processing status
+  status: varchar("status", { length: 20 }).default("pending").notNull(), // pending, scanning, extracting, completed, failed, expired
+  errorMessage: text("error_message"),
+
+  // Privacy scan results
+  privacyScanResult: jsonb("privacy_scan_result").$type<{
+    textDensity: number; // 0-100 percentage
+    detectedBrands: string[];
+    hasLogos: boolean;
+    hasFaces: boolean;
+    isSafeToProcess: boolean;
+    rejectionReason?: string;
+  }>(),
+
+  // Link to extracted pattern (set null if pattern deleted)
+  extractedPatternId: varchar("extracted_pattern_id").references(() => learnedAdPatterns.id, { onDelete: "set null" }),
+
+  // Processing timing
+  processingStartedAt: timestamp("processing_started_at"),
+  processingCompletedAt: timestamp("processing_completed_at"),
+  processingDurationMs: integer("processing_duration_ms"),
+
+  // TTL - 24 hours (reduced from 7 days for privacy)
+  expiresAt: timestamp("expires_at").notNull(),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  idxStatus: index("idx_uploads_status").on(table.status),
+  idxExpires: index("idx_uploads_expires").on(table.expiresAt),
+  idxUserId: index("idx_uploads_user_id").on(table.userId),
+}));
+
+/**
+ * Pattern Application History - Tracks pattern usage and feedback
+ * Used for pattern quality scoring and optimization
+ */
+export const patternApplicationHistory = pgTable("pattern_application_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+
+  // References
+  patternId: varchar("pattern_id").notNull().references(() => learnedAdPatterns.id, { onDelete: "cascade" }),
+  generatedAdId: varchar("generated_ad_id").references(() => generations.id, { onDelete: "cascade" }),
+  productId: varchar("product_id").references(() => products.id, { onDelete: "set null" }),
+
+  // Application context
+  targetPlatform: varchar("target_platform", { length: 50 }),
+  promptUsed: text("prompt_used"), // The prompt that included the pattern
+
+  // Feedback
+  userRating: integer("user_rating"), // 1-5
+  wasUsed: boolean("was_used").default(false).notNull(), // Did user keep the result
+  feedback: text("feedback"),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  idxPatternId: index("idx_history_pattern_id").on(table.patternId),
+  idxUserId: index("idx_history_user_id").on(table.userId),
+  uniquePatternGeneration: unique().on(table.patternId, table.generatedAdId),
+}));
+
+// Learn from Winners enum constraints
+const learnedPatternCategoryEnum = z.enum([
+  'product_showcase', 'testimonial', 'comparison', 'educational', 'promotional', 'brand_awareness'
+]);
+const learnedPatternPlatformEnum = z.enum([
+  'linkedin', 'facebook', 'instagram', 'twitter', 'tiktok', 'youtube', 'pinterest', 'general'
+]);
+const learnedPatternEngagementTierEnum = z.enum(['top-1', 'top-5', 'top-10', 'top-25', 'unverified']);
+const uploadStatusEnum = z.enum(['pending', 'scanning', 'extracting', 'completed', 'failed', 'expired']);
+
+// Insert schemas
+export const insertLearnedAdPatternSchema = createInsertSchema(learnedAdPatterns, {
+  category: learnedPatternCategoryEnum,
+  platform: learnedPatternPlatformEnum,
+  engagementTier: learnedPatternEngagementTierEnum.optional(),
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAdAnalysisUploadSchema = createInsertSchema(adAnalysisUploads, {
+  status: uploadStatusEnum,
+}).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPatternApplicationHistorySchema = createInsertSchema(patternApplicationHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Type exports
+export type InsertLearnedAdPattern = z.infer<typeof insertLearnedAdPatternSchema>;
+export type LearnedAdPattern = typeof learnedAdPatterns.$inferSelect;
+
+export type InsertAdAnalysisUpload = z.infer<typeof insertAdAnalysisUploadSchema>;
+export type AdAnalysisUpload = typeof adAnalysisUploads.$inferSelect;
+
+export type InsertPatternApplicationHistory = z.infer<typeof insertPatternApplicationHistorySchema>;
+export type PatternApplicationHistory = typeof patternApplicationHistory.$inferSelect;
+
+// Re-export enums for use in validation
+export {
+  learnedPatternCategoryEnum,
+  learnedPatternPlatformEnum,
+  learnedPatternEngagementTierEnum,
+  uploadStatusEnum,
+};

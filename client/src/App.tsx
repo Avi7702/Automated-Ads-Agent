@@ -22,6 +22,7 @@ import BrandImageLibrary from "@/pages/BrandImageLibrary";
 import TemplateLibrary from "@/pages/TemplateLibrary";
 import SystemMap from "@/pages/SystemMap";
 import ApiKeySettings from "@/pages/ApiKeySettings";
+import LearnFromWinners from "@/pages/LearnFromWinners";
 
 function Router() {
   return (
@@ -75,6 +76,12 @@ function Router() {
       <Route path="/template-library">
         <ProtectedRoute>
           <TemplateLibrary />
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/learn-from-winners">
+        <ProtectedRoute>
+          <LearnFromWinners />
         </ProtectedRoute>
       </Route>
 

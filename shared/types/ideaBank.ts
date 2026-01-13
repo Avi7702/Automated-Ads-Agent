@@ -120,6 +120,7 @@ export interface AnalysisStatus {
   webSearchUsed: boolean;
   productKnowledgeUsed?: boolean; // Phase 0.5
   uploadDescriptionsUsed?: number; // Phase 9 - count of upload descriptions used
+  learnedPatternsUsed?: number; // Learn from Winners - count of patterns applied
 }
 
 export interface IdeaBankSuggestResponse {

@@ -74,6 +74,7 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.2.1",
     "express-session": "^1.18.2",
+    "file-type": "^21.3.0",
     "framer-motion": "^12.23.26",
     "helmet": "^8.1.0",
     "input-otp": "^1.4.2",

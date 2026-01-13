@@ -17,6 +17,8 @@ import { generateContentWithRetry } from "../lib/geminiClient";
 import { storage } from "../storage";
 import { visionAnalysisService, type VisionAnalysisResult } from "./visionAnalysisService";
 import { queryFileSearchStore } from "./fileSearchService";
+import { getRelevantPatterns, formatPatternsForPrompt } from "./patternExtractionService";
+import type { LearnedAdPattern } from "../../shared/schema";
 import {
   productKnowledgeService,
   type EnhancedProductContext,
@@ -227,6 +229,24 @@ export async function generateSuggestions(
   // 5. Match templates based on product analysis (if available) - only for freestyle mode
   const matchedTemplates = productAnalysis && mode === 'freestyle' ? await matchTemplates(productAnalysis) : [];
 
+  // 5.5 Fetch learned patterns from user's pattern library (Learn from Winners)
+  let learnedPatterns: LearnedAdPattern[] = [];
+  try {
+    learnedPatterns = await getRelevantPatterns({
+      userId,
+      category: productAnalysis?.category ?? undefined, // Convert null to undefined
+      platform: undefined, // Could be passed from request in future
+      industry: brandProfile?.industry ?? undefined,
+      maxPatterns: 3,
+    });
+    if (learnedPatterns.length > 0) {
+      logger.info({ module: 'IdeaBank', patternCount: learnedPatterns.length }, 'Learned patterns found for suggestion context');
+    }
+  } catch (err) {
+    logger.error({ module: 'IdeaBank', err }, 'Failed to fetch learned patterns');
+    // Continue without patterns - not a fatal error
+  }
+
   // 6. Branch based on mode
   try {
     if (mode === 'template' && templateContext) {
@@ -285,6 +305,7 @@ export async function generateSuggestions(
         kbContext,
         kbCitations,
         matchedTemplates,
+        learnedPatterns, // Learn from Winners patterns
         userGoal,
         maxSuggestions: Math.min(maxSuggestions, 5),
         enableWebSearch,
@@ -309,6 +330,7 @@ export async function generateSuggestions(
           webSearchUsed: false, // Web search disabled for now
           productKnowledgeUsed: !!enhancedContext, // Phase 0.5
           uploadDescriptionsUsed: uploadDescriptions.length, // Phase 9
+          learnedPatternsUsed: learnedPatterns.length, // Learn from Winners
         },
         recipe, // Include recipe for /api/transform context
       };
@@ -477,6 +499,7 @@ async function generateLLMSuggestions(params: {
   kbContext: string | null;
   kbCitations: string[];
   matchedTemplates: AdSceneTemplate[];
+  learnedPatterns: LearnedAdPattern[]; // Learn from Winners patterns
   userGoal?: string;
   maxSuggestions: number;
   enableWebSearch: boolean;
@@ -490,6 +513,7 @@ async function generateLLMSuggestions(params: {
     kbContext,
     kbCitations,
     matchedTemplates,
+    learnedPatterns,
     userGoal,
     maxSuggestions,
   } = params;
@@ -503,6 +527,7 @@ async function generateLLMSuggestions(params: {
     brandProfile,
     kbContext,
     matchedTemplates,
+    learnedPatterns,
     userGoal,
     maxSuggestions,
   });
@@ -600,10 +625,11 @@ function buildSuggestionPrompt(params: {
   brandProfile: BrandProfile | undefined;
   kbContext: string | null;
   matchedTemplates: AdSceneTemplate[];
+  learnedPatterns: LearnedAdPattern[];
   userGoal?: string;
   maxSuggestions: number;
 }): string {
-  const { product, productAnalysis, uploadDescriptions, enhancedContext, brandProfile, kbContext, matchedTemplates, userGoal, maxSuggestions } =
+  const { product, productAnalysis, uploadDescriptions, enhancedContext, brandProfile, kbContext, matchedTemplates, learnedPatterns, userGoal, maxSuggestions } =
     params;
 
   let prompt = `You are an expert advertising creative director. Generate ${maxSuggestions} distinct ad concept suggestions.
@@ -665,6 +691,12 @@ IMPORTANT: These uploaded images should be incorporated into your ad concepts. C
    - Blueprint: ${t.promptBlueprint.slice(0, 100)}...
 `;
     });
+  }
+
+  // Add learned patterns from Learn from Winners feature
+  if (learnedPatterns.length > 0) {
+    const patternsContext = formatPatternsForPrompt(learnedPatterns);
+    prompt += `\n${patternsContext}\n`;
   }
 
   prompt += `
