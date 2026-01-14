@@ -684,7 +684,7 @@ export default function LearnFromWinners() {
             onUpload={handleUpload}
             isUploading={isPolling}
             uploadProgress={uploadStatusData?.progress || 0}
-            uploadStatusData={uploadStatusData?.status}
+            uploadStatus={uploadStatusData?.status}
             uploadError={uploadStatusData?.error}
           />
         </div>

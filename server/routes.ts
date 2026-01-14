@@ -3478,6 +3478,56 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
     }
   });
 
+  // GET /api/monitoring/system - Full system health aggregation
+  app.get("/api/monitoring/system", async (_req, res) => {
+    try {
+      const { getSystemHealth } = await import('./services/systemHealthService');
+      const { getPerformanceMetrics } = await import('./middleware/performanceMetrics');
+      const { getRecentErrors, getErrorStats } = await import('./services/errorTrackingService');
+
+      const health = await getSystemHealth();
+      const perfMetrics = getPerformanceMetrics();
+      const errorStats = getErrorStats();
+
+      // Aggregate performance metrics
+      const totalRequests = perfMetrics.reduce((sum, m) => sum + m.requests, 0);
+      const totalErrors = perfMetrics.reduce((sum, m) => sum + m.errors, 0);
+      const avgResponseTime = perfMetrics.length > 0
+        ? perfMetrics.reduce((sum, m) => sum + m.avgLatency, 0) / perfMetrics.length
+        : 0;
+
+      // Top 5 endpoints by request count
+      const topEndpoints = perfMetrics
+        .sort((a, b) => b.requests - a.requests)
+        .slice(0, 5)
+        .map(m => ({
+          endpoint: m.endpoint,
+          method: m.method,
+          requests: m.requests,
+          avgLatency: Math.round(m.avgLatency),
+        }));
+
+      res.json({
+        status: health.overall,
+        timestamp: health.timestamp,
+        services: health.services,
+        performance: {
+          totalRequests,
+          totalErrors,
+          avgResponseTime: Math.round(avgResponseTime),
+          topEndpoints,
+        },
+        errors: {
+          total: errorStats.total,
+          recent: errorStats.last5min,
+        },
+      });
+    } catch (error: any) {
+      logger.error({ module: 'monitoring', error }, 'Failed to fetch system health');
+      res.status(500).json({ error: "Failed to fetch system health" });
+    }
+  });
+
   // GET /api/monitoring/endpoints - API endpoints summary
   app.get("/api/monitoring/endpoints", async (_req, res) => {
     try {
