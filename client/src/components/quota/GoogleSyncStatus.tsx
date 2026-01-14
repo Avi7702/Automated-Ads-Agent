@@ -70,10 +70,10 @@ async function triggerManualSync(): Promise<{ success: boolean; snapshot: any }>
 }
 
 const statusConfig = {
-  success: { icon: CheckCircle2, color: 'bg-green-500/10 text-green-500 border-green-500/30', label: 'Synced' },
-  partial: { icon: AlertTriangle, color: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/30', label: 'Partial' },
-  failed: { icon: XCircle, color: 'bg-red-500/10 text-red-500 border-red-500/30', label: 'Failed' },
-  never_synced: { icon: Clock, color: 'bg-gray-500/10 text-gray-500 border-gray-500/30', label: 'Never Synced' },
+  success: { icon: CheckCircle2, color: 'bg-green-500/10 dark:bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30 dark:border-green-500/20', label: 'Synced' },
+  partial: { icon: AlertTriangle, color: 'bg-yellow-500/10 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 border-yellow-500/30 dark:border-yellow-500/20', label: 'Partial' },
+  failed: { icon: XCircle, color: 'bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30 dark:border-red-500/20', label: 'Failed' },
+  never_synced: { icon: Clock, color: 'bg-gray-500/10 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400 border-gray-500/30 dark:border-gray-500/20', label: 'Never Synced' },
 };
 
 export function GoogleSyncStatus() {
@@ -124,7 +124,7 @@ export function GoogleSyncStatus() {
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg flex items-center gap-2">
             {syncStatus.isConfigured ? (
-              <Cloud className="w-5 h-5 text-blue-500" />
+              <Cloud className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             ) : (
               <CloudOff className="w-5 h-5 text-muted-foreground" />
             )}
@@ -151,8 +151,8 @@ export function GoogleSyncStatus() {
       </CardHeader>
       <CardContent className="space-y-4">
         {!syncStatus.isConfigured ? (
-          <Alert variant="default" className="bg-yellow-500/10 border-yellow-500/30">
-            <AlertTriangle className="h-4 w-4 text-yellow-500" />
+          <Alert variant="default" className="bg-yellow-500/10 dark:bg-yellow-500/20 border-yellow-500/30 dark:border-yellow-500/20">
+            <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
             <AlertTitle>Not Configured</AlertTitle>
             <AlertDescription className="text-sm">
               Google Cloud Monitoring is not configured. Set the following environment variables:
@@ -187,7 +187,7 @@ export function GoogleSyncStatus() {
 
             {/* Error Message */}
             {syncStatus.errorMessage && (
-              <Alert variant="destructive" className="bg-red-500/10 border-red-500/30">
+              <Alert variant="destructive" className="bg-red-500/10 dark:bg-red-500/20 border-red-500/30 dark:border-red-500/20">
                 <XCircle className="h-4 w-4" />
                 <AlertDescription className="text-xs">
                   {syncStatus.errorMessage}
@@ -251,9 +251,9 @@ export function GoogleSyncStatus() {
                         variant="outline"
                         className={cn(
                           "text-[10px] px-1 py-0",
-                          entry.status === 'success' ? 'bg-green-500/10 text-green-500' :
-                          entry.status === 'partial' ? 'bg-yellow-500/10 text-yellow-500' :
-                          'bg-red-500/10 text-red-500'
+                          entry.status === 'success' ? 'bg-green-500/10 dark:bg-green-500/20 text-green-600 dark:text-green-400' :
+                          entry.status === 'partial' ? 'bg-yellow-500/10 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400' :
+                          'bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400'
                         )}
                       >
                         {entry.status}

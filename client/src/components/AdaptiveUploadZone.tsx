@@ -84,10 +84,10 @@ const PLATFORMS = [
 ];
 
 const ENGAGEMENT_TIERS = [
-  { value: "top-1", label: "Top 1%", color: "text-yellow-500" },
-  { value: "top-5", label: "Top 5%", color: "text-orange-500" },
-  { value: "top-10", label: "Top 10%", color: "text-blue-500" },
-  { value: "top-25", label: "Top 25%", color: "text-green-500" },
+  { value: "top-1", label: "Top 1%", color: "text-yellow-600 dark:text-yellow-400" },
+  { value: "top-5", label: "Top 5%", color: "text-orange-600 dark:text-orange-400" },
+  { value: "top-10", label: "Top 10%", color: "text-blue-600 dark:text-blue-400" },
+  { value: "top-25", label: "Top 25%", color: "text-green-600 dark:text-green-400" },
   { value: "unverified", label: "Unverified", color: "text-muted-foreground" },
 ];
 
@@ -257,8 +257,8 @@ export function AdaptiveUploadZone({
             <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
               <Brain className="w-12 h-12 text-primary" />
             </div>
-            <div className="absolute -right-2 -bottom-2 w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-500/30 to-orange-500/20 flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-yellow-600" />
+            <div className="absolute -right-2 -bottom-2 w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-500/30 to-orange-500/20 dark:from-yellow-500/20 dark:to-orange-500/10 flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
             </div>
           </div>
 
@@ -283,22 +283,22 @@ export function AdaptiveUploadZone({
           {/* Feature Highlights */}
           <div className="grid grid-cols-3 gap-6 mt-8 max-w-2xl">
             <div className="text-center">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center mx-auto mb-2">
-                <Layout className="w-5 h-5 text-blue-500" />
+              <div className="w-10 h-10 rounded-xl bg-blue-500/10 dark:bg-blue-500/20 flex items-center justify-center mx-auto mb-2">
+                <Layout className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               </div>
               <p className="text-sm font-medium">Layout Patterns</p>
               <p className="text-xs text-muted-foreground">Structure & hierarchy</p>
             </div>
             <div className="text-center">
-              <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center mx-auto mb-2">
-                <Palette className="w-5 h-5 text-purple-500" />
+              <div className="w-10 h-10 rounded-xl bg-purple-500/10 dark:bg-purple-500/20 flex items-center justify-center mx-auto mb-2">
+                <Palette className="w-5 h-5 text-purple-600 dark:text-purple-400" />
               </div>
               <p className="text-sm font-medium">Color Psychology</p>
               <p className="text-xs text-muted-foreground">Mood & emotion</p>
             </div>
             <div className="text-center">
-              <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center mx-auto mb-2">
-                <Target className="w-5 h-5 text-green-500" />
+              <div className="w-10 h-10 rounded-xl bg-green-500/10 dark:bg-green-500/20 flex items-center justify-center mx-auto mb-2">
+                <Target className="w-5 h-5 text-green-600 dark:text-green-400" />
               </div>
               <p className="text-sm font-medium">Hook Patterns</p>
               <p className="text-xs text-muted-foreground">Persuasion tactics</p>
@@ -391,7 +391,7 @@ export function AdaptiveUploadZone({
 
           {/* Privacy Notice - Trust Builder Pattern */}
           <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-4 py-2 rounded-full">
-            <Shield className="w-3.5 h-3.5 text-green-500" />
+            <Shield className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
             <span>AI extracts patterns only • No content stored</span>
           </div>
         </div>

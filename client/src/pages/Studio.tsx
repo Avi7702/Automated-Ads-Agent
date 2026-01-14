@@ -234,7 +234,7 @@ function ContextBar({
           <>
             <span className="text-muted-foreground">•</span>
             <span className="flex items-center gap-1.5">
-              <ImageIcon className="w-4 h-4 text-purple-500" />
+              <ImageIcon className="w-4 h-4 text-purple-600 dark:text-purple-400" />
               {selectedTemplate.title}
             </span>
           </>
@@ -857,7 +857,7 @@ export default function Studio() {
       {/* Background Ambience */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/5 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-500/5 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-500/5 dark:bg-blue-500/10 blur-[120px] rounded-full" />
       </div>
 
       {/* Header */}
@@ -907,7 +907,7 @@ export default function Studio() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-6 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-purple-500/5"
+              className="p-6 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-purple-500/5 dark:to-purple-500/10"
             >
               <div className="flex items-center gap-2 mb-4">
                 <Zap className="w-5 h-5 text-primary" />
@@ -953,7 +953,7 @@ export default function Studio() {
             >
               <div className="relative w-32 h-32">
                 <div className="absolute inset-0 rounded-full border-t-2 border-primary animate-spin" />
-                <div className="absolute inset-4 rounded-full border-r-2 border-purple-500 animate-spin-slow" />
+                <div className="absolute inset-4 rounded-full border-r-2 border-purple-600 dark:border-purple-400 animate-spin-slow" />
                 <div className="absolute inset-0 flex items-center justify-center">
                   <Sparkles className="w-12 h-12 text-primary" />
                 </div>
@@ -1560,8 +1560,8 @@ export default function Studio() {
                       className="w-full p-4 rounded-xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-all text-left group"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-yellow-500/20 to-orange-500/20 flex items-center justify-center">
-                          <TrendingUp className="w-5 h-5 text-yellow-500" />
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-yellow-500/20 dark:from-yellow-500/30 to-orange-500/20 dark:to-orange-500/30 flex items-center justify-center">
+                          <TrendingUp className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
                         </div>
                         <div className="flex-1">
                           <p className="font-medium flex items-center gap-2">
@@ -1576,20 +1576,20 @@ export default function Studio() {
                             Browse high-performing ad templates for style ideas
                           </p>
                         </div>
-                        <Star className="w-5 h-5 text-muted-foreground group-hover:text-yellow-500 transition-colors" />
+                        <Star className="w-5 h-5 text-muted-foreground group-hover:text-yellow-600 dark:group-hover:text-yellow-400 transition-colors" />
                       </div>
                     </button>
 
                     {/* Show selected performing template */}
                     {selectedPerformingTemplate && (
-                      <div className="mt-3 flex items-center justify-between p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                      <div className="mt-3 flex items-center justify-between p-3 rounded-lg bg-yellow-500/10 dark:bg-yellow-500/20 border border-yellow-500/20 dark:border-yellow-500/30">
                         <div className="flex items-center gap-2">
-                          <TrendingUp className="w-4 h-4 text-yellow-500" />
+                          <TrendingUp className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
                           <span className="text-sm">
                             Inspired by: <strong>{selectedPerformingTemplate.name}</strong>
                           </span>
                           {selectedPerformingTemplate.engagementTier && selectedPerformingTemplate.engagementTier !== "unranked" && (
-                            <Badge variant="outline" className="text-xs bg-yellow-500/10 text-yellow-600 border-yellow-500/30">
+                            <Badge variant="outline" className="text-xs bg-yellow-500/10 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 border-yellow-500/30 dark:border-yellow-500/20">
                               {selectedPerformingTemplate.engagementTier.replace("-", " ")}
                             </Badge>
                           )}
@@ -1758,7 +1758,7 @@ export default function Studio() {
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="p-4 rounded-xl bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20"
+                  className="p-4 rounded-xl bg-gradient-to-r from-green-500/10 dark:from-green-500/20 to-emerald-500/10 dark:to-emerald-500/20 border border-green-500/20 dark:border-green-500/30"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -1870,7 +1870,7 @@ export default function Studio() {
                 <Eye className="w-5 h-5 text-primary" />
                 <span className="font-medium">LinkedIn Preview</span>
                 {generatedImage && generatedCopy ? (
-                  <span className="text-xs text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full">Ready</span>
+                  <span className="text-xs text-green-600 dark:text-green-400 bg-green-500/10 dark:bg-green-500/20 px-2 py-0.5 rounded-full">Ready</span>
                 ) : (
                   <span className="text-xs text-muted-foreground bg-muted/30 px-2 py-0.5 rounded-full">
                     {generatedImage ? "Need copy" : generatedCopy ? "Need image" : "Empty"}
@@ -1952,7 +1952,7 @@ export default function Studio() {
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-yellow-500" />
+              <TrendingUp className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
               Template Inspiration
             </DialogTitle>
             <DialogDescription>
@@ -2024,7 +2024,7 @@ export default function Studio() {
                         {/* Badges */}
                         <div className="absolute top-2 left-2 flex gap-1">
                           {template.isFeatured && (
-                            <Badge className="bg-yellow-500/90 text-yellow-950 text-xs px-1.5 py-0.5">
+                            <Badge className="bg-yellow-500/90 dark:bg-yellow-600/90 text-yellow-950 dark:text-yellow-50 text-xs px-1.5 py-0.5">
                               <Star className="w-3 h-3 mr-1 fill-current" />
                               Featured
                             </Badge>
@@ -2046,12 +2046,12 @@ export default function Studio() {
                         {/* Style tags */}
                         <div className="flex flex-wrap gap-1">
                           {template.mood && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-500 capitalize">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 capitalize">
                               {template.mood}
                             </span>
                           )}
                           {template.style && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 capitalize">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 capitalize">
                               {template.style}
                             </span>
                           )}

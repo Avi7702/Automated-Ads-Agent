@@ -87,9 +87,9 @@ function SourceBadge({ source }: { source: EnrichmentDraft["sources"][0] }) {
 // Completeness indicator
 function CompletenessIndicator({ completeness }: { completeness: EnrichmentStatus["completeness"] }) {
   const getColor = (pct: number) => {
-    if (pct >= 75) return "bg-green-500";
-    if (pct >= 50) return "bg-yellow-500";
-    return "bg-red-500";
+    if (pct >= 75) return "bg-green-500 dark:bg-green-600";
+    if (pct >= 50) return "bg-yellow-500 dark:bg-yellow-600";
+    return "bg-red-500 dark:bg-red-600";
   };
 
   return (
@@ -535,7 +535,7 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
                       {benefit}
                       <button
                         onClick={() => removeBenefit(idx)}
-                        className="ml-1 hover:text-red-500"
+                        className="ml-1 hover:text-red-600 dark:hover:text-red-400"
                       >
                         &times;
                       </button>
@@ -570,7 +570,7 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
                       #{tag}
                       <button
                         onClick={() => removeTag(tag)}
-                        className="ml-1 hover:text-red-500"
+                        className="ml-1 hover:text-red-600 dark:hover:text-red-400"
                       >
                         &times;
                       </button>

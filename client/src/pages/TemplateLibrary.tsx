@@ -129,7 +129,7 @@ function TemplateCard({
       {/* Featured badge */}
       {template.isFeatured && (
         <div className="absolute top-3 left-3 z-10">
-          <Badge className="bg-yellow-500/90 text-yellow-950 gap-1">
+          <Badge className="bg-yellow-500/90 text-yellow-950 dark:bg-yellow-500/80 dark:text-yellow-100 gap-1">
             <Star className="w-3 h-3 fill-current" />
             Featured
           </Badge>
@@ -238,7 +238,7 @@ function TemplateDetailModal({
           <DialogTitle className="text-xl flex items-center gap-2">
             {template.name}
             {template.isFeatured && (
-              <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+              <Star className="w-5 h-5 text-yellow-600 fill-yellow-600 dark:text-yellow-400 dark:fill-yellow-400" />
             )}
           </DialogTitle>
           <DialogDescription>{template.description}</DialogDescription>
@@ -487,8 +487,8 @@ export default function TemplateLibrary() {
     <div className="min-h-screen bg-background text-foreground">
       {/* Background */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-purple-500/5 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-pink-500/5 blur-[120px] rounded-full" />
+        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-purple-500/5 dark:bg-purple-500/10 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-pink-500/5 dark:bg-pink-500/10 blur-[120px] rounded-full" />
       </div>
 
       <Header currentPage="template-library" />

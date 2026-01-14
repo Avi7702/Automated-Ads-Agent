@@ -117,10 +117,10 @@ const PLATFORMS = [
 ];
 
 const ENGAGEMENT_TIERS = [
-  { value: "top-1", label: "Top 1%", color: "text-yellow-500" },
-  { value: "top-5", label: "Top 5%", color: "text-orange-500" },
-  { value: "top-10", label: "Top 10%", color: "text-blue-500" },
-  { value: "top-25", label: "Top 25%", color: "text-green-500" },
+  { value: "top-1", label: "Top 1%", color: "text-yellow-600 dark:text-yellow-400" },
+  { value: "top-5", label: "Top 5%", color: "text-orange-600 dark:text-orange-400" },
+  { value: "top-10", label: "Top 10%", color: "text-blue-600 dark:text-blue-400" },
+  { value: "top-25", label: "Top 25%", color: "text-green-600 dark:text-green-400" },
   { value: "unverified", label: "Unverified", color: "text-muted-foreground" },
 ];
 
@@ -251,12 +251,12 @@ function PatternVisualization({ pattern, compact = false }: PatternVisualization
           className={cn(
             "p-3 rounded-xl border transition-colors",
             pattern.colorPsychology
-              ? "bg-blue-500/5 border-blue-500/30"
+              ? "bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/30 dark:border-blue-500/20"
               : "bg-muted/30 border-transparent opacity-50"
           )}
         >
           <div className="flex items-center gap-2 mb-2">
-            <Palette className="w-4 h-4 text-blue-500" />
+            <Palette className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             <span className="text-sm font-medium">Color</span>
           </div>
           {pattern.colorPsychology ? (
@@ -277,12 +277,12 @@ function PatternVisualization({ pattern, compact = false }: PatternVisualization
           className={cn(
             "p-3 rounded-xl border transition-colors",
             pattern.hookPatterns
-              ? "bg-green-500/5 border-green-500/30"
+              ? "bg-green-500/5 dark:bg-green-500/10 border-green-500/30 dark:border-green-500/20"
               : "bg-muted/30 border-transparent opacity-50"
           )}
         >
           <div className="flex items-center gap-2 mb-2">
-            <Target className="w-4 h-4 text-green-500" />
+            <Target className="w-4 h-4 text-green-600 dark:text-green-400" />
             <span className="text-sm font-medium">Hook</span>
           </div>
           {pattern.hookPatterns ? (
@@ -303,12 +303,12 @@ function PatternVisualization({ pattern, compact = false }: PatternVisualization
           className={cn(
             "p-3 rounded-xl border transition-colors",
             pattern.visualElements
-              ? "bg-purple-500/5 border-purple-500/30"
+              ? "bg-purple-500/5 dark:bg-purple-500/10 border-purple-500/30 dark:border-purple-500/20"
               : "bg-muted/30 border-transparent opacity-50"
           )}
         >
           <div className="flex items-center gap-2 mb-2">
-            <Eye className="w-4 h-4 text-purple-500" />
+            <Eye className="w-4 h-4 text-purple-600 dark:text-purple-400" />
             <span className="text-sm font-medium">Visuals</span>
           </div>
           {pattern.visualElements ? (
@@ -357,12 +357,12 @@ function PatternCard({ pattern, onView, onDelete, onApply }: PatternCardProps) {
 
   const getCategoryColor = (category: string) => {
     const colors: Record<string, string> = {
-      product_showcase: "bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30",
-      testimonial: "bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/30",
-      comparison: "bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30",
-      educational: "bg-purple-500/20 text-purple-700 dark:text-purple-300 border-purple-500/30",
-      promotional: "bg-orange-500/20 text-orange-700 dark:text-orange-300 border-orange-500/30",
-      brand_awareness: "bg-pink-500/20 text-pink-700 dark:text-pink-300 border-pink-500/30",
+      product_showcase: "bg-blue-500/20 dark:bg-blue-500/30 text-blue-700 dark:text-blue-300 border-blue-500/30 dark:border-blue-500/20",
+      testimonial: "bg-yellow-500/20 dark:bg-yellow-500/30 text-yellow-700 dark:text-yellow-300 border-yellow-500/30 dark:border-yellow-500/20",
+      comparison: "bg-green-500/20 dark:bg-green-500/30 text-green-700 dark:text-green-300 border-green-500/30 dark:border-green-500/20",
+      educational: "bg-purple-500/20 dark:bg-purple-500/30 text-purple-700 dark:text-purple-300 border-purple-500/30 dark:border-purple-500/20",
+      promotional: "bg-orange-500/20 dark:bg-orange-500/30 text-orange-700 dark:text-orange-300 border-orange-500/30 dark:border-orange-500/20",
+      brand_awareness: "bg-pink-500/20 dark:bg-pink-500/30 text-pink-700 dark:text-pink-300 border-pink-500/30 dark:border-pink-500/20",
     };
     return colors[category] || "bg-muted";
   };
@@ -405,7 +405,7 @@ function PatternCard({ pattern, onView, onDelete, onApply }: PatternCardProps) {
                 <TooltipTrigger>
                   <div className={cn(
                     "flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
-                    "bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30"
+                    "bg-gradient-to-r from-yellow-500/20 dark:from-yellow-500/30 to-orange-500/20 dark:to-orange-500/30 border border-yellow-500/30 dark:border-yellow-500/20"
                   )}>
                     <TrendingUp className="w-3 h-3" />
                     {engagementInfo?.label}
@@ -819,7 +819,7 @@ export default function LearnFromWinners() {
                       </DialogDescription>
                     </div>
                     {selectedPattern.engagementTier && selectedPattern.engagementTier !== "unverified" && (
-                      <Badge className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-yellow-500/30">
+                      <Badge className="bg-gradient-to-r from-yellow-500/20 dark:from-yellow-500/30 to-orange-500/20 dark:to-orange-500/30 border-yellow-500/30 dark:border-yellow-500/20">
                         <TrendingUp className="w-3 h-3 mr-1" />
                         {ENGAGEMENT_TIERS.find(t => t.value === selectedPattern.engagementTier)?.label}
                       </Badge>
