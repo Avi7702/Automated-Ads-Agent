@@ -151,7 +151,7 @@ export function SystemHealthTab() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Badge variant="outline" className="text-xs bg-gray-500/10 text-gray-500">
+              <Badge variant="outline" className="text-xs bg-muted/50 text-muted-foreground">
                 Not Configured
               </Badge>
             </CardContent>

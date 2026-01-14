@@ -175,7 +175,7 @@ export function ProductCard({
               variant="secondary"
               size="icon"
               onClick={handleEditClick}
-              className="h-10 w-10 rounded-full bg-white/90 hover:bg-white text-gray-800"
+              className="h-10 w-10 rounded-full bg-background/90 hover:bg-background text-foreground"
               title="Edit product"
               data-testid={`product-card-edit-${product.id}`}
             >
