@@ -141,7 +141,7 @@ export function HistoryTimeline({
       <div
         ref={scrollRef}
         onScroll={updateScrollState}
-        className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
+        className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent"
         style={{ scrollbarWidth: "thin" }}
       >
         <AnimatePresence mode="popLayout">
@@ -177,30 +177,30 @@ export function HistoryTimeline({
                 {/* Current Indicator */}
                 {isCurrent && (
                   <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                    <Star className="w-3 h-3 text-white fill-white" />
+                    <Star className="w-3 h-3 text-primary-foreground fill-current" />
                   </div>
                 )}
 
                 {/* Edit Badge */}
                 {isEdit && !isCurrent && (
-                  <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded text-[10px] bg-purple-500/80 text-white">
+                  <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded text-[10px] bg-primary/80 text-primary-foreground">
                     Edit
                   </div>
                 )}
 
                 {/* Hover Overlay */}
-                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-1">
-                  <Clock className="w-3 h-3 text-white/70 mb-1" />
-                  <span className="text-[10px] text-white text-center">
+                <div className="absolute inset-0 bg-background/90 dark:bg-background/95 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-1">
+                  <Clock className="w-3 h-3 text-muted-foreground mb-1" />
+                  <span className="text-[10px] text-foreground font-medium text-center">
                     {formatTime(generation.createdAt)}
                   </span>
                 </div>
 
                 {/* Bottom Gradient */}
-                <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
+                <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-background/90 dark:from-background/95 to-transparent pointer-events-none" />
 
                 {/* Version Number */}
-                <span className="absolute bottom-1 left-1 text-[10px] text-white/70">
+                <span className="absolute bottom-1 left-1 text-[10px] text-foreground font-medium drop-shadow-sm">
                   v{generations.length - index}
                 </span>
               </motion.button>

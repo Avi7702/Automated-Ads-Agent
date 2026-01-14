@@ -48,6 +48,23 @@
   --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
   --color-sidebar-border: hsl(var(--sidebar-border));
   --color-sidebar-ring: hsl(var(--sidebar-ring));
+
+  /* Status colors */
+  --color-success: hsl(var(--success));
+  --color-success-text: hsl(var(--success-text));
+  --color-warning: hsl(var(--warning));
+  --color-warning-text: hsl(var(--warning-text));
+  --color-error: hsl(var(--error));
+  --color-error-text: hsl(var(--error-text));
+  --color-info: hsl(var(--info));
+  --color-info-text: hsl(var(--info-text));
+  --color-quality-high: hsl(var(--quality-high));
+  --color-quality-medium: hsl(var(--quality-medium));
+  --color-quality-low: hsl(var(--quality-low));
+  --color-source-vision: hsl(var(--source-vision));
+  --color-source-kb: hsl(var(--source-kb));
+  --color-source-web: hsl(var(--source-web));
+  --color-source-template: hsl(var(--source-template));
 }
 
 /* LIGHT MODE (default) */
@@ -90,6 +107,23 @@
   --sidebar-accent-foreground: 240 5.9% 10%;
   --sidebar-border: 240 5.9% 90%;
   --sidebar-ring: 217.2 91.2% 59.8%;
+
+  /* Status colors */
+  --success: 142 76% 36%;
+  --success-text: 142 71% 25%;
+  --warning: 43 96% 56%;
+  --warning-text: 25 95% 35%;
+  --error: 0 84.2% 60.2%;
+  --error-text: 0 72% 41%;
+  --info: 217 91% 60%;
+  --info-text: 217 91% 45%;
+  --quality-high: 142 76% 36%;
+  --quality-medium: 43 96% 56%;
+  --quality-low: 30 80% 55%;
+  --source-vision: 217 91% 60%;
+  --source-kb: 280 65% 60%;
+  --source-web: 142 76% 36%;
+  --source-template: 30 80% 55%;
 }
 
 /* DARK MODE */
@@ -130,6 +164,23 @@
   --sidebar-accent-foreground: 240 4.8% 95.9%;
   --sidebar-border: 240 3.7% 15.9%;
   --sidebar-ring: 217.2 91.2% 59.8%;
+
+  /* Status colors - lighter variants for dark backgrounds */
+  --success: 142 76% 45%;
+  --success-text: 142 70% 60%;
+  --warning: 43 96% 65%;
+  --warning-text: 43 96% 75%;
+  --error: 0 84.2% 70%;
+  --error-text: 0 84% 75%;
+  --info: 217 91% 70%;
+  --info-text: 217 91% 80%;
+  --quality-high: 142 76% 55%;
+  --quality-medium: 43 96% 70%;
+  --quality-low: 30 80% 70%;
+  --source-vision: 217 91% 70%;
+  --source-kb: 280 65% 75%;
+  --source-web: 142 76% 55%;
+  --source-template: 30 80% 70%;
 }
 
 @layer base {
@@ -141,6 +192,17 @@
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-display tracking-tight;
+  }
+
+  /* Smooth theme transitions */
+  * {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-duration: 200ms;
+    transition-timing-function: ease-in-out;
+  }
+  *[class*="animate-"],
+  *[class*="transition-transform"] {
+    transition-property: transform, opacity !important;
   }
 }
 

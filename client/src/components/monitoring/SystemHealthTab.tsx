@@ -32,9 +32,9 @@ async function fetchSystemHealth(): Promise<SystemHealth> {
 }
 
 const statusConfig = {
-  healthy: { icon: CheckCircle2, color: 'bg-green-500/10 text-green-500 border-green-500/50', label: 'Healthy' },
-  degraded: { icon: AlertTriangle, color: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/50', label: 'Degraded' },
-  unhealthy: { icon: XCircle, color: 'bg-red-500/10 text-red-500 border-red-500/50', label: 'Unhealthy' },
+  healthy: { icon: CheckCircle2, color: 'bg-green-500/10 dark:bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/50 dark:border-green-500/30', label: 'Healthy' },
+  degraded: { icon: AlertTriangle, color: 'bg-yellow-500/10 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-500/50 dark:border-yellow-500/30', label: 'Degraded' },
+  unhealthy: { icon: XCircle, color: 'bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/50 dark:border-red-500/30', label: 'Unhealthy' },
 };
 
 export function SystemHealthTab() {
@@ -109,7 +109,7 @@ export function SystemHealthTab() {
                 </div>
               )}
               {health.services.database.waitingClients > 0 && (
-                <div className="flex justify-between text-yellow-500">
+                <div className="flex justify-between text-yellow-700 dark:text-yellow-400">
                   <span>Waiting Clients</span>
                   <span className="font-medium">{health.services.database.waitingClients}</span>
                 </div>

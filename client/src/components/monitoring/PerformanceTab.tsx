@@ -118,7 +118,7 @@ export function PerformanceTab() {
                     <td className="text-right py-2 px-2">
                       <span className={cn(
                         "font-medium",
-                        metric.errorRate > 5 ? "text-red-500" : metric.errorRate > 1 ? "text-yellow-500" : "text-green-500"
+                        metric.errorRate > 5 ? "text-red-600 dark:text-red-400" : metric.errorRate > 1 ? "text-yellow-700 dark:text-yellow-400" : "text-green-600 dark:text-green-400"
                       )}>
                         {metric.errorRate.toFixed(1)}%
                       </span>
@@ -126,7 +126,7 @@ export function PerformanceTab() {
                     <td className="text-right py-2 px-2">
                       <span className={cn(
                         "font-medium",
-                        metric.avgLatency > 1000 ? "text-red-500" : metric.avgLatency > 500 ? "text-yellow-500" : "text-green-500"
+                        metric.avgLatency > 1000 ? "text-red-600 dark:text-red-400" : metric.avgLatency > 500 ? "text-yellow-700 dark:text-yellow-400" : "text-green-600 dark:text-green-400"
                       )}>
                         {Math.round(metric.avgLatency)}ms
                       </span>

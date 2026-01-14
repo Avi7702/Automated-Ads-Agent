@@ -88,7 +88,7 @@ export function ErrorTrackingTab() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Last 5 Minutes</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-500">{stats.last5min}</div>
+            <div className="text-2xl font-bold text-red-600 dark:text-red-400">{stats.last5min}</div>
           </CardContent>
         </Card>
         <Card>
@@ -96,7 +96,7 @@ export function ErrorTrackingTab() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Last Hour</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-500">{stats.last1hour}</div>
+            <div className="text-2xl font-bold text-yellow-700 dark:text-yellow-400">{stats.last1hour}</div>
           </CardContent>
         </Card>
         <Card>
@@ -113,7 +113,7 @@ export function ErrorTrackingTab() {
       {errors.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center h-64 text-muted-foreground">
-            <AlertTriangle className="w-12 h-12 mb-4 text-green-500" />
+            <AlertTriangle className="w-12 h-12 mb-4 text-green-600 dark:text-green-400" />
             <p className="text-lg font-medium">No Errors!</p>
             <p className="text-sm">Your application is running smoothly.</p>
           </CardContent>
@@ -134,7 +134,7 @@ export function ErrorTrackingTab() {
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline" className="text-xs bg-red-500/10 text-red-500">
+                        <Badge variant="outline" className="text-xs bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400">
                           {error.statusCode}
                         </Badge>
                         <Badge variant="outline" className="text-xs">
