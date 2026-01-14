@@ -36,9 +36,9 @@ interface IdeaBankPanelProps {
 // Badge component for mode display
 function ModeBadge({ mode }: { mode: GenerationMode }) {
   const modeConfig = {
-    exact_insert: { label: "Exact Insert", className: "bg-green-500/10 text-green-600 border-green-500/30" },
-    inspiration: { label: "Inspiration", className: "bg-purple-500/10 text-purple-600 border-purple-500/30" },
-    standard: { label: "Standard", className: "bg-blue-500/10 text-blue-600 border-blue-500/30" },
+    exact_insert: { label: "Exact Insert", className: "bg-green-500/10 dark:bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30 dark:border-green-500/20" },
+    inspiration: { label: "Inspiration", className: "bg-purple-500/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 border-purple-500/30 dark:border-purple-500/20" },
+    standard: { label: "Standard", className: "bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/30 dark:border-blue-500/20" },
   };
 
   const config = modeConfig[mode];
@@ -61,16 +61,16 @@ function SourceIndicators({ suggestion }: { suggestion: IdeaBankSuggestion }) {
   const sources = [];
 
   if (suggestion.sourcesUsed.visionAnalysis) {
-    sources.push({ icon: Eye, label: "Vision", color: "text-blue-500" });
+    sources.push({ icon: Eye, label: "Vision", color: "text-blue-600 dark:text-blue-400" });
   }
   if (suggestion.sourcesUsed.kbRetrieval) {
-    sources.push({ icon: Database, label: "Knowledge", color: "text-purple-500" });
+    sources.push({ icon: Database, label: "Knowledge", color: "text-purple-600 dark:text-purple-400" });
   }
   if (suggestion.sourcesUsed.webSearch) {
-    sources.push({ icon: Globe, label: "Web", color: "text-green-500" });
+    sources.push({ icon: Globe, label: "Web", color: "text-green-600 dark:text-green-400" });
   }
   if (suggestion.sourcesUsed.templateMatching) {
-    sources.push({ icon: TrendingUp, label: "Templates", color: "text-orange-500" });
+    sources.push({ icon: TrendingUp, label: "Templates", color: "text-orange-600 dark:text-orange-400" });
   }
 
   return (
@@ -123,9 +123,9 @@ function SuggestionCard({
           <div className="flex items-center gap-1.5">
             <div className={cn(
               "w-2 h-2 rounded-full",
-              confidencePercentage >= 80 ? "bg-green-500" :
-              confidencePercentage >= 60 ? "bg-yellow-500" :
-              "bg-orange-500"
+              confidencePercentage >= 80 ? "bg-green-600 dark:bg-green-500" :
+              confidencePercentage >= 60 ? "bg-yellow-600 dark:bg-yellow-500" :
+              "bg-orange-600 dark:bg-orange-500"
             )} />
             <span className="text-xs text-muted-foreground">{confidencePercentage}%</span>
           </div>
@@ -194,7 +194,7 @@ function SuggestionCard({
               }}
               variant="default"
               size="sm"
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-green-600 dark:bg-green-500 hover:bg-green-700 dark:hover:bg-green-600"
               disabled={isGenerating}
               data-testid={`button-generate-suggestion-${suggestion.id}`}
             >
@@ -246,16 +246,16 @@ function TemplateSlotCard({
       <div className="space-y-3">
         {/* Header with confidence */}
         <div className="flex items-start justify-between gap-2">
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border bg-amber-500/10 text-amber-600 border-amber-500/30">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30 dark:border-amber-500/20">
             <Target className="w-3 h-3" />
             Template Slot
           </span>
           <div className="flex items-center gap-1.5">
             <div className={cn(
               "w-2 h-2 rounded-full",
-              confidencePercentage >= 80 ? "bg-green-500" :
-              confidencePercentage >= 60 ? "bg-yellow-500" :
-              "bg-orange-500"
+              confidencePercentage >= 80 ? "bg-green-600 dark:bg-green-500" :
+              confidencePercentage >= 60 ? "bg-yellow-600 dark:bg-yellow-500" :
+              "bg-orange-600 dark:bg-orange-500"
             )} />
             <span className="text-xs text-muted-foreground">{confidencePercentage}%</span>
           </div>
@@ -312,7 +312,7 @@ function TemplateSlotCard({
             )}
             {suggestion.ctaSuggestion && (
               <div className="flex items-start gap-2">
-                <MousePointer className="w-3 h-3 mt-0.5 text-green-500 shrink-0" />
+                <MousePointer className="w-3 h-3 mt-0.5 text-green-600 dark:text-green-400 shrink-0" />
                 <div>
                   <span className="text-xs font-medium text-muted-foreground">CTA: </span>
                   <span className="text-xs text-foreground font-medium">{suggestion.ctaSuggestion}</span>
@@ -326,13 +326,13 @@ function TemplateSlotCard({
         <div className="flex items-center gap-3 flex-wrap text-xs">
           {suggestion.colorHarmony.length > 0 && (
             <div className="flex items-center gap-1.5">
-              <Palette className="w-3 h-3 text-purple-500" />
+              <Palette className="w-3 h-3 text-purple-600 dark:text-purple-400" />
               <span className="text-muted-foreground">{suggestion.colorHarmony.slice(0, 3).join(", ")}</span>
             </div>
           )}
           {suggestion.lightingNotes && (
             <div className="flex items-center gap-1.5">
-              <Sun className="w-3 h-3 text-yellow-500" />
+              <Sun className="w-3 h-3 text-yellow-600 dark:text-yellow-400" />
               <span className="text-muted-foreground line-clamp-1">{suggestion.lightingNotes.split(".")[0]}</span>
             </div>
           )}
@@ -590,12 +590,12 @@ export function IdeaBankPanel({
           <Sparkles className="w-5 h-5 text-primary" />
           <h3 className="font-medium">Intelligent Idea Bank</h3>
           {mode === 'template' && (
-            <span className="text-xs text-muted-foreground bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
+            <span className="text-xs text-muted-foreground bg-amber-500/10 dark:bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/30 dark:border-amber-500/20">
               Template Mode
             </span>
           )}
           {legacyMode && mode !== 'template' && (
-            <span className="text-xs text-muted-foreground bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/30">
+            <span className="text-xs text-muted-foreground bg-yellow-500/10 dark:bg-yellow-500/20 px-2 py-0.5 rounded border border-yellow-500/30 dark:border-yellow-500/20">
               Legacy Mode
             </span>
           )}
@@ -619,13 +619,13 @@ export function IdeaBankPanel({
           </span>
         )}
         {selectedUploads.length > 0 && (
-          <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-purple-500/10 border border-purple-500/20">
-            <Upload className="w-3 h-3 text-purple-500" />
+          <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-purple-500/10 dark:bg-purple-500/20 border border-purple-500/20 dark:border-purple-500/30">
+            <Upload className="w-3 h-3 text-purple-600 dark:text-purple-400" />
             {selectedUploads.length} {selectedUploads.length === 1 ? 'upload' : 'uploads'}
           </span>
         )}
         {analyzingCount > 0 && (
-          <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-amber-500/10 border border-amber-500/20 text-amber-600">
+          <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/20 dark:border-amber-500/30 text-amber-600 dark:text-amber-400">
             <Loader2 className="w-3 h-3 animate-spin" />
             Analyzing {analyzingCount} {analyzingCount === 1 ? 'image' : 'images'}...
           </span>
@@ -637,7 +637,7 @@ export function IdeaBankPanel({
         <div className="flex items-center gap-4 p-3 rounded-lg bg-card/30 border border-border/50 text-xs">
           <div className="flex items-center gap-1.5">
             {response.analysisStatus.visionComplete ? (
-              <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+              <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
             ) : (
               <XCircle className="w-3.5 h-3.5 text-muted-foreground" />
             )}
@@ -645,7 +645,7 @@ export function IdeaBankPanel({
           </div>
           <div className="flex items-center gap-1.5">
             {response.analysisStatus.kbQueried ? (
-              <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+              <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
             ) : (
               <XCircle className="w-3.5 h-3.5 text-muted-foreground" />
             )}
@@ -658,7 +658,7 @@ export function IdeaBankPanel({
           </div>
           {response.analysisStatus.webSearchUsed && (
             <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+              <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
               <span className="text-muted-foreground">Web Search</span>
             </div>
           )}
@@ -681,11 +681,11 @@ export function IdeaBankPanel({
 
       {/* Template Mode - Template Context Info */}
       {mode === 'template' && templateContext && !loading && (
-        <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm">
+        <div className="p-3 rounded-lg bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/30 dark:border-amber-500/20 text-sm">
           <div className="flex items-center gap-2 mb-2">
             <Target className="w-4 h-4 text-amber-600" />
-            <span className="font-medium text-amber-700">{templateContext.title}</span>
-            <span className="text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-600">
+            <span className="font-medium text-amber-700 dark:text-amber-400">{templateContext.title}</span>
+            <span className="text-xs px-2 py-0.5 rounded bg-amber-500/20 dark:bg-amber-500/30 text-amber-600 dark:text-amber-400">
               {templateContext.category}
             </span>
           </div>
@@ -749,7 +749,7 @@ export function IdeaBankPanel({
               {response.suggestions.length} AI-generated {response.suggestions.length === 1 ? 'idea' : 'ideas'}
             </span>
             {onQuickGenerate && (
-              <span className="text-xs text-green-500">
+              <span className="text-xs text-green-600 dark:text-green-400">
                 Click "Generate" to start immediately
               </span>
             )}
