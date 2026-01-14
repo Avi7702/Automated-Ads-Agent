@@ -58,10 +58,10 @@ async function fetchBreakdown(period: string): Promise<UsageBreakdownData> {
 }
 
 const statusConfig = {
-  healthy: { icon: CheckCircle2, color: 'bg-green-500/10 text-green-500', label: 'Healthy' },
-  warning: { icon: AlertTriangle, color: 'bg-yellow-500/10 text-yellow-500', label: 'Warning' },
-  critical: { icon: AlertCircle, color: 'bg-red-500/10 text-red-500', label: 'Critical' },
-  rate_limited: { icon: AlertTriangle, color: 'bg-red-500/10 text-red-500', label: 'Rate Limited' },
+  healthy: { icon: CheckCircle2, color: 'bg-green-500/10 dark:bg-green-500/20 text-green-600 dark:text-green-400', label: 'Healthy' },
+  warning: { icon: AlertTriangle, color: 'bg-yellow-500/10 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400', label: 'Warning' },
+  critical: { icon: AlertCircle, color: 'bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400', label: 'Critical' },
+  rate_limited: { icon: AlertTriangle, color: 'bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400', label: 'Rate Limited' },
 };
 
 export function QuotaDashboardContent({ className }: { className?: string }) {
@@ -125,8 +125,8 @@ export function QuotaDashboardContent({ className }: { className?: string }) {
 
       {/* Warnings */}
       {quotaStatus?.warnings && quotaStatus.warnings.length > 0 && (
-        <Alert variant="default" className="bg-yellow-500/10 border-yellow-500/50">
-          <AlertTriangle className="h-4 w-4 text-yellow-500" />
+        <Alert variant="default" className="bg-yellow-500/10 dark:bg-yellow-500/20 border-yellow-500/30 dark:border-yellow-500/20">
+          <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
           <AlertDescription>
             {quotaStatus.warnings.map((warning, i) => (
               <span key={i} className="block">{warning}</span>
@@ -191,9 +191,9 @@ export function QuotaDashboardContent({ className }: { className?: string }) {
           {/* Local Tracking Info */}
           <div className="bg-card/50 backdrop-blur rounded-lg border p-4">
             <div className="flex items-center gap-2 mb-2">
-              <Activity className="w-4 h-4 text-blue-500" />
+              <Activity className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               <span className="font-medium">Local Tracking</span>
-              <Badge variant="outline" className="ml-auto text-xs bg-green-500/10 text-green-500">
+              <Badge variant="outline" className="ml-auto text-xs bg-green-500/10 dark:bg-green-500/20 text-green-600 dark:text-green-400">
                 Real-time
               </Badge>
             </div>

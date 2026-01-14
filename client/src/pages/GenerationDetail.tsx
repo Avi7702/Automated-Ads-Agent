@@ -541,7 +541,7 @@ export default function GenerationDetail() {
               {generation.cost != null && (
                 <div>
                   <h4 className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Cost</h4>
-                  <p className="text-sm font-medium text-green-600">${generation.cost.toFixed(4)}</p>
+                  <p className="text-sm font-medium text-green-600 dark:text-green-400">${generation.cost.toFixed(4)}</p>
                 </div>
               )}
               <div>

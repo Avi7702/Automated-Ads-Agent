@@ -76,12 +76,12 @@ function CategoryBadge({ category }: { category: string }) {
   const info = IMAGE_CATEGORIES.find(c => c.value === category);
   // Light mode readable + dark mode optimized colors
   const colors: Record<string, string> = {
-    historical_ad: "bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30",
-    product_hero: "bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/30",
-    installation: "bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30",
-    detail: "bg-purple-500/20 text-purple-700 dark:text-purple-400 border-purple-500/30",
-    lifestyle: "bg-pink-500/20 text-pink-700 dark:text-pink-400 border-pink-500/30",
-    comparison: "bg-cyan-500/20 text-cyan-700 dark:text-cyan-400 border-cyan-500/30",
+    historical_ad: "bg-amber-500/20 dark:bg-amber-500/30 text-amber-700 dark:text-amber-400 border-amber-500/30 dark:border-amber-500/20",
+    product_hero: "bg-blue-500/20 dark:bg-blue-500/30 text-blue-700 dark:text-blue-400 border-blue-500/30 dark:border-blue-500/20",
+    installation: "bg-green-500/20 dark:bg-green-500/30 text-green-700 dark:text-green-400 border-green-500/30 dark:border-green-500/20",
+    detail: "bg-purple-500/20 dark:bg-purple-500/30 text-purple-700 dark:text-purple-400 border-purple-500/30 dark:border-purple-500/20",
+    lifestyle: "bg-pink-500/20 dark:bg-pink-500/30 text-pink-700 dark:text-pink-400 border-pink-500/30 dark:border-pink-500/20",
+    comparison: "bg-cyan-500/20 dark:bg-cyan-500/30 text-cyan-700 dark:text-cyan-400 border-cyan-500/30 dark:border-cyan-500/20",
   };
 
   return (
@@ -663,7 +663,7 @@ export default function BrandImageLibrary() {
       {/* Background */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/5 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-500/5 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-500/5 dark:bg-blue-500/10 blur-[120px] rounded-full" />
       </div>
 
       <Header currentPage="settings" />

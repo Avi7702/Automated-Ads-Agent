@@ -341,7 +341,7 @@ export function BrandProfileDisplay({ className }: BrandProfileDisplayProps) {
               {profile.voice?.wordsToUse && profile.voice.wordsToUse.length > 0 && (
                 <div className="space-y-2">
                   <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                    <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
                     Words to Use
                   </span>
                   <BadgeList items={profile.voice.wordsToUse} variant="outline" />
@@ -350,7 +350,7 @@ export function BrandProfileDisplay({ className }: BrandProfileDisplayProps) {
               {profile.voice?.wordsToAvoid && profile.voice.wordsToAvoid.length > 0 && (
                 <div className="space-y-2">
                   <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                    <XCircle className="w-3.5 h-3.5 text-red-500" />
+                    <XCircle className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
                     Words to Avoid
                   </span>
                   <BadgeList items={profile.voice.wordsToAvoid} variant="destructive" />

@@ -21,13 +21,13 @@ export function TemplateCard({ template, onSelect, isSelected }: TemplateCardPro
   // Get category color (light mode readable + dark mode optimized)
   const getCategoryColor = (category: string) => {
     const colors: Record<string, string> = {
-      product_showcase: "bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30",
-      professional: "bg-purple-500/20 text-purple-700 dark:text-purple-300 border-purple-500/30",
-      installation: "bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30",
-      worksite: "bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30",
-      educational: "bg-pink-500/20 text-pink-700 dark:text-pink-300 border-pink-500/30",
+      product_showcase: "bg-blue-500/5 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30 dark:border-blue-500/20",
+      professional: "bg-purple-500/5 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30 dark:border-purple-500/20",
+      installation: "bg-green-500/5 dark:bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/30 dark:border-green-500/20",
+      worksite: "bg-amber-500/5 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 dark:border-amber-500/20",
+      educational: "bg-pink-500/5 dark:bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/30 dark:border-pink-500/20",
     };
-    return colors[category] || "bg-gray-500/20 text-gray-700 dark:text-gray-300 border-gray-500/30";
+    return colors[category] || "bg-gray-500/5 dark:bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/30 dark:border-gray-500/20";
   };
 
   return (
@@ -183,7 +183,7 @@ export function TemplateCard({ template, onSelect, isSelected }: TemplateCardPro
           {/* Global indicator */}
           {template.isGlobal && (
             <div className="pt-2 border-t border-border">
-              <span className="text-xs text-primary/80 flex items-center gap-1">
+              <span className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1">
                 <svg
                   className="w-3 h-3"
                   fill="currentColor"

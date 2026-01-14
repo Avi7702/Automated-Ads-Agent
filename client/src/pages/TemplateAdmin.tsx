@@ -373,7 +373,7 @@ export default function TemplateAdmin() {
                       </td>
                       <td className="px-4 py-3">
                         {template.isGlobal ? (
-                          <Check className="w-4 h-4 text-green-500" />
+                          <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
                         ) : (
                           <X className="w-4 h-4 text-muted-foreground" />
                         )}
@@ -505,7 +505,7 @@ export default function TemplateAdmin() {
                     required
                   />
                   {formData.promptBlueprint && !formData.promptBlueprint.includes("{{product}}") && (
-                    <p className="mt-2 text-xs text-yellow-500 flex items-center gap-1">
+                    <p className="mt-2 text-xs text-yellow-600 dark:text-yellow-400 flex items-center gap-1">
                       <AlertTriangle className="w-3 h-3" />
                       Blueprint should contain {"{{product}}"} placeholder
                     </p>
