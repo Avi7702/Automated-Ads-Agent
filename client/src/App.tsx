@@ -1,5 +1,4 @@
 import { Switch, Route } from "wouter";
-import { lazy, Suspense } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
@@ -8,40 +7,28 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-
-// Eager load only critical routes for instant access
+import NotFound from "@/pages/not-found";
 import Login from "@/pages/Login";
 import Studio from "@/pages/Studio";
-
-// Lazy load all other routes to reduce initial bundle size
-const Gallery = lazy(() => import("@/pages/Gallery"));
-const GenerationDetail = lazy(() => import("@/pages/GenerationDetail"));
-const BrandProfile = lazy(() => import("@/pages/BrandProfile"));
-const Templates = lazy(() => import("@/pages/Templates"));
-const TemplateAdmin = lazy(() => import("@/pages/TemplateAdmin"));
-const QuotaDashboard = lazy(() => import("@/pages/QuotaDashboard"));
-const ProductLibrary = lazy(() => import("@/pages/ProductLibrary"));
-const InstallationScenarios = lazy(() => import("@/pages/InstallationScenarios"));
-const BrandImageLibrary = lazy(() => import("@/pages/BrandImageLibrary"));
-const TemplateLibrary = lazy(() => import("@/pages/TemplateLibrary"));
-const SystemMap = lazy(() => import("@/pages/SystemMap"));
-const ApiKeySettings = lazy(() => import("@/pages/ApiKeySettings"));
-const LearnFromWinners = lazy(() => import("@/pages/LearnFromWinners"));
-const NotFound = lazy(() => import("@/pages/not-found"));
-
-// Loading fallback component
-const PageLoader = () => (
-  <div className="flex items-center justify-center min-h-screen">
-    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-  </div>
-);
+import Gallery from "@/pages/Gallery";
+import GenerationDetail from "@/pages/GenerationDetail";
+import BrandProfile from "@/pages/BrandProfile";
+import Templates from "@/pages/Templates";
+import TemplateAdmin from "@/pages/TemplateAdmin";
+import QuotaDashboard from "@/pages/QuotaDashboard";
+import ProductLibrary from "@/pages/ProductLibrary";
+import InstallationScenarios from "@/pages/InstallationScenarios";
+import BrandImageLibrary from "@/pages/BrandImageLibrary";
+import TemplateLibrary from "@/pages/TemplateLibrary";
+import SystemMap from "@/pages/SystemMap";
+import ApiKeySettings from "@/pages/ApiKeySettings";
+import LearnFromWinners from "@/pages/LearnFromWinners";
 
 function Router() {
   return (
-    <Suspense fallback={<PageLoader />}>
-      <Switch>
-        {/* Public route - Login */}
-        <Route path="/login" component={Login} />
+    <Switch>
+      {/* Public route - Login */}
+      <Route path="/login" component={Login} />
 
       {/* Protected routes */}
       <Route path="/">
@@ -136,8 +123,7 @@ function Router() {
       </Route>
 
       <Route component={NotFound} />
-      </Switch>
-    </Suspense>
+    </Switch>
   );
 }
 
