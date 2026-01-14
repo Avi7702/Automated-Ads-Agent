@@ -3440,7 +3440,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   // ===== MONITORING API ENDPOINTS =====
 
   // GET /api/monitoring/health - System health status
-  app.get("/api/monitoring/health", async (_req, res) => {
+  app.get("/api/monitoring/health", requireAuth, async (_req, res) => {
     try {
       const { getSystemHealth } = await import('./services/systemHealthService');
       const health = await getSystemHealth();
@@ -3452,7 +3452,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   });
 
   // GET /api/monitoring/performance - Performance metrics
-  app.get("/api/monitoring/performance", async (_req, res) => {
+  app.get("/api/monitoring/performance", requireAuth, async (_req, res) => {
     try {
       const { getPerformanceMetrics } = await import('./middleware/performanceMetrics');
       const metrics = getPerformanceMetrics();
@@ -3464,7 +3464,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   });
 
   // GET /api/monitoring/errors - Error tracking
-  app.get("/api/monitoring/errors", async (req, res) => {
+  app.get("/api/monitoring/errors", requireAuth, async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 50;
       const { getRecentErrors, getErrorStats } = await import('./services/errorTrackingService');
@@ -3479,7 +3479,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   });
 
   // GET /api/monitoring/system - Full system health aggregation
-  app.get("/api/monitoring/system", async (_req, res) => {
+  app.get("/api/monitoring/system", requireAuth, async (_req, res) => {
     try {
       const { getSystemHealth } = await import('./services/systemHealthService');
       const { getPerformanceMetrics } = await import('./middleware/performanceMetrics');
@@ -3529,7 +3529,7 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
   });
 
   // GET /api/monitoring/endpoints - API endpoints summary
-  app.get("/api/monitoring/endpoints", async (_req, res) => {
+  app.get("/api/monitoring/endpoints", requireAuth, async (_req, res) => {
     try {
       const { getPerformanceMetrics } = await import('./middleware/performanceMetrics');
       const metrics = getPerformanceMetrics();
