@@ -26,7 +26,7 @@ export function Header({ currentPage }: HeaderProps) {
     if (location === "/brand-images") return "brand-images";
     if (location === "/learn-from-winners") return "learn-from-winners";
     if (location === "/usage") return "usage";
-    if (location === "/settings" || location === "/brand-profile") return "settings";
+    if (location === "/settings") return "settings";
     if (location.startsWith("/templates") || location.startsWith("/admin/templates")) return "templates";
     if (location.startsWith("/generation/")) return "generation";
     return "studio";

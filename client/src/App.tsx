@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
@@ -98,9 +98,8 @@ function Router() {
       </Route>
 
       <Route path="/brand-profile">
-        <ProtectedRoute>
-          <BrandProfile />
-        </ProtectedRoute>
+        {/* Redirect for backward compatibility */}
+        <Redirect to="/settings" />
       </Route>
 
       <Route path="/templates">
