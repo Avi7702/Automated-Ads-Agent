@@ -896,8 +896,14 @@ export default function LearnFromWinners() {
   const [selectedPattern, setSelectedPattern] = useState<LearnedAdPattern | null>(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
 
-  // Fetch patterns
-  const { data: patterns, isLoading, error } = useQuery<LearnedAdPattern[]>({
+  // Fetch patterns - API returns { patterns: [...], count: number, filters: {...} }
+  interface PatternsResponse {
+    patterns: LearnedAdPattern[];
+    count: number;
+    filters?: { category?: string; platform?: string; industry?: string };
+  }
+
+  const { data: patternsResponse, isLoading, error } = useQuery<PatternsResponse>({
     queryKey: ["learned-patterns", categoryFilter, platformFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -911,6 +917,11 @@ export default function LearnFromWinners() {
       return res.json();
     },
   });
+
+  // Extract patterns array with defensive check
+  const patterns = Array.isArray(patternsResponse?.patterns)
+    ? patternsResponse.patterns
+    : [];
 
   // Upload mutation
   const uploadMutation = useMutation({
@@ -1000,8 +1011,8 @@ export default function LearnFromWinners() {
     },
   });
 
-  // Filter patterns
-  const filteredPatterns = patterns?.filter(p => {
+  // Filter patterns - patterns is guaranteed to be an array
+  const filteredPatterns = patterns.filter(p => {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       return (
