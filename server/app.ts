@@ -6,10 +6,12 @@ import session from "express-session";
 import { registerRoutes } from "./routes";
 import { logger, apiLogger } from "./lib/logger";
 import { requestIdMiddleware } from "./middleware/requestId";
+import { performanceMetricsMiddleware } from "./middleware/performanceMetrics";
 import { defaultTimeout, haltOnTimeout } from "./middleware/timeout";
 import { initGracefulShutdown, onShutdown } from "./utils/gracefulShutdown";
 import { validateEnvOrExit } from "./lib/validateEnv";
 import { initSentry, sentryRequestHandler, sentryErrorHandler, captureException } from "./lib/sentry";
+import { trackError } from "./services/errorTrackingService";
 
 export function log(message: string, source = "express") {
   // Use structured logger in production, formatted console in development
@@ -41,6 +43,11 @@ app.use(helmet({
 
 // Request ID for tracing
 app.use(requestIdMiddleware);
+
+// Performance metrics tracking (if monitoring enabled)
+if (process.env.ENABLE_MONITORING !== 'false') {
+  app.use(performanceMetricsMiddleware);
+}
 
 // Request timeout (30s default)
 app.use(defaultTimeout);
@@ -146,12 +153,24 @@ export default async function runApp(
   // Sentry error handler - must be before custom error handler
   app.use(sentryErrorHandler);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
     // Log error with structured logger
     logger.error({ err, status, module: 'ErrorHandler' }, message);
+
+    // Track error for dashboard (only if monitoring enabled)
+    if (process.env.ENABLE_MONITORING !== 'false') {
+      trackError({
+        statusCode: status,
+        message,
+        endpoint: req.path,
+        method: req.method,
+        userAgent: req.get('user-agent'),
+        stack: err.stack,
+      });
+    }
 
     // Capture in Sentry if it's a server error
     if (status >= 500) {
@@ -177,9 +196,76 @@ export default async function runApp(
   // Initialize graceful shutdown
   initGracefulShutdown(server);
 
-  // Register DB cleanup on shutdown (if using direct connection)
+  // Register comprehensive cleanup on shutdown
   onShutdown(async () => {
-    logger.info('Closing database connections');
-    // If using Drizzle/pg pool: await pool.end();
+    logger.info({ module: 'shutdown' }, 'Starting graceful shutdown');
+
+    // Close Redis first (sessions depend on Redis)
+    if (process.env.REDIS_URL) {
+      try {
+        const { closeRedisClient } = require('./lib/redis');
+        await closeRedisClient();
+        logger.info({ module: 'shutdown' }, 'Redis connection closed');
+      } catch (err) {
+        logger.error({ module: 'shutdown', err }, 'Error closing Redis');
+      }
+    }
+
+    // Clear monitoring data
+    if (process.env.ENABLE_MONITORING !== 'false') {
+      try {
+        const { resetPerformanceMetrics } = require('./middleware/performanceMetrics');
+        const { clearErrors } = require('./services/errorTrackingService');
+        resetPerformanceMetrics();
+        clearErrors();
+        logger.info({ module: 'shutdown' }, 'Monitoring data cleared');
+      } catch (err) {
+        logger.error({ module: 'shutdown', err }, 'Error clearing monitoring data');
+      }
+    }
+
+    // Close database pool with timeout
+    try {
+      const { pool } = require('./db');
+      const poolClosePromise = pool.end();
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Pool close timeout')), 10000)
+      );
+
+      await Promise.race([poolClosePromise, timeoutPromise]);
+      logger.info({ module: 'shutdown' }, 'Database pool closed');
+    } catch (err) {
+      logger.error({ module: 'shutdown', err }, 'Error closing database pool - forcing shutdown');
+      // Force close by removing listeners to prevent hanging
+      const { pool } = require('./db');
+      pool.removeAllListeners();
+    }
+
+    logger.info({ module: 'shutdown' }, 'Graceful shutdown complete');
   });
+
+  // Track unhandled errors (only if monitoring enabled)
+  if (process.env.ENABLE_MONITORING !== 'false') {
+    process.on('unhandledRejection', (reason: any) => {
+      logger.error({ err: reason, module: 'UnhandledRejection' }, 'Unhandled promise rejection');
+      trackError({
+        statusCode: 500,
+        message: reason?.message || 'Unhandled promise rejection',
+        endpoint: 'N/A',
+        method: 'N/A',
+        stack: reason?.stack,
+      });
+    });
+
+    process.on('uncaughtException', (error: Error) => {
+      logger.error({ err: error, module: 'UncaughtException' }, 'Uncaught exception');
+      trackError({
+        statusCode: 500,
+        message: error.message,
+        endpoint: 'N/A',
+        method: 'N/A',
+        stack: error.stack,
+      });
+    });
+  }
 }

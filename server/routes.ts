@@ -3437,6 +3437,70 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
     }
   });
 
+  // ===== MONITORING API ENDPOINTS =====
+
+  // GET /api/monitoring/health - System health status
+  app.get("/api/monitoring/health", async (_req, res) => {
+    try {
+      const { getSystemHealth } = await import('./services/systemHealthService');
+      const health = await getSystemHealth();
+      res.json(health);
+    } catch (error: any) {
+      logger.error({ module: 'monitoring', error }, 'Failed to fetch system health');
+      res.status(500).json({ error: "Failed to fetch system health" });
+    }
+  });
+
+  // GET /api/monitoring/performance - Performance metrics
+  app.get("/api/monitoring/performance", async (_req, res) => {
+    try {
+      const { getPerformanceMetrics } = await import('./middleware/performanceMetrics');
+      const metrics = getPerformanceMetrics();
+      res.json(metrics);
+    } catch (error: any) {
+      logger.error({ module: 'monitoring', error }, 'Failed to fetch performance metrics');
+      res.status(500).json({ error: "Failed to fetch performance metrics" });
+    }
+  });
+
+  // GET /api/monitoring/errors - Error tracking
+  app.get("/api/monitoring/errors", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const { getRecentErrors, getErrorStats } = await import('./services/errorTrackingService');
+      const errors = getRecentErrors(limit);
+      const stats = getErrorStats();
+
+      res.json({ errors, stats });
+    } catch (error: any) {
+      logger.error({ module: 'monitoring', error }, 'Failed to fetch errors');
+      res.status(500).json({ error: "Failed to fetch errors" });
+    }
+  });
+
+  // GET /api/monitoring/endpoints - API endpoints summary
+  app.get("/api/monitoring/endpoints", async (_req, res) => {
+    try {
+      const { getPerformanceMetrics } = await import('./middleware/performanceMetrics');
+      const metrics = getPerformanceMetrics();
+
+      // Aggregate by endpoint pattern (group similar paths)
+      const summary = metrics.map(m => ({
+        endpoint: m.endpoint,
+        method: m.method,
+        requests: m.requests,
+        errorRate: m.errorRate.toFixed(2) + '%',
+        avgLatency: Math.round(m.avgLatency) + 'ms',
+        status: m.errorRate > 5 ? 'unhealthy' : m.errorRate > 1 ? 'degraded' : 'healthy',
+      }));
+
+      res.json(summary);
+    } catch (error: any) {
+      logger.error({ module: 'monitoring', error }, 'Failed to fetch endpoint summary');
+      res.status(500).json({ error: "Failed to fetch endpoint summary" });
+    }
+  });
+
   // Start Google Cloud Monitoring auto-sync on server startup
   // ===== RAG API ENDPOINTS =====
 

@@ -129,6 +129,25 @@ export function validateEnvironment(): ValidationResult {
     warnings.push('FIRECRAWL_API_KEY not set - web scraping features disabled');
   }
 
+  // Database pool configuration warnings
+  if (!process.env.DB_POOL_MAX) {
+    warnings.push('DB_POOL_MAX not set - using default (20 connections)');
+  } else {
+    const poolMax = parseInt(process.env.DB_POOL_MAX, 10);
+    if (isProduction && poolMax > 20) {
+      warnings.push(`DB_POOL_MAX set to ${poolMax} - consider Railway limit of 15 connections per service`);
+    }
+  }
+
+  if (!process.env.DB_STATEMENT_TIMEOUT) {
+    warnings.push('DB_STATEMENT_TIMEOUT not set - using default (30s)');
+  }
+
+  // Monitoring configuration
+  if (process.env.ENABLE_MONITORING === 'false') {
+    warnings.push('ENABLE_MONITORING is disabled - performance metrics and error tracking disabled');
+  }
+
   return {
     valid: errors.length === 0,
     errors,

@@ -110,12 +110,14 @@ export function addBreadcrumb(breadcrumb: {
  * Express error handler middleware
  * Add this AFTER all routes but BEFORE your custom error handler
  */
+// @ts-expect-error - Sentry Handlers API varies by version, fallback provided
 export const sentryErrorHandler = Sentry.Handlers?.errorHandler?.() ?? ((err: any, _req: any, _res: any, next: any) => next(err));
 
 /**
  * Express request handler middleware
  * Add this BEFORE all routes
  */
+// @ts-expect-error - Sentry Handlers API varies by version, fallback provided
 export const sentryRequestHandler = Sentry.Handlers?.requestHandler?.() ?? ((_req: any, _res: any, next: any) => next());
 
 // Re-export Sentry for advanced usage
