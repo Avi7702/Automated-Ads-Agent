@@ -205,18 +205,18 @@ test.describe('Monitoring UI Dashboard', () => {
     await page.goto('/usage');
 
     // Wait for page to load
-    await page.waitForSelector('text=Quota Dashboard', { timeout: 10000 });
+    await page.waitForSelector('text=Monitoring Dashboard', { timeout: 10000 });
 
     // Verify all monitoring tabs are present
-    await expect(page.locator('text=Quota')).toBeVisible();
+    await expect(page.locator('text=API Quota')).toBeVisible();
     await expect(page.locator('text=System Health')).toBeVisible();
     await expect(page.locator('text=Performance')).toBeVisible();
-    await expect(page.locator('text=Error Tracking')).toBeVisible();
+    await expect(page.locator('text=Errors')).toBeVisible();
   });
 
   test('System Health tab displays service status', async ({ page }) => {
     await page.goto('/usage');
-    await page.waitForSelector('text=System Health', { timeout: 10000 });
+    await page.waitForSelector('text=Monitoring Dashboard', { timeout: 10000 });
 
     // Click System Health tab
     await page.click('text=System Health');
@@ -237,7 +237,7 @@ test.describe('Monitoring UI Dashboard', () => {
 
   test('Performance tab shows endpoint metrics', async ({ page }) => {
     await page.goto('/usage');
-    await page.waitForSelector('text=Performance', { timeout: 10000 });
+    await page.waitForSelector('text=Monitoring Dashboard', { timeout: 10000 });
 
     // Click Performance tab
     await page.click('text=Performance');
@@ -252,7 +252,7 @@ test.describe('Monitoring UI Dashboard', () => {
 
   test('Error Tracking tab displays error statistics', async ({ page }) => {
     await page.goto('/usage');
-    await page.waitForSelector('text=Error Tracking', { timeout: 10000 });
+    await page.waitForSelector('text=Monitoring Dashboard', { timeout: 10000 });
 
     // Click Error Tracking tab
     await page.click('text=Error Tracking');
