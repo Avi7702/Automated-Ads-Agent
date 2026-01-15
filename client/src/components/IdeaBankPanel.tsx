@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, RefreshCw, Eye, Zap, Database, Globe, CheckCircle2, XCircle, Lightbulb, TrendingUp, Check, Play, Loader2, Upload, Palette, Sun, Target, Type, MessageSquare, MousePointer } from "lucide-react";
+import { Sparkles, RefreshCw, Eye, Zap, Database, Globe, CheckCircle2, XCircle, Lightbulb, TrendingUp, Check, Play, Loader2, Upload, Palette, Sun, Target, Type, MessageSquare, MousePointer, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import type {
   IdeaBankSuggestResponse,
@@ -131,33 +132,55 @@ function SuggestionCard({
           </div>
         </div>
 
-        {/* Prompt text */}
-        <p className="text-sm text-foreground/90 group-hover:text-foreground transition-colors leading-relaxed line-clamp-3">
-          {suggestion.prompt}
-        </p>
+        {/* Summary heading */}
+        <h3 className="text-base font-semibold text-foreground leading-snug">
+          {suggestion.summary}
+        </h3>
 
         {/* Reasoning */}
         {suggestion.reasoning && (
-          <p className="text-xs text-muted-foreground italic border-l-2 border-primary/30 pl-3 line-clamp-2">
-            {suggestion.reasoning}
-          </p>
+          <div className="flex items-start gap-2 text-sm text-muted-foreground">
+            <Lightbulb className="w-4 h-4 mt-0.5 shrink-0 text-amber-500" />
+            <p className="leading-relaxed">
+              <span className="font-medium text-foreground">Why this works:</span> {suggestion.reasoning}
+            </p>
+          </div>
         )}
 
         {/* Recommended platform and aspect ratio */}
         {(suggestion.recommendedPlatform || suggestion.recommendedAspectRatio) && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
             {suggestion.recommendedPlatform && (
-              <span className="px-2 py-0.5 rounded bg-primary/10 border border-primary/20 text-primary">
+              <span className="px-2 py-0.5 rounded bg-primary/10 border border-primary/20 text-primary font-medium">
                 {suggestion.recommendedPlatform}
               </span>
             )}
             {suggestion.recommendedAspectRatio && (
-              <span className="px-2 py-0.5 rounded bg-muted/30 border border-border">
+              <span className="px-2 py-0.5 rounded bg-muted/30 border border-border font-medium">
                 {suggestion.recommendedAspectRatio}
               </span>
             )}
           </div>
         )}
+
+        {/* Technical prompt in collapsible */}
+        <Collapsible>
+          <CollapsibleTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-between text-xs text-muted-foreground hover:text-foreground"
+            >
+              <span>View technical prompt</span>
+              <ChevronDown className="w-3 h-3 transition-transform ui-expanded:rotate-180" />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-2">
+            <p className="text-xs text-muted-foreground leading-relaxed p-3 bg-muted/30 rounded-lg border border-border/50">
+              {suggestion.prompt}
+            </p>
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* Sources used */}
         <SourceIndicators suggestion={suggestion} />
@@ -182,7 +205,7 @@ function SuggestionCard({
             ) : (
               <>
                 <Sparkles className="w-3 h-3 mr-1" />
-                Use
+                Use This Idea
               </>
             )}
           </Button>
@@ -203,7 +226,7 @@ function SuggestionCard({
               ) : (
                 <>
                   <Play className="w-3 h-3 mr-1" />
-                  Generate
+                  Generate Now
                 </>
               )}
             </Button>
@@ -489,6 +512,7 @@ export function IdeaBankPanel({
           setResponse({
             suggestions: data.map((prompt: string, idx: number) => ({
               id: `legacy-${idx}`,
+              summary: `Legacy suggestion ${idx + 1}`,
               prompt,
               mode: "standard" as GenerationMode,
               reasoning: "Generated from legacy endpoint",
@@ -513,50 +537,46 @@ export function IdeaBankPanel({
           setLegacyMode(true);
         }
       } else {
-        // Try the old prompt-suggestions endpoint as fallback (freestyle only)
-        if (mode !== 'template') {
-          const fallbackRes = await fetch("/api/prompt-suggestions", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              productName: selectedProducts.map(p => p.name).join(", "),
-              category: selectedProducts[0]?.category,
-            }),
-          });
+        // Retry once after 2 seconds (no legacy fallback)
+        console.warn("Initial suggestion request failed, retrying...");
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
-          if (fallbackRes.ok) {
-            const data = await fallbackRes.json();
-            const suggestions = Array.isArray(data) ? data : (data.suggestions || []);
+        const retryRes = await fetch("/api/idea-bank/suggest", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            productIds: selectedProducts.map(p => p.id),
+            uploadDescriptions: uploadDescriptions.length > 0 ? uploadDescriptions : undefined,
+            maxSuggestions: 6,
+            mode: mode || 'freestyle',
+            templateId: mode === 'template' ? templateId : undefined,
+          }),
+        });
 
-            // Convert legacy format
-            setResponse({
-              suggestions: suggestions.map((prompt: string, idx: number) => ({
-                id: `fallback-${idx}`,
-                prompt,
-                mode: "standard" as GenerationMode,
-                reasoning: "Generated from legacy prompt suggestions",
-                confidence: 0.6,
-                sourcesUsed: {
-                  visionAnalysis: false,
-                  kbRetrieval: false,
-                  webSearch: false,
-                  templateMatching: true,
-                },
-              })),
-              analysisStatus: {
-                visionComplete: false,
-                kbQueried: false,
-                templatesMatched: suggestions.length,
-                webSearchUsed: false,
-              },
-            });
-            setLegacyMode(true);
-          } else {
-            throw new Error("Failed to fetch suggestions from both endpoints");
+        if (!retryRes.ok) {
+          throw new Error('Retry failed - unable to generate suggestions');
+        }
+
+        const retryData = await retryRes.json();
+
+        // Process retry response (same as primary response)
+        if (mode === 'template' && retryData.slotSuggestions) {
+          const templateResponse = retryData as IdeaBankTemplateResponse;
+          setSlotSuggestions(templateResponse.slotSuggestions);
+          setMergedPrompt(templateResponse.mergedPrompt);
+          setTemplateContext(templateResponse.template);
+          setResponse(null);
+          setLegacyMode(false);
+          if (onRecipeAvailable && templateResponse.recipe) {
+            onRecipeAvailable(templateResponse.recipe);
           }
-        } else {
-          // Template mode has no fallback
-          throw new Error("Failed to fetch template suggestions");
+        } else if (retryData.suggestions && retryData.analysisStatus) {
+          setResponse(retryData as IdeaBankSuggestResponse);
+          setSlotSuggestions([]);
+          setMergedPrompt('');
+          setTemplateContext(null);
+          setLegacyMode(false);
         }
       }
     } catch (err: any) {

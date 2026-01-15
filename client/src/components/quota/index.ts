@@ -1,4 +1,5 @@
 export { QuotaDashboard } from "./QuotaDashboard";
+export { QuotaDashboardContent } from "./QuotaDashboardContent";
 export { QuotaStatusCard } from "./QuotaStatusCard";
 export { CostCard } from "./CostCard";
 export { RateLimitCountdown } from "./RateLimitCountdown";

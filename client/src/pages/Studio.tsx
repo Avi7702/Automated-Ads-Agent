@@ -33,7 +33,7 @@ import {
 import { IdeaBankPanel } from "@/components/IdeaBankPanel";
 import { LinkedInPostPreview } from "@/components/LinkedInPostPreview";
 import { TemplateLibrary } from "@/components/TemplateLibrary";
-import type { GenerationRecipe, TemplateSlotSuggestion } from "@shared/types/ideaBank";
+import type { GenerationRecipe, TemplateSlotSuggestion, GenerationMode, IdeaBankMode } from "@shared/types/ideaBank";
 import { UploadZone } from "@/components/UploadZone";
 import type { AnalyzedUpload } from "@/types/analyzedUpload";
 import { HistoryTimeline } from "@/components/HistoryTimeline";
@@ -371,8 +371,13 @@ export default function Studio() {
   // GenerationRecipe from IdeaBank - contains relationships, scenarios, brand context
   const [generationRecipe, setGenerationRecipe] = useState<GenerationRecipe | undefined>(undefined);
 
-  // Generation path selection: Freestyle vs Template mode
-  const [generationMode, setGenerationMode] = useState<'freestyle' | 'template'>('freestyle');
+  // IdeaBankMode: Controls Idea Bank orchestration ('freestyle' or 'template')
+  const [ideaBankMode, setIdeaBankMode] = useState<IdeaBankMode>('freestyle');
+
+  // GenerationMode: Controls how /api/transform processes templates ('exact_insert', 'inspiration', 'standard')
+  // When user comes from Templates.tsx, this is set from query params
+  const [generationMode, setGenerationMode] = useState<GenerationMode>('standard');
+
   const [selectedTemplateForMode, setSelectedTemplateForMode] = useState<AdSceneTemplate | null>(null);
 
   // Refs for scroll tracking
@@ -497,6 +502,42 @@ export default function Studio() {
     return () => clearTimeout(debounceTimer);
   }, [selectedProducts.length, tempUploads.length, prompt.length, resolution]);
 
+  // Parse query params for template/pattern deep linking
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+
+    // Handle template selection from /templates page
+    const templateId = params.get('templateId');
+    const mode = params.get('mode');
+    if (templateId && templates.length > 0) {
+      const template = templates.find(t => t.id === templateId);
+      if (template) {
+        setSelectedTemplateForMode(template);
+        setIdeaBankMode('template'); // Switch UI to template mode
+
+        // Validate and set generation mode from query params (from Templates.tsx)
+        if (mode && ['exact_insert', 'inspiration'].includes(mode)) {
+          setGenerationMode(mode as GenerationMode);
+        } else {
+          // Default to exact_insert when template is selected
+          setGenerationMode('exact_insert');
+        }
+      }
+    }
+
+    // Handle pattern selection from /learn-from-winners page
+    const patternId = params.get('patternId');
+    if (patternId) {
+      fetch(`/api/learned-patterns/${patternId}`)
+        .then(res => res.json())
+        .then(pattern => {
+          // TODO: Add selectedPattern state and pass to IdeaBankPanel
+          console.log('Pattern loaded:', pattern);
+        })
+        .catch(err => console.error('Failed to load pattern:', err));
+    }
+  }, [templates]);
+
   // Scroll tracking for context bar and sticky generate
   useEffect(() => {
     const handleScroll = () => {
@@ -573,6 +614,15 @@ export default function Studio() {
 
       formData.append("prompt", finalPrompt);
       formData.append("resolution", resolution);
+
+      // Send template context if user has selected a template and is in template mode
+      // Map IdeaBankMode to GenerationMode for the image generation endpoint
+      if (ideaBankMode === 'template' && selectedTemplateForMode) {
+        // Use the specific generationMode set from Templates.tsx query params,
+        // or default to 'exact_insert' if not specified
+        formData.append('mode', generationMode);
+        formData.append('templateId', selectedTemplateForMode.id);
+      }
 
       // Append GenerationRecipe if available (from IdeaBank suggestions)
       if (generationRecipe) {
@@ -1230,12 +1280,13 @@ export default function Studio() {
                   {/* Freestyle Mode */}
                   <button
                     onClick={() => {
-                      setGenerationMode('freestyle');
+                      setIdeaBankMode('freestyle');
+                      setGenerationMode('standard');
                       setSelectedTemplateForMode(null);
                     }}
                     className={cn(
                       "p-6 rounded-xl border-2 transition-all text-left group",
-                      generationMode === 'freestyle'
+                      ideaBankMode === 'freestyle'
                         ? "border-primary bg-primary/10 ring-2 ring-primary/20"
                         : "border-border hover:border-primary/50 bg-card/50"
                     )}
@@ -1243,7 +1294,7 @@ export default function Studio() {
                     <div className="flex items-center gap-3 mb-3">
                       <div className={cn(
                         "w-10 h-10 rounded-lg flex items-center justify-center",
-                        generationMode === 'freestyle'
+                        ideaBankMode === 'freestyle'
                           ? "bg-primary text-primary-foreground"
                           : "bg-muted text-muted-foreground group-hover:bg-primary/20 group-hover:text-primary"
                       )}>
@@ -1251,7 +1302,7 @@ export default function Studio() {
                       </div>
                       <div>
                         <h4 className="font-medium">Freestyle</h4>
-                        {generationMode === 'freestyle' && (
+                        {ideaBankMode === 'freestyle' && (
                           <Check className="w-4 h-4 text-primary inline ml-2" />
                         )}
                       </div>
@@ -1263,10 +1314,13 @@ export default function Studio() {
 
                   {/* Template Mode */}
                   <button
-                    onClick={() => setGenerationMode('template')}
+                    onClick={() => {
+                      setIdeaBankMode('template');
+                      setGenerationMode('exact_insert'); // Default to exact_insert
+                    }}
                     className={cn(
                       "p-6 rounded-xl border-2 transition-all text-left group",
-                      generationMode === 'template'
+                      ideaBankMode === 'template'
                         ? "border-primary bg-primary/10 ring-2 ring-primary/20"
                         : "border-border hover:border-primary/50 bg-card/50"
                     )}
@@ -1274,7 +1328,7 @@ export default function Studio() {
                     <div className="flex items-center gap-3 mb-3">
                       <div className={cn(
                         "w-10 h-10 rounded-lg flex items-center justify-center",
-                        generationMode === 'template'
+                        ideaBankMode === 'template'
                           ? "bg-primary text-primary-foreground"
                           : "bg-muted text-muted-foreground group-hover:bg-primary/20 group-hover:text-primary"
                       )}>
@@ -1282,7 +1336,7 @@ export default function Studio() {
                       </div>
                       <div>
                         <h4 className="font-medium">Use Template</h4>
-                        {generationMode === 'template' && (
+                        {ideaBankMode === 'template' && (
                           <Check className="w-4 h-4 text-primary inline ml-2" />
                         )}
                       </div>
@@ -1294,7 +1348,7 @@ export default function Studio() {
                 </div>
 
                 {/* Template Picker - shown when template mode is selected */}
-                {generationMode === 'template' && (
+                {ideaBankMode === 'template' && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
@@ -1690,7 +1744,7 @@ export default function Studio() {
                     }}
                     selectedPromptId={selectedSuggestion?.id}
                     isGenerating={state === "generating"}
-                    mode={generationMode}
+                    mode={ideaBankMode}
                     templateId={selectedTemplateForMode?.id || undefined}
                     onSlotSuggestionSelect={(suggestion: TemplateSlotSuggestion, mergedPrompt: string) => {
                       // When user selects a slot suggestion in template mode,

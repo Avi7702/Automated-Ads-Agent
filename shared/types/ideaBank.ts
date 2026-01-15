@@ -18,6 +18,7 @@ export interface SourcesUsed {
 
 export interface IdeaBankSuggestion {
   id: string;
+  summary: string; // Plain language description (10-20 words)
   prompt: string;
   mode: GenerationMode;
   templateIds?: string[];

@@ -1462,70 +1462,6 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
     }
   });
 
-  // Get AI-generated prompt suggestions based on curated templates
-  app.post("/api/prompt-suggestions", async (req, res) => {
-    try {
-      const { productName, category } = req.body;
-
-      // Input validation
-      if (!productName || typeof productName !== 'string') {
-        return res.status(400).json({ error: "Product name is required" });
-      }
-
-      // Sanitize product name to prevent injection
-      const sanitizedProductName = productName.replace(/[^\w\s-]/g, '').slice(0, 100);
-
-      // Get curated templates for the category (or all if no category)
-      const templates = await storage.getPromptTemplates(category);
-
-      if (templates.length === 0) {
-        return res.json([]);
-      }
-
-      // Use Gemini to generate variations of the curated prompts
-      const templateExamples = templates.slice(0, 5).map(t => `"${t.prompt}"`).join(", ");
-
-      const suggestionPrompt = `You are a creative marketing prompt generator. Given a product called "${sanitizedProductName}", generate 4 creative, professional marketing scene ideas similar to these examples: ${templateExamples}.
-
-Each suggestion should be a concise, vivid description (max 15 words) of a marketing scene or lifestyle context for the product.
-
-Return ONLY a JSON array of 4 strings, nothing else. Example format:
-["professional desk setup with morning sunlight", "outdoor adventure scene in mountains", "minimalist lifestyle flat lay", "urban street photography aesthetic"]`;
-
-      const modelName = "gemini-3-flash-preview";
-      logger.info({ module: 'PromptSuggestions', model: modelName }, 'Using model');
-
-      const result = await genai.models.generateContent({
-        model: modelName,
-        contents: suggestionPrompt,
-      });
-
-      logger.info({ module: 'PromptSuggestions', modelVersion: result.modelVersion }, 'Model response received');
-
-      const responseText = result.text || "[]";
-
-      // Parse the JSON response
-      let suggestions: string[] = [];
-      try {
-        suggestions = JSON.parse(responseText);
-        // Validate array and limit to 4 suggestions
-        if (!Array.isArray(suggestions)) {
-          suggestions = templates.slice(0, 4).map(t => t.prompt);
-        } else {
-          suggestions = suggestions.slice(0, 4);
-        }
-      } catch (e) {
-        // Fallback to template prompts if parsing fails
-        suggestions = templates.slice(0, 4).map(t => t.prompt);
-      }
-
-      res.json(suggestions);
-    } catch (error: any) {
-      logger.error({ module: 'PromptSuggestions', err: error }, 'Error generating suggestions');
-      res.status(500).json({ error: "Failed to generate suggestions", details: error.message });
-    }
-  });
-
   // Delete prompt template
   app.delete("/api/prompt-templates/:id", async (req, res) => {
     try {
@@ -2979,10 +2915,30 @@ Return ONLY a JSON array of 4 strings, nothing else. Example format:
       }
 
       // Existing freestyle response
-      res.json(result.response);
+      const response = result.response;
+
+      // Check if suggestions array is empty and provide helpful message
+      if (!response.suggestions || response.suggestions.length === 0) {
+        return res.status(200).json({
+          suggestions: [],
+          analysisStatus: {
+            ...response.analysisStatus,
+            message: "No suggestions generated. Try adding products or images.",
+            details: "AI analysis completed but no viable prompts found."
+          }
+        });
+      }
+
+      res.json(response);
     } catch (error: any) {
       logger.error({ module: 'IdeaBankSuggest', err: error }, 'Error suggesting ideas');
-      res.status(500).json({ error: "Failed to generate suggestions" });
+
+      // Return structured error with retry signal
+      res.status(500).json({
+        error: "Failed to generate suggestions",
+        message: "Please try again or contact support",
+        fallback: true // Signal to client this is retryable
+      });
     }
   });
 

@@ -586,6 +586,7 @@ async function generateLLMSuggestions(params: {
   }
 
   const rawSuggestions = JSON.parse(fixedJson) as Array<{
+    summary?: string;
     prompt: string;
     mode: string;
     templateId?: string;
@@ -598,6 +599,7 @@ async function generateLLMSuggestions(params: {
   // Transform and validate suggestions
   return rawSuggestions.slice(0, maxSuggestions).map((s, index) => ({
     id: `suggestion-${Date.now()}-${index}`,
+    summary: s.summary || s.prompt.slice(0, 80) + '...',
     prompt: sanitizePrompt(s.prompt),
     mode: validateMode(s.mode),
     templateIds: s.templateId ? [s.templateId] : undefined,
@@ -702,6 +704,7 @@ IMPORTANT: These uploaded images should be incorporated into your ad concepts. C
   prompt += `
 ## Output Format
 Return a JSON array of ${maxSuggestions} suggestions. Each suggestion must have:
+- summary: One-line description of what the image shows in plain language (10-20 words, NO technical jargon)
 - prompt: A detailed image generation prompt (50-150 words)
 - mode: Either "exact_insert" (use template reference image) or "inspiration" (use template as style guide) or "standard" (no template)
 - templateId: The template ID if using a template, omit otherwise

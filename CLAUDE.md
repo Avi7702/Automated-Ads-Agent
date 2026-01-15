@@ -320,3 +320,69 @@ When completing a task, update this file with:
 1. Task status in the table above
 2. Any new key files added
 3. Any gotchas for the next agent
+
+---
+
+## Railway Deployment (API Access)
+
+**Production URL:** https://automated-ads-agent-production.up.railway.app
+**Health Check:** `/api/health`
+
+### API Credentials (DO NOT MODIFY)
+
+```
+Token: 4615359f-6328-413f-b418-4f0c6979161a
+Project ID: 772de8a1-ac15-4f2a-8fdb-766c78c41761
+Service ID: 28ce02bc-f4ad-4ea7-aab6-bffc98a47e2f
+Environment ID: 14f7ad84-cb42-4ec6-a9e5-29826e2f9882 (production)
+Project Name: surprising-smile
+Service Name: automated-ads-agent
+```
+
+### Authentication
+
+Railway uses `Project-Access-Token` header (NOT `Authorization: Bearer`):
+
+```bash
+curl -X POST https://backboard.railway.app/graphql/v2 \
+  -H "Content-Type: application/json" \
+  -H "Project-Access-Token: 4615359f-6328-413f-b418-4f0c6979161a" \
+  -d '{"query": "YOUR_GRAPHQL_QUERY"}'
+```
+
+### Common Operations
+
+**Check Deployment Status:**
+```bash
+curl -s -X POST https://backboard.railway.app/graphql/v2 \
+  -H "Content-Type: application/json" \
+  -H "Project-Access-Token: 4615359f-6328-413f-b418-4f0c6979161a" \
+  -d '{"query": "query { deployments(first: 3, input: { serviceId: \"28ce02bc-f4ad-4ea7-aab6-bffc98a47e2f\" }) { edges { node { id status createdAt } } } }"}'
+```
+
+**Trigger Redeploy:**
+```bash
+curl -s -X POST https://backboard.railway.app/graphql/v2 \
+  -H "Content-Type: application/json" \
+  -H "Project-Access-Token: 4615359f-6328-413f-b418-4f0c6979161a" \
+  -d '{"query": "mutation { serviceInstanceRedeploy(serviceId: \"28ce02bc-f4ad-4ea7-aab6-bffc98a47e2f\", environmentId: \"14f7ad84-cb42-4ec6-a9e5-29826e2f9882\") }"}'
+```
+
+**Check JS Bundle Hash (verify deployment):**
+```bash
+curl -s "https://automated-ads-agent-production.up.railway.app/" | grep -o 'assets/index-[^"]*\.js'
+```
+
+### Deployment Status Values
+
+- `INITIALIZING` - Starting build
+- `BUILDING` - Build in progress
+- `DEPLOYING` - Deploying to infrastructure
+- `SUCCESS` - Deployment complete
+- `FAILED` - Build/deploy failed
+- `REMOVED` - Old deployment removed
+
+### Docs
+
+- [Railway Public API Guide](https://docs.railway.com/guides/public-api)
+- [Manage Deployments](https://docs.railway.com/guides/manage-deployments)
