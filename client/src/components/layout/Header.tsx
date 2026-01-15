@@ -8,7 +8,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface HeaderProps {
-  currentPage?: "studio" | "gallery" | "products" | "template-library" | "installation-scenarios" | "brand-images" | "learn-from-winners" | "settings" | "templates" | "generation";
+  currentPage?: "studio" | "library" | "settings";
 }
 
 export function Header({ currentPage }: HeaderProps) {
@@ -17,30 +17,22 @@ export function Header({ currentPage }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Determine active page from location if not provided
+  // Phase 3: Simplified to 3 main routes
   const activePage = currentPage || (() => {
-    if (location === "/") return "studio";
-    if (location === "/gallery") return "gallery";
-    if (location === "/products") return "products";
-    if (location === "/template-library") return "template-library";
-    if (location === "/installation-scenarios") return "installation-scenarios";
-    if (location === "/brand-images") return "brand-images";
-    if (location === "/learn-from-winners") return "learn-from-winners";
-    if (location === "/usage") return "usage";
-    if (location === "/settings") return "settings";
-    if (location.startsWith("/templates") || location.startsWith("/admin/templates")) return "templates";
-    if (location.startsWith("/generation/")) return "generation";
+    if (location === "/" || location.startsWith("/?")) return "studio";
+    if (location.startsWith("/library")) return "library";
+    if (location.startsWith("/settings")) return "settings";
+    // Legacy routes map to their consolidated equivalents
+    if (location === "/gallery" || location.startsWith("/generation/")) return "studio";
+    if (["/products", "/brand-images", "/template-library", "/templates", "/installation-scenarios", "/learn-from-winners"].includes(location)) return "library";
+    if (location === "/usage" || location === "/settings/api-keys") return "settings";
     return "studio";
   })();
 
+  // Phase 3: Simplified navigation - 3 main items
   const navItems = [
     { id: "studio", label: "Studio", href: "/" },
-    { id: "gallery", label: "History", href: "/gallery" },
-    { id: "products", label: "Products", href: "/products" },
-    { id: "template-library", label: "Templates", href: "/template-library" },
-    { id: "installation-scenarios", label: "Scenarios", href: "/installation-scenarios" },
-    { id: "brand-images", label: "Brand Images", href: "/brand-images" },
-    { id: "learn-from-winners", label: "Patterns", href: "/learn-from-winners" },
-    { id: "usage", label: "Usage", href: "/usage" },
+    { id: "library", label: "Library", href: "/library" },
     { id: "settings", label: "Settings", href: "/settings" },
   ];
 

@@ -23,6 +23,9 @@ import TemplateLibrary from "@/pages/TemplateLibrary";
 import SystemMap from "@/pages/SystemMap";
 import ApiKeySettings from "@/pages/ApiKeySettings";
 import LearnFromWinners from "@/pages/LearnFromWinners";
+// Phase 3 consolidated pages
+import Library from "@/pages/Library";
+import Settings from "@/pages/Settings";
 
 function Router() {
   return (
@@ -37,75 +40,62 @@ function Router() {
         </ProtectedRoute>
       </Route>
 
-      <Route path="/gallery">
+      {/* Phase 3: Consolidated Routes */}
+      <Route path="/library">
         <ProtectedRoute>
-          <Gallery />
-        </ProtectedRoute>
-      </Route>
-
-      <Route path="/generation/:id">
-        <ProtectedRoute>
-          <GenerationDetail />
-        </ProtectedRoute>
-      </Route>
-
-      <Route path="/usage">
-        <ProtectedRoute>
-          <QuotaDashboard />
-        </ProtectedRoute>
-      </Route>
-
-      <Route path="/products">
-        <ProtectedRoute>
-          <ProductLibrary />
-        </ProtectedRoute>
-      </Route>
-
-      <Route path="/installation-scenarios">
-        <ProtectedRoute>
-          <InstallationScenarios />
-        </ProtectedRoute>
-      </Route>
-
-      <Route path="/brand-images">
-        <ProtectedRoute>
-          <BrandImageLibrary />
-        </ProtectedRoute>
-      </Route>
-
-      <Route path="/template-library">
-        <ProtectedRoute>
-          <TemplateLibrary />
-        </ProtectedRoute>
-      </Route>
-
-      <Route path="/learn-from-winners">
-        <ProtectedRoute>
-          <LearnFromWinners />
-        </ProtectedRoute>
-      </Route>
-
-      <Route path="/settings/api-keys">
-        <ProtectedRoute>
-          <ApiKeySettings />
+          <Library />
         </ProtectedRoute>
       </Route>
 
       <Route path="/settings">
         <ProtectedRoute>
-          <BrandProfile />
+          <Settings />
         </ProtectedRoute>
       </Route>
 
+      {/* Legacy routes - redirect to consolidated pages */}
+      <Route path="/gallery">
+        <Redirect to="/?view=history" />
+      </Route>
+
+      <Route path="/generation/:id">
+        {(params: { id: string }) => <Redirect to={`/?generation=${params.id}`} />}
+      </Route>
+
+      <Route path="/usage">
+        <Redirect to="/settings?section=usage" />
+      </Route>
+
+      <Route path="/products">
+        <Redirect to="/library?tab=products" />
+      </Route>
+
+      <Route path="/installation-scenarios">
+        <Redirect to="/library?tab=scenarios" />
+      </Route>
+
+      <Route path="/brand-images">
+        <Redirect to="/library?tab=brand-images" />
+      </Route>
+
+      <Route path="/template-library">
+        <Redirect to="/library?tab=templates" />
+      </Route>
+
+      <Route path="/learn-from-winners">
+        <Redirect to="/library?tab=patterns" />
+      </Route>
+
+      <Route path="/settings/api-keys">
+        <Redirect to="/settings?section=api-keys" />
+      </Route>
+
       <Route path="/brand-profile">
-        {/* Redirect for backward compatibility */}
         <Redirect to="/settings" />
       </Route>
 
       <Route path="/templates">
-        <ProtectedRoute>
-          <Templates />
-        </ProtectedRoute>
+        <Redirect to="/library?tab=scene-templates" />
       </Route>
 
       <Route path="/admin/templates">

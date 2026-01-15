@@ -1,0 +1,1 @@
+export { SmartCanvas } from './SmartCanvas';

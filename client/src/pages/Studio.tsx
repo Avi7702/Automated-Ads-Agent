@@ -40,6 +40,7 @@ import { HistoryTimeline } from "@/components/HistoryTimeline";
 import { SaveToCatalogDialog } from "@/components/SaveToCatalogDialog";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Header } from "@/components/layout/Header";
+import { StudioProvider } from "@/context/StudioContext";
 
 // Icons
 import {
@@ -903,6 +904,7 @@ export default function Studio() {
   ];
 
   return (
+    <StudioProvider>
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/20 selection:text-primary font-sans relative">
       {/* Background Ambience */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
@@ -2159,5 +2161,6 @@ export default function Studio() {
         </DialogContent>
       </Dialog>
     </div>
+    </StudioProvider>
   );
 }
