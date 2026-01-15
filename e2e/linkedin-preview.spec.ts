@@ -85,7 +85,8 @@ test.describe('LinkedIn Post Preview - Always Visible', () => {
     await expect(page.locator('text=Start New')).toBeVisible({ timeout: 90000 });
 
     // The LinkedIn Preview should have a "Generate Copy" button in the text placeholder
-    const generateCopyButton = page.locator('button:has-text("Generate Copy")');
+    // Using data-testid for stability (Phase 2 Task 3)
+    const generateCopyButton = page.locator('[data-testid="generate-copy-button-linkedin"]');
 
     // If visible, click it to generate copy
     if (await generateCopyButton.isVisible({ timeout: 5000 }).catch(() => false)) {

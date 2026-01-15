@@ -174,6 +174,7 @@ export function LinkedInPostPreview({
                     onGenerateCopy();
                   }}
                   disabled={isGeneratingCopy}
+                  data-testid="generate-copy-button-linkedin"
                   className="mt-2 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#0A66C2] hover:bg-[#0A66C2]/10 rounded transition-colors disabled:opacity-50"
                 >
                   {isGeneratingCopy ? (
