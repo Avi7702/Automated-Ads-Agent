@@ -78,10 +78,10 @@
 
 ## Phase 2: Duplication Removal 🟡 HIGH PRIORITY
 
-**Status:** 🚧 **IN PROGRESS** (Task 1/3 Complete)
+**Status:** 🚧 **IN PROGRESS** (Task 2/3 Complete)
 **Estimated Timeline:** Week 2-3
 **Priority:** 🟡 High
-**Current:** Week 1 - Route duplication removed
+**Current:** Week 2-3 - Prompt endpoint duplication removed
 
 ### Verified Duplications to Remove (3 real, 3 false positives)
 
@@ -89,7 +89,7 @@
 
 | # | Duplication | Status | Priority | Estimated Effort |
 |---|-------------|--------|----------|------------------|
-| 1 | Duplicate prompt endpoints (`/api/prompt-suggestions` vs `/api/idea-bank/suggest`) | ⏸️ Pending | 🟡 High | 2-3 hours |
+| 1 | Duplicate prompt endpoints (`/api/prompt-suggestions` vs `/api/idea-bank/suggest`) | ✅ Complete | 🟡 High | 3 hours (actual) |
 | 2 | Duplicate copy generation (inline Studio.tsx vs CopywritingPanel) | ⏸️ Pending | 🟡 High | 3-4 hours |
 | 3 | Duplicate settings routes (`/settings` vs `/brand-profile`) | ✅ Complete | 🟢 Low | 2 hours (actual) |
 
@@ -103,11 +103,14 @@
 
 ### Tasks to Complete
 
-1. ⏸️ Deprecate `/api/prompt-suggestions` endpoint
-   - Remove from `server/routes.ts` line 1466
-   - Remove fallback logic from `IdeaBankPanel.tsx` lines 516-526
-   - Add error handling for main endpoint failures
-   - Update tests
+1. ✅ Deprecate `/api/prompt-suggestions` endpoint (COMPLETE - Jan 14, 2026)
+   - ✅ Enhanced error handling in `/api/idea-bank/suggest` with structured responses
+   - ✅ Removed legacy endpoint from `server/routes.ts` (62 lines deleted)
+   - ✅ Replaced fallback with retry logic in `IdeaBankPanel.tsx` (47 lines removed)
+   - ✅ Created feature flags middleware (`server/middleware/featureFlags.ts`)
+   - ✅ No tests required updates (verified with grep)
+   - ✅ Build passes with no TypeScript errors
+   - **Commit:** `536d195` on branch `main`
 
 2. ⏸️ Remove inline copy generation from Studio.tsx
    - Delete `handleGenerateCopy()` function (lines 692-740)
@@ -128,11 +131,11 @@
 
 ### Success Criteria
 
-- ⏸️ Only 1 prompt suggestion system exists (Task 1 pending)
+- ✅ Only 1 prompt suggestion system exists (Task 1 COMPLETE)
 - ⏸️ Only 1 copy generation flow exists (Task 2 pending)
 - ✅ Only 1 settings route exists (Task 3 COMPLETE)
-- ✅ All tests pass after changes (Task 3 verified)
-- ✅ No broken links or references (Task 3 verified)
+- ✅ All tests pass after changes (Tasks 1 & 3 verified)
+- ✅ No broken links or references (Tasks 1 & 3 verified)
 
 ---
 
