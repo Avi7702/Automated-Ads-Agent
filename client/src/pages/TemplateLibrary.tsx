@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -58,6 +57,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Header } from "@/components/layout/Header";
 import { AddTemplateModal } from "@/components/AddTemplateModal";
+
+interface TemplateLibraryProps {
+  embedded?: boolean;
+  selectedId?: string | null;
+}
 
 // Platform icons mapping
 const platformIcons: Record<string, typeof Instagram> = {
@@ -407,7 +411,7 @@ function TemplateSkeleton() {
   );
 }
 
-export default function TemplateLibrary() {
+export default function TemplateLibrary({ embedded = false, selectedId }: TemplateLibraryProps) {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
@@ -483,120 +487,109 @@ export default function TemplateLibrary() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* Background */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-purple-500/5 dark:bg-purple-500/10 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-pink-500/5 dark:bg-pink-500/10 blur-[120px] rounded-full" />
+  const mainContent = (
+    <>
+      {/* Title and Actions */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-display font-bold">Template Library</h1>
+          <p className="text-muted-foreground mt-1">
+            High-performing ad templates for inspiration
+          </p>
+        </div>
+        <Button className="gap-2" onClick={() => setIsAddModalOpen(true)}>
+          <Plus className="w-4 h-4" />
+          Add Template
+        </Button>
       </div>
 
-      <Header currentPage="template-library" />
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-8">
+        {/* Search */}
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search templates..."
+            className="pl-10"
+          />
+        </div>
 
-      {/* Content */}
-      <main className="container max-w-7xl mx-auto px-4 sm:px-6 pt-24 pb-20 relative z-10">
-        {/* Title and Actions */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+        {/* Category Filter */}
+        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <SelectTrigger className="w-full sm:w-40">
+            <SelectValue placeholder="Category" />
+          </SelectTrigger>
+          <SelectContent>
+            {categories.map((category) => (
+              <SelectItem key={category} value={category}>
+                <span className="capitalize">{category === "all" ? "All Categories" : category}</span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Platform Filter */}
+        <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
+          <SelectTrigger className="w-full sm:w-40">
+            <SelectValue placeholder="Platform" />
+          </SelectTrigger>
+          <SelectContent>
+            {platforms.map((platform) => (
+              <SelectItem key={platform} value={platform}>
+                <span className="capitalize">{platform === "all" ? "All Platforms" : platform}</span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Templates Grid */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <TemplateSkeleton key={i} />
+          ))}
+        </div>
+      ) : !filteredTemplates || filteredTemplates.length === 0 ? (
+        <div className="flex flex-col items-center justify-center min-h-[50vh] text-center space-y-4">
+          <div className="w-20 h-20 rounded-2xl bg-secondary flex items-center justify-center">
+            <Layout className="w-10 h-10 text-muted-foreground" />
+          </div>
           <div>
-            <h1 className="text-3xl font-display font-bold">Template Library</h1>
-            <p className="text-muted-foreground mt-1">
-              High-performing ad templates for inspiration
+            <h2 className="text-2xl font-display font-medium mb-2">
+              {searchQuery || selectedCategory !== "all" || selectedPlatform !== "all"
+                ? "No matching templates"
+                : "No templates yet"}
+            </h2>
+            <p className="text-muted-foreground">
+              {searchQuery || selectedCategory !== "all" || selectedPlatform !== "all"
+                ? "Try adjusting your filters"
+                : "Add high-performing ad templates to build your library"}
             </p>
           </div>
-          <Button className="gap-2" onClick={() => setIsAddModalOpen(true)}>
-            <Plus className="w-4 h-4" />
-            Add Template
-          </Button>
+          {!searchQuery && selectedCategory === "all" && selectedPlatform === "all" && (
+            <Button className="gap-2" onClick={() => setIsAddModalOpen(true)}>
+              <Plus className="w-4 h-4" />
+              Add First Template
+            </Button>
+          )}
         </div>
-
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-8">
-          {/* Search */}
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search templates..."
-              className="pl-10"
-            />
-          </div>
-
-          {/* Category Filter */}
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-full sm:w-40">
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((category) => (
-                <SelectItem key={category} value={category}>
-                  <span className="capitalize">{category === "all" ? "All Categories" : category}</span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Platform Filter */}
-          <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
-            <SelectTrigger className="w-full sm:w-40">
-              <SelectValue placeholder="Platform" />
-            </SelectTrigger>
-            <SelectContent>
-              {platforms.map((platform) => (
-                <SelectItem key={platform} value={platform}>
-                  <span className="capitalize">{platform === "all" ? "All Platforms" : platform}</span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Templates Grid */}
-        {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-              <TemplateSkeleton key={i} />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+          <AnimatePresence mode="popLayout">
+            {filteredTemplates.map((template) => (
+              <TemplateCard
+                key={template.id}
+                template={template}
+                onClick={() => handleTemplateClick(template)}
+                onDelete={() => handleDelete(template)}
+              />
             ))}
-          </div>
-        ) : !filteredTemplates || filteredTemplates.length === 0 ? (
-          <div className="flex flex-col items-center justify-center min-h-[50vh] text-center space-y-4">
-            <div className="w-20 h-20 rounded-2xl bg-secondary flex items-center justify-center">
-              <Layout className="w-10 h-10 text-muted-foreground" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-display font-medium mb-2">
-                {searchQuery || selectedCategory !== "all" || selectedPlatform !== "all"
-                  ? "No matching templates"
-                  : "No templates yet"}
-              </h2>
-              <p className="text-muted-foreground">
-                {searchQuery || selectedCategory !== "all" || selectedPlatform !== "all"
-                  ? "Try adjusting your filters"
-                  : "Add high-performing ad templates to build your library"}
-              </p>
-            </div>
-            {!searchQuery && selectedCategory === "all" && selectedPlatform === "all" && (
-              <Button className="gap-2" onClick={() => setIsAddModalOpen(true)}>
-                <Plus className="w-4 h-4" />
-                Add First Template
-              </Button>
-            )}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-            <AnimatePresence mode="popLayout">
-              {filteredTemplates.map((template) => (
-                <TemplateCard
-                  key={template.id}
-                  template={template}
-                  onClick={() => handleTemplateClick(template)}
-                  onDelete={() => handleDelete(template)}
-                />
-              ))}
-            </AnimatePresence>
-          </div>
-        )}
-      </main>
+          </AnimatePresence>
+        </div>
+      )}
 
       {/* Template Detail Modal */}
       <TemplateDetailModal
@@ -611,6 +604,27 @@ export default function TemplateLibrary() {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
       />
+    </>
+  );
+
+  if (embedded) {
+    return mainContent;
+  }
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Background */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-purple-500/5 dark:bg-purple-500/10 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-pink-500/5 dark:bg-pink-500/10 blur-[120px] rounded-full" />
+      </div>
+
+      <Header currentPage="template-library" />
+
+      {/* Content */}
+      <main className="container max-w-7xl mx-auto px-4 sm:px-6 pt-24 pb-20 relative z-10">
+        {mainContent}
+      </main>
     </div>
   );
 }

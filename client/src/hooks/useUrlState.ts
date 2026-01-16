@@ -14,12 +14,17 @@ import { useLocation } from 'wouter';
 export function useUrlState() {
   const [location, setLocation] = useLocation();
 
-  // Parse current URL search params
+  // Parse current URL search params from window.location
+  // The location dependency ensures re-parsing when wouter updates the route
+  // This is safe because setLocation synchronously updates window.location
   const searchParams = useMemo(() => {
-    // Handle both browser and test environments
-    const search = typeof window !== 'undefined' ? window.location.search : '';
-    return new URLSearchParams(search);
-  }, [location]); // Re-parse when location changes
+    if (typeof window === 'undefined') {
+      return new URLSearchParams();
+    }
+    // Use window.location.search as the single source of truth
+    // This ensures we always have the current query params even with hash routing
+    return new URLSearchParams(window.location.search);
+  }, [location]);
 
   /**
    * Get a single query parameter value

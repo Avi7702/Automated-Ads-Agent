@@ -18,7 +18,11 @@ interface ApiKeysResponse {
   keys: ApiKeyInfo[];
 }
 
-export default function ApiKeySettings() {
+interface ApiKeySettingsProps {
+  embedded?: boolean;
+}
+
+export default function ApiKeySettings({ embedded = false }: ApiKeySettingsProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -178,48 +182,18 @@ export default function ApiKeySettings() {
 
   const editingKeyInfo = editingService ? getKeyInfo(editingService) : null;
 
-  return (
-    <div className="min-h-screen bg-background text-foreground selection:bg-primary/20 selection:text-primary font-sans overflow-hidden relative">
-      {/* Background Ambience */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/5 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-500/5 blur-[120px] rounded-full" />
-      </div>
-
-      <Header currentPage="settings" />
-
-      <main className="container max-w-4xl mx-auto px-6 pt-24 pb-20 relative z-10">
-        {/* Back Button */}
-        <div className="mb-6">
-          <Link href="/settings">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Settings
-            </Button>
-          </Link>
-        </div>
-
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 rounded-lg bg-primary/10">
-            <KeyRound className="w-6 h-6 text-primary" />
-          </div>
-          <h1 className="text-2xl font-semibold text-foreground">API Key Settings</h1>
-        </div>
-        <p className="text-muted-foreground mb-8">
-          Manage your API keys for external services. Custom keys use your own
-          quota and billing.
-        </p>
-
-        {/* Security Notice */}
-        <Alert className="mb-8">
-          <ShieldCheck className="h-4 w-4" />
-          <AlertTitle>Security</AlertTitle>
-          <AlertDescription>
-            Your API keys are encrypted with AES-256-GCM before storage. Keys
-            are never logged or exposed in API responses after saving.
-          </AlertDescription>
-        </Alert>
+  // Content shared between embedded and standalone modes
+  const content = (
+    <>
+      {/* Security Notice */}
+      <Alert className="mb-8">
+        <ShieldCheck className="h-4 w-4" />
+        <AlertTitle>Security</AlertTitle>
+        <AlertDescription>
+          Your API keys are encrypted with AES-256-GCM before storage. Keys
+          are never logged or exposed in API responses after saving.
+        </AlertDescription>
+      </Alert>
 
         {/* Error State */}
         {error && (
@@ -269,34 +243,33 @@ export default function ApiKeySettings() {
           </div>
         )}
 
-        {/* Info Section */}
-        <div className="mt-12 p-6 rounded-xl border bg-card/50">
-          <h2 className="font-semibold mb-3">How It Works</h2>
-          <ul className="space-y-2 text-sm text-muted-foreground">
-            <li className="flex items-start gap-2">
-              <span className="text-primary mt-0.5">1.</span>
-              <span>
-                <strong className="text-foreground">Default keys</strong> are
-                shared across all users with rate limits.
-              </span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-primary mt-0.5">2.</span>
-              <span>
-                <strong className="text-foreground">Custom keys</strong> give
-                you dedicated quota and are billed to your account.
-              </span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-primary mt-0.5">3.</span>
-              <span>
-                <strong className="text-foreground">Remove</strong> a custom
-                key anytime to revert to the default.
-              </span>
-            </li>
-          </ul>
-        </div>
-      </main>
+      {/* Info Section */}
+      <div className="mt-12 p-6 rounded-xl border bg-card/50">
+        <h2 className="font-semibold mb-3">How It Works</h2>
+        <ul className="space-y-2 text-sm text-muted-foreground">
+          <li className="flex items-start gap-2">
+            <span className="text-primary mt-0.5">1.</span>
+            <span>
+              <strong className="text-foreground">Default keys</strong> are
+              shared across all users with rate limits.
+            </span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-primary mt-0.5">2.</span>
+            <span>
+              <strong className="text-foreground">Custom keys</strong> give
+              you dedicated quota and are billed to your account.
+            </span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-primary mt-0.5">3.</span>
+            <span>
+              <strong className="text-foreground">Remove</strong> a custom
+              key anytime to revert to the default.
+            </span>
+          </li>
+        </ul>
+      </div>
 
       {/* Edit Form Dialog */}
       <ApiKeyForm
@@ -309,6 +282,50 @@ export default function ApiKeySettings() {
         validationError={formError}
         validationSuccess={formSuccess}
       />
+    </>
+  );
+
+  // Embedded mode - just render content
+  if (embedded) {
+    return content;
+  }
+
+  // Standalone mode - full page layout
+  return (
+    <div className="min-h-screen bg-background text-foreground selection:bg-primary/20 selection:text-primary font-sans overflow-hidden relative">
+      {/* Background Ambience */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/5 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-500/5 blur-[120px] rounded-full" />
+      </div>
+
+      <Header currentPage="settings" />
+
+      <main className="container max-w-4xl mx-auto px-6 pt-24 pb-20 relative z-10">
+        {/* Back Button */}
+        <div className="mb-6">
+          <Link href="/settings">
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Settings
+            </Button>
+          </Link>
+        </div>
+
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-2">
+          <div className="p-2 rounded-lg bg-primary/10">
+            <KeyRound className="w-6 h-6 text-primary" />
+          </div>
+          <h1 className="text-2xl font-semibold text-foreground">API Key Settings</h1>
+        </div>
+        <p className="text-muted-foreground mb-8">
+          Manage your API keys for external services. Custom keys use your own
+          quota and billing.
+        </p>
+
+        {content}
+      </main>
     </div>
   );
 }

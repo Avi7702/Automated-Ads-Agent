@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -40,6 +39,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Header } from "@/components/layout/Header";
+
+interface InstallationScenariosProps {
+  embedded?: boolean;
+  selectedId?: string | null;
+}
 
 // Scenario types
 const SCENARIO_TYPES = [
@@ -470,7 +474,7 @@ function ScenarioFormModal({
   );
 }
 
-export default function InstallationScenarios() {
+export default function InstallationScenarios({ embedded = false, selectedId }: InstallationScenariosProps) {
   const queryClient = useQueryClient();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingScenario, setEditingScenario] = useState<InstallationScenario | null>(null);
@@ -563,57 +567,46 @@ export default function InstallationScenarios() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* Background */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/5 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-500/5 blur-[120px] rounded-full" />
+  const mainContent = (
+    <>
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-display font-bold">Installation Scenarios</h1>
+          <p className="text-muted-foreground mt-1">
+            Define real-world usage contexts for your products
+          </p>
+        </div>
+        <Button onClick={handleOpenCreate}>
+          <Plus className="w-4 h-4 mr-2" />
+          New Scenario
+        </Button>
       </div>
 
-      <Header currentPage="settings" />
-
-      {/* Content */}
-      <main className="container max-w-6xl mx-auto px-6 pt-24 pb-20 relative z-10">
-        {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl font-display font-bold">Installation Scenarios</h1>
-            <p className="text-muted-foreground mt-1">
-              Define real-world usage contexts for your products
-            </p>
-          </div>
-          <Button onClick={handleOpenCreate}>
-            <Plus className="w-4 h-4 mr-2" />
-            New Scenario
-          </Button>
+      {/* Loading State */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <ScenarioSkeleton key={i} />
+          ))}
         </div>
-
-        {/* Loading State */}
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <ScenarioSkeleton key={i} />
+      ) : /* Empty State */ !scenarios || scenarios.length === 0 ? (
+        <EmptyState onCreateNew={handleOpenCreate} />
+      ) : (
+        /* Scenario Grid */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <AnimatePresence>
+            {scenarios.map(scenario => (
+              <ScenarioCard
+                key={scenario.id}
+                scenario={scenario}
+                onEdit={() => handleOpenEdit(scenario)}
+                onDelete={() => setDeleteConfirmId(scenario.id)}
+              />
             ))}
-          </div>
-        ) : /* Empty State */ !scenarios || scenarios.length === 0 ? (
-          <EmptyState onCreateNew={handleOpenCreate} />
-        ) : (
-          /* Scenario Grid */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <AnimatePresence>
-              {scenarios.map(scenario => (
-                <ScenarioCard
-                  key={scenario.id}
-                  scenario={scenario}
-                  onEdit={() => handleOpenEdit(scenario)}
-                  onDelete={() => setDeleteConfirmId(scenario.id)}
-                />
-              ))}
-            </AnimatePresence>
-          </div>
-        )}
-      </main>
+          </AnimatePresence>
+        </div>
+      )}
 
       {/* Form Modal */}
       <ScenarioFormModal
@@ -656,6 +649,27 @@ export default function InstallationScenarios() {
           </div>
         </DialogContent>
       </Dialog>
+    </>
+  );
+
+  if (embedded) {
+    return mainContent;
+  }
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Background */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/5 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-500/5 blur-[120px] rounded-full" />
+      </div>
+
+      <Header currentPage="settings" />
+
+      {/* Content */}
+      <main className="container max-w-6xl mx-auto px-6 pt-24 pb-20 relative z-10">
+        {mainContent}
+      </main>
     </div>
   );
 }

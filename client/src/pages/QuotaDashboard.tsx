@@ -1,7 +1,17 @@
 import { QuotaDashboard } from "@/components/quota";
 import { Header } from "@/components/layout/Header";
 
-export default function QuotaDashboardPage() {
+interface QuotaDashboardPageProps {
+  embedded?: boolean;
+}
+
+export default function QuotaDashboardPage({ embedded = false }: QuotaDashboardPageProps) {
+  // Embedded mode - just render content
+  if (embedded) {
+    return <QuotaDashboard />;
+  }
+
+  // Standalone mode - full page layout
   return (
     <div className="min-h-screen bg-background">
       <Header />

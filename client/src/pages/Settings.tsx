@@ -115,25 +115,13 @@ export default function Settings() {
 // These will be replaced with proper content extraction in future iterations
 
 function BrandProfileContent() {
-  return (
-    <div className="settings-content-wrapper">
-      <BrandProfile />
-    </div>
-  );
+  return <BrandProfile embedded />;
 }
 
 function ApiKeySettingsContent() {
-  return (
-    <div className="settings-content-wrapper">
-      <ApiKeySettings />
-    </div>
-  );
+  return <ApiKeySettings embedded />;
 }
 
 function QuotaDashboardContent() {
-  return (
-    <div className="settings-content-wrapper">
-      <QuotaDashboard />
-    </div>
-  );
+  return <QuotaDashboard embedded />;
 }

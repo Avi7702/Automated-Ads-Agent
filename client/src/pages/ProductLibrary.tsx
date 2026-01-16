@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
@@ -227,7 +226,12 @@ function ProductDetailModal({
   );
 }
 
-export default function ProductLibrary() {
+interface ProductLibraryProps {
+  embedded?: boolean;
+  selectedId?: string | null;
+}
+
+export default function ProductLibrary({ embedded = false, selectedId }: ProductLibraryProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -239,7 +243,7 @@ export default function ProductLibrary() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch products
-  const { data: products, isLoading, refetch } = useQuery<Product[]>({
+  const { data: products, isLoading, error, refetch } = useQuery<Product[]>({
     queryKey: ["products"],
     queryFn: async () => {
       const response = await fetch("/api/products");
@@ -305,19 +309,11 @@ export default function ProductLibrary() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* Background */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/5 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-500/5 blur-[120px] rounded-full" />
-      </div>
-
-      <Header currentPage="settings" />
-
-      {/* Content */}
-      <main className="container max-w-6xl mx-auto px-4 sm:px-6 pt-24 pb-20 relative z-10">
-        {/* Page Header */}
+  // Content to render (shared between embedded and standalone)
+  const content = (
+    <>
+      {/* Page Header - only show in standalone mode */}
+      {!embedded && (
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-display font-bold">Product Library</h1>
@@ -330,6 +326,17 @@ export default function ProductLibrary() {
             Add Product
           </Button>
         </div>
+      )}
+
+      {/* Add button in embedded mode */}
+      {embedded && (
+        <div className="flex justify-end mb-4">
+          <Button onClick={() => setIsAddModalOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Add Product
+          </Button>
+        </div>
+      )}
 
         {/* Search Bar */}
         <div className="mb-8">
@@ -357,8 +364,23 @@ export default function ProductLibrary() {
           )}
         </div>
 
-        {/* Loading State */}
-        {isLoading ? (
+        {/* Error State */}
+        {error ? (
+          <div className="flex flex-col items-center justify-center min-h-[50vh] text-center space-y-4">
+            <div className="w-20 h-20 rounded-2xl bg-destructive/10 flex items-center justify-center">
+              <Package className="w-10 h-10 text-destructive" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-display font-medium mb-2">Failed to load products</h2>
+              <p className="text-muted-foreground">
+                {error instanceof Error ? error.message : "An unexpected error occurred"}
+              </p>
+            </div>
+            <Button onClick={() => refetch()} variant="outline">
+              Try Again
+            </Button>
+          </div>
+        ) : /* Loading State */ isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
             {Array.from({ length: 8 }).map((_, index) => (
               <ProductSkeleton key={index} />
@@ -482,7 +504,6 @@ export default function ProductLibrary() {
             })}
           </div>
         )}
-      </main>
 
       {/* Product Detail Modal */}
       <ProductDetailModal
@@ -519,6 +540,28 @@ export default function ProductLibrary() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </>
+  );
+
+  // Embedded mode - just render content
+  if (embedded) {
+    return content;
+  }
+
+  // Standalone mode - full page layout
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Background */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/5 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-500/5 blur-[120px] rounded-full" />
+      </div>
+
+      <Header currentPage="settings" />
+
+      <main className="container max-w-6xl mx-auto px-4 sm:px-6 pt-24 pb-20 relative z-10">
+        {content}
+      </main>
     </div>
   );
 }

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -40,6 +39,11 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Header } from "@/components/layout/Header";
+
+interface BrandImageLibraryProps {
+  embedded?: boolean;
+  selectedId?: string | null;
+}
 
 // Image categories
 const IMAGE_CATEGORIES = [
@@ -585,7 +589,7 @@ function ImageDetailModal({
   );
 }
 
-export default function BrandImageLibrary() {
+export default function BrandImageLibrary({ embedded = false, selectedId }: BrandImageLibraryProps) {
   const queryClient = useQueryClient();
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<BrandImage | null>(null);
@@ -658,101 +662,91 @@ export default function BrandImageLibrary() {
     setIsDetailOpen(true);
   };
 
-  return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* Background */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/5 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-500/5 dark:bg-blue-500/10 blur-[120px] rounded-full" />
+  // Content that is shared between embedded and full-page modes
+  const content = (
+    <>
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-display font-bold">Brand Image Library</h1>
+          <p className="text-muted-foreground mt-1">
+            Manage your brand's visual assets for AI-powered ad generation
+          </p>
+        </div>
+        <Button onClick={() => setIsUploadOpen(true)}>
+          <Upload className="w-4 h-4 mr-2" />
+          Upload Image
+        </Button>
       </div>
 
-      <Header currentPage="settings" />
-
-      {/* Content */}
-      <main className="container max-w-6xl mx-auto px-6 pt-24 pb-20 relative z-10">
-        {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl font-display font-bold">Brand Image Library</h1>
-            <p className="text-muted-foreground mt-1">
-              Manage your brand's visual assets for AI-powered ad generation
-            </p>
+      {/* Filters */}
+      {images && images.length > 0 && (
+        <div className="flex items-center gap-4 mb-6">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">Filter:</span>
           </div>
-          <Button onClick={() => setIsUploadOpen(true)}>
-            <Upload className="w-4 h-4 mr-2" />
-            Upload Image
-          </Button>
-        </div>
-
-        {/* Filters */}
-        {images && images.length > 0 && (
-          <div className="flex items-center gap-4 mb-6">
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Filter:</span>
-            </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {IMAGE_CATEGORIES.filter(cat => usedCategories.includes(cat.value)).map(cat => (
-                  <SelectItem key={cat.value} value={cat.value}>
-                    {cat.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {categoryFilter !== "all" && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setCategoryFilter("all")}
-              >
-                <X className="w-4 h-4 mr-1" />
-                Clear
-              </Button>
-            )}
-          </div>
-        )}
-
-        {/* Loading State */}
-        {isLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <ImageSkeleton key={i} />
-            ))}
-          </div>
-        ) : /* Empty State */ !images || images.length === 0 ? (
-          <EmptyState onUpload={() => setIsUploadOpen(true)} />
-        ) : /* No Results */ filteredImages.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">No images in this category</p>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {IMAGE_CATEGORIES.filter(cat => usedCategories.includes(cat.value)).map(cat => (
+                <SelectItem key={cat.value} value={cat.value}>
+                  {cat.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {categoryFilter !== "all" && (
             <Button
-              variant="outline"
-              className="mt-4"
+              variant="ghost"
+              size="sm"
               onClick={() => setCategoryFilter("all")}
             >
-              Show All Images
+              <X className="w-4 h-4 mr-1" />
+              Clear
             </Button>
-          </div>
-        ) : (
-          /* Image Grid */
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            <AnimatePresence>
-              {filteredImages.map(image => (
-                <BrandImageCard
-                  key={image.id}
-                  image={image}
-                  onView={() => handleViewImage(image)}
-                  onDelete={() => setDeleteConfirmId(image.id)}
-                />
-              ))}
-            </AnimatePresence>
-          </div>
-        )}
-      </main>
+          )}
+        </div>
+      )}
+
+      {/* Loading State */}
+      {isLoading ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <ImageSkeleton key={i} />
+          ))}
+        </div>
+      ) : /* Empty State */ !images || images.length === 0 ? (
+        <EmptyState onUpload={() => setIsUploadOpen(true)} />
+      ) : /* No Results */ filteredImages.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">No images in this category</p>
+          <Button
+            variant="outline"
+            className="mt-4"
+            onClick={() => setCategoryFilter("all")}
+          >
+            Show All Images
+          </Button>
+        </div>
+      ) : (
+        /* Image Grid */
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          <AnimatePresence>
+            {filteredImages.map(image => (
+              <BrandImageCard
+                key={image.id}
+                image={image}
+                onView={() => handleViewImage(image)}
+                onDelete={() => setDeleteConfirmId(image.id)}
+              />
+            ))}
+          </AnimatePresence>
+        </div>
+      )}
 
       {/* Upload Modal */}
       <UploadModal
@@ -802,6 +796,29 @@ export default function BrandImageLibrary() {
           </div>
         </DialogContent>
       </Dialog>
+    </>
+  );
+
+  // Embedded mode: return just the content
+  if (embedded) {
+    return <div className="space-y-4">{content}</div>;
+  }
+
+  // Full page mode: return with wrapper, background, and header
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Background */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/5 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-500/5 dark:bg-blue-500/10 blur-[120px] rounded-full" />
+      </div>
+
+      <Header currentPage="settings" />
+
+      {/* Content */}
+      <main className="container max-w-6xl mx-auto px-6 pt-24 pb-20 relative z-10">
+        {content}
+      </main>
     </div>
   );
 }

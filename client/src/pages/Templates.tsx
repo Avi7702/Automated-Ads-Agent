@@ -6,9 +6,14 @@ import { Link, useLocation } from "wouter";
 import type { AdSceneTemplate } from "@shared/schema";
 import { Header } from "@/components/layout/Header";
 
+interface TemplatesProps {
+  embedded?: boolean;
+  selectedId?: string | null;
+}
+
 type GenerationMode = "exact_insert" | "inspiration";
 
-export default function Templates() {
+export default function Templates({ embedded = false, selectedId }: TemplatesProps) {
   const [, setLocation] = useLocation();
   const [selectedTemplate, setSelectedTemplate] = useState<AdSceneTemplate | null>(null);
   const [selectedMode, setSelectedMode] = useState<GenerationMode>("exact_insert");
@@ -35,29 +40,10 @@ export default function Templates() {
     setLocation(`/?templateId=${selectedTemplate.id}&mode=${selectedMode}`);
   };
 
-  return (
-    <div className="min-h-screen bg-background text-foreground selection:bg-primary/20 selection:text-primary font-sans overflow-hidden relative">
-      {/* Background Ambience */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/5 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-500/5 dark:bg-blue-500/10 blur-[120px] rounded-full" />
-      </div>
-
-      <Header currentPage="templates" />
-
-      <main className="container max-w-7xl mx-auto px-6 pt-24 pb-20 relative z-10">
-        {/* Back Button */}
-        <div className="mb-6">
-          <Link href="/">
-            <Button variant="ghost" size="sm" className="gap-2">
-              <ArrowLeft className="w-4 h-4" />
-              Back to Studio
-            </Button>
-          </Link>
-        </div>
-
-        {/* Selected Template Preview with Mode Selection */}
-        {selectedTemplate && (
+  const mainContent = (
+    <>
+      {/* Selected Template Preview with Mode Selection */}
+      {selectedTemplate && (
           <div className="mb-6 p-6 rounded-2xl border border-primary/30 bg-primary/5 backdrop-blur-sm">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Selected Template</h3>
@@ -167,11 +153,40 @@ export default function Templates() {
           </div>
         )}
 
-        {/* Template Library Component */}
-        <TemplateLibrary
-          onSelectTemplate={handleSelectTemplate}
-          selectedTemplateId={selectedTemplate?.id}
-        />
+      {/* Template Library Component */}
+      <TemplateLibrary
+        onSelectTemplate={handleSelectTemplate}
+        selectedTemplateId={selectedTemplate?.id}
+      />
+    </>
+  );
+
+  if (embedded) {
+    return mainContent;
+  }
+
+  return (
+    <div className="min-h-screen bg-background text-foreground selection:bg-primary/20 selection:text-primary font-sans overflow-hidden relative">
+      {/* Background Ambience */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/5 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-500/5 dark:bg-blue-500/10 blur-[120px] rounded-full" />
+      </div>
+
+      <Header currentPage="templates" />
+
+      <main className="container max-w-7xl mx-auto px-6 pt-24 pb-20 relative z-10">
+        {/* Back Button */}
+        <div className="mb-6">
+          <Link href="/">
+            <Button variant="ghost" size="sm" className="gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              Back to Studio
+            </Button>
+          </Link>
+        </div>
+
+        {mainContent}
       </main>
     </div>
   );

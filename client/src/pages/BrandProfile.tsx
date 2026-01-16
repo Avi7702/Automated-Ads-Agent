@@ -11,7 +11,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-export default function BrandProfile() {
+interface BrandProfileProps {
+  embedded?: boolean;
+}
+
+export default function BrandProfile({ embedded = false }: BrandProfileProps) {
+  // Embedded mode - just render content
+  if (embedded) {
+    return <BrandProfileDisplay className="max-w-3xl" />;
+  }
+
+  // Standalone mode - full page layout
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/20 selection:text-primary font-sans overflow-hidden relative">
       {/* Background Ambience */}

@@ -129,52 +129,28 @@ export default function Library() {
 }
 
 // Wrapper components that embed existing pages without their headers
-// These will be replaced with proper content extraction in future iterations
+// selectedId enables deep linking to specific items within each tab
 
 function ProductLibraryContent({ selectedId }: { selectedId: string | null }) {
-  return (
-    <div className="library-content-wrapper">
-      <ProductLibrary />
-    </div>
-  );
+  return <ProductLibrary embedded selectedId={selectedId} />;
 }
 
 function BrandImageLibraryContent({ selectedId }: { selectedId: string | null }) {
-  return (
-    <div className="library-content-wrapper">
-      <BrandImageLibrary />
-    </div>
-  );
+  return <BrandImageLibrary embedded selectedId={selectedId} />;
 }
 
 function TemplateLibraryContent({ selectedId }: { selectedId: string | null }) {
-  return (
-    <div className="library-content-wrapper">
-      <TemplateLibrary />
-    </div>
-  );
+  return <TemplateLibrary embedded selectedId={selectedId} />;
 }
 
 function SceneTemplatesContent({ selectedId }: { selectedId: string | null }) {
-  return (
-    <div className="library-content-wrapper">
-      <Templates />
-    </div>
-  );
+  return <Templates embedded selectedId={selectedId} />;
 }
 
 function ScenariosContent({ selectedId }: { selectedId: string | null }) {
-  return (
-    <div className="library-content-wrapper">
-      <InstallationScenarios />
-    </div>
-  );
+  return <InstallationScenarios embedded selectedId={selectedId} />;
 }
 
 function PatternsContent({ selectedId }: { selectedId: string | null }) {
-  return (
-    <div className="library-content-wrapper">
-      <LearnFromWinners />
-    </div>
-  );
+  return <LearnFromWinners embedded selectedId={selectedId} />;
 }

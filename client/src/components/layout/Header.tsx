@@ -25,7 +25,7 @@ export function Header({ currentPage }: HeaderProps) {
     // Legacy routes map to their consolidated equivalents
     if (location === "/gallery" || location.startsWith("/generation/")) return "studio";
     if (["/products", "/brand-images", "/template-library", "/templates", "/installation-scenarios", "/learn-from-winners"].includes(location)) return "library";
-    if (location === "/usage" || location === "/settings/api-keys") return "settings";
+    if (location === "/usage" || location === "/settings/api-keys" || location === "/brand-profile") return "settings";
     return "studio";
   })();
 

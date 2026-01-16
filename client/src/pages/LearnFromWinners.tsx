@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Learn from Winners - Pattern Library
  *
@@ -90,6 +89,11 @@ interface UploadMetadata {
   platform: string;
   industry?: string;
   engagementTier?: string;
+}
+
+interface LearnFromWinnersProps {
+  embedded?: boolean;
+  selectedId?: string | null;
 }
 
 // ============================================
@@ -503,7 +507,7 @@ function PatternSkeleton() {
 // MAIN PAGE COMPONENT
 // ============================================
 
-export default function LearnFromWinners() {
+export default function LearnFromWinners({ embedded = false, selectedId }: LearnFromWinnersProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -511,8 +515,8 @@ export default function LearnFromWinners() {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [platformFilter, setPlatformFilter] = useState<string>("all");
   const [currentUploadId, setCurrentUploadId] = useState<string | null>(null);
-  const uploadStatusDataData = useUploadStatus(currentUploadId);
-  const { isPolling } = uploadStatusDataData;
+  const uploadStatusData = useUploadStatus(currentUploadId);
+  const { isPolling } = uploadStatusData;
   const [selectedPattern, setSelectedPattern] = useState<LearnedAdPattern | null>(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
 
@@ -657,203 +661,212 @@ export default function LearnFromWinners() {
     window.location.href = `/?patternId=${pattern.id}`;
   };
 
+  const mainContent = (
+    <>
+      {/* Page Header */}
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+            <Brain className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-display font-semibold">Learn from Winners</h1>
+            <p className="text-sm text-muted-foreground">
+              Extract success patterns from high-performing ads
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Upload Zone */}
+      <div className="mb-8">
+        <AdaptiveUploadZone
+          patterns={patterns || []}
+          onUpload={handleUpload}
+          isUploading={isPolling}
+          uploadProgress={uploadStatusData?.progress || 0}
+          uploadStatus={uploadStatusData?.status}
+          uploadError={uploadStatusData?.error}
+        />
+      </div>
+
+      {/* Content */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <PatternSkeleton key={i} />
+          ))}
+        </div>
+      ) : error ? (
+        <div className="text-center py-12">
+          <AlertTriangle className="w-12 h-12 text-destructive mx-auto mb-4" />
+          <h3 className="text-lg font-medium mb-2">Failed to load patterns</h3>
+          <p className="text-muted-foreground mb-4">Please try refreshing the page.</p>
+          <Button variant="outline" onClick={() => queryClient.invalidateQueries({ queryKey: ["learned-patterns"] })}>
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Retry
+          </Button>
+        </div>
+      ) : patterns && patterns.length > 0 ? (
+        <>
+          {/* Filters & Search */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search patterns..."
+                className="pl-9"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {PATTERN_CATEGORIES.map((cat) => (
+                    <SelectItem key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={platformFilter} onValueChange={setPlatformFilter}>
+                <SelectTrigger className="w-36">
+                  <SelectValue placeholder="Platform" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Platforms</SelectItem>
+                  {PLATFORMS.map((plat) => (
+                    <SelectItem key={plat.value} value={plat.value}>
+                      {plat.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <div className="flex items-center border rounded-lg p-1">
+                <Button
+                  variant={viewMode === "grid" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("grid")}
+                >
+                  <Grid3X3 className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "list" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("list")}
+                >
+                  <List className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Results Count */}
+          <div className="text-sm text-muted-foreground mb-4">
+            {filteredPatterns?.length || 0} pattern{(filteredPatterns?.length || 0) !== 1 ? "s" : ""} found
+          </div>
+
+          {/* Pattern Grid */}
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
+            className={cn(
+              viewMode === "grid"
+                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                : "flex flex-col gap-4"
+            )}
+          >
+            <AnimatePresence mode="popLayout">
+              {filteredPatterns?.map((pattern) => (
+                <PatternCard
+                  key={pattern.id}
+                  pattern={pattern}
+                  onView={() => handleViewPattern(pattern)}
+                  onDelete={() => handleDeletePattern(pattern.id)}
+                  onApply={() => handleApplyPattern(pattern)}
+                />
+              ))}
+            </AnimatePresence>
+          </motion.div>
+        </>
+      ) : null}
+
+      {/* Pattern Detail Dialog */}
+      <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
+        <DialogContent className="sm:max-w-2xl">
+          {selectedPattern && (
+            <>
+              <DialogHeader>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <DialogTitle className="text-xl">{selectedPattern.name}</DialogTitle>
+                    <DialogDescription className="flex items-center gap-2 mt-1">
+                      <Badge variant="outline">
+                        {PATTERN_CATEGORIES.find(c => c.value === selectedPattern.category)?.label}
+                      </Badge>
+                      <Badge variant="secondary">{selectedPattern.platform}</Badge>
+                      {selectedPattern.industry && (
+                        <Badge variant="outline">{selectedPattern.industry}</Badge>
+                      )}
+                    </DialogDescription>
+                  </div>
+                  {selectedPattern.engagementTier && selectedPattern.engagementTier !== "unverified" && (
+                    <Badge className="bg-gradient-to-r from-yellow-500/20 dark:from-yellow-500/30 to-orange-500/20 dark:to-orange-500/30 border-yellow-500/30 dark:border-yellow-500/20">
+                      <TrendingUp className="w-3 h-3 mr-1" />
+                      {ENGAGEMENT_TIERS.find(t => t.value === selectedPattern.engagementTier)?.label}
+                    </Badge>
+                  )}
+                </div>
+              </DialogHeader>
+
+              <div className="py-4">
+                <PatternVisualization pattern={selectedPattern} />
+              </div>
+
+              <DialogFooter className="flex-col sm:flex-row gap-2">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mr-auto">
+                  <Zap className="w-4 h-4" />
+                  Used {selectedPattern.usageCount} times
+                  {selectedPattern.lastUsedAt && (
+                    <span>• Last used {new Date(selectedPattern.lastUsedAt).toLocaleDateString()}</span>
+                  )}
+                </div>
+                <Button variant="outline" onClick={() => setShowDetailDialog(false)}>
+                  Close
+                </Button>
+                <Button onClick={() => {
+                  handleApplyPattern(selectedPattern);
+                  setShowDetailDialog(false);
+                }}>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Apply Pattern
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+
+  if (embedded) {
+    return mainContent;
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
-
       <main className="container max-w-7xl mx-auto py-8 px-4 sm:px-6">
-        {/* Page Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
-              <Brain className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-display font-semibold">Learn from Winners</h1>
-              <p className="text-sm text-muted-foreground">
-                Extract success patterns from high-performing ads
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Upload Zone */}
-        <div className="mb-8">
-          <AdaptiveUploadZone
-            patterns={patterns || []}
-            onUpload={handleUpload}
-            isUploading={isPolling}
-            uploadProgress={uploadStatusData?.progress || 0}
-            uploadStatus={uploadStatusData?.status}
-            uploadError={uploadStatusData?.error}
-          />
-        </div>
-
-        {/* Content */}
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <PatternSkeleton key={i} />
-            ))}
-          </div>
-        ) : error ? (
-          <div className="text-center py-12">
-            <AlertTriangle className="w-12 h-12 text-destructive mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2">Failed to load patterns</h3>
-            <p className="text-muted-foreground mb-4">Please try refreshing the page.</p>
-            <Button variant="outline" onClick={() => queryClient.invalidateQueries({ queryKey: ["learned-patterns"] })}>
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Retry
-            </Button>
-          </div>
-        ) : patterns && patterns.length > 0 ? (
-          <>
-            {/* Filters & Search */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search patterns..."
-                  className="pl-9"
-                />
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="Category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Categories</SelectItem>
-                    {PATTERN_CATEGORIES.map((cat) => (
-                      <SelectItem key={cat.value} value={cat.value}>
-                        {cat.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={platformFilter} onValueChange={setPlatformFilter}>
-                  <SelectTrigger className="w-36">
-                    <SelectValue placeholder="Platform" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Platforms</SelectItem>
-                    {PLATFORMS.map((plat) => (
-                      <SelectItem key={plat.value} value={plat.value}>
-                        {plat.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <div className="flex items-center border rounded-lg p-1">
-                  <Button
-                    variant={viewMode === "grid" ? "secondary" : "ghost"}
-                    size="sm"
-                    onClick={() => setViewMode("grid")}
-                  >
-                    <Grid3X3 className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant={viewMode === "list" ? "secondary" : "ghost"}
-                    size="sm"
-                    onClick={() => setViewMode("list")}
-                  >
-                    <List className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* Results Count */}
-            <div className="text-sm text-muted-foreground mb-4">
-              {filteredPatterns?.length || 0} pattern{(filteredPatterns?.length || 0) !== 1 ? "s" : ""} found
-            </div>
-
-            {/* Pattern Grid */}
-            <motion.div
-              variants={staggerContainer}
-              initial="hidden"
-              animate="visible"
-              className={cn(
-                viewMode === "grid"
-                  ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-                  : "flex flex-col gap-4"
-              )}
-            >
-              <AnimatePresence mode="popLayout">
-                {filteredPatterns?.map((pattern) => (
-                  <PatternCard
-                    key={pattern.id}
-                    pattern={pattern}
-                    onView={() => handleViewPattern(pattern)}
-                    onDelete={() => handleDeletePattern(pattern.id)}
-                    onApply={() => handleApplyPattern(pattern)}
-                  />
-                ))}
-              </AnimatePresence>
-            </motion.div>
-          </>
-        ) : null}
-
-        {/* Pattern Detail Dialog */}
-        <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-          <DialogContent className="sm:max-w-2xl">
-            {selectedPattern && (
-              <>
-                <DialogHeader>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <DialogTitle className="text-xl">{selectedPattern.name}</DialogTitle>
-                      <DialogDescription className="flex items-center gap-2 mt-1">
-                        <Badge variant="outline">
-                          {PATTERN_CATEGORIES.find(c => c.value === selectedPattern.category)?.label}
-                        </Badge>
-                        <Badge variant="secondary">{selectedPattern.platform}</Badge>
-                        {selectedPattern.industry && (
-                          <Badge variant="outline">{selectedPattern.industry}</Badge>
-                        )}
-                      </DialogDescription>
-                    </div>
-                    {selectedPattern.engagementTier && selectedPattern.engagementTier !== "unverified" && (
-                      <Badge className="bg-gradient-to-r from-yellow-500/20 dark:from-yellow-500/30 to-orange-500/20 dark:to-orange-500/30 border-yellow-500/30 dark:border-yellow-500/20">
-                        <TrendingUp className="w-3 h-3 mr-1" />
-                        {ENGAGEMENT_TIERS.find(t => t.value === selectedPattern.engagementTier)?.label}
-                      </Badge>
-                    )}
-                  </div>
-                </DialogHeader>
-
-                <div className="py-4">
-                  <PatternVisualization pattern={selectedPattern} />
-                </div>
-
-                <DialogFooter className="flex-col sm:flex-row gap-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mr-auto">
-                    <Zap className="w-4 h-4" />
-                    Used {selectedPattern.usageCount} times
-                    {selectedPattern.lastUsedAt && (
-                      <span>• Last used {new Date(selectedPattern.lastUsedAt).toLocaleDateString()}</span>
-                    )}
-                  </div>
-                  <Button variant="outline" onClick={() => setShowDetailDialog(false)}>
-                    Close
-                  </Button>
-                  <Button onClick={() => {
-                    handleApplyPattern(selectedPattern);
-                    setShowDetailDialog(false);
-                  }}>
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Apply Pattern
-                  </Button>
-                </DialogFooter>
-              </>
-            )}
-          </DialogContent>
-        </Dialog>
+        {mainContent}
       </main>
     </div>
   );
