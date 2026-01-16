@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { LoginPage } from './pages/login.page';
 import { StudioPage } from './pages/studio.page';
 import { LibraryPage } from './pages/library.page';
 import { SettingsPage } from './pages/settings.page';
@@ -15,15 +14,11 @@ import { SettingsPage } from './pages/settings.page';
  */
 
 test.describe('Phase 3: Route Consolidation', () => {
-  // Setup: Login before each test
-  test.beforeEach(async ({ page, request }) => {
-    // Create demo user and login
-    await request.get('/api/auth/demo');
-
-    const loginPage = new LoginPage(page);
-    await loginPage.goto();
-    await loginPage.login('demo@company.com', 'demo123');
-    await loginPage.waitForRedirect();
+  // Use the stored auth state from auth.setup.ts
+  // No need to login before each test - Playwright handles this via storageState
+  test.beforeEach(async ({ page }) => {
+    // Wait for page to be ready
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test.describe('Main Routes', () => {
@@ -194,27 +189,28 @@ test.describe('Phase 3: Route Consolidation', () => {
   });
 
   test.describe('Navigation Highlighting', () => {
-    test('Studio nav item is active on root path', async ({ page }) => {
+    test('Studio nav item is highlighted on root path', async ({ page }) => {
       await page.goto('/');
       await page.waitForLoadState('networkidle');
 
-      const studioNav = page.locator('nav').getByText('Studio');
+      // The active nav item has bg-primary/10 class for highlighting
+      const studioNav = page.locator('nav span').filter({ hasText: 'Studio' });
       await expect(studioNav).toHaveClass(/bg-primary/);
     });
 
-    test('Library nav item is active on /library', async ({ page }) => {
+    test('Library nav item is highlighted on /library', async ({ page }) => {
       await page.goto('/library');
       await page.waitForLoadState('networkidle');
 
-      const libraryNav = page.locator('nav').getByText('Library');
+      const libraryNav = page.locator('nav span').filter({ hasText: 'Library' });
       await expect(libraryNav).toHaveClass(/bg-primary/);
     });
 
-    test('Settings nav item is active on /settings', async ({ page }) => {
+    test('Settings nav item is highlighted on /settings', async ({ page }) => {
       await page.goto('/settings');
       await page.waitForLoadState('networkidle');
 
-      const settingsNav = page.locator('nav').getByText('Settings');
+      const settingsNav = page.locator('nav span').filter({ hasText: 'Settings' });
       await expect(settingsNav).toHaveClass(/bg-primary/);
     });
   });

@@ -31,6 +31,11 @@ export default defineConfig({
     // Base URL for all tests
     baseURL: 'http://localhost:3000',
 
+    // Bypass rate limiting for E2E tests
+    extraHTTPHeaders: {
+      'x-e2e-test': 'true',
+    },
+
     // Collect trace when retrying the failed test
     trace: 'on-first-retry',
 

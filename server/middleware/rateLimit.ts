@@ -46,6 +46,11 @@ export function createRateLimiter(options: RateLimiterOptions = {}) {
   const store = stores[storeName];
 
   return (req: Request, res: Response, next: NextFunction) => {
+    // Skip rate limiting in test environment or for E2E tests with special header
+    if (process.env.NODE_ENV === 'test' || req.headers['x-e2e-test'] === 'true') {
+      return next();
+    }
+
     const key = req.ip || req.socket.remoteAddress || 'unknown';
     const now = Date.now();
 

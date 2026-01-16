@@ -21,12 +21,13 @@ export class LibraryPage {
     this.header = page.locator('header').first();
     this.pageTitle = page.locator('h1').filter({ hasText: 'Library' });
     this.tabsList = page.locator('[role="tablist"]');
-    this.productsTab = page.getByRole('tab', { name: /Products/i });
-    this.brandImagesTab = page.getByRole('tab', { name: /Brand Images/i });
-    this.templatesTab = page.getByRole('tab', { name: /Templates/i });
-    this.sceneTemplatesTab = page.getByRole('tab', { name: /Scenes/i });
-    this.scenariosTab = page.getByRole('tab', { name: /Scenarios/i });
-    this.patternsTab = page.getByRole('tab', { name: /Patterns/i });
+    // Select tabs by accessible name (text content)
+    this.productsTab = page.getByRole('tab', { name: 'Products' });
+    this.brandImagesTab = page.getByRole('tab', { name: 'Brand Images' });
+    this.templatesTab = page.getByRole('tab', { name: 'Templates' });
+    this.sceneTemplatesTab = page.getByRole('tab', { name: 'Scenes' });
+    this.scenariosTab = page.getByRole('tab', { name: 'Scenarios' });
+    this.patternsTab = page.getByRole('tab', { name: 'Patterns' });
   }
 
   /**

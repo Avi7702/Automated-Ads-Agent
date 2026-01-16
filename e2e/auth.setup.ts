@@ -11,15 +11,14 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const authFile = path.join(__dirname, '.auth', 'user.json');
 
-setup('authenticate as demo user', async ({ request, context }) => {
-  // Create demo user session via GET /api/auth/demo
-  // This endpoint creates or retrieves the demo user and establishes a session
-  const response = await request.get('/api/auth/demo');
+setup('authenticate as demo user', async ({ page }) => {
+  // Navigate to demo auth endpoint using browser context
+  // This ensures cookies are properly set in the browser
+  await page.goto('/api/auth/demo');
 
-  // Verify the request was successful
-  expect(response.ok()).toBeTruthy();
-
-  const data = await response.json();
+  // Get the response body (JSON is displayed as text in browser)
+  const content = await page.textContent('body');
+  const data = JSON.parse(content || '{}');
 
   // Verify we got a valid user back
   expect(data).toHaveProperty('id');
@@ -27,7 +26,7 @@ setup('authenticate as demo user', async ({ request, context }) => {
   expect(data.email).toBe('demo@company.com');
 
   // Save the storage state (cookies, session) for reuse in other tests
-  await context.storageState({ path: authFile });
+  await page.context().storageState({ path: authFile });
 
   console.log('Demo user authenticated successfully:', data.email);
 });

@@ -1042,3 +1042,68 @@ export {
   learnedPatternEngagementTierEnum,
   uploadStatusEnum,
 };
+
+// ============================================
+// CONTENT PLANNER TABLES
+// ============================================
+
+/**
+ * Content Planner Categories - Enum for the 6 content categories
+ */
+export const contentPlannerCategoryEnum = z.enum([
+  'product_showcase',
+  'educational',
+  'industry_insights',
+  'customer_success',
+  'company_updates',
+  'engagement'
+]);
+
+export const contentPlannerPlatformEnum = z.enum([
+  'linkedin',
+  'twitter',
+  'facebook',
+  'instagram',
+  'tiktok'
+]);
+
+/**
+ * Content Planner Posts - Tracks posts created using content planner templates
+ * Used for balance tracking across the 6 content categories
+ */
+export const contentPlannerPosts = pgTable("content_planner_posts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+
+  // Content categorization
+  category: varchar("category", { length: 50 }).notNull(), // product_showcase, educational, industry_insights, customer_success, company_updates, engagement
+  subType: varchar("sub_type", { length: 100 }).notNull(), // e.g., construction_best_practices, testimonials, etc.
+
+  // Platform (optional - user may not specify)
+  platform: varchar("platform", { length: 50 }), // linkedin, twitter, facebook, instagram, tiktok
+
+  // Optional notes
+  notes: text("notes"),
+
+  // When the post was marked as completed
+  postedAt: timestamp("posted_at").defaultNow().notNull(),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  // Index for efficient weekly balance queries
+  idxUserPostedAt: index("idx_content_planner_user_posted").on(table.userId, table.postedAt),
+  idxUserCategory: index("idx_content_planner_user_category").on(table.userId, table.category),
+}));
+
+// Insert schema
+export const insertContentPlannerPostSchema = createInsertSchema(contentPlannerPosts, {
+  category: contentPlannerCategoryEnum,
+  platform: contentPlannerPlatformEnum.optional(),
+}).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Type exports
+export type InsertContentPlannerPost = z.infer<typeof insertContentPlannerPostSchema>;
+export type ContentPlannerPost = typeof contentPlannerPosts.$inferSelect;
