@@ -546,7 +546,9 @@ export default function ContentPlanner() {
                       Mark as Posted
                     </Button>
                     <Button className="flex-1" asChild>
-                      <a href="/" target="_blank" rel="noopener noreferrer">
+                      <a
+                        href={`/?contentCategory=${encodeURIComponent(selectedTemplate.category)}&contentType=${encodeURIComponent(selectedTemplate.subType)}&suggestedPrompt=${encodeURIComponent(selectedTemplate.hookFormulas[0] || '')}`}
+                      >
                         <ExternalLink className="w-4 h-4 mr-2" />
                         Create in Studio
                       </a>

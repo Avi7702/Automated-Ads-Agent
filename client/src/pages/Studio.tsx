@@ -533,11 +533,17 @@ export default function Studio() {
         .then(res => res.json())
         .then(pattern => {
           // TODO: Add selectedPattern state and pass to IdeaBankPanel
-          console.log('Pattern loaded:', pattern);
         })
-        .catch(err => console.error('Failed to load pattern:', err));
+        .catch(() => {});
     }
-  }, [templates]);
+
+    // Handle content planner context
+    const suggestedPrompt = params.get('suggestedPrompt');
+    if (suggestedPrompt && !prompt) {
+      // Pre-fill prompt with suggested hook from Content Planner
+      setPrompt(suggestedPrompt);
+    }
+  }, [templates, prompt]);
 
   // Scroll tracking for context bar and sticky generate
   useEffect(() => {
