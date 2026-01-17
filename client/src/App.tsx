@@ -26,6 +26,8 @@ import LearnFromWinners from "@/pages/LearnFromWinners";
 // Phase 3 consolidated pages
 import Library from "@/pages/Library";
 import Settings from "@/pages/Settings";
+// Content Planner
+import ContentPlanner from "@/pages/ContentPlanner";
 
 function Router() {
   return (
@@ -50,6 +52,13 @@ function Router() {
       <Route path="/settings">
         <ProtectedRoute>
           <Settings />
+        </ProtectedRoute>
+      </Route>
+
+      {/* Content Planner - Strategic posting guide */}
+      <Route path="/content-planner">
+        <ProtectedRoute>
+          <ContentPlanner />
         </ProtectedRoute>
       </Route>
 

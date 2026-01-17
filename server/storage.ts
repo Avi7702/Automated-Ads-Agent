@@ -49,6 +49,9 @@ import {
   type InsertAdAnalysisUpload,
   type PatternApplicationHistory,
   type InsertPatternApplicationHistory,
+  // Content Planner types
+  type ContentPlannerPost,
+  type InsertContentPlannerPost,
   generations,
   generationUsage,
   products,
@@ -78,6 +81,8 @@ import {
   learnedAdPatterns,
   adAnalysisUploads,
   patternApplicationHistory,
+  // Content Planner tables
+  contentPlannerPosts,
 } from "@shared/schema";
 import { decryptApiKey } from "./services/encryptionService";
 import { db } from "./db";
@@ -291,6 +296,16 @@ export interface IStorage {
   createApplicationHistory(history: InsertPatternApplicationHistory): Promise<PatternApplicationHistory>;
   getPatternApplicationHistory(patternId: string): Promise<PatternApplicationHistory[]>;
   updateApplicationFeedback(id: string, rating: number, wasUsed: boolean, feedback?: string): Promise<PatternApplicationHistory>;
+
+  // ============================================
+  // CONTENT PLANNER OPERATIONS
+  // ============================================
+
+  // Content Planner Post CRUD operations
+  createContentPlannerPost(post: InsertContentPlannerPost): Promise<ContentPlannerPost>;
+  getContentPlannerPostsByUser(userId: string, startDate?: Date, endDate?: Date): Promise<ContentPlannerPost[]>;
+  getWeeklyBalance(userId: string): Promise<{ category: string; count: number }[]>;
+  deleteContentPlannerPost(id: string): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -1692,6 +1707,92 @@ export class DbStorage implements IStorage {
       .where(eq(patternApplicationHistory.id, id))
       .returning();
     return result;
+  }
+
+  // ============================================
+  // CONTENT PLANNER IMPLEMENTATIONS
+  // ============================================
+
+  /**
+   * Create a new content planner post (marks a post as completed)
+   */
+  async createContentPlannerPost(post: InsertContentPlannerPost): Promise<ContentPlannerPost> {
+    const [result] = await db
+      .insert(contentPlannerPosts)
+      .values(post)
+      .returning();
+    return result;
+  }
+
+  /**
+   * Get content planner posts for a user within a date range
+   * Defaults to last 7 days if no dates provided
+   */
+  async getContentPlannerPostsByUser(
+    userId: string,
+    startDate?: Date,
+    endDate?: Date
+  ): Promise<ContentPlannerPost[]> {
+    const conditions = [eq(contentPlannerPosts.userId, userId)];
+
+    // Default to last 7 days
+    const effectiveStartDate = startDate || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const effectiveEndDate = endDate || new Date();
+
+    conditions.push(gte(contentPlannerPosts.postedAt, effectiveStartDate));
+    conditions.push(lte(contentPlannerPosts.postedAt, effectiveEndDate));
+
+    return await db
+      .select()
+      .from(contentPlannerPosts)
+      .where(and(...conditions))
+      .orderBy(desc(contentPlannerPosts.postedAt));
+  }
+
+  /**
+   * Get weekly balance - count of posts per category for the current week
+   * Week starts on Monday
+   */
+  async getWeeklyBalance(userId: string): Promise<{ category: string; count: number }[]> {
+    // Calculate the start of the current week (Monday)
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const daysSinceMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - daysSinceMonday);
+    weekStart.setHours(0, 0, 0, 0);
+
+    // Get all posts from this week
+    const posts = await db
+      .select({
+        category: contentPlannerPosts.category,
+      })
+      .from(contentPlannerPosts)
+      .where(
+        and(
+          eq(contentPlannerPosts.userId, userId),
+          gte(contentPlannerPosts.postedAt, weekStart)
+        )
+      );
+
+    // Count by category
+    const countMap: Record<string, number> = {};
+    for (const post of posts) {
+      countMap[post.category] = (countMap[post.category] || 0) + 1;
+    }
+
+    // Return as array
+    return Object.entries(countMap).map(([category, count]) => ({
+      category,
+      count,
+    }));
+  }
+
+  /**
+   * Delete a content planner post
+   */
+  async deleteContentPlannerPost(id: string): Promise<void> {
+    await db.delete(contentPlannerPosts).where(eq(contentPlannerPosts.id, id));
   }
 }
 

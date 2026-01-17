@@ -8,7 +8,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface HeaderProps {
-  currentPage?: "studio" | "library" | "settings";
+  currentPage?: "studio" | "library" | "settings" | "content-planner";
 }
 
 export function Header({ currentPage }: HeaderProps) {
@@ -17,11 +17,12 @@ export function Header({ currentPage }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Determine active page from location if not provided
-  // Phase 3: Simplified to 3 main routes
+  // Phase 3: Simplified to 3 main routes + Content Planner
   const activePage = currentPage || (() => {
     if (location === "/" || location.startsWith("/?")) return "studio";
     if (location.startsWith("/library")) return "library";
     if (location.startsWith("/settings")) return "settings";
+    if (location.startsWith("/content-planner")) return "content-planner";
     // Legacy routes map to their consolidated equivalents
     if (location === "/gallery" || location.startsWith("/generation/")) return "studio";
     if (["/products", "/brand-images", "/template-library", "/templates", "/installation-scenarios", "/learn-from-winners"].includes(location)) return "library";
@@ -29,9 +30,10 @@ export function Header({ currentPage }: HeaderProps) {
     return "studio";
   })();
 
-  // Phase 3: Simplified navigation - 3 main items
+  // Phase 3: Simplified navigation - 4 main items (including Content Planner)
   const navItems = [
     { id: "studio", label: "Studio", href: "/" },
+    { id: "content-planner", label: "Content Planner", href: "/content-planner" },
     { id: "library", label: "Library", href: "/library" },
     { id: "settings", label: "Settings", href: "/settings" },
   ];

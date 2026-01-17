@@ -4723,6 +4723,191 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
 
   // ===== END LEARN FROM WINNERS ENDPOINTS =====
 
+  // ============================================
+  // CONTENT PLANNER ENDPOINTS
+  // ============================================
+
+  /**
+   * GET /api/content-planner/templates
+   * Returns all content templates with research data
+   */
+  app.get("/api/content-planner/templates", async (req, res) => {
+    try {
+      const { contentCategories, getAllTemplates } = await import("@shared/contentTemplates");
+      res.json({
+        categories: contentCategories,
+        templates: getAllTemplates(),
+      });
+    } catch (error: any) {
+      logger.error({ err: error }, 'Failed to get content planner templates');
+      res.status(500).json({ error: "Failed to get templates" });
+    }
+  });
+
+  /**
+   * GET /api/content-planner/balance
+   * Returns weekly post counts by category for the current user
+   */
+  app.get("/api/content-planner/balance", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const { contentCategories, calculateWeeklyBalance, suggestNextCategory } = await import("@shared/contentTemplates");
+
+      // Get posts from this week
+      const weeklyPosts = await storage.getWeeklyBalance(userId);
+
+      // Format for UI
+      const balance: Record<string, { current: number; target: number; percentage: number }> = {};
+      for (const category of contentCategories) {
+        const postData = weeklyPosts.find(p => p.category === category.id);
+        const current = postData?.count || 0;
+        balance[category.id] = {
+          current,
+          target: category.weeklyTarget,
+          percentage: category.weeklyTarget > 0 ? Math.round((current / category.weeklyTarget) * 100) : 0,
+        };
+      }
+
+      // Get suggested next category
+      const postsForSuggestion = weeklyPosts.map(p => ({ category: p.category }));
+      const suggested = suggestNextCategory(postsForSuggestion);
+
+      res.json({
+        balance,
+        suggested: {
+          categoryId: suggested.id,
+          categoryName: suggested.name,
+          reason: `You've posted ${balance[suggested.id]?.current || 0} of ${suggested.weeklyTarget} ${suggested.name.toLowerCase()} posts this week.`,
+        },
+        totalPosts: weeklyPosts.reduce((sum, p) => sum + p.count, 0),
+      });
+    } catch (error: any) {
+      logger.error({ err: error }, 'Failed to get content planner balance');
+      res.status(500).json({ error: "Failed to get balance" });
+    }
+  });
+
+  /**
+   * GET /api/content-planner/suggestion
+   * Returns the suggested next post type based on balance
+   */
+  app.get("/api/content-planner/suggestion", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const { suggestNextCategory, getRandomTemplate, contentCategories } = await import("@shared/contentTemplates");
+
+      // Get posts from this week
+      const weeklyPosts = await storage.getWeeklyBalance(userId);
+      const postsForSuggestion = weeklyPosts.map(p => ({ category: p.category }));
+
+      // Get suggested category
+      const suggested = suggestNextCategory(postsForSuggestion);
+
+      // Get a random template from that category
+      const template = getRandomTemplate(suggested.id);
+
+      // Get current count for this category
+      const currentCount = weeklyPosts.find(p => p.category === suggested.id)?.count || 0;
+
+      res.json({
+        category: {
+          id: suggested.id,
+          name: suggested.name,
+          percentage: suggested.percentage,
+          weeklyTarget: suggested.weeklyTarget,
+          currentCount,
+          bestPractices: suggested.bestPractices,
+        },
+        suggestedTemplate: template ? {
+          id: template.id,
+          title: template.title,
+          subType: template.subType,
+          description: template.description,
+          hookFormulas: template.hookFormulas.slice(0, 2), // Preview
+        } : null,
+        reason: `You've posted ${currentCount} of ${suggested.weeklyTarget} ${suggested.name.toLowerCase()} posts this week. This category needs attention.`,
+      });
+    } catch (error: any) {
+      logger.error({ err: error }, 'Failed to get content planner suggestion');
+      res.status(500).json({ error: "Failed to get suggestion" });
+    }
+  });
+
+  /**
+   * POST /api/content-planner/posts
+   * Marks a post as completed (tracks in the balance)
+   */
+  app.post("/api/content-planner/posts", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const { category, subType, platform, notes } = req.body;
+
+      // Validate category
+      const { contentCategories } = await import("@shared/contentTemplates");
+      const validCategory = contentCategories.find(c => c.id === category);
+      if (!validCategory) {
+        return res.status(400).json({ error: "Invalid category" });
+      }
+
+      // Create the post record
+      const post = await storage.createContentPlannerPost({
+        userId,
+        category,
+        subType: subType || 'general',
+        platform: platform || null,
+        notes: notes || null,
+        postedAt: new Date(),
+      });
+
+      res.status(201).json({
+        message: "Post recorded",
+        post,
+      });
+    } catch (error: any) {
+      logger.error({ err: error }, 'Failed to create content planner post');
+      res.status(500).json({ error: "Failed to record post" });
+    }
+  });
+
+  /**
+   * GET /api/content-planner/posts
+   * Returns the user's posts within a date range
+   */
+  app.get("/api/content-planner/posts", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const { startDate, endDate } = req.query;
+
+      const posts = await storage.getContentPlannerPostsByUser(
+        userId,
+        startDate ? new Date(startDate as string) : undefined,
+        endDate ? new Date(endDate as string) : undefined
+      );
+
+      res.json({ posts });
+    } catch (error: any) {
+      logger.error({ err: error }, 'Failed to get content planner posts');
+      res.status(500).json({ error: "Failed to get posts" });
+    }
+  });
+
+  /**
+   * DELETE /api/content-planner/posts/:id
+   * Deletes a post record (undo marking as completed)
+   */
+  app.delete("/api/content-planner/posts/:id", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteContentPlannerPost(id);
+      res.json({ message: "Post deleted" });
+    } catch (error: any) {
+      logger.error({ err: error }, 'Failed to delete content planner post');
+      res.status(500).json({ error: "Failed to delete post" });
+    }
+  });
+
+  // ===== END CONTENT PLANNER ENDPOINTS =====
+
   // Uses lazy-loading to prevent import-time errors
   (async () => {
     try {
