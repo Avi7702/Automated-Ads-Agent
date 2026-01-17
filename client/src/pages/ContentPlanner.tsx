@@ -647,7 +647,7 @@ function MarkAsPostedDialog({
                 <SelectValue placeholder="Select platform" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Not specified</SelectItem>
+                <SelectItem value="not_specified">Not specified</SelectItem>
                 <SelectItem value="linkedin">LinkedIn</SelectItem>
                 <SelectItem value="twitter">Twitter/X</SelectItem>
                 <SelectItem value="facebook">Facebook</SelectItem>
