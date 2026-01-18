@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
 
 /**
@@ -14,9 +14,15 @@ import { useLocation } from 'wouter';
 export function useUrlState() {
   const [location, setLocation] = useLocation();
 
+  // Version counter to force searchParams re-computation when we update query params
+  // This is needed because wouter's location only contains the pathname, not query params
+  // So when navigating within the same path (e.g., /settings?section=brand → /settings?section=usage),
+  // the location doesn't change and useMemo won't re-run without this trigger
+  const [urlVersion, setUrlVersion] = useState(0);
+
   // Parse current URL search params from window.location
   // The location dependency ensures re-parsing when wouter updates the route
-  // This is safe because setLocation synchronously updates window.location
+  // The urlVersion dependency ensures re-parsing when we programmatically update query params
   const searchParams = useMemo(() => {
     if (typeof window === 'undefined') {
       return new URLSearchParams();
@@ -24,7 +30,7 @@ export function useUrlState() {
     // Use window.location.search as the single source of truth
     // This ensures we always have the current query params even with hash routing
     return new URLSearchParams(window.location.search);
-  }, [location]);
+  }, [location, urlVersion]);
 
   /**
    * Get a single query parameter value
@@ -75,6 +81,7 @@ export function useUrlState() {
       const newLocation = newSearch ? `${basePath}?${newSearch}` : basePath;
 
       setLocation(newLocation);
+      setUrlVersion(v => v + 1); // Force searchParams re-computation
     },
     [searchParams, location, setLocation]
   );
@@ -100,6 +107,7 @@ export function useUrlState() {
       const newLocation = newSearch ? `${basePath}?${newSearch}` : basePath;
 
       setLocation(newLocation);
+      setUrlVersion(v => v + 1); // Force searchParams re-computation
     },
     [searchParams, location, setLocation]
   );
@@ -138,6 +146,7 @@ export function useUrlState() {
       const newLocation = newSearch ? `${basePath}?${newSearch}` : basePath;
 
       setLocation(newLocation);
+      setUrlVersion(v => v + 1); // Force searchParams re-computation
     },
     [searchParams, location, setLocation]
   );
@@ -165,6 +174,7 @@ export function useUrlState() {
       const newLocation = newSearch ? `${path}?${newSearch}` : path;
 
       setLocation(newLocation);
+      setUrlVersion(v => v + 1); // Force searchParams re-computation
     },
     [searchParams, setLocation]
   );
