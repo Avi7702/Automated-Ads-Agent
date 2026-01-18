@@ -359,6 +359,7 @@ export default function Studio() {
   // Ad Copy state for LinkedIn Preview
   const [generatedCopy, setGeneratedCopy] = useState<string>("");
   const [isGeneratingCopy, setIsGeneratingCopy] = useState(false);
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
 
   // Save to Catalog dialog state
   const [showSaveToCatalog, setShowSaveToCatalog] = useState(false);
@@ -526,6 +527,36 @@ export default function Studio() {
   // Parse query params for template/pattern deep linking
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const cpTemplateId = params.get('cpTemplateId');
+    const freshStart = params.get('fresh') === 'true';
+
+    // Handle fresh start - clear all state before loading template
+    if (freshStart && cpTemplateId) {
+      // Clear all existing state for a fresh start
+      setSelectedProducts([]);
+      setGeneratedCopy('');
+      setGeneratedImage(null);
+      setGeneratedImageUrl(null);
+      setPrompt('');
+      setSelectedTemplate(null);
+      setTempUploads([]);
+      setEditPrompt('');
+      setAskAIResponse(null);
+      setGenerationId(null);
+      setState('idle');
+      setSelectedSuggestion(null);
+      setGenerationRecipe(undefined);
+      setCpTemplate(null); // Reset so the template gets re-loaded below
+
+      // Also clear localStorage draft to prevent restoration
+      localStorage.removeItem('studio-prompt-draft');
+
+      // Remove the fresh param from URL to prevent re-triggering
+      const newParams = new URLSearchParams(window.location.search);
+      newParams.delete('fresh');
+      const newUrl = newParams.toString() ? `?${newParams.toString()}` : window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+    }
 
     // Handle template selection from /templates page
     const templateId = params.get('templateId');
@@ -546,8 +577,7 @@ export default function Studio() {
       }
     }
 
-    // Handle Content Planner template (cpTemplateId)
-    const cpTemplateId = params.get('cpTemplateId');
+    // Handle Content Planner template (cpTemplateId is already parsed above)
     if (cpTemplateId && !cpTemplate) {
       const contentPlannerTemplate = getTemplateById(cpTemplateId);
       if (contentPlannerTemplate) {
@@ -1823,6 +1853,16 @@ export default function Studio() {
                     }}
                     productNames={selectedProducts.map(p => p.name)}
                     hasProductsSelected={selectedProducts.length > 0 || tempUploads.length > 0}
+                    availableProducts={products}
+                    selectedProductIds={selectedProducts.map(p => p.id)}
+                    onProductSelectionChange={(productIds) => {
+                      const newProducts = products.filter(p => productIds.includes(p.id));
+                      setSelectedProducts(newProducts);
+                    }}
+                    onGenerateComplete={(result) => {
+                      if (result.copy?.caption) setGeneratedCopy(result.copy.caption);
+                      if (result.image?.imageUrl) setGeneratedImageUrl(result.image.imageUrl);
+                    }}
                   />
                 )}
 

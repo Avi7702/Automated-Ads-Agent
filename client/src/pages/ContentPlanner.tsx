@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLocation } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Header } from '@/components/layout/Header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +18,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Select,
   SelectContent,
@@ -125,11 +136,17 @@ const categoryColors: Record<string, string> = {
 export default function ContentPlanner() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   // State for modals
   const [selectedTemplate, setSelectedTemplate] = useState<ContentTemplate | null>(null);
   const [markAsPostedCategory, setMarkAsPostedCategory] = useState<string | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+
+  // State for Start Fresh warning modal
+  const [showStartFreshModal, setShowStartFreshModal] = useState(false);
+  const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
+  const [pendingTemplateName, setPendingTemplateName] = useState<string>('');
 
   // Fetch templates
   const { data: templatesData, isLoading: templatesLoading } = useQuery<{
@@ -196,6 +213,34 @@ export default function ContentPlanner() {
       title: 'Copied',
       description: 'Hook formula copied to clipboard.',
     });
+  };
+
+  // Handler to initiate "Create in Studio" flow with warning modal
+  const handleCreateInStudio = (templateId: string, templateName: string) => {
+    setPendingTemplateId(templateId);
+    setPendingTemplateName(templateName);
+    setShowStartFreshModal(true);
+  };
+
+  // Handler when user confirms "Start Fresh"
+  const handleConfirmStartFresh = () => {
+    if (pendingTemplateId) {
+      // Navigate to Studio with the template and fresh=true flag
+      setLocation(`/?cpTemplateId=${pendingTemplateId}&fresh=true`);
+    }
+    // Reset modal state
+    setShowStartFreshModal(false);
+    setPendingTemplateId(null);
+    setPendingTemplateName('');
+    // Close the template detail dialog if open
+    setSelectedTemplate(null);
+  };
+
+  // Handler when user cancels the modal
+  const handleCancelStartFresh = () => {
+    setShowStartFreshModal(false);
+    setPendingTemplateId(null);
+    setPendingTemplateName('');
   };
 
   if (templatesLoading || balanceLoading) {
@@ -545,11 +590,12 @@ export default function ContentPlanner() {
                       <Check className="w-4 h-4 mr-2" />
                       Mark as Posted
                     </Button>
-                    <Button className="flex-1" asChild>
-                      <a href={`/?cpTemplateId=${selectedTemplate.id}`}>
-                        <ExternalLink className="w-4 h-4 mr-2" />
-                        Create in Studio
-                      </a>
+                    <Button
+                      className="flex-1"
+                      onClick={() => handleCreateInStudio(selectedTemplate.id, selectedTemplate.title)}
+                    >
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      Create in Studio
                     </Button>
                   </div>
                 </div>
@@ -567,6 +613,28 @@ export default function ContentPlanner() {
           onSubmit={(data) => markAsPostedMutation.mutate(data)}
           isSubmitting={markAsPostedMutation.isPending}
         />
+
+        {/* Start Fresh Warning Modal */}
+        <AlertDialog open={showStartFreshModal} onOpenChange={setShowStartFreshModal}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Start Fresh with Template</AlertDialogTitle>
+              <AlertDialogDescription>
+                You're about to create content using:
+                <span className="block mt-2 font-medium text-foreground">
+                  "{pendingTemplateName}"
+                </span>
+                <span className="block mt-3">
+                  This will clear your current work and start fresh in the Studio.
+                </span>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={handleCancelStartFresh}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmStartFresh}>Start Fresh</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </main>
     </div>
   );
