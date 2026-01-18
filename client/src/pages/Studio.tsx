@@ -41,6 +41,8 @@ import { SaveToCatalogDialog } from "@/components/SaveToCatalogDialog";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Header } from "@/components/layout/Header";
 import { StudioProvider } from "@/context/StudioContext";
+import { ContentPlannerGuidance } from "@/components/ContentPlannerGuidance";
+import { getTemplateById, type ContentTemplate } from "@shared/contentTemplates";
 
 // Icons
 import {
@@ -381,6 +383,9 @@ export default function Studio() {
 
   const [selectedTemplateForMode, setSelectedTemplateForMode] = useState<AdSceneTemplate | null>(null);
 
+  // Content Planner template state (from cpTemplateId query param)
+  const [cpTemplate, setCpTemplate] = useState<ContentTemplate | null>(null);
+
   // Refs for scroll tracking
   const generateButtonRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
@@ -526,13 +531,41 @@ export default function Studio() {
       }
     }
 
-    // Handle content planner context
+    // Handle Content Planner template (cpTemplateId)
+    const cpTemplateId = params.get('cpTemplateId');
+    if (cpTemplateId && !cpTemplate) {
+      const contentPlannerTemplate = getTemplateById(cpTemplateId);
+      if (contentPlannerTemplate) {
+        setCpTemplate(contentPlannerTemplate);
+
+        // Auto-select platform from template's best platforms
+        if (contentPlannerTemplate.bestPlatforms.length > 0) {
+          const bestPlatform = contentPlannerTemplate.bestPlatforms[0].platform;
+          // Map to our platform names
+          const platformMap: Record<string, string> = {
+            'linkedin': 'LinkedIn',
+            'instagram': 'Instagram',
+            'facebook': 'Facebook',
+            'twitter': 'Twitter',
+            'tiktok': 'TikTok',
+          };
+          const mappedPlatform = platformMap[bestPlatform.toLowerCase()] || bestPlatform;
+          setPlatform(mappedPlatform);
+        }
+
+        // Pre-fill prompt with first example topic
+        if (contentPlannerTemplate.exampleTopics.length > 0 && !prompt) {
+          setPrompt(contentPlannerTemplate.exampleTopics[0]);
+        }
+      }
+    }
+
+    // Legacy: Handle suggestedPrompt (old format - now deprecated)
     const suggestedPrompt = params.get('suggestedPrompt');
-    if (suggestedPrompt && !prompt) {
-      // Pre-fill prompt with suggested hook from Content Planner
+    if (suggestedPrompt && !prompt && !cpTemplateId) {
       setPrompt(suggestedPrompt);
     }
-  }, [templates, prompt]);
+  }, [templates, prompt, cpTemplate]);
 
   // Scroll tracking for context bar and sticky generate
   useEffect(() => {
@@ -1701,6 +1734,28 @@ export default function Studio() {
                     </motion.div>
                   )}
                 </AnimatePresence>
+
+                {/* Content Planner Guidance Panel */}
+                {cpTemplate && (
+                  <ContentPlannerGuidance
+                    template={cpTemplate}
+                    platform={platform}
+                    onDismiss={() => {
+                      setCpTemplate(null);
+                      // Clear the URL param
+                      const url = new URL(window.location.href);
+                      url.searchParams.delete('cpTemplateId');
+                      window.history.replaceState({}, '', url.toString());
+                    }}
+                    onSelectHook={(hook) => {
+                      setPrompt(hook);
+                    }}
+                    onGenerateCopy={(copy) => {
+                      setGeneratedCopy(copy);
+                    }}
+                    productNames={selectedProducts.map(p => p.name)}
+                  />
+                )}
 
                 {/* Main Prompt Textarea */}
                 <div className="space-y-2">
