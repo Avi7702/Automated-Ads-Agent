@@ -20,6 +20,11 @@ export interface ContentTemplate {
   bestPlatforms: { platform: string; format: string }[];
   exampleTopics: string[];
   whatToAvoid: string[];
+  // 2026 AI-First fields
+  productRequirement: 'required' | 'recommended' | 'optional' | 'none';
+  minProducts?: number;
+  maxProducts?: number;
+  imageRequirement: 'required' | 'optional' | 'none';
 }
 
 export interface ContentCategory {
@@ -77,7 +82,9 @@ CTA: "DM for spec sheets" or "Link in comments"`,
       'Using jargon without explaining benefits',
       'Generic product photos - use real applications',
       'Being too promotional (80/20 rule: 80% value, 20% promo)'
-    ]
+    ],
+    productRequirement: 'required',
+    imageRequirement: 'optional'
   },
   {
     id: 'product_applications',
@@ -122,7 +129,9 @@ Results:
       'Skipping the "why" - connect application to benefit',
       'Missing the human element (show workers, not just product)',
       'Forgetting to mention timeline and conditions'
-    ]
+    ],
+    productRequirement: 'required',
+    imageRequirement: 'optional'
   },
   {
     id: 'product_comparisons',
@@ -165,7 +174,10 @@ The verdict: [When to use each]
       'Comparing apples to oranges (unfair matchups)',
       'Forgetting to mention when each option is appropriate',
       'Too many specs without practical takeaways'
-    ]
+    ],
+    productRequirement: 'required',
+    minProducts: 2,
+    imageRequirement: 'optional'
   },
   {
     id: 'new_arrivals',
@@ -213,7 +225,9 @@ Key features:
       'Focusing on features instead of benefits',
       'Missing the urgency or exclusivity angle',
       'No clear CTA or next step'
-    ]
+    ],
+    productRequirement: 'required',
+    imageRequirement: 'optional'
   },
   {
     id: 'product_benefits',
@@ -257,7 +271,9 @@ Real result: "[Quote from customer or case study metric]"
       'Benefits that sound like features',
       'Missing the customer perspective',
       'Ignoring compliance and certification angles'
-    ]
+    ],
+    productRequirement: 'required',
+    imageRequirement: 'optional'
   }
 ];
 
@@ -304,7 +320,9 @@ CTA: "Save this" or "Share your own tip"`,
       'Being too generic ("Quality matters" vs specific advice)',
       'Missing the "so what" - connect facts to practical implications',
       'Corporate tone - write like a colleague, not marketing'
-    ]
+    ],
+    productRequirement: 'optional',
+    imageRequirement: 'optional'
   },
   {
     id: 'industry_standards',
@@ -349,7 +367,9 @@ Action step: [What to do now]
       'Missing practical implications',
       'Forgetting deadlines and timelines',
       'Not providing actionable next steps'
-    ]
+    ],
+    productRequirement: 'optional',
+    imageRequirement: 'optional'
   },
   {
     id: 'technical_guides',
@@ -393,7 +413,9 @@ Common mistake: [What to avoid]
       'No visuals or diagrams',
       'Assuming too much prior knowledge',
       'Not mentioning safety considerations'
-    ]
+    ],
+    productRequirement: 'optional',
+    imageRequirement: 'optional'
   },
   {
     id: 'material_science',
@@ -436,7 +458,9 @@ Real example: [Case where this knowledge prevented a problem]
       'Overly technical language',
       'Missing real-world relevance',
       'No visual aids for complex concepts'
-    ]
+    ],
+    productRequirement: 'optional',
+    imageRequirement: 'optional'
   },
   {
     id: 'safety_protocols',
@@ -481,7 +505,9 @@ OSHA reference: [If applicable]
       'Ignoring practical site constraints',
       'Missing OSHA or regulatory references',
       'Stock photos instead of real site examples'
-    ]
+    ],
+    productRequirement: 'optional',
+    imageRequirement: 'optional'
   }
 ];
 
@@ -531,7 +557,9 @@ Our take: [Your perspective]
       'Doom-and-gloom without solutions',
       'Missing the "so what" for readers',
       'Outdated data (always cite recent sources)'
-    ]
+    ],
+    productRequirement: 'optional',
+    imageRequirement: 'optional'
   },
   {
     id: 'case_studies',
@@ -581,7 +609,9 @@ Results:
       'Taking all the credit (acknowledge partners)',
       'Skipping the challenges (too good to be true)',
       'Missing specific metrics and results'
-    ]
+    ],
+    productRequirement: 'optional',
+    imageRequirement: 'optional'
   },
   {
     id: 'research_findings',
@@ -628,7 +658,9 @@ Link to full study: [If available]
       'Academic jargon without translation',
       'Missing the practical "so what"',
       'Not citing sources properly'
-    ]
+    ],
+    productRequirement: 'optional',
+    imageRequirement: 'optional'
   },
   {
     id: 'industry_events',
@@ -675,7 +707,9 @@ What we're excited about:
       'Missing hashtags for discoverability',
       'Not engaging with other attendees\' posts',
       'Forgetting to follow up on connections'
-    ]
+    ],
+    productRequirement: 'optional',
+    imageRequirement: 'optional'
   },
   {
     id: 'regulatory_updates',
@@ -723,7 +757,9 @@ Action items:
       'Missing effective dates',
       'No actionable guidance',
       'Scaring without providing solutions'
-    ]
+    ],
+    productRequirement: 'optional',
+    imageRequirement: 'optional'
   }
 ];
 
@@ -782,7 +818,9 @@ Results:
       'Sharing without explicit permission',
       'Missing specific metrics and results',
       'Forgetting to tag and credit the customer'
-    ]
+    ],
+    productRequirement: 'required',
+    imageRequirement: 'optional'
   },
   {
     id: 'testimonials',
@@ -828,7 +866,9 @@ What changed:
       'Vague praise without specifics',
       'Missing context or backstory',
       'Not getting written permission'
-    ]
+    ],
+    productRequirement: 'recommended',
+    imageRequirement: 'optional'
   },
   {
     id: 'challenges_solved',
@@ -876,7 +916,9 @@ Result:
       'Making problems sound too easy',
       'Missing the customer\'s perspective',
       'Not showing the human side of challenges'
-    ]
+    ],
+    productRequirement: 'recommended',
+    imageRequirement: 'optional'
   },
   {
     id: 'before_after',
@@ -923,7 +965,9 @@ What made the difference:
       'Missing the "during" story',
       'No context on timeline or scope',
       'Forgetting to show the human effort involved'
-    ]
+    ],
+    productRequirement: 'required',
+    imageRequirement: 'required'
   },
   {
     id: 'client_interviews',
@@ -970,7 +1014,9 @@ Thank you to [Customer] for sharing their perspective!
       'Only asking softball questions',
       'Missing follow-up on interesting points',
       'Not preparing questions in advance'
-    ]
+    ],
+    productRequirement: 'recommended',
+    imageRequirement: 'optional'
   }
 ];
 
@@ -1024,7 +1070,9 @@ What they're known for:
       'Generic descriptions that could be anyone',
       'Missing the human story',
       'Not getting employee permission'
-    ]
+    ],
+    productRequirement: 'optional',
+    imageRequirement: 'optional'
   },
   {
     id: 'company_news',
@@ -1071,7 +1119,9 @@ Timeline: [When it takes effect]
       'Announcements without customer benefit',
       'Missing the "why should I care" angle',
       'Too corporate or press-release style'
-    ]
+    ],
+    productRequirement: 'optional',
+    imageRequirement: 'optional'
   },
   {
     id: 'behind_the_scenes',
@@ -1116,7 +1166,9 @@ Fun fact:
       'Missing safety gear in industrial settings',
       'Boring processes without storytelling',
       'Revealing proprietary or sensitive operations'
-    ]
+    ],
+    productRequirement: 'optional',
+    imageRequirement: 'optional'
   },
   {
     id: 'corporate_responsibility',
@@ -1166,7 +1218,9 @@ What's next:
       'One-time events positioned as ongoing programs',
       'Missing specific numbers and impact',
       'Self-congratulatory tone'
-    ]
+    ],
+    productRequirement: 'none',
+    imageRequirement: 'optional'
   },
   {
     id: 'milestones_achievements',
@@ -1215,7 +1269,9 @@ What this means:
       'Forgetting to thank customers and team',
       'Vague milestones without context',
       'Missing the human story behind numbers'
-    ]
+    ],
+    productRequirement: 'optional',
+    imageRequirement: 'optional'
   }
 ];
 
@@ -1267,7 +1323,9 @@ My take: [Your position - optional]
       'Controversial topics that alienate',
       'Polls more than twice per month (LinkedIn algorithm)',
       'Not following up on poll results'
-    ]
+    ],
+    productRequirement: 'none',
+    imageRequirement: 'none'
   },
   {
     id: 'quizzes',
@@ -1313,7 +1371,9 @@ Answer reveal: [Tomorrow / in comments / swipe]
       'Missing the answer reveal',
       'Not engaging with guesses in comments',
       'Obscure topics that only experts know'
-    ]
+    ],
+    productRequirement: 'none',
+    imageRequirement: 'optional'
   },
   {
     id: 'industry_challenges',
@@ -1357,7 +1417,9 @@ One approach that works:
       'Blaming customers or partners',
       'Challenges too niche to resonate',
       'Not engaging with community responses'
-    ]
+    ],
+    productRequirement: 'none',
+    imageRequirement: 'none'
   },
   {
     id: 'tips_tricks',
@@ -1403,7 +1465,9 @@ Bonus tip:
       'Unsafe shortcuts',
       'Tips that require expensive tools',
       'Too many tips in one post (keep it focused)'
-    ]
+    ],
+    productRequirement: 'none',
+    imageRequirement: 'optional'
   },
   {
     id: 'faq_responses',
@@ -1449,7 +1513,9 @@ What this means for you:
       'Jargon that doesn\'t answer the question',
       'Avoiding difficult questions',
       'Not inviting follow-up questions'
-    ]
+    ],
+    productRequirement: 'none',
+    imageRequirement: 'none'
   }
 ];
 

@@ -158,6 +158,21 @@ export const listPatternsQuerySchema = z.object({
   offset: z.string().regex(/^\d+$/).transform(Number).refine(n => n >= 0, 'Offset must be non-negative').optional(),
 });
 
+// ============================================
+// CONTENT PLANNER SCHEMAS
+// ============================================
+
+/**
+ * Schema for generating a complete post (copy + image)
+ * Used by /api/content-planner/generate-post endpoint
+ */
+export const generateCompletePostSchema = z.object({
+  templateId: z.string().min(1, 'Template ID is required'),
+  productIds: z.array(z.string()).default([]),
+  topic: z.string().trim().max(500, 'Topic too long').optional(),
+  platform: z.enum(['instagram', 'linkedin', 'facebook', 'twitter', 'tiktok']).default('linkedin'),
+});
+
 // Type exports for use in routes
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
@@ -173,3 +188,6 @@ export type UpdatePatternInput = z.infer<typeof updatePatternSchema>;
 export type ApplyPatternInput = z.infer<typeof applyPatternSchema>;
 export type RatePatternInput = z.infer<typeof ratePatternSchema>;
 export type ListPatternsQuery = z.infer<typeof listPatternsQuerySchema>;
+
+// Content Planner types
+export type GenerateCompletePostInput = z.infer<typeof generateCompletePostSchema>;

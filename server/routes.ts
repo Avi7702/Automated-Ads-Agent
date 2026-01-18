@@ -25,7 +25,7 @@ import { brandImageRecommendationRAG } from "./services/brandImageRecommendation
 import { matchTemplateForContext, analyzeTemplatePatterns, suggestTemplateCustomizations } from "./services/templatePatternRAG";
 import { encryptApiKey, generateKeyPreview, validateMasterKeyConfigured, EncryptionConfigError } from "./services/encryptionService";
 import { validateApiKey, isValidService, getSupportedServices, type ServiceName } from "./services/apiKeyValidationService";
-import { saveApiKeySchema, uploadPatternSchema, updatePatternSchema, applyPatternSchema, ratePatternSchema, listPatternsQuerySchema } from "./validation/schemas";
+import { saveApiKeySchema, uploadPatternSchema, updatePatternSchema, applyPatternSchema, ratePatternSchema, listPatternsQuerySchema, generateCompletePostSchema } from "./validation/schemas";
 import { logger } from "./lib/logger";
 import { validateFileType, uploadPatternLimiter, checkPatternQuota } from "./middleware/uploadValidation";
 import { extractPatterns, processUploadForPatterns, getRelevantPatterns, formatPatternsForPrompt } from "./services/patternExtractionService";
@@ -5019,6 +5019,47 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
     } catch (error: any) {
       logger.error({ err: error }, 'Failed to generate carousel outline');
       res.status(500).json({ error: error.message || "Failed to generate carousel outline" });
+    }
+  });
+
+  /**
+   * POST /api/content-planner/generate-post
+   * Generates a complete post with copy and image in parallel
+   *
+   * 2026 AI-First Approach:
+   * - Unified generation (copy + image in one action)
+   * - Smart product detection based on template requirements
+   * - Partial success handling (returns whatever succeeds)
+   * - Unique content on every generation
+   */
+  app.post("/api/content-planner/generate-post", requireAuth, validate(generateCompletePostSchema), async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      // Body is already validated and transformed by Zod schema
+      const { templateId, productIds, topic, platform } = req.body;
+
+      const { contentPlannerService } = await import('./services/contentPlannerService');
+
+      const result = await contentPlannerService.generateCompletePost({
+        userId,
+        templateId,
+        productIds,
+        topic: topic || undefined,
+        platform,
+      });
+
+      res.json(result);
+    } catch (error: any) {
+      logger.error({ err: error }, 'Failed to generate complete post');
+      res.status(500).json({
+        success: false,
+        copyError: error.message || "Failed to generate post",
+        imageError: error.message || "Failed to generate post",
+      });
     }
   });
 

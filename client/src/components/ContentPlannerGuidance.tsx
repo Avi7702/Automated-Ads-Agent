@@ -44,6 +44,38 @@ import {
   Maximize2,
 } from "lucide-react";
 import type { ContentTemplate } from "@shared/contentTemplates";
+import { Checkbox } from "@/components/ui/checkbox";
+
+// Types for unified generation
+interface Product {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+interface GenerateCompletePostResult {
+  success: boolean;
+  copy?: {
+    headline: string;
+    hook: string;
+    bodyText: string;
+    cta: string;
+    caption: string;
+    hashtags: string[];
+    framework: string;
+  };
+  image?: {
+    imageUrl: string;
+    prompt: string;
+  };
+  copyError?: string;
+  imageError?: string;
+  template: {
+    id: string;
+    title: string;
+    category: string;
+  };
+}
 
 interface ContentPlannerGuidanceProps {
   template: ContentTemplate;
@@ -53,8 +85,13 @@ interface ContentPlannerGuidanceProps {
   onGenerateCopy: (copy: string) => void;
   onSetAspectRatio?: (ratio: string) => void;
   onGenerateImage?: () => void;
+  onGenerateComplete?: (result: GenerateCompletePostResult) => void;
   productNames?: string[];
   hasProductsSelected?: boolean;
+  // 2026 AI-First: Products for unified generation
+  availableProducts?: Product[];
+  selectedProductIds?: string[];
+  onProductSelectionChange?: (productIds: string[]) => void;
 }
 
 // Map template category to copywriting campaign objective
@@ -166,18 +203,73 @@ export function ContentPlannerGuidance({
   onGenerateCopy,
   onSetAspectRatio,
   onGenerateImage,
+  onGenerateComplete,
   productNames = [],
   hasProductsSelected = false,
+  availableProducts = [],
+  selectedProductIds = [],
+  onProductSelectionChange,
 }: ContentPlannerGuidanceProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [copiedHookIndex, setCopiedHookIndex] = useState<number | null>(null);
   const [showAllHooks, setShowAllHooks] = useState(false);
+  const [topicInput, setTopicInput] = useState('');
 
   // Detect visual format from the first platform's format
   const visualFormat = detectVisualFormat(template.bestPlatforms[0]?.format || '');
   const FormatIcon = getFormatIcon(visualFormat.type);
 
-  // Generate copy mutation
+  // Check product requirements
+  const productRequirement = template.productRequirement || 'optional';
+  const minProducts = template.minProducts || 1;
+  const meetsProductRequirement =
+    productRequirement === 'none' ||
+    (productRequirement === 'optional') ||
+    (productRequirement === 'recommended' && true) || // Always allow skip for recommended
+    (productRequirement === 'required' && selectedProductIds.length >= minProducts);
+
+  // Handle product selection toggle
+  const handleProductToggle = (productId: string) => {
+    if (!onProductSelectionChange) return;
+    const newSelection = selectedProductIds.includes(productId)
+      ? selectedProductIds.filter(id => id !== productId)
+      : [...selectedProductIds, productId];
+    onProductSelectionChange(newSelection);
+  };
+
+  // 2026 AI-First: Unified generation mutation
+  const generateCompleteMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/content-planner/generate-post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          templateId: template.id,
+          productIds: selectedProductIds,
+          topic: topicInput.trim() || undefined,
+          platform: platform.toLowerCase(),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate post');
+      }
+
+      return response.json() as Promise<GenerateCompletePostResult>;
+    },
+    onSuccess: (result) => {
+      if (onGenerateComplete) {
+        onGenerateComplete(result);
+      }
+      // Also trigger the copy callback if we got copy
+      if (result.copy?.caption) {
+        onGenerateCopy(result.copy.caption);
+      }
+    },
+  });
+
+  // Generate copy mutation (legacy)
   const generateCopyMutation = useMutation({
     mutationFn: async () => {
       const response = await fetch('/api/copywriting/generate', {
@@ -359,6 +451,174 @@ export function ContentPlannerGuidance({
                 </TooltipProvider>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* 2026 AI-First: Smart Product Detection & Unified Generation */}
+        <div className="mt-3 p-3 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border border-green-200 dark:border-green-800">
+          {/* Product Requirement Badge */}
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="w-4 h-4 text-green-600 dark:text-green-400" />
+            <span className="text-sm font-semibold text-green-900 dark:text-green-100">
+              AI-Powered Generation
+            </span>
+            {productRequirement === 'required' && (
+              <Badge variant="destructive" className="text-xs">
+                Products Required ({minProducts}+)
+              </Badge>
+            )}
+            {productRequirement === 'recommended' && (
+              <Badge variant="secondary" className="text-xs">
+                Products Recommended
+              </Badge>
+            )}
+            {productRequirement === 'optional' && availableProducts.length > 0 && (
+              <Badge variant="outline" className="text-xs">
+                Products Optional
+              </Badge>
+            )}
+          </div>
+
+          {/* Product Selector (if products available and not 'none') */}
+          {productRequirement !== 'none' && availableProducts.length > 0 && onProductSelectionChange && (
+            <div className="mb-3 space-y-2">
+              <p className="text-xs text-muted-foreground">
+                {productRequirement === 'required'
+                  ? `Select at least ${minProducts} product${minProducts > 1 ? 's' : ''} to feature:`
+                  : productRequirement === 'recommended'
+                  ? 'Add products for richer content (optional):'
+                  : 'Enhance with products (optional):'}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {availableProducts.slice(0, 6).map((product) => (
+                  <label
+                    key={product.id}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-1.5 rounded-md border cursor-pointer transition-all text-xs",
+                      selectedProductIds.includes(product.id)
+                        ? "bg-primary/10 border-primary text-primary"
+                        : "bg-background hover:bg-muted border-border"
+                    )}
+                  >
+                    <Checkbox
+                      checked={selectedProductIds.includes(product.id)}
+                      onCheckedChange={() => handleProductToggle(product.id)}
+                      className="h-3.5 w-3.5"
+                    />
+                    <span className="truncate max-w-[120px]">{product.name}</span>
+                  </label>
+                ))}
+              </div>
+              {selectedProductIds.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {selectedProductIds.length} selected
+                  {productRequirement === 'required' && selectedProductIds.length < minProducts && (
+                    <span className="text-destructive ml-1">
+                      (need {minProducts - selectedProductIds.length} more)
+                    </span>
+                  )}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Topic Input */}
+          <div className="mb-3">
+            <label className="text-xs text-muted-foreground block mb-1">
+              Topic/Angle (optional):
+            </label>
+            <input
+              type="text"
+              value={topicInput}
+              onChange={(e) => setTopicInput(e.target.value)}
+              placeholder={template.exampleTopics[0] || "e.g., Product durability comparison"}
+              className="w-full px-3 py-1.5 text-sm rounded-md border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            />
+          </div>
+
+          {/* Unified Generate Button */}
+          <Button
+            className="w-full"
+            size="lg"
+            onClick={() => generateCompleteMutation.mutate()}
+            disabled={generateCompleteMutation.isPending || !meetsProductRequirement}
+          >
+            {generateCompleteMutation.isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Generating Complete Post...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 mr-2" />
+                Generate Complete Post
+              </>
+            )}
+          </Button>
+
+          {/* Status messages */}
+          {!meetsProductRequirement && productRequirement === 'required' && (
+            <p className="text-xs text-destructive mt-2 text-center">
+              Select at least {minProducts} product{minProducts > 1 ? 's' : ''} to generate
+            </p>
+          )}
+          {generateCompleteMutation.isError && (
+            <p className="text-xs text-destructive mt-2 text-center">
+              Generation failed. Please try again.
+            </p>
+          )}
+          {generateCompleteMutation.isSuccess && generateCompleteMutation.data && (
+            <div className="mt-2 text-xs space-y-1">
+              {generateCompleteMutation.data.copy && (
+                <p className="text-green-600 dark:text-green-400 flex items-center gap-1">
+                  <Check className="w-3 h-3" /> Copy generated
+                </p>
+              )}
+              {generateCompleteMutation.data.copyError && (
+                <p className="text-orange-600 dark:text-orange-400 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" /> Copy: {generateCompleteMutation.data.copyError}
+                </p>
+              )}
+              {generateCompleteMutation.data.image?.prompt && (
+                <p className="text-green-600 dark:text-green-400 flex items-center gap-1">
+                  <Check className="w-3 h-3" /> Image prompt ready
+                </p>
+              )}
+              {generateCompleteMutation.data.imageError && (
+                <p className="text-orange-600 dark:text-orange-400 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" /> Image: {generateCompleteMutation.data.imageError}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Secondary actions */}
+          <div className="flex gap-2 mt-3 pt-3 border-t border-green-200 dark:border-green-800">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 text-xs"
+              onClick={() => generateCopyMutation.mutate()}
+              disabled={generateCopyMutation.isPending}
+            >
+              {generateCopyMutation.isPending ? (
+                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+              ) : (
+                <Copy className="w-3 h-3 mr-1" />
+              )}
+              Copy Only
+            </Button>
+            {onGenerateImage && template.imageRequirement !== 'none' && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 text-xs"
+                onClick={onGenerateImage}
+              >
+                <ImageIcon className="w-3 h-3 mr-1" />
+                Image Only
+              </Button>
+            )}
           </div>
         </div>
       </CardHeader>
