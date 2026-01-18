@@ -538,7 +538,6 @@ export function IdeaBankPanel({
         }
       } else {
         // Retry once after 2 seconds (no legacy fallback)
-        console.warn("Initial suggestion request failed, retrying...");
         await new Promise(resolve => setTimeout(resolve, 2000));
 
         const retryRes = await fetch("/api/idea-bank/suggest", {
@@ -580,7 +579,6 @@ export function IdeaBankPanel({
         }
       }
     } catch (err: any) {
-      console.error("Failed to fetch suggestions:", err);
       setError(err.message || "Failed to load suggestions");
     } finally {
       setLoading(false);

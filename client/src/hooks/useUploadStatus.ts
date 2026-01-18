@@ -102,7 +102,6 @@ export function useUploadStatus(uploadId: string | null): UploadStatus & { isPol
               isComplete: true,
             });
           } else {
-            console.error(`Upload status polling error: ${res.status} ${res.statusText}`);
             // Continue polling on other errors (might be transient)
             return;
           }
@@ -145,9 +144,8 @@ export function useUploadStatus(uploadId: string | null): UploadStatus & { isPol
             timeoutRef.current = null;
           }
         }
-      } catch (error) {
-        // Log error but continue polling (might be transient network issue)
-        console.error("Upload status polling error:", error);
+      } catch {
+        // Continue polling (might be transient network issue)
       }
     };
 

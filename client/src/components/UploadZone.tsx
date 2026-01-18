@@ -56,8 +56,7 @@ export function UploadZone({
         confidence: data.confidence,
         status: "confirmed",
       };
-    } catch (error) {
-      console.error("[UploadZone] Analysis failed:", error);
+    } catch {
       // Return with a fallback description
       return {
         ...upload,

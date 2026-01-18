@@ -118,7 +118,6 @@ export default function GenerationDetail() {
 
       setLocation(`/generation/${data.generationId}`);
     } catch (error: any) {
-      console.error("Edit error:", error);
       setEditError(error.message || "Something went wrong. Please try again.");
     } finally {
       setIsEditing(false);
@@ -160,7 +159,6 @@ export default function GenerationDetail() {
       setAskAIResponse(data.answer);
       setAskAIQuestion("");
     } catch (error: any) {
-      console.error("Ask AI error:", error);
       setAskAIError(error.message || "Something went wrong. Please try again.");
     } finally {
       setIsAskingAI(false);

@@ -494,8 +494,8 @@ export default function Studio() {
           const data = await res.json();
           setPriceEstimate(data);
         }
-      } catch (error) {
-        console.error("Failed to fetch price estimate:", error);
+      } catch {
+        // Silent fail - price estimate is non-critical
       }
     };
 
@@ -524,17 +524,6 @@ export default function Studio() {
           setGenerationMode('exact_insert');
         }
       }
-    }
-
-    // Handle pattern selection from /learn-from-winners page
-    const patternId = params.get('patternId');
-    if (patternId) {
-      fetch(`/api/learned-patterns/${patternId}`)
-        .then(res => res.json())
-        .then(pattern => {
-          // TODO: Add selectedPattern state and pass to IdeaBankPanel
-        })
-        .catch(() => {});
     }
 
     // Handle content planner context
@@ -659,7 +648,6 @@ export default function Studio() {
         document.getElementById("result")?.scrollIntoView({ behavior: "smooth" });
       }, 100);
     } catch (error: any) {
-      console.error("Generation error:", error);
       alert(`Failed to generate image: ${error.message}`);
       setState("idle");
     }
@@ -715,7 +703,6 @@ export default function Studio() {
 
       setLocation(`/generation/${data.generationId}`);
     } catch (error: any) {
-      console.error("Edit error:", error);
       alert(error.message || "Edit failed");
     } finally {
       setIsEditing(false);
@@ -789,7 +776,6 @@ export default function Studio() {
         setCollapsedSections((prev) => ({ ...prev, preview: false }));
       }
     } catch (error: any) {
-      console.error("Copy generation error:", error);
       alert(error.message || "Failed to generate copy");
     } finally {
       setIsGeneratingCopy(false);
@@ -835,7 +821,6 @@ export default function Studio() {
       setAskAIResponse(data.answer);
       setAskAIQuestion("");
     } catch (error: any) {
-      console.error("Ask AI error:", error);
       alert(error.message || "Failed to get response");
     } finally {
       setIsAskingAI(false);
