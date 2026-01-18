@@ -42,6 +42,9 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Header } from "@/components/layout/Header";
 import { StudioProvider } from "@/context/StudioContext";
 import { ContentPlannerGuidance } from "@/components/ContentPlannerGuidance";
+import { CarouselBuilder } from "@/components/CarouselBuilder";
+import { BeforeAfterBuilder } from "@/components/BeforeAfterBuilder";
+import { TextOnlyMode } from "@/components/TextOnlyMode";
 import { getTemplateById, type ContentTemplate } from "@shared/contentTemplates";
 
 // Icons
@@ -386,6 +389,18 @@ export default function Studio() {
   // Content Planner template state (from cpTemplateId query param)
   const [cpTemplate, setCpTemplate] = useState<ContentTemplate | null>(null);
 
+  // Carousel Builder state (for carousel format content)
+  const [showCarouselBuilder, setShowCarouselBuilder] = useState(false);
+  const [carouselTopic, setCarouselTopic] = useState("");
+
+  // Before/After Builder state (for transformation content)
+  const [showBeforeAfterBuilder, setShowBeforeAfterBuilder] = useState(false);
+  const [beforeAfterTopic, setBeforeAfterTopic] = useState("");
+
+  // Text-Only Mode state (for text-only posts - 30% more reach!)
+  const [showTextOnlyMode, setShowTextOnlyMode] = useState(false);
+  const [textOnlyTopic, setTextOnlyTopic] = useState("");
+
   // Refs for scroll tracking
   const generateButtonRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
@@ -551,6 +566,34 @@ export default function Studio() {
           };
           const mappedPlatform = platformMap[bestPlatform.toLowerCase()] || bestPlatform;
           setPlatform(mappedPlatform);
+
+          // Auto-set aspect ratio based on format
+          const format = contentPlannerTemplate.bestPlatforms[0].format;
+          const formatLower = format.toLowerCase();
+
+          // Format to aspect ratio mapping
+          const formatAspectRatioMap: Record<string, string> = {
+            'carousel': '1080x1350',
+            'reel': '1080x1920',
+            'story': '1080x1920',
+            'video': '1920x1080',
+            'post': '1200x627',
+          };
+
+          // Detect format type and set aspect ratio
+          let detectedRatio = '1200x627'; // default
+
+          if (formatLower.includes('carousel')) {
+            detectedRatio = formatAspectRatioMap.carousel;
+          } else if (formatLower.includes('reel') || formatLower.includes('story')) {
+            detectedRatio = formatAspectRatioMap.reel;
+          } else if (formatLower.includes('video')) {
+            detectedRatio = formatAspectRatioMap.video;
+          } else {
+            detectedRatio = formatAspectRatioMap.post;
+          }
+
+          setAspectRatio(detectedRatio);
         }
 
         // Pre-fill prompt with first example topic
@@ -1736,7 +1779,7 @@ export default function Studio() {
                 </AnimatePresence>
 
                 {/* Content Planner Guidance Panel */}
-                {cpTemplate && (
+                {cpTemplate && !showCarouselBuilder && !showBeforeAfterBuilder && !showTextOnlyMode && (
                   <ContentPlannerGuidance
                     template={cpTemplate}
                     platform={platform}
@@ -1753,7 +1796,88 @@ export default function Studio() {
                     onGenerateCopy={(copy) => {
                       setGeneratedCopy(copy);
                     }}
+                    onSetAspectRatio={(ratio) => {
+                      setAspectRatio(ratio);
+                    }}
+                    onGenerateImage={() => {
+                      // Check format and open appropriate builder
+                      const format = cpTemplate.bestPlatforms[0]?.format?.toLowerCase() || '';
+                      const topic = prompt || cpTemplate.exampleTopics[0] || cpTemplate.title;
+
+                      if (format.includes('carousel') || format.includes('slides')) {
+                        // Carousel format
+                        setCarouselTopic(topic);
+                        setShowCarouselBuilder(true);
+                      } else if (format.includes('before') && format.includes('after')) {
+                        // Before/After format
+                        setBeforeAfterTopic(topic);
+                        setShowBeforeAfterBuilder(true);
+                      } else if (format.includes('text') || format.includes('thread')) {
+                        // Text-only format (30% more reach on LinkedIn!)
+                        setTextOnlyTopic(topic);
+                        setShowTextOnlyMode(true);
+                      } else {
+                        // Standard image generation
+                        handleGenerate();
+                      }
+                    }}
                     productNames={selectedProducts.map(p => p.name)}
+                    hasProductsSelected={selectedProducts.length > 0 || tempUploads.length > 0}
+                  />
+                )}
+
+                {/* Carousel Builder - shown when creating carousel content */}
+                {showCarouselBuilder && cpTemplate && (
+                  <CarouselBuilder
+                    templateId={cpTemplate.id}
+                    topic={carouselTopic}
+                    platform={platform}
+                    productNames={selectedProducts.map(p => p.name)}
+                    productImageUrls={selectedProducts.map(p => p.cloudinaryUrl).filter(Boolean) as string[]}
+                    aspectRatio={aspectRatio}
+                    onClose={() => {
+                      setShowCarouselBuilder(false);
+                    }}
+                    onComplete={(outline) => {
+                      // Optionally handle completed carousel
+                      setShowCarouselBuilder(false);
+                    }}
+                  />
+                )}
+
+                {/* Before/After Builder - shown when creating transformation content */}
+                {showBeforeAfterBuilder && cpTemplate && (
+                  <BeforeAfterBuilder
+                    templateId={cpTemplate.id}
+                    topic={beforeAfterTopic}
+                    platform={platform}
+                    productNames={selectedProducts.map(p => p.name)}
+                    productImageUrls={selectedProducts.map(p => p.cloudinaryUrl).filter(Boolean) as string[]}
+                    aspectRatio={aspectRatio}
+                    onClose={() => {
+                      setShowBeforeAfterBuilder(false);
+                    }}
+                    onComplete={(result) => {
+                      // Optionally handle completed before/after
+                      setShowBeforeAfterBuilder(false);
+                    }}
+                  />
+                )}
+
+                {/* Text-Only Mode - shown for text posts (30% more reach on LinkedIn!) */}
+                {showTextOnlyMode && cpTemplate && (
+                  <TextOnlyMode
+                    templateId={cpTemplate.id}
+                    topic={textOnlyTopic}
+                    platform={platform}
+                    onClose={() => {
+                      setShowTextOnlyMode(false);
+                    }}
+                    onComplete={(result) => {
+                      // Set the generated copy
+                      setGeneratedCopy(result.copy);
+                      setShowTextOnlyMode(false);
+                    }}
                   />
                 )}
 

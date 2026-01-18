@@ -1741,6 +1741,71 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
     }
   });
 
+  // Standalone copy generation (no generationId required)
+  // Used by BeforeAfterBuilder and TextOnlyMode components
+  app.post("/api/copywriting/standalone", async (req, res) => {
+    try {
+      const {
+        platform = 'linkedin',
+        tone = 'authentic',
+        framework = 'auto',
+        campaignObjective = 'engagement',
+        productName,
+        productDescription,
+        variations = 3,
+        industry = 'general',
+      } = req.body;
+
+      // Validate required fields
+      if (!productName || !productDescription) {
+        return res.status(400).json({
+          error: "Missing required fields",
+          details: "productName and productDescription are required"
+        });
+      }
+
+      // Validate variations
+      const variationCount = Math.min(Math.max(parseInt(variations) || 3, 1), 5);
+
+      // Call copywriting service
+      const { copywritingService } = await import("./services/copywritingService");
+      const generatedVariations = await copywritingService.generateCopy({
+        platform,
+        tone,
+        framework,
+        campaignObjective,
+        productName,
+        productDescription,
+        industry,
+        variations: variationCount,
+        // Provide defaults for fields that copywritingService expects
+        productBenefits: [],
+        uniqueValueProp: productDescription,
+      } as any);
+
+      // Transform to simplified response format
+      const responseVariations = generatedVariations.map((v: any) => ({
+        copy: v.caption || v.bodyText || '',
+        headline: v.headline,
+        hook: v.hook,
+        hashtags: v.hashtags || [],
+        framework: v.framework,
+        cta: v.cta,
+      }));
+
+      res.json({
+        success: true,
+        variations: responseVariations,
+      });
+    } catch (error: any) {
+      logger.error({ module: 'StandaloneCopy', err: error }, 'Error generating standalone copy');
+      res.status(500).json({
+        error: "Failed to generate copy",
+        details: error.message
+      });
+    }
+  });
+
   // Update user's brand voice
   app.put("/api/user/brand-voice", requireAuth, async (req, res) => {
     try {
@@ -4903,6 +4968,57 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
     } catch (error: any) {
       logger.error({ err: error }, 'Failed to delete content planner post');
       res.status(500).json({ error: "Failed to delete post" });
+    }
+  });
+
+  /**
+   * POST /api/content-planner/carousel-outline
+   * Generates a structured carousel outline with slides
+   *
+   * 2026 Best Practices:
+   * - 7 slides is the sweet spot (5-10 range optimal)
+   * - First slide critical: 80% of engagement
+   * - One idea per slide, mobile-first design
+   * - Authentic > Polished
+   */
+  app.post("/api/content-planner/carousel-outline", requireAuth, async (req, res) => {
+    try {
+      const { templateId, topic, slideCount = 7, platform = 'linkedin', productNames = [] } = req.body;
+
+      if (!templateId) {
+        return res.status(400).json({ error: "templateId is required" });
+      }
+
+      if (!topic || typeof topic !== 'string' || topic.trim().length === 0) {
+        return res.status(400).json({ error: "topic is required and must be a non-empty string" });
+      }
+
+      // Validate slideCount (5-10 range per 2026 best practices)
+      const validSlideCount = Math.max(5, Math.min(10, parseInt(slideCount) || 7));
+
+      const { carouselOutlineService } = await import('./services/carouselOutlineService');
+
+      const outline = await carouselOutlineService.generateOutline({
+        templateId,
+        topic: topic.trim(),
+        slideCount: validSlideCount,
+        platform: platform.toLowerCase(),
+        productNames: Array.isArray(productNames) ? productNames : [],
+      });
+
+      res.json({
+        success: true,
+        outline,
+        metadata: {
+          recommendedSlideCount: 7,
+          slideCountUsed: validSlideCount,
+          platform,
+          generatedAt: new Date().toISOString(),
+        },
+      });
+    } catch (error: any) {
+      logger.error({ err: error }, 'Failed to generate carousel outline');
+      res.status(500).json({ error: error.message || "Failed to generate carousel outline" });
     }
   });
 

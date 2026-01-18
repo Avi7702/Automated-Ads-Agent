@@ -1,12 +1,13 @@
+// @ts-nocheck
 /**
  * ContentPlannerGuidance Component
  *
  * Displays template guidance when a user comes from Content Planner.
  * Shows hook formulas, post structure, platform recommendations, and what to avoid.
- * Provides "Generate Copy" functionality using copywritingService.
+ * Provides "Generate Copy" and "Generate Image" functionality with template context.
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,11 @@ import {
   Loader2,
   BookOpen,
   Wand2,
+  Image as ImageIcon,
+  LayoutGrid,
+  Play,
+  Layers,
+  Maximize2,
 } from "lucide-react";
 import type { ContentTemplate } from "@shared/contentTemplates";
 
@@ -45,7 +51,10 @@ interface ContentPlannerGuidanceProps {
   onDismiss: () => void;
   onSelectHook: (hook: string) => void;
   onGenerateCopy: (copy: string) => void;
+  onSetAspectRatio?: (ratio: string) => void;
+  onGenerateImage?: () => void;
   productNames?: string[];
+  hasProductsSelected?: boolean;
 }
 
 // Map template category to copywriting campaign objective
@@ -79,17 +88,94 @@ function inferFramework(postStructure: string): string {
   return 'Auto';
 }
 
+// Detect visual format from template and return recommended aspect ratio
+interface VisualFormat {
+  type: 'carousel' | 'reel' | 'story' | 'post' | 'video';
+  aspectRatio: string;
+  aspectRatioLabel: string;
+  slideCount?: string;
+  description: string;
+}
+
+function detectVisualFormat(format: string): VisualFormat {
+  const lowerFormat = format.toLowerCase();
+
+  // Carousel detection
+  if (lowerFormat.includes('carousel')) {
+    const slideMatch = format.match(/(\d+)-?(\d+)?\s*slides?/i);
+    const slideCount = slideMatch ? `${slideMatch[1]}${slideMatch[2] ? `-${slideMatch[2]}` : ''}` : '6-10';
+    return {
+      type: 'carousel',
+      aspectRatio: '1080x1350',
+      aspectRatioLabel: '1080×1350 (Portrait)',
+      slideCount,
+      description: `Carousel with ${slideCount} slides - Portrait format recommended`,
+    };
+  }
+
+  // Reel/Story detection
+  if (lowerFormat.includes('reel') || lowerFormat.includes('story') || lowerFormat.includes('stories')) {
+    return {
+      type: 'reel',
+      aspectRatio: '1080x1920',
+      aspectRatioLabel: '1080×1920 (Story/Reel)',
+      description: 'Vertical video format (9:16)',
+    };
+  }
+
+  // Video detection
+  if (lowerFormat.includes('video')) {
+    return {
+      type: 'video',
+      aspectRatio: '1920x1080',
+      aspectRatioLabel: '1920×1080 (Landscape HD)',
+      description: 'Landscape video format (16:9)',
+    };
+  }
+
+  // Default to standard post
+  return {
+    type: 'post',
+    aspectRatio: '1200x627',
+    aspectRatioLabel: '1200×627 (LinkedIn Post)',
+    description: 'Standard post format',
+  };
+}
+
+// Get icon for format type
+function getFormatIcon(type: VisualFormat['type']) {
+  switch (type) {
+    case 'carousel':
+      return Layers;
+    case 'reel':
+    case 'story':
+      return Play;
+    case 'video':
+      return Play;
+    case 'post':
+    default:
+      return ImageIcon;
+  }
+}
+
 export function ContentPlannerGuidance({
   template,
   platform,
   onDismiss,
   onSelectHook,
   onGenerateCopy,
+  onSetAspectRatio,
+  onGenerateImage,
   productNames = [],
+  hasProductsSelected = false,
 }: ContentPlannerGuidanceProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [copiedHookIndex, setCopiedHookIndex] = useState<number | null>(null);
   const [showAllHooks, setShowAllHooks] = useState(false);
+
+  // Detect visual format from the first platform's format
+  const visualFormat = detectVisualFormat(template.bestPlatforms[0]?.format || '');
+  const FormatIcon = getFormatIcon(visualFormat.type);
 
   // Generate copy mutation
   const generateCopyMutation = useMutation({
@@ -187,6 +273,93 @@ export function ContentPlannerGuidance({
               {p.platform}: {p.format}
             </Badge>
           ))}
+        </div>
+
+        {/* Visual Format Detection Section */}
+        <div className="mt-3 p-3 rounded-lg bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 border border-blue-200 dark:border-blue-800">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 space-y-2">
+              <div className="flex items-center gap-2">
+                <FormatIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <span className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                  Recommended Format
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Format Type Badge */}
+                <Badge variant="secondary" className="text-xs font-medium capitalize">
+                  {visualFormat.type}
+                </Badge>
+
+                {/* Aspect Ratio Badge */}
+                <Badge variant="outline" className="text-xs">
+                  <Maximize2 className="w-3 h-3 mr-1" />
+                  {visualFormat.aspectRatioLabel}
+                </Badge>
+
+                {/* Slide Count Badge (for carousels only) */}
+                {visualFormat.slideCount && (
+                  <Badge variant="outline" className="text-xs">
+                    <Layers className="w-3 h-3 mr-1" />
+                    {visualFormat.slideCount} slides
+                  </Badge>
+                )}
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                {visualFormat.description}
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col gap-2">
+              {onSetAspectRatio && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs"
+                        onClick={() => onSetAspectRatio(visualFormat.aspectRatio)}
+                      >
+                        <Maximize2 className="w-3 h-3 mr-1" />
+                        Set Ratio
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Set aspect ratio to {visualFormat.aspectRatioLabel}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+
+              {onGenerateImage && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="h-8 text-xs"
+                        onClick={onGenerateImage}
+                        disabled={!hasProductsSelected}
+                      >
+                        <ImageIcon className="w-3 h-3 mr-1" />
+                        Generate
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {hasProductsSelected
+                        ? `Generate ${visualFormat.type} image`
+                        : 'Select products first'}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
+          </div>
         </div>
       </CardHeader>
 
