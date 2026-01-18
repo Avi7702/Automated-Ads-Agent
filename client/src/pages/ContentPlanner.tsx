@@ -547,7 +547,7 @@ export default function ContentPlanner() {
                     </Button>
                     <Button className="flex-1" asChild>
                       <a
-                        href={`/?contentCategory=${encodeURIComponent(selectedTemplate.category)}&contentType=${encodeURIComponent(selectedTemplate.subType)}&suggestedPrompt=${encodeURIComponent(selectedTemplate.hookFormulas[0] || '')}`}
+                        href={`/?contentCategory=${encodeURIComponent(selectedTemplate.category)}&contentType=${encodeURIComponent(selectedTemplate.subType)}&suggestedPrompt=${encodeURIComponent(selectedTemplate.exampleTopics[0] || selectedTemplate.title)}`}
                       >
                         <ExternalLink className="w-4 h-4 mr-2" />
                         Create in Studio
