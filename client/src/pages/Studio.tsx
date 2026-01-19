@@ -1043,7 +1043,7 @@ export default function Studio() {
             animate={{ opacity: 1, y: 0 }}
             className="text-center space-y-4 py-8"
           >
-            <h1 className="font-display text-4xl md:text-5xl font-bold tracking-tight bg-gradient-to-b from-white to-white/60 bg-clip-text text-transparent">
+            <h1 className="font-display text-4xl md:text-5xl font-bold tracking-tight bg-gradient-to-b from-zinc-900 to-zinc-900/60 dark:from-white dark:to-white/60 bg-clip-text text-transparent">
               Create stunning product visuals
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
