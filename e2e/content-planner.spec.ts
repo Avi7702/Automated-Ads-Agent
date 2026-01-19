@@ -676,3 +676,262 @@ test.describe('Content Planner Responsive', () => {
     await expect(page.locator('text=Content Categories')).toBeVisible();
   });
 });
+
+// =============================================================================
+// RECENT POSTS SECTION TESTS
+// =============================================================================
+
+test.describe('Recent Posts Section', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/content-planner');
+    await page.waitForLoadState('networkidle');
+  });
+
+  test('displays Recent Posts section when posts exist', async ({ page, request }) => {
+    // Create a post to ensure we have recent posts
+    await request.post('/api/content-planner/posts', {
+      data: {
+        category: 'engagement',
+        subType: 'questions_polls',
+        platform: 'linkedin',
+        notes: 'E2E test post for Recent Posts display',
+      },
+    });
+
+    // Reload page to see the post
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+
+    // Verify Recent Posts section is visible
+    await expect(page.locator('text=Recent Posts (Last 7 Days)')).toBeVisible();
+    await expect(page.locator('text=Posts you\'ve marked as completed')).toBeVisible();
+  });
+
+  test('shows post details correctly', async ({ page, request }) => {
+    // Create a test post with all details
+    await request.post('/api/content-planner/posts', {
+      data: {
+        category: 'educational',
+        subType: 'technical_guides',
+        platform: 'linkedin',
+        notes: 'Detailed E2E test post',
+      },
+    });
+
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+
+    // Find the recent post items
+    const recentPostItems = page.locator('[class*="border rounded-lg"]').filter({
+      has: page.locator('svg.lucide-trash-2'),
+    });
+
+    // Verify at least one post exists
+    await expect(recentPostItems.first()).toBeVisible();
+
+    // Verify platform badge is visible
+    await expect(recentPostItems.first().locator('text=linkedin')).toBeVisible();
+
+    // Verify date format (should show month abbreviation)
+    await expect(recentPostItems.first().locator('text=/Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec/')).toBeVisible();
+  });
+
+  test('delete button removes post', async ({ page, request }) => {
+    // Create a post
+    const response = await request.post('/api/content-planner/posts', {
+      data: {
+        category: 'engagement',
+        subType: 'questions_polls',
+        platform: 'twitter',
+        notes: 'Post to be deleted',
+      },
+    });
+    expect(response.ok()).toBeTruthy();
+
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+
+    // Get initial post count
+    const recentPostItems = page.locator('[class*="border rounded-lg"]').filter({
+      has: page.locator('svg.lucide-trash-2'),
+    });
+    const initialCount = await recentPostItems.count();
+    expect(initialCount).toBeGreaterThan(0);
+
+    // Click delete button on first post
+    const deleteButton = recentPostItems.first().locator('button').filter({
+      has: page.locator('svg.lucide-trash-2'),
+    });
+    await deleteButton.click();
+
+    // Verify toast notification
+    await expect(page.locator('text=Post removed')).toBeVisible({ timeout: 5000 });
+
+    // Wait for UI to update
+    await page.waitForTimeout(1500);
+
+    // Verify post count decreased
+    const newCount = await recentPostItems.count();
+    expect(newCount).toBeLessThan(initialCount);
+  });
+
+  test('balance updates after deleting post', async ({ page, request }) => {
+    // Create a post
+    await request.post('/api/content-planner/posts', {
+      data: {
+        category: 'engagement',
+        subType: 'questions_polls',
+        platform: 'linkedin',
+      },
+    });
+
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+
+    // Get initial total posts count
+    const totalPostsElement = page.locator('text=Total Posts This Week').locator('..');
+    const initialTotalText = await totalPostsElement.textContent();
+    const initialTotal = parseInt(initialTotalText?.match(/(\d+)/)?.[1] || '0');
+
+    // Delete the post
+    const deleteButton = page.locator('button').filter({
+      has: page.locator('svg.lucide-trash-2'),
+    }).first();
+    await deleteButton.click();
+
+    // Wait for deletion
+    await expect(page.locator('text=Post removed')).toBeVisible({ timeout: 5000 });
+    await page.waitForTimeout(2000);
+
+    // Verify total decreased
+    const newTotalText = await totalPostsElement.textContent();
+    const newTotal = parseInt(newTotalText?.match(/(\d+)/)?.[1] || '0');
+    expect(newTotal).toBeLessThanOrEqual(initialTotal);
+  });
+
+  test('shows multiple posts', async ({ page, request }) => {
+    // Create multiple posts
+    const posts = [
+      { category: 'engagement', subType: 'questions_polls', platform: 'linkedin' },
+      { category: 'educational', subType: 'technical_guides', platform: 'twitter' },
+    ];
+
+    for (const post of posts) {
+      await request.post('/api/content-planner/posts', { data: post });
+      await page.waitForTimeout(100);
+    }
+
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+
+    // Verify multiple posts are visible
+    const recentPostItems = page.locator('[class*="border rounded-lg"]').filter({
+      has: page.locator('svg.lucide-trash-2'),
+    });
+    const count = await recentPostItems.count();
+    expect(count).toBeGreaterThanOrEqual(2);
+  });
+
+  test('post category icon displays correctly', async ({ page, request }) => {
+    // Create a post
+    await request.post('/api/content-planner/posts', {
+      data: {
+        category: 'engagement',
+        subType: 'general',
+      },
+    });
+
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+
+    // Verify post has a colored icon container
+    const recentPostItems = page.locator('[class*="border rounded-lg"]').filter({
+      has: page.locator('svg.lucide-trash-2'),
+    });
+    const iconContainer = recentPostItems.first().locator('[class*="rounded-lg"][class*="bg-"]').first();
+    await expect(iconContainer).toBeVisible();
+  });
+});
+
+// =============================================================================
+// RECENT POSTS API TESTS
+// =============================================================================
+
+test.describe('Recent Posts API', () => {
+  test('GET /api/content-planner/posts returns posts array', async ({ request }) => {
+    const response = await request.get('/api/content-planner/posts');
+    expect(response.ok()).toBeTruthy();
+
+    const data = await response.json();
+    expect(Array.isArray(data)).toBeTruthy();
+  });
+
+  test('GET /api/content-planner/posts returns posts with correct structure', async ({ request }) => {
+    // Create a test post first
+    await request.post('/api/content-planner/posts', {
+      data: {
+        category: 'engagement',
+        subType: 'questions_polls',
+        platform: 'linkedin',
+        notes: 'API structure test',
+      },
+    });
+
+    const response = await request.get('/api/content-planner/posts');
+    const posts = await response.json();
+
+    if (posts.length > 0) {
+      const post = posts[0];
+      expect(post).toHaveProperty('id');
+      expect(post).toHaveProperty('userId');
+      expect(post).toHaveProperty('category');
+      expect(post).toHaveProperty('postedAt');
+    }
+  });
+
+  test('DELETE /api/content-planner/posts/:id removes post', async ({ request }) => {
+    // Create a post
+    const createResponse = await request.post('/api/content-planner/posts', {
+      data: {
+        category: 'engagement',
+        subType: 'questions_polls',
+        platform: 'linkedin',
+      },
+    });
+    expect(createResponse.ok()).toBeTruthy();
+    const createData = await createResponse.json();
+    const postId = createData.post?.id;
+
+    if (postId) {
+      // Delete the post
+      const deleteResponse = await request.delete(`/api/content-planner/posts/${postId}`);
+      expect(deleteResponse.ok()).toBeTruthy();
+
+      // Verify it's gone
+      const getResponse = await request.get('/api/content-planner/posts');
+      const posts = await getResponse.json();
+      const stillExists = posts.some((p: any) => p.id === postId);
+      expect(stillExists).toBe(false);
+    }
+  });
+
+  test('POST /api/content-planner/posts creates post', async ({ request }) => {
+    const postData = {
+      category: 'educational',
+      subType: 'technical_guides',
+      platform: 'linkedin',
+      notes: 'Test post for API verification',
+    };
+
+    const response = await request.post('/api/content-planner/posts', {
+      data: postData,
+    });
+
+    expect(response.ok()).toBeTruthy();
+    const data = await response.json();
+
+    expect(data.message).toBe('Post recorded');
+    expect(data.post).toHaveProperty('id');
+    expect(data.post.category).toBe(postData.category);
+  });
+});

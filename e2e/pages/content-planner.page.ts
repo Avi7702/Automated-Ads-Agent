@@ -39,6 +39,12 @@ export class ContentPlannerPage {
   readonly notesTextarea: Locator;
   readonly recordPostButton: Locator;
 
+  // Recent Posts section elements
+  readonly recentPostsSection: Locator;
+  readonly recentPostsTitle: Locator;
+  readonly recentPostItems: Locator;
+  readonly deletePostButtons: Locator;
+
   constructor(page: Page) {
     this.page = page;
 
@@ -73,6 +79,16 @@ export class ContentPlannerPage {
     this.platformSelect = page.locator('text=Platform').locator('..').locator('select, [role="combobox"]');
     this.notesTextarea = page.locator('textarea[placeholder*="notes"]');
     this.recordPostButton = page.locator('button', { hasText: 'Record Post' });
+
+    // Recent Posts section elements
+    this.recentPostsSection = page.locator('text=Recent Posts (Last 7 Days)').locator('..');
+    this.recentPostsTitle = page.locator('text=Recent Posts (Last 7 Days)');
+    this.recentPostItems = page.locator('[class*="border rounded-lg"]').filter({
+      has: page.locator('svg.lucide-trash-2'),
+    });
+    this.deletePostButtons = page.locator('button').filter({
+      has: page.locator('svg.lucide-trash-2'),
+    });
   }
 
   /**
@@ -254,5 +270,65 @@ export class ContentPlannerPage {
     const badgeText = await badges.nth(categoryIndex).textContent();
     const match = badgeText?.match(/(\d+)/);
     return match ? parseInt(match[1], 10) : 0;
+  }
+
+  // ==========================================================================
+  // RECENT POSTS METHODS
+  // ==========================================================================
+
+  /**
+   * Check if Recent Posts section is visible
+   */
+  async isRecentPostsSectionVisible(): Promise<boolean> {
+    try {
+      await expect(this.recentPostsTitle).toBeVisible({ timeout: 5000 });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Get the count of recent posts displayed
+   */
+  async getRecentPostsCount(): Promise<number> {
+    if (!(await this.isRecentPostsSectionVisible())) {
+      return 0;
+    }
+    return await this.recentPostItems.count();
+  }
+
+  /**
+   * Delete a post by index
+   */
+  async deletePost(index: number): Promise<void> {
+    const deleteButton = this.recentPostItems.nth(index).locator('button').filter({
+      has: this.page.locator('svg.lucide-trash-2'),
+    });
+    await deleteButton.click();
+    // Wait for deletion to complete
+    await this.page.waitForTimeout(1000);
+  }
+
+  /**
+   * Get post details at a specific index
+   */
+  async getPostDetails(index: number): Promise<{
+    category: string | null;
+    platform: string | null;
+    date: string | null;
+  }> {
+    const postItem = this.recentPostItems.nth(index);
+
+    const categoryText = await postItem.locator('span.font-medium').first().textContent();
+    const platformBadge = postItem.locator('[class*="Badge"]').first();
+    const platform = await platformBadge.isVisible() ? await platformBadge.textContent() : null;
+    const dateText = await postItem.locator('span.text-xs.text-muted-foreground').first().textContent();
+
+    return {
+      category: categoryText,
+      platform,
+      date: dateText,
+    };
   }
 }
