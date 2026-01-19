@@ -616,7 +616,7 @@ export default function ContentPlanner() {
 
         {/* Start Fresh Warning Modal */}
         <AlertDialog open={showStartFreshModal} onOpenChange={setShowStartFreshModal}>
-          <AlertDialogContent>
+          <AlertDialogContent className="max-h-[90vh] overflow-y-auto">
             <AlertDialogHeader>
               <AlertDialogTitle>Start Fresh with Template</AlertDialogTitle>
               <AlertDialogDescription>

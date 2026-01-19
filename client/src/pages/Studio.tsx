@@ -423,7 +423,9 @@ export default function Studio() {
     queryFn: async () => {
       const res = await fetch("/api/products");
       if (!res.ok) return [];
-      return res.json();
+      const data = await res.json();
+      // Handle both formats: direct array or wrapped {products: [...]}
+      return Array.isArray(data) ? data : (data?.products || []);
     },
   });
 
@@ -1860,8 +1862,16 @@ export default function Studio() {
                       setSelectedProducts(newProducts);
                     }}
                     onGenerateComplete={(result) => {
-                      if (result.copy?.caption) setGeneratedCopy(result.copy.caption);
-                      if (result.image?.imageUrl) setGeneratedImageUrl(result.image.imageUrl);
+                      // Set copy if available
+                      if (result.copy?.caption) {
+                        setGeneratedCopy(result.copy.caption);
+                      }
+                      // Handle image: use imageUrl if provided, otherwise set prompt for generation
+                      if (result.image?.imageUrl && result.image.imageUrl.trim()) {
+                        setGeneratedImageUrl(result.image.imageUrl);
+                      } else if (result.image?.prompt && result.image.prompt.trim()) {
+                        setPrompt(result.image.prompt);
+                      }
                     }}
                   />
                 )}
