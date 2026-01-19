@@ -48,11 +48,11 @@ import { useToast } from "@/hooks/use-toast";
 function getEnrichmentStatusBadge(status: string | null | undefined) {
   switch (status) {
     case "complete":
-      return { variant: "default" as const, label: "Complete", className: "bg-green-500/10 dark:bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30 dark:border-green-500/20" };
+      return { variant: "default" as const, label: "Complete", className: "bg-green-500/10 dark:bg-green-500/20 text-green-900 dark:text-green-400 border-green-500/30 dark:border-green-500/20" };
     case "verified":
-      return { variant: "default" as const, label: "Verified", className: "bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/30 dark:border-blue-500/20" };
+      return { variant: "default" as const, label: "Verified", className: "bg-blue-500/10 dark:bg-blue-500/20 text-blue-900 dark:text-blue-400 border-blue-500/30 dark:border-blue-500/20" };
     case "draft":
-      return { variant: "secondary" as const, label: "Draft", className: "bg-yellow-500/10 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 border-yellow-500/30 dark:border-yellow-500/20" };
+      return { variant: "secondary" as const, label: "Draft", className: "bg-yellow-500/10 dark:bg-yellow-500/20 text-yellow-900 dark:text-yellow-400 border-yellow-500/30 dark:border-yellow-500/20" };
     case "pending":
     default:
       return { variant: "outline" as const, label: "Pending", className: "bg-muted/50 text-muted-foreground" };

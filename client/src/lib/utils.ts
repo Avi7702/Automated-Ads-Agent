@@ -12,7 +12,7 @@ export function cn(...inputs: ClassValue[]) {
  * - Valid Cloudinary URLs pass through unchanged
  */
 export function getProductImageUrl(url: string | null | undefined, width: number = 800): string {
-  const fallback = "https://placehold.co/400x400/1a1a2e/ffffff?text=No+Image";
+  const fallback = "https://placehold.co/400x400/e5e5e5/525252?text=No+Image";
 
   if (!url) return fallback;
 

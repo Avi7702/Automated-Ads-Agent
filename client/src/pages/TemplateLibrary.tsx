@@ -74,19 +74,19 @@ const platformIcons: Record<string, typeof Instagram> = {
 
 // Engagement tier colors (light mode readable + dark mode optimized)
 const engagementTierColors: Record<string, string> = {
-  "top-5": "bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-500/30",
-  "top-10": "bg-orange-500/20 text-orange-700 dark:text-orange-400 border-orange-500/30",
-  "top-25": "bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/30",
+  "top-5": "bg-yellow-500/20 text-yellow-900 dark:text-yellow-400 border-yellow-500/30",
+  "top-10": "bg-orange-500/20 text-orange-900 dark:text-orange-400 border-orange-500/30",
+  "top-25": "bg-blue-500/20 text-blue-900 dark:text-blue-400 border-blue-500/30",
   "unranked": "bg-muted text-muted-foreground",
 };
 
 // Category colors (light mode readable + dark mode optimized)
 const categoryColors: Record<string, string> = {
-  product_showcase: "bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/30",
-  installation: "bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30",
-  worksite: "bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30",
-  professional: "bg-purple-500/20 text-purple-700 dark:text-purple-400 border-purple-500/30",
-  educational: "bg-pink-500/20 text-pink-700 dark:text-pink-400 border-pink-500/30",
+  product_showcase: "bg-blue-500/20 text-blue-900 dark:text-blue-400 border-blue-500/30",
+  installation: "bg-green-500/20 text-green-900 dark:text-green-400 border-green-500/30",
+  worksite: "bg-amber-500/20 text-amber-900 dark:text-amber-400 border-amber-500/30",
+  professional: "bg-purple-500/20 text-purple-900 dark:text-purple-400 border-purple-500/30",
+  educational: "bg-pink-500/20 text-pink-900 dark:text-pink-400 border-pink-500/30",
 };
 
 // Template image with fallback

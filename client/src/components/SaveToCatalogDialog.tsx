@@ -254,7 +254,7 @@ export function SaveToCatalogDialog({
                           {tag}
                           <button
                             onClick={() => removeTag(tag)}
-                            className="hover:text-white"
+                            className="hover:text-destructive"
                           >
                             <X className="w-3 h-3" />
                           </button>
