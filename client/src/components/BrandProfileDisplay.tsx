@@ -14,10 +14,14 @@ import {
   XCircle,
   AlertCircle,
   Loader2,
+  PenLine,
+  Plus,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { BrandProfileForm } from "@/components/BrandProfileForm";
 import type { BrandProfile, BrandVoice, TargetAudience } from "@shared/types/ideaBank";
 
 interface BrandProfileDisplayProps {
@@ -135,6 +139,7 @@ export function BrandProfileDisplay({ className }: BrandProfileDisplayProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<BrandProfile | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
   useEffect(() => {
     fetchProfile();
@@ -208,22 +213,34 @@ export function BrandProfileDisplay({ className }: BrandProfileDisplayProps) {
   // No profile state
   if (!profile) {
     return (
-      <div
-        className={cn(
-          "flex items-center justify-center py-12 rounded-2xl border border-border bg-card/30",
-          className
-        )}
-      >
-        <div className="flex flex-col items-center gap-3 text-center">
-          <Building2 className="w-10 h-10 text-muted-foreground/50" />
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">No brand profile found</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Create a brand profile to personalize your ad generation experience.
-            </p>
+      <>
+        <div
+          className={cn(
+            "flex items-center justify-center py-12 rounded-2xl border border-border bg-card/30",
+            className
+          )}
+        >
+          <div className="flex flex-col items-center gap-4 text-center">
+            <Building2 className="w-10 h-10 text-muted-foreground/50" />
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">No brand profile found</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Create a brand profile to personalize your ad generation experience.
+              </p>
+            </div>
+            <Button onClick={() => setIsFormOpen(true)} className="mt-2">
+              <Plus className="w-4 h-4 mr-2" />
+              Create Brand Profile
+            </Button>
           </div>
         </div>
-      </div>
+        <BrandProfileForm
+          isOpen={isFormOpen}
+          onClose={() => setIsFormOpen(false)}
+          existingProfile={null}
+          onSave={fetchProfile}
+        />
+      </>
     );
   }
 
@@ -252,21 +269,27 @@ export function BrandProfileDisplay({ className }: BrandProfileDisplayProps) {
     >
       {/* Header */}
       <div className="p-6 bg-gradient-to-br from-primary/5 to-purple-500/5 border-b border-border">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
-            <Building2 className="w-5 h-5 text-white" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
+              <Building2 className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">
+                {profile.brandName || "Untitled Brand"}
+              </h2>
+              {profile.industry && (
+                <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                  <Briefcase className="w-3.5 h-3.5" />
+                  {profile.industry}
+                </p>
+              )}
+            </div>
           </div>
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">
-              {profile.brandName || "Untitled Brand"}
-            </h2>
-            {profile.industry && (
-              <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                <Briefcase className="w-3.5 h-3.5" />
-                {profile.industry}
-              </p>
-            )}
-          </div>
+          <Button variant="outline" size="sm" onClick={() => setIsFormOpen(true)}>
+            <PenLine className="w-4 h-4 mr-2" />
+            Edit Profile
+          </Button>
         </div>
       </div>
 
@@ -436,6 +459,14 @@ export function BrandProfileDisplay({ className }: BrandProfileDisplayProps) {
           </Section>
         )}
       </div>
+
+      {/* Edit Form */}
+      <BrandProfileForm
+        isOpen={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+        existingProfile={profile}
+        onSave={fetchProfile}
+      />
     </motion.div>
   );
 }
