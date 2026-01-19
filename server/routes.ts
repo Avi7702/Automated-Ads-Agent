@@ -2980,7 +2980,8 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       }
 
       // Existing freestyle response
-      const response = result.response;
+      // Type assertion: when mode !== 'template', service returns IdeaBankSuggestResponse
+      const response = result.response as import('@shared/types/ideaBank').IdeaBankSuggestResponse;
 
       // Check if suggestions array is empty and provide helpful message
       if (!response.suggestions || response.suggestions.length === 0) {

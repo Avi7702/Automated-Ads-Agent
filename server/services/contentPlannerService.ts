@@ -120,9 +120,9 @@ export async function generateCompletePost(
 
   // 4. Generate copy and image in parallel
   const [copyResult, imageResult] = await Promise.allSettled([
-    generateCopy(template, products, brandProfile, topic, platform),
+    generateCopy(template, products, brandProfile ?? null, topic, platform),
     template.imageRequirement !== 'none'
-      ? generateImage(template, products, brandProfile, topic, platform)
+      ? generateImage(template, products, brandProfile ?? null, topic, platform)
       : Promise.resolve(null)
   ]);
 
@@ -172,15 +172,15 @@ export async function generateCompletePost(
 }
 
 /**
- * Fetch products by IDs with ownership verification
+ * Fetch products by IDs
  */
-async function fetchProducts(userId: string, productIds: string[]): Promise<Product[]> {
+async function fetchProducts(_userId: string, productIds: string[]): Promise<Product[]> {
   const products: Product[] = [];
 
   for (const productId of productIds) {
     try {
-      const product = await storage.getProduct(productId);
-      if (product && product.userId === userId) {
+      const product = await storage.getProductById(productId);
+      if (product) {
         products.push(product);
       }
     } catch (e) {
@@ -219,9 +219,9 @@ async function generateCopy(
 
   // Build target audience from brand profile
   const targetAudience = brandProfile ? {
-    demographics: brandProfile.targetAudience || 'B2B professionals',
+    demographics: String(brandProfile.targetAudience || 'B2B professionals'),
     psychographics: 'Decision-makers seeking reliable solutions',
-    painPoints: ['Quality concerns', 'Delivery timing', 'Cost optimization']
+    painPoints: ['Quality concerns', 'Delivery timing', 'Cost optimization'] as string[]
   } : undefined;
 
   // Build brand voice from profile

@@ -1,9 +1,5 @@
 import { useState } from "react";
 import {
-  Sparkles,
-  Cloud,
-  Flame,
-  Database,
   CheckCircle2,
   XCircle,
   AlertCircle,
@@ -35,42 +31,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-// Service configuration
-const SERVICE_CONFIG: Record<
-  string,
-  {
-    displayName: string;
-    icon: React.ElementType;
-    docsUrl: string;
-    description: string;
-  }
-> = {
-  gemini: {
-    displayName: "Google Gemini",
-    icon: Sparkles,
-    docsUrl: "https://aistudio.google.com/apikey",
-    description: "AI image generation and analysis",
-  },
-  cloudinary: {
-    displayName: "Cloudinary",
-    icon: Cloud,
-    docsUrl: "https://cloudinary.com/console",
-    description: "Image storage and transformation",
-  },
-  firecrawl: {
-    displayName: "Firecrawl",
-    icon: Flame,
-    docsUrl: "https://firecrawl.dev/app/api-keys",
-    description: "Web scraping for product data",
-  },
-  redis: {
-    displayName: "Redis",
-    icon: Database,
-    docsUrl: "https://redis.io/docs",
-    description: "Caching and rate limiting",
-  },
-};
+import { SERVICE_CONFIG } from "@/lib/apiKeyConfig";
 
 export type ApiKeyStatus = "using_default" | "custom" | "invalid" | "not_configured";
 
@@ -209,7 +170,11 @@ export function ApiKeyCard({
           {keyInfo.keyPreview && hasCustomKey && (
             <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 font-mono text-sm">
               <span className="text-muted-foreground">
-                {showKeyPreview ? keyInfo.keyPreview : "••••••••••••"}
+                {showKeyPreview
+                  ? keyInfo.keyPreview
+                  : keyInfo.keyPreview.length > 8
+                    ? `${keyInfo.keyPreview.slice(0, 4)}${"•".repeat(8)}${keyInfo.keyPreview.slice(-4)}`
+                    : "••••••••••••"}
               </span>
               <Button
                 variant="ghost"
@@ -268,6 +233,7 @@ export function ApiKeyCard({
                 size="sm"
                 onClick={onValidate}
                 disabled={isValidating}
+                aria-label={`Validate ${config.displayName} API key`}
               >
                 {isValidating ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -284,6 +250,7 @@ export function ApiKeyCard({
                 onClick={() => setShowDeleteConfirm(true)}
                 disabled={isDeleting}
                 className="text-destructive hover:text-destructive"
+                aria-label={`Delete ${config.displayName} API key`}
               >
                 {isDeleting ? (
                   <Loader2 className="w-4 h-4 animate-spin" />

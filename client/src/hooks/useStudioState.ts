@@ -37,7 +37,7 @@ export function useStudioState() {
   // All image URLs for generation
   const allImageUrls = useMemo(() => {
     const productUrls = state.selectedProducts
-      .map((p) => p.imageUrl)
+      .map((p) => p.cloudinaryUrl)
       .filter(Boolean) as string[];
     const uploadUrls = confirmedUploads.map((u) => u.previewUrl);
     return [...productUrls, ...uploadUrls];

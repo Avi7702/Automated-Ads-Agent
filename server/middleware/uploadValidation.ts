@@ -98,7 +98,7 @@ export async function validateFileType(
     (req as any).validatedFileType = fileInfo;
     next();
   } catch (error) {
-    logger.error('File type validation error', { error });
+    logger.error({ err: error instanceof Error ? error : new Error(String(error)) }, 'File type validation error');
     return res.status(500).json({ error: 'Failed to validate file type' });
   }
 }
@@ -188,7 +188,7 @@ export async function checkPatternQuota(
 
     next();
   } catch (error) {
-    logger.error('Pattern quota check error', { error });
+    logger.error({ err: error instanceof Error ? error : new Error(String(error)) }, 'Pattern quota check error');
     return res.status(500).json({ error: 'Failed to check pattern quota' });
   }
 }

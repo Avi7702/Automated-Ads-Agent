@@ -1,9 +1,5 @@
 import { useState, useEffect } from "react";
 import {
-  Sparkles,
-  Cloud,
-  Flame,
-  Database,
   Loader2,
   CheckCircle2,
   XCircle,
@@ -24,107 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-
-// Service configuration with validation patterns
-const SERVICE_CONFIG: Record<
-  string,
-  {
-    displayName: string;
-    icon: React.ElementType;
-    docsUrl: string;
-    placeholder: string;
-    pattern: RegExp;
-    formatHint: string;
-    fields: Array<{
-      name: string;
-      label: string;
-      placeholder: string;
-      pattern?: RegExp;
-      formatHint?: string;
-    }>;
-  }
-> = {
-  gemini: {
-    displayName: "Google Gemini",
-    icon: Sparkles,
-    docsUrl: "https://aistudio.google.com/apikey",
-    placeholder: "AIza...",
-    pattern: /^AIza[a-zA-Z0-9_-]{35}$/,
-    formatHint: "Gemini API keys start with 'AIza' and are 39 characters long",
-    fields: [
-      {
-        name: "apiKey",
-        label: "API Key",
-        placeholder: "AIzaSy...",
-        pattern: /^AIza[a-zA-Z0-9_-]{35}$/,
-        formatHint: "Starts with 'AIza', 39 characters total",
-      },
-    ],
-  },
-  cloudinary: {
-    displayName: "Cloudinary",
-    icon: Cloud,
-    docsUrl: "https://cloudinary.com/console",
-    placeholder: "",
-    pattern: /^.+$/,
-    formatHint: "",
-    fields: [
-      {
-        name: "cloudName",
-        label: "Cloud Name",
-        placeholder: "your-cloud-name",
-        formatHint: "Found in your Cloudinary dashboard",
-      },
-      {
-        name: "apiKey",
-        label: "API Key",
-        placeholder: "123456789012345",
-        pattern: /^\d{15}$/,
-        formatHint: "15-digit number",
-      },
-      {
-        name: "apiSecret",
-        label: "API Secret",
-        placeholder: "your-api-secret",
-        formatHint: "Keep this secret!",
-      },
-    ],
-  },
-  firecrawl: {
-    displayName: "Firecrawl",
-    icon: Flame,
-    docsUrl: "https://firecrawl.dev/app/api-keys",
-    placeholder: "fc-...",
-    pattern: /^fc-[a-zA-Z0-9_-]{20,}$/,
-    formatHint: "Firecrawl API keys start with 'fc-'",
-    fields: [
-      {
-        name: "apiKey",
-        label: "API Key",
-        placeholder: "fc-...",
-        pattern: /^fc-[a-zA-Z0-9_-]{20,}$/,
-        formatHint: "Starts with 'fc-'",
-      },
-    ],
-  },
-  redis: {
-    displayName: "Redis",
-    icon: Database,
-    docsUrl: "https://redis.io/docs",
-    placeholder: "redis://...",
-    pattern: /^redis(s)?:\/\/.+/,
-    formatHint: "Redis connection URL format",
-    fields: [
-      {
-        name: "apiKey",
-        label: "Connection URL",
-        placeholder: "redis://default:password@host:6379",
-        pattern: /^redis(s)?:\/\/.+/,
-        formatHint: "Format: redis://user:password@host:port",
-      },
-    ],
-  },
-};
+import { SERVICE_CONFIG } from "@/lib/apiKeyConfig";
 
 interface ApiKeyFormProps {
   isOpen: boolean;
@@ -260,7 +156,7 @@ export function ApiKeyForm({
                   onChange={(e) => handleFieldChange(field.name, e.target.value)}
                   placeholder={field.placeholder}
                   className={cn(
-                    "pr-10",
+                    "pr-12",
                     formatErrors[field.name] && "border-destructive"
                   )}
                   autoComplete="off"
@@ -271,7 +167,7 @@ export function ApiKeyForm({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-10 w-10"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
                     onClick={() => togglePasswordVisibility(field.name)}
                   >
                     {showPasswords[field.name] ? (
@@ -297,7 +193,7 @@ export function ApiKeyForm({
 
           {/* Validation Error */}
           {validationError && (
-            <Alert variant="destructive">
+            <Alert variant="destructive" role="alert" aria-live="assertive">
               <XCircle className="h-4 w-4" />
               <AlertTitle>Validation Failed</AlertTitle>
               <AlertDescription className="space-y-2">

@@ -10,9 +10,7 @@ import { ApiKeyCard, type ApiKeyInfo } from "@/components/settings/ApiKeyCard";
 import { ApiKeyForm } from "@/components/settings/ApiKeyForm";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-
-// Supported services in display order
-const SERVICES = ["gemini", "cloudinary", "firecrawl", "redis"];
+import { SUPPORTED_SERVICES } from "@/lib/apiKeyConfig";
 
 interface ApiKeysResponse {
   keys: ApiKeyInfo[];
@@ -211,7 +209,7 @@ export default function ApiKeySettings({ embedded = false }: ApiKeySettingsProps
         {/* Loading State */}
         {isLoading && (
           <div className="grid gap-4 md:grid-cols-2">
-            {SERVICES.map((service) => (
+            {SUPPORTED_SERVICES.map((service) => (
               <div key={service} className="rounded-xl border bg-card p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <Skeleton className="h-10 w-10 rounded-lg" />
@@ -228,8 +226,8 @@ export default function ApiKeySettings({ embedded = false }: ApiKeySettingsProps
 
         {/* API Key Cards */}
         {!isLoading && !error && (
-          <div className="grid gap-4 md:grid-cols-2">
-            {SERVICES.map((service) => (
+          <div className="grid gap-4 lg:grid-cols-2">
+            {SUPPORTED_SERVICES.map((service) => (
               <ApiKeyCard
                 key={service}
                 keyInfo={getKeyInfo(service)}

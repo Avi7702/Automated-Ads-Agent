@@ -83,20 +83,17 @@ export function PromptEditor() {
       {/* IdeaBank Panel */}
       {hasImages && (
         <IdeaBankPanel
-          selectedProductIds={selectedProducts.map((p) => p.id)}
-          uploadDescriptions={tempUploads
-            .filter((u) => u.status === 'confirmed' && u.description)
-            .map((u) => u.description!)}
+          selectedProducts={selectedProducts}
+          tempUploads={tempUploads}
           mode={ideaBankMode}
-          onModeChange={setIdeaBankMode}
-          onSuggestionSelect={(suggestion) => {
+          onSelectPrompt={(prompt: string, id?: string, reasoning?: string) => {
             setSuggestion({
-              id: suggestion.id,
-              prompt: suggestion.prompt,
-              reasoning: suggestion.reasoning,
+              id: id || '',
+              prompt,
+              reasoning,
             });
           }}
-          onRecipeGenerated={setRecipe}
+          onRecipeAvailable={setRecipe}
         />
       )}
 
