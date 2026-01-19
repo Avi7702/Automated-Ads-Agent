@@ -37,6 +37,29 @@ const statusConfig = {
   unhealthy: { icon: XCircle, color: 'bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/50 dark:border-red-500/30', label: 'Unhealthy' },
 };
 
+// Get reason for database status
+function getDatabaseStatusReason(db: SystemHealth['services']['database']): string | null {
+  if (db.status === 'healthy') return null;
+
+  const reasons: string[] = [];
+
+  if (db.averageQueryTime !== undefined) {
+    if (db.averageQueryTime >= 500) {
+      reasons.push(`Query time critical (${db.averageQueryTime}ms)`);
+    } else if (db.averageQueryTime >= 200) {
+      reasons.push(`Query time slow (${db.averageQueryTime}ms > 200ms)`);
+    }
+  }
+
+  if (db.activeConnections >= db.maxConnections) {
+    reasons.push('Connection pool exhausted');
+  } else if (db.activeConnections >= db.maxConnections * 0.8) {
+    reasons.push(`Pool near capacity (${db.activeConnections}/${db.maxConnections})`);
+  }
+
+  return reasons.length > 0 ? reasons.join(', ') : null;
+}
+
 export function SystemHealthTab() {
   const { data: health, isLoading } = useQuery({
     queryKey: ['system-health'],
@@ -93,6 +116,11 @@ export function SystemHealthTab() {
                 {statusConfig[health.services.database.status].label}
               </Badge>
             </div>
+            {getDatabaseStatusReason(health.services.database) && (
+              <div className="text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-500/10 rounded px-2 py-1">
+                {getDatabaseStatusReason(health.services.database)}
+              </div>
+            )}
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Active Connections</span>
