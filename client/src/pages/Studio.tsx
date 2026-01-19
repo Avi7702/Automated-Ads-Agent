@@ -84,6 +84,16 @@ import {
 // Types
 type GenerationState = "idle" | "generating" | "result";
 
+interface CopyResult {
+  headline: string;
+  hook: string;
+  bodyText: string;
+  cta: string;
+  caption: string;
+  hashtags: string[];
+  framework: string;
+}
+
 interface CollapsedSections {
   upload: boolean;
   products: boolean;
@@ -360,6 +370,7 @@ export default function Studio() {
   const [generatedCopy, setGeneratedCopy] = useState<string>("");
   const [isGeneratingCopy, setIsGeneratingCopy] = useState(false);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+  const [generatedCopyFull, setGeneratedCopyFull] = useState<CopyResult | null>(null);
 
   // Save to Catalog dialog state
   const [showSaveToCatalog, setShowSaveToCatalog] = useState(false);
@@ -1338,6 +1349,7 @@ export default function Studio() {
                           authorHeadline="Building Products | Construction Solutions"
                           postText={generatedCopy}
                           imageUrl={generatedImage || undefined}
+                          hashtags={generatedCopyFull?.hashtags || []}
                         />
                       </div>
 
@@ -1862,9 +1874,13 @@ export default function Studio() {
                       setSelectedProducts(newProducts);
                     }}
                     onGenerateComplete={(result) => {
-                      // Set copy if available
-                      if (result.copy?.caption) {
-                        setGeneratedCopy(result.copy.caption);
+                      // Store full copy object for future use
+                      if (result.copy) {
+                        setGeneratedCopyFull(result.copy);
+                        // Keep caption in generatedCopy for backward compatibility
+                        if (result.copy.caption) {
+                          setGeneratedCopy(result.copy.caption);
+                        }
                       }
                       // Handle image: use imageUrl if provided, otherwise set prompt for generation
                       if (result.image?.imageUrl && result.image.imageUrl.trim()) {
@@ -2096,6 +2112,7 @@ export default function Studio() {
                   authorHeadline="Building Products | Construction Solutions"
                   postText={generatedCopy || null}
                   imageUrl={generatedImage || selectedTemplateForMode?.previewImageUrl || null}
+                  hashtags={generatedCopyFull?.hashtags || []}
                   isEditable={true}
                   onTextChange={(text) => setGeneratedCopy(text)}
                   onGenerateCopy={generationId ? handleGenerateCopy : undefined}
@@ -2163,6 +2180,7 @@ export default function Studio() {
                 authorHeadline="Building Products | Construction Solutions"
                 postText={generatedCopy || null}
                 imageUrl={generatedImage || null}
+                hashtags={generatedCopyFull?.hashtags || []}
                 isEditable={true}
                 onTextChange={(text) => setGeneratedCopy(text)}
                 onGenerateCopy={generationId ? handleGenerateCopy : undefined}

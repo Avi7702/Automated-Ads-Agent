@@ -52,6 +52,7 @@ import {
   Users,
   Building2,
   MessageSquare,
+  Trash2,
 } from 'lucide-react';
 
 // Types from backend
@@ -102,6 +103,17 @@ interface SuggestionData {
     hookFormulas: string[];
   } | null;
   reason: string;
+}
+
+interface ContentPlannerPost {
+  id: string;
+  userId: string;
+  category: string;
+  subType: string;
+  platform: string | null;
+  notes: string | null;
+  postedAt: string;
+  createdAt: string;
 }
 
 // Category icons
@@ -169,6 +181,43 @@ export default function ContentPlanner() {
     staleTime: 1000 * 60,
   });
 
+  // Fetch recent posts (last 7 days)
+  const { data: recentPosts = [], refetch: refetchPosts } = useQuery<ContentPlannerPost[]>({
+    queryKey: ['/api/content-planner/posts'],
+    queryFn: async () => {
+      const res = await fetch('/api/content-planner/posts', { credentials: 'include' });
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  // Delete post mutation
+  const deletePostMutation = useMutation({
+    mutationFn: async (postId: string) => {
+      const res = await fetch(`/api/content-planner/posts/${postId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Failed to delete');
+    },
+    onSuccess: () => {
+      refetchPosts();
+      queryClient.invalidateQueries({ queryKey: ['/api/content-planner/balance'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/content-planner/suggestion'] });
+      toast({
+        title: 'Post removed',
+        description: 'Your weekly balance has been updated.',
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to remove post. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+
   // Mark as posted mutation
   const markAsPostedMutation = useMutation({
     mutationFn: async (data: { category: string; subType: string; platform?: string; notes?: string }) => {
@@ -184,6 +233,7 @@ export default function ContentPlanner() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/content-planner/balance'] });
       queryClient.invalidateQueries({ queryKey: ['/api/content-planner/suggestion'] });
+      refetchPosts();
       toast({
         title: 'Post recorded',
         description: 'Your weekly balance has been updated.',
@@ -376,6 +426,91 @@ export default function ContentPlanner() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Recent Posts Section */}
+        {recentPosts.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <MessageSquare className="w-5 h-5 text-primary" />
+                Recent Posts (Last 7 Days)
+              </CardTitle>
+              <CardDescription>
+                Posts you've marked as completed. Click delete to undo.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {recentPosts.map((post) => {
+                  const category = categories.find((c) => c.id === post.category);
+                  const Icon = categoryIcons[post.category] || Target;
+                  const postedDate = new Date(post.postedAt);
+                  const formattedDate = postedDate.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                  });
+
+                  return (
+                    <div
+                      key={post.id}
+                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 flex-1">
+                        <div
+                          className={`w-8 h-8 rounded-lg ${
+                            categoryColors[post.category] || 'bg-gray-500'
+                          } flex items-center justify-center shrink-0`}
+                        >
+                          <Icon className="w-4 h-4 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-sm">
+                              {category?.name || post.category.replace('_', ' ')}
+                            </span>
+                            {post.platform && (
+                              <Badge variant="outline" className="text-xs">
+                                {post.platform}
+                              </Badge>
+                            )}
+                            <span className="text-xs text-muted-foreground">
+                              {formattedDate}
+                            </span>
+                          </div>
+                          {post.subType && post.subType !== 'general' && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {post.subType.replace(/_/g, ' ')}
+                            </p>
+                          )}
+                          {post.notes && (
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                              {post.notes}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                        onClick={() => deletePostMutation.mutate(post.id)}
+                        disabled={deletePostMutation.isPending}
+                      >
+                        {deletePostMutation.isPending ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Content Categories Accordion */}
         <div className="space-y-4">
