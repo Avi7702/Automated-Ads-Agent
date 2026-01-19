@@ -56,7 +56,7 @@ export default function Settings() {
           </p>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-6">
+        <div className="flex flex-col lg:flex-row gap-6 min-h-0">
           {/* Navigation Sidebar */}
           <nav className="w-full lg:w-64 shrink-0">
             <div className="space-y-1">
@@ -96,8 +96,8 @@ export default function Settings() {
           </nav>
 
           {/* Content Area */}
-          <div className="flex-1 min-w-0">
-            <div className="bg-card rounded-lg border border-border p-6">
+          <div className="flex-1 min-w-0 min-h-0">
+            <div className="bg-card rounded-lg border border-border p-6 max-h-[calc(100vh-200px)] overflow-y-auto">
               <Suspense fallback={<SectionLoading />}>
                 {activeSection === 'brand' && <BrandProfileContent />}
                 {activeSection === 'api-keys' && <ApiKeySettingsContent />}
