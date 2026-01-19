@@ -36,6 +36,18 @@ export async function getSystemHealth(): Promise<SystemHealthStatus> {
     if (process.env.REDIS_URL) {
         try {
             const redis = getRedisClient();
+
+            // Wait for connection to be ready (max 3 seconds)
+            const maxWait = 3000;
+            const startWait = Date.now();
+            while (redis.status !== 'ready' && (Date.now() - startWait) < maxWait) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            if (redis.status !== 'ready') {
+                throw new Error(`Redis not ready after ${maxWait}ms, status: ${redis.status}`);
+            }
+
             const start = Date.now();
             await redis.ping();
             const latency = Date.now() - start;
