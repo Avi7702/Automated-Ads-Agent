@@ -21,8 +21,8 @@ export interface DbHealthStatus {
  * Check database health by running a simple query and inspecting pool metrics
  *
  * Health status determination:
- * - healthy: Query < 100ms, pool not exhausted
- * - degraded: Query 100-500ms, or pool nearing exhaustion
+ * - healthy: Query < 200ms, pool not exhausted
+ * - degraded: Query 200-500ms, or pool nearing exhaustion
  * - unhealthy: Query > 500ms, or pool exhausted, or connection failed
  */
 export async function checkDbHealth(): Promise<DbHealthStatus> {
@@ -42,7 +42,7 @@ export async function checkDbHealth(): Promise<DbHealthStatus> {
 
         if (queryTime >= 500 || activeConnections >= maxConnections) {
             status = 'unhealthy';
-        } else if (queryTime >= 100 || activeConnections >= maxConnections * 0.8) {
+        } else if (queryTime >= 200 || activeConnections >= maxConnections * 0.8) {
             status = 'degraded';
         } else {
             status = 'healthy';
