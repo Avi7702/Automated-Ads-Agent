@@ -37,7 +37,9 @@ import type { GenerationRecipe, TemplateSlotSuggestion, GenerationMode, IdeaBank
 import { UploadZone } from "@/components/UploadZone";
 import type { AnalyzedUpload } from "@/types/analyzedUpload";
 import { HistoryTimeline } from "@/components/HistoryTimeline";
+import { HistoryPanel } from "@/components/studio/HistoryPanel";
 import { SaveToCatalogDialog } from "@/components/SaveToCatalogDialog";
+import { useHistoryPanelUrl } from "@/hooks/useUrlState";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Header } from "@/components/layout/Header";
 import { StudioProvider } from "@/context/StudioContext";
@@ -413,6 +415,10 @@ export default function Studio() {
   const [showTextOnlyMode, setShowTextOnlyMode] = useState(false);
   const [textOnlyTopic, setTextOnlyTopic] = useState("");
 
+  // History panel URL state
+  const { isHistoryOpen, selectedGenerationId, openHistory, closeHistory, selectGeneration } = useHistoryPanelUrl();
+  const [historyPanelOpen, setHistoryPanelOpen] = useState(isHistoryOpen);
+
   // Refs for scroll tracking
   const generateButtonRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
@@ -503,6 +509,28 @@ export default function Studio() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Sync history panel URL state to local state
+  useEffect(() => {
+    setHistoryPanelOpen(isHistoryOpen);
+  }, [isHistoryOpen]);
+
+  // Load generation from URL param (?generation=:id)
+  useEffect(() => {
+    if (selectedGenerationId && !generatedImage) {
+      fetch(`/api/generations/${selectedGenerationId}`, { credentials: 'include' })
+        .then(res => res.json())
+        .then(data => {
+          if (data.imageUrl) {
+            setGeneratedImage(data.imageUrl);
+            setGenerationId(data.id);
+            setPrompt(data.prompt || '');
+            setState('result');
+          }
+        })
+        .catch(console.error);
+    }
+  }, [selectedGenerationId, generatedImage]);
 
   // Fetch price estimate when inputs change
   useEffect(() => {
@@ -917,6 +945,16 @@ export default function Studio() {
     }, 100);
   };
 
+  // Handle history panel toggle
+  const handleHistoryToggle = () => {
+    if (historyPanelOpen) {
+      closeHistory();
+    } else {
+      openHistory();
+    }
+    setHistoryPanelOpen(!historyPanelOpen);
+  };
+
   // Handle Ask AI
   const handleAskAI = async () => {
     if (!askAIQuestion.trim() || !generationId) return;
@@ -1042,11 +1080,19 @@ export default function Studio() {
         onNavigate={navigateToSection}
       />
 
-      {/* Main Content - 2 Column Layout on Desktop */}
+      {/* Main Content - 2/3 Column Layout on Desktop */}
       {/* pb-24 on mobile accounts for the ~60px fixed bottom preview bar */}
-      <main className="container max-w-7xl mx-auto px-6 pt-24 pb-24 lg:pb-12 relative z-10">
-        {/* Desktop: 2-column grid, Mobile: single column */}
-        <div className="lg:grid lg:grid-cols-[1fr_400px] lg:gap-8">
+      <main className={cn(
+        "container mx-auto px-6 pt-24 pb-24 lg:pb-12 relative z-10",
+        historyPanelOpen ? "max-w-[1600px]" : "max-w-7xl"
+      )}>
+        {/* Desktop: 2/3-column grid (with optional history panel), Mobile: single column */}
+        <div className={cn(
+          "lg:grid lg:gap-8",
+          historyPanelOpen
+            ? "lg:grid-cols-[1fr_400px_320px]"
+            : "lg:grid-cols-[1fr_400px]"
+        )}>
           {/* Left Column - All Inputs (scrollable) */}
           <div className="space-y-8 min-w-0">
           {/* Hero Section */}
@@ -1062,6 +1108,18 @@ export default function Studio() {
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Select products, describe your vision, and generate professional marketing content in minutes.
             </p>
+            {/* Quick Actions */}
+            <div className="flex justify-center gap-3 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleHistoryToggle}
+                className="gap-2"
+              >
+                <History className="w-4 h-4" />
+                {historyPanelOpen ? "Hide History" : "History"}
+              </Button>
+            </div>
           </motion.div>
 
           {/* Quick Start */}
@@ -2151,6 +2209,25 @@ export default function Studio() {
               </div>
             </div>
           </div>
+
+          {/* History Panel - Third column when open */}
+          <HistoryPanel
+            isOpen={historyPanelOpen}
+            onToggle={handleHistoryToggle}
+            onSelectGeneration={(id) => {
+              selectGeneration(id);
+              // Load that generation - fetch full data first
+              fetch(`/api/generations/${id}`, { credentials: 'include' })
+                .then(res => res.json())
+                .then(data => {
+                  if (data.generatedImagePath || data.imageUrl) {
+                    handleLoadFromHistory(data);
+                  }
+                })
+                .catch(console.error);
+            }}
+            className="hidden lg:flex"
+          />
         </div>
       </main>
 
