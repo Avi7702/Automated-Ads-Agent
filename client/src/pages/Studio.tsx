@@ -53,6 +53,7 @@ import { toast } from "sonner";
 import { useHaptic } from "@/hooks/useHaptic";
 import { useRipple } from "@/hooks/useRipple";
 import { useKeyboardShortcuts, type ShortcutConfig } from "@/hooks/useKeyboardShortcuts";
+import { useGesture } from "@use-gesture/react";
 
 // Icons
 import {
@@ -301,25 +302,45 @@ function StickyGenerateBar({
       exit={{ y: 100, opacity: 0 }}
       className="fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 mb-safe"
     >
-      <Button
-        size="lg"
-        onClick={onGenerate}
-        disabled={disabled || isGenerating}
-        className="px-8 h-14 text-lg rounded-full shadow-xl shadow-primary/20"
-      >
-        {isGenerating ? (
-          <>
-            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-            Generating...
-          </>
-        ) : (
-          <>
-            <Sparkles className="w-5 h-5 mr-2 ai-sparkle text-primary ai-glow" />
-            Generate Image
-</>
+      <div className="relative">
+        {/* Pulsing ring when ready */}
+        {!disabled && !isGenerating && (
+          <div className="absolute inset-0 rounded-full border-2 border-primary animate-ping opacity-75" />
         )}
-      </Button>
-      <p className="text-center text-xs text-muted-foreground mt-2">
+
+        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <Button
+            size="lg"
+            onClick={onGenerate}
+            disabled={disabled || isGenerating}
+            className={cn(
+              "relative px-8 h-16 text-lg rounded-full shadow-2xl group overflow-hidden",
+              !disabled && !isGenerating && "glass"
+            )}
+          >
+            {/* Animated gradient background */}
+            {!disabled && !isGenerating && (
+              <div className="absolute inset-0 bg-gradient-to-r from-primary via-purple-500 to-primary animate-gradient-x opacity-90" />
+            )}
+
+            <span className="relative z-10 flex items-center">
+              {isGenerating ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-5 h-5 mr-2 ai-sparkle ai-glow" />
+                  Generate Image
+                </>
+              )}
+            </span>
+          </Button>
+        </motion.div>
+      </div>
+
+      <p className="text-center text-xs text-muted-foreground mt-3">
         {selectedProducts.length} product{selectedProducts.length > 1 ? "s" : ""} • {platform}
       </p>
     </motion.div>
@@ -433,6 +454,10 @@ export default function Studio() {
   const [justCopied, setJustCopied] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+
+  // Phase 3: Image gesture controls (pinch-to-zoom, drag)
+  const [imageScale, setImageScale] = useState(1);
+  const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 });
 
   // Refs for scroll tracking
   const generateButtonRef = useRef<HTMLDivElement>(null);
@@ -1343,13 +1368,53 @@ export default function Studio() {
                 </div>
               </div>
 
-              {/* Generated Image */}
-              <div className="rounded-2xl overflow-hidden border border-border bg-black">
-                <img
-                  src={generatedImage}
-                  alt="Generated"
-                  className="w-full aspect-square object-cover"
-                />
+              {/* Generated Image with Pinch-to-Zoom */}
+              <div className="rounded-2xl overflow-hidden border border-border bg-black relative touch-none select-none">
+                <motion.div
+                  style={{
+                    scale: imageScale,
+                    x: imagePosition.x,
+                    y: imagePosition.y,
+                    cursor: imageScale > 1 ? 'grab' : 'default'
+                  }}
+                  onWheel={(e) => {
+                    e.preventDefault();
+                    const delta = -e.deltaY * 0.001;
+                    const newScale = Math.max(0.5, Math.min(3, imageScale + delta));
+                    setImageScale(newScale);
+                  }}
+                  onDoubleClick={() => {
+                    // Reset zoom on double-click
+                    setImageScale(1);
+                    setImagePosition({ x: 0, y: 0 });
+                  }}
+                  className="transition-none"
+                >
+                  <img
+                    src={generatedImage}
+                    alt="Generated"
+                    className="w-full aspect-square object-cover pointer-events-none"
+                    draggable={false}
+                  />
+                </motion.div>
+
+                {/* Zoom controls hint */}
+                {imageScale === 1 && (
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs text-white/80">
+                    Scroll to zoom • Double-click to reset
+                  </div>
+                )}
+
+                {/* Current zoom level indicator */}
+                {imageScale !== 1 && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="absolute top-4 right-4 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs text-white font-mono"
+                  >
+                    {Math.round(imageScale * 100)}%
+                  </motion.div>
+                )}
               </div>
 
               {/* Action Buttons */}
@@ -1774,11 +1839,14 @@ export default function Studio() {
                     </Select>
                   </div>
 
-                  {/* Product Grid - with internal scroll */}
+                  {/* Product Grid - Bento-style layout with featured products */}
                   <div className="max-h-[300px] overflow-y-auto rounded-lg border border-border/50 p-2">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
-                      {filteredProducts.map((product) => {
+                    <div className="grid grid-cols-6 gap-2 sm:gap-3 auto-rows-[80px]">
+                      {filteredProducts.map((product, index) => {
                         const isSelected = selectedProducts.some((p) => p.id === product.id);
+                        const isFeatured = index === 0;
+                        const isWide = (index + 1) % 7 === 0;
+
                         return (
                           <button
                             key={product.id}
@@ -1789,7 +1857,12 @@ export default function Studio() {
                             }}
                             disabled={!isSelected && selectedProducts.length >= 6}
                             className={cn(
-                              "card-interactive relative aspect-square min-h-[80px] rounded-xl overflow-hidden border-2 transition-all",
+                              "card-interactive relative rounded-xl overflow-hidden border-2 transition-all group",
+                              // Bento grid sizing
+                              isFeatured && "col-span-2 row-span-2",
+                              isWide && !isFeatured && "col-span-3",
+                              !isFeatured && !isWide && "col-span-1",
+                              // Selection states
                               isSelected
                                 ? "border-primary ring-2 ring-primary/20 scale-105"
                                 : "border-border hover:border-primary/50 hover:scale-102",
@@ -1799,16 +1872,27 @@ export default function Studio() {
                             <img
                               src={getProductImageUrl(product.cloudinaryUrl)}
                               alt={product.name}
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                              loading="lazy"
                             />
-                            {isSelected && (
-                              <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                                <Check className="w-3 h-3 text-white" />
-                              </div>
-                            )}
-                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                              <p className="text-white text-xs truncate">{product.name}</p>
+
+                            {/* Gradient overlay on hover */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                              <p className="absolute bottom-2 left-2 right-2 text-white text-xs font-medium truncate">
+                                {product.name}
+                              </p>
                             </div>
+
+                            {/* Selection indicator */}
+                            {isSelected && (
+                              <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className="absolute top-2 right-2 w-6 h-6 rounded-full bg-primary shadow-lg flex items-center justify-center"
+                              >
+                                <Check className="w-4 h-4 text-white" />
+                              </motion.div>
+                            )}
                           </button>
                         );
                       })}

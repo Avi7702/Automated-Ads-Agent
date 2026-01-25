@@ -470,3 +470,34 @@
   position: relative;
   overflow: hidden;
 }
+
+/* ========================================
+   PHASE 3: LAYOUT MODERNIZATION - ANIMATED GRADIENTS
+   ======================================== */
+
+/* Animated gradient for floating action button */
+@keyframes gradient-x {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient-x {
+  background-size: 200% 200%;
+  animation: gradient-x 3s ease infinite;
+}
+
+/* Pulsing ring for ready state */
+@keyframes pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
