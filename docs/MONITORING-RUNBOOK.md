@@ -6,10 +6,68 @@ This guide covers monitoring, alerting, and incident response for the Automated 
 
 | Component | Tool | Dashboard |
 |-----------|------|-----------|
-| Metrics & Traces | OpenTelemetry → Axiom | [axiom.co](https://app.axiom.co) |
-| Logs | Pino → Axiom | Via OTLP |
-| Alerts | Axiom Monitors | Configured in Axiom UI |
-| Notifications | Axiom → Slack | Via webhook |
+| **Error Tracking** | Sentry | [sentry.io](https://sentry.io) |
+| **Metrics & Traces** | OpenTelemetry → Axiom | [axiom.co](https://app.axiom.co) |
+| **Structured Logs** | Pino → Axiom | Via OTLP |
+| **Alerts** | Sentry + Axiom Monitors | Both dashboards |
+| **Notifications** | Sentry + Axiom → Slack | Via webhooks |
+
+## Error Tracking: Sentry
+
+Sentry captures unhandled errors with full context. Already integrated at [server/lib/sentry.ts](../server/lib/sentry.ts).
+
+### Setup Sentry
+
+1. Create account at [sentry.io](https://sentry.io)
+2. Create a new Node.js project
+3. Get your DSN from Project Settings → Client Keys
+4. Add to `.env`:
+
+```bash
+SENTRY_DSN=https://xxxxx@o123456.ingest.sentry.io/1234567
+```
+
+### What Sentry Captures
+
+- Unhandled exceptions
+- Express errors (via middleware)
+- Performance traces (10% sample in production)
+- User context (when logged in)
+- Breadcrumbs (action trail before error)
+
+### What Sentry Ignores
+
+Configured to skip non-actionable errors:
+- Network errors (`Failed to fetch`, `Load failed`)
+- User cancellations (`AbortError`)
+- Auth errors (`Unauthorized`, `Invalid session`)
+- 4xx client errors (handled by `beforeSend` filter)
+
+### Manual Error Capture
+
+```typescript
+import { captureException, addBreadcrumb } from './lib/sentry';
+
+// Add context breadcrumb
+addBreadcrumb({
+  category: 'generation',
+  message: 'Starting image generation',
+  data: { productId: '123' }
+});
+
+try {
+  // risky operation
+} catch (err) {
+  captureException(err, { userId: user.id, action: 'generate' });
+}
+```
+
+### Sentry Alerts
+
+Configure in Sentry UI:
+1. Go to **Alerts** → **Create Alert**
+2. Set conditions (error count, new issues, etc.)
+3. Add Slack/Email notifications
 
 ## Setting Up Axiom Alerts
 

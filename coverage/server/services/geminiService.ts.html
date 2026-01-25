@@ -3,7 +3,7 @@
 <html lang="en">
 
 <head>
-    <title>Code coverage report for server/services/imageStorage.ts</title>
+    <title>Code coverage report for server/services/geminiService.ts</title>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="../../prettify.css" />
     <link rel="stylesheet" href="../../base.css" />
@@ -19,34 +19,34 @@
 <body>
 <div class='wrapper'>
     <div class='pad1'>
-        <h1><a href="../../index.html">All files</a> / <a href="index.html">server/services</a> imageStorage.ts</h1>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">server/services</a> geminiService.ts</h1>
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">98.59% </span>
+                <span class="strong">90.62% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>70/71</span>
+                <span class='fraction'>58/64</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">96.15% </span>
+                <span class="strong">66.66% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>25/26</span>
+                <span class='fraction'>24/36</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>13/13</span>
+                <span class='fraction'>4/4</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">98.57% </span>
+                <span class="strong">90.47% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>69/70</span>
+                <span class='fraction'>57/63</span>
             </div>
         
             
@@ -272,17 +272,37 @@
 <a name='L207'></a><a href='#L207'>207</a>
 <a name='L208'></a><a href='#L208'>208</a>
 <a name='L209'></a><a href='#L209'>209</a>
-<a name='L210'></a><a href='#L210'>210</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">34x</span>
-<span class="cline-any cline-yes">34x</span>
-<span class="cline-any cline-yes">34x</span>
-<span class="cline-any cline-yes">34x</span>
-<span class="cline-any cline-yes">34x</span>
-<span class="cline-any cline-yes">34x</span>
-<span class="cline-any cline-yes">34x</span>
-<span class="cline-any cline-yes">34x</span>
+<a name='L210'></a><a href='#L210'>210</a>
+<a name='L211'></a><a href='#L211'>211</a>
+<a name='L212'></a><a href='#L212'>212</a>
+<a name='L213'></a><a href='#L213'>213</a>
+<a name='L214'></a><a href='#L214'>214</a>
+<a name='L215'></a><a href='#L215'>215</a>
+<a name='L216'></a><a href='#L216'>216</a>
+<a name='L217'></a><a href='#L217'>217</a>
+<a name='L218'></a><a href='#L218'>218</a>
+<a name='L219'></a><a href='#L219'>219</a>
+<a name='L220'></a><a href='#L220'>220</a>
+<a name='L221'></a><a href='#L221'>221</a>
+<a name='L222'></a><a href='#L222'>222</a>
+<a name='L223'></a><a href='#L223'>223</a>
+<a name='L224'></a><a href='#L224'>224</a>
+<a name='L225'></a><a href='#L225'>225</a>
+<a name='L226'></a><a href='#L226'>226</a>
+<a name='L227'></a><a href='#L227'>227</a>
+<a name='L228'></a><a href='#L228'>228</a>
+<a name='L229'></a><a href='#L229'>229</a>
+<a name='L230'></a><a href='#L230'>230</a>
+<a name='L231'></a><a href='#L231'>231</a>
+<a name='L232'></a><a href='#L232'>232</a>
+<a name='L233'></a><a href='#L233'>233</a>
+<a name='L234'></a><a href='#L234'>234</a>
+<a name='L235'></a><a href='#L235'>235</a>
+<a name='L236'></a><a href='#L236'>236</a>
+<a name='L237'></a><a href='#L237'>237</a>
+<a name='L238'></a><a href='#L238'>238</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">34x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -306,102 +326,204 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">34x</span>
-<span class="cline-any cline-yes">34x</span>
-<span class="cline-any cline-yes">34x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">28x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">27x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">27x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">18x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13x</span>
+<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">26x</span>
-<span class="cline-any cline-yes">26x</span>
-<span class="cline-any cline-yes">26x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">10x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">24x</span>
-<span class="cline-any cline-yes">24x</span>
-<span class="cline-any cline-yes">24x</span>
-<span class="cline-any cline-yes">24x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">24x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">7x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-yes">8x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">9x</span>
-<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">7x</span>
-<span class="cline-any cline-yes">7x</span>
-<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -415,281 +537,243 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">5x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">34x</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import fs from 'fs/promises';
-import fsSync from 'fs';
-import path from 'path';
-import crypto from 'crypto';
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { Pool } from 'pg';
-import { eq } from 'drizzle-orm';
-import { generations } from '../../shared/schema';
-import type { ConversationMessage } from './geminiService';
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { generateContentWithRetry } from '../lib/geminiClient';
+import { telemetry } from '../instrumentation';
 &nbsp;
-const UPLOAD_DIR = path.join(process.cwd(), 'uploads');
+export interface ConversationMessage {
+  role: 'user' | 'model';
+  parts: {
+    text?: string;
+    inlineData?: {
+      mimeType: string;
+      data: string;
+    };
+  }[];
+}
 &nbsp;
-export interface GenerationMetadata {
-  userId: string;
-  prompt: string;
+export interface GenerateResult {
   imageBase64: string;
   conversationHistory: ConversationMessage[];
   model: string;
-  aspectRatio: string;
+  usageMetadata?: {
+    promptTokenCount?: number;
+    candidatesTokenCount?: number;
+    totalTokenCount?: number;
+  };
 }
 &nbsp;
-export interface SavedGeneration {
-  id: string;
-  userId: string;
-  prompt: string;
-  imagePath: string;
-  imageUrl: string;
-  conversationHistory: ConversationMessage[];
-  model: string;
-  aspectRatio: string;
-  createdAt: Date;
+export interface GenerateOptions {
+  referenceImages?: string[];
+  aspectRatio?: '1:1' | '16:9' | '9:16' | '4:3' | '3:4';
 }
 &nbsp;
-class ImageStorageService {
-  private pool: Pool | null = null;
-  private db: ReturnType&lt;typeof drizzle&gt; | null = null;
-  private isInitialized = false;
+export class GeminiService {
+  private readonly modelName = process.env.GEMINI_MODEL || 'gemini-3-pro-image-preview';
 &nbsp;
-  async initialize(): Promise&lt;void&gt; {
-    if (this.isInitialized) return;
 &nbsp;
-    const databaseUrl = process.env.DATABASE_URL;
+  async generateImage(prompt: string, options?: GenerateOptions, userId?: string): Promise&lt;GenerateResult&gt; {
+    const startTime = Date.now();
+    let success = false;
+    let errorType: string | undefined;
 &nbsp;
-    if (!databaseUrl) {
-      throw new Error('DATABASE_URL environment variable is required for ImageStorageService');
-    }
-&nbsp;
-    this.pool = new Pool({ connectionString: databaseUrl });
-    this.db = drizzle(this.pool);
-    this.isInitialized = true;
-  }
-&nbsp;
-  async close(): Promise&lt;void&gt; {
-    if (this.pool) {
-      await this.pool.end();
-      this.pool = null;
-      this.db = null;
-    }
-    this.isInitialized = false;
-  }
-&nbsp;
-  private ensureInitialized(): void {
-    if (!this.isInitialized || !this.db) {
-      throw new Error('ImageStorageService not initialized. Call initialize() first.');
-    }
-  }
-&nbsp;
-  async ensureUploadDir(): Promise&lt;void&gt; {
-    await fs.mkdir(UPLOAD_DIR, { recursive: true });
-  }
-&nbsp;
-  generateFilename(extension: string = 'png'): string {
-    const timestamp = Date.now();
-    const random = crypto.randomBytes(8).toString('hex');
-    return `generation_${timestamp}_${random}.${extension}`;
-  }
-&nbsp;
-  async saveImage(base64Data: string): Promise&lt;string&gt; {
-    // Validate base64 data
-    if (!base64Data || base64Data.length &lt; 100) {
-      throw new Error('Invalid image data: too short');
-    }
-&nbsp;
-    // Validate it's actually base64
-    const base64Regex = /^[A-Za-z0-9+/=]+$/;
-    if (!base64Regex.test(base64Data)) {
-      throw new Error('Invalid image data: not valid base64');
-    }
-&nbsp;
-    await this.ensureUploadDir();
-    const filename = this.generateFilename();
-    const filepath = path.join(UPLOAD_DIR, filename);
-    const buffer = Buffer.from(base64Data, 'base64');
-&nbsp;
-    // Validate decoded buffer is not empty
-    <span class="missing-if-branch" title="if path not taken" >I</span>if (buffer.length === 0) {
-<span class="cstat-no" title="statement not covered" >      throw new Error('Invalid image data: empty after decode');</span>
-    }
-&nbsp;
-    await fs.writeFile(filepath, buffer);
-    return filename;
-  }
-&nbsp;
-  getImagePath(filename: string): string {
-    return path.join(UPLOAD_DIR, filename);
-  }
-&nbsp;
-  getImageUrl(filename: string): string {
-    return `/uploads/${filename}`;
-  }
-&nbsp;
-  async deleteImage(filename: string): Promise&lt;void&gt; {
     try {
-      const filepath = this.getImagePath(filename);
-      await fs.unlink(filepath);
-    } catch (error) {
-      // File may not exist, that's okay
-    }
-  }
+      // Build the content parts
+      const parts: Array&lt;{ text: string } | { inlineData: { mimeType: string; data: string } }&gt; = [];
 &nbsp;
-  async saveGeneration(metadata: GenerationMetadata): Promise&lt;SavedGeneration&gt; {
-    this.ensureInitialized();
+      // Add aspect ratio to prompt if specified
+      let enhancedPrompt = prompt;
+      if (options?.aspectRatio) {
+        enhancedPrompt = `${prompt} [Aspect ratio: ${options.aspectRatio}]`;
+      }
+      parts.push({ text: enhancedPrompt });
 &nbsp;
-    // Save image to filesystem
-    const filename = await this.saveImage(metadata.imageBase64);
-&nbsp;
-    // Save generation to database - with cleanup on failure
-    let dbGeneration;
-    try {
-      [dbGeneration] = await this.db!.insert(generations)
-        .values({
-          userId: metadata.userId,
-          prompt: metadata.prompt,
-          imagePath: filename,
-          conversationHistory: metadata.conversationHistory,
-          model: metadata.model,
-          aspectRatio: metadata.aspectRatio,
-          status: 'completed',
-        })
-        .returning();
-    } catch (error) {
-      // Clean up orphaned file if DB insert fails
-      await this.deleteImage(filename);
-      throw error;
-    }
-&nbsp;
-    return {
-      id: dbGeneration.id,
-      userId: metadata.userId,
-      prompt: metadata.prompt,
-      imagePath: filename,
-      imageUrl: this.getImageUrl(filename),
-      conversationHistory: metadata.conversationHistory as ConversationMessage[],
-      model: metadata.model,
-      aspectRatio: metadata.aspectRatio,
-      createdAt: dbGeneration.createdAt,
-    };
-  }
-&nbsp;
-  async getGeneration(id: string): Promise&lt;SavedGeneration | null&gt; {
-    this.ensureInitialized();
-&nbsp;
-    const [dbGeneration] = await this.db!.select()
-      .from(generations)
-      .where(eq(generations.id, id));
-&nbsp;
-    if (!dbGeneration) {
-      return null;
-    }
-&nbsp;
-    return {
-      id: dbGeneration.id,
-      userId: dbGeneration.userId || '',
-      prompt: dbGeneration.prompt,
-      imagePath: dbGeneration.imagePath || '',
-      imageUrl: this.getImageUrl(dbGeneration.imagePath || ''),
-      conversationHistory: (dbGeneration.conversationHistory as ConversationMessage[]) || [],
-      model: dbGeneration.model || '',
-      aspectRatio: dbGeneration.aspectRatio || '1:1',
-      createdAt: dbGeneration.createdAt,
-    };
-  }
-&nbsp;
-  async clearAll(): Promise&lt;void&gt; {
-    this.ensureInitialized();
-&nbsp;
-    // Delete all generations from database
-    await this.db!.delete(generations);
-&nbsp;
-    // Clean up uploads directory
-    try {
-      const files = await fs.readdir(UPLOAD_DIR);
-      for (const file of files) {
-        if (file.startsWith('generation_')) {
-          await fs.unlink(path.join(UPLOAD_DIR, file));
+      // Add reference images if provided
+      if (options?.referenceImages &amp;&amp; options.referenceImages.length &gt; 0) {
+        for (const refImage of options.referenceImages) {
+          parts.push({
+            inlineData: {
+              mimeType: 'image/png',
+              data: refImage
+            }
+          });
         }
       }
+&nbsp;
+      // Create conversation history
+      const conversationHistory: ConversationMessage[] = [
+        {
+          role: 'user',
+          parts: parts as ConversationMessage['parts']
+        }
+      ];
+&nbsp;
+      // Generate content using the new SDK pattern
+      const response = await generateContentWithRetry({
+        model: this.modelName,
+        contents: parts,
+        config: {
+          responseModalities: ['TEXT', 'IMAGE']
+        }
+      }, { operation: 'image_generation' });
+&nbsp;
+      // Extract image data from response
+      const candidate = response.candidates?.[0];
+      if (!candidate?.content?.parts) {
+        errorType = 'no_content';
+        throw new Error('No content in response');
+      }
+&nbsp;
+      let imageData = '';
+      let mimeType = 'image/png';
+&nbsp;
+      for (const part of candidate.content.parts) {
+        if (part.inlineData) {
+          imageData = part.inlineData.data || <span class="branch-1 cbranch-no" title="branch not covered" >'';</span>
+          mimeType = part.inlineData.mimeType || <span class="branch-1 cbranch-no" title="branch not covered" >'image/png';</span>
+          break;
+        }
+      }
+&nbsp;
+      if (!imageData) {
+        errorType = 'no_image_data';
+        throw new Error('No image data in response');
+      }
+&nbsp;
+      // Add model response to conversation history
+      conversationHistory.push({
+        role: 'model',
+        parts: [{
+          inlineData: {
+            mimeType,
+            data: imageData
+          }
+        }]
+      });
+&nbsp;
+      success = true;
+&nbsp;
+      return {
+        imageBase64: imageData,
+        conversationHistory,
+        model: this.modelName,
+        usageMetadata: response.usageMetadata
+      };
     } catch (error) {
-      // Directory may not exist
+      errorType = errorType || (error instanceof Error ? error.name : <span class="branch-1 cbranch-no" title="branch not covered" >'unknown');</span>
+      throw error;
+    } finally {
+      // Track Gemini API usage and cost
+      const durationMs = Date.now() - startTime;
+      telemetry.trackGeminiUsage({
+        model: this.modelName,
+        operation: 'generate',
+        inputTokens: prompt.length * 0.25, // Rough estimate: ~4 chars per token
+        outputTokens: 0, // Image output
+        durationMs,
+        userId,
+        success,
+        errorType,
+      });
     }
   }
 &nbsp;
-  fileExists(filename: string): boolean {
-    const filepath = this.getImagePath(filename);
-    return fsSync.existsSync(filepath);
+  async continueConversation(
+    history: ConversationMessage[],
+    editPrompt: string,
+    userId?: string
+  ): Promise&lt;GenerateResult&gt; {
+    const startTime = Date.now();
+    let success = false;
+    let errorType: string | undefined;
+&nbsp;
+    try {
+      // Create new history with the edit prompt
+      const newHistory: ConversationMessage[] = [
+        ...history,
+        {
+          role: 'user',
+          parts: [{ text: editPrompt }]
+        }
+      ];
+&nbsp;
+      // Build contents array from history for the API
+      const contents = newHistory.map(msg =&gt; ({
+        role: msg.role,
+        parts: msg.parts
+      }));
+&nbsp;
+      // Generate content using the new SDK pattern
+      const response = await generateContentWithRetry({
+        model: this.modelName,
+        contents,
+        config: {
+          responseModalities: ['TEXT', 'IMAGE']
+        }
+      }, { operation: 'image_editing' });
+&nbsp;
+      // Extract image data from response
+      const candidate = response.candidates?.[0];
+      <span class="missing-if-branch" title="if path not taken" >I</span>if (!candidate?.content?.parts) {
+<span class="cstat-no" title="statement not covered" >        errorType = 'no_content';</span>
+<span class="cstat-no" title="statement not covered" >        throw new Error('No content in response');</span>
+      }
+&nbsp;
+      let imageData = '';
+      let mimeType = 'image/png';
+&nbsp;
+      for (const part of candidate.content.parts) {
+        <span class="missing-if-branch" title="else path not taken" >E</span>if (part.inlineData) {
+          imageData = part.inlineData.data || <span class="branch-1 cbranch-no" title="branch not covered" >'';</span>
+          mimeType = part.inlineData.mimeType || <span class="branch-1 cbranch-no" title="branch not covered" >'image/png';</span>
+          break;
+        }
+      }
+&nbsp;
+      <span class="missing-if-branch" title="if path not taken" >I</span>if (!imageData) {
+<span class="cstat-no" title="statement not covered" >        errorType = 'no_image_data';</span>
+<span class="cstat-no" title="statement not covered" >        throw new Error('No image data in response');</span>
+      }
+&nbsp;
+      // Add model response to conversation history
+      newHistory.push({
+        role: 'model',
+        parts: [{
+          inlineData: {
+            mimeType,
+            data: imageData
+          }
+        }]
+      });
+&nbsp;
+      success = true;
+&nbsp;
+      return {
+        imageBase64: imageData,
+        conversationHistory: newHistory,
+        model: this.modelName,
+        usageMetadata: response.usageMetadata
+      };
+    } catch (error) {
+<span class="cstat-no" title="statement not covered" >      errorType = errorType || (error instanceof Error ? error.name : 'unknown');</span>
+<span class="cstat-no" title="statement not covered" >      throw error;</span>
+    } finally {
+      // Track Gemini API usage and cost
+      const durationMs = Date.now() - startTime;
+      telemetry.trackGeminiUsage({
+        model: this.modelName,
+        operation: 'edit',
+        inputTokens: editPrompt.length * 0.25, // Rough estimate
+        outputTokens: 0,
+        durationMs,
+        userId,
+        success,
+        errorType,
+      });
+    }
   }
 }
 &nbsp;
-export const imageStorageService = new ImageStorageService();
+export const geminiService = new GeminiService();
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -697,7 +781,7 @@ export const imageStorageService = new ImageStorageService();
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-12-01T03:08:49.056Z
+                at 2026-01-16T10:29:10.110Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

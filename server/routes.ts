@@ -28,6 +28,7 @@ import { validateApiKey, isValidService, getSupportedServices, type ServiceName 
 import { saveApiKeySchema, uploadPatternSchema, updatePatternSchema, applyPatternSchema, ratePatternSchema, listPatternsQuerySchema, generateCompletePostSchema } from "./validation/schemas";
 import { logger } from "./lib/logger";
 import { validateFileType, uploadPatternLimiter, checkPatternQuota } from "./middleware/uploadValidation";
+import { toGenerationDTO, toGenerationDTOArray } from "./dto/generationDTO";
 import { extractPatterns, processUploadForPatterns, getRelevantPatterns, formatPatternsForPrompt } from "./services/patternExtractionService";
 import { startPatternCleanupScheduler } from "./jobs/patternCleanupJob";
 
@@ -811,7 +812,7 @@ Consider these product relationships and usage contexts when generating the imag
     try {
       const limit = parseInt(req.query.limit as string) || 50;
       const allGenerations = await storage.getGenerations(limit);
-      res.json(allGenerations);
+      res.json(toGenerationDTOArray(allGenerations));
     } catch (error: any) {
       logger.error({ module: 'Generations', err: error }, 'Error fetching generations');
       res.status(500).json({ error: "Failed to fetch generations" });
@@ -825,10 +826,7 @@ Consider these product relationships and usage contexts when generating the imag
       if (!generation) {
         return res.status(404).json({ error: "Generation not found" });
       }
-      res.json({
-        ...generation,
-        canEdit: !!generation.conversationHistory
-      });
+      res.json(toGenerationDTO(generation));
     } catch (error: any) {
       logger.error({ module: 'Generation', err: error }, 'Error fetching generation');
       res.status(500).json({ error: "Failed to fetch generation" });

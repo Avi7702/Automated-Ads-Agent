@@ -192,7 +192,11 @@
       "Bash(bash -c 'export GIT_COMMIT_APPROVED=true && export GIT_PUSH_APPROVED=true && git commit -m \"\"feat: Week 4 light/dark mode fixes - 10 low-priority components complete\n\nFixed all remaining hardcoded colors across 10 components \\(18 total color fixes\\):\n- TemplateCard.tsx: 7 category badge colors + 1 global indicator\n- QuotaDashboardContent.tsx: 4 status badges + warning alert + local tracking\n- Templates.tsx: Mode buttons + background gradient \\(3 fixes\\)\n- ProductLibrary.tsx: 3 status badges \\(complete/verified/draft\\)\n- BrandImageLibrary.tsx: 6 category badges + background gradient\n- BrandProfileDisplay.tsx: 2 icon colors \\(CheckCircle2, XCircle\\)\n- GenerationDetail.tsx: 1 cost display text\n- TemplateAdmin.tsx: 2 icon colors \\(global status, warning\\)\n- Gallery.tsx: 2 background blur effects\n- SaveToCatalogDialog.tsx: Info badge + error text \\(3 fixes\\)\n\nPattern applied consistently:\n- Text: text-{color}-600 dark:text-{color}-400\n- Backgrounds: bg-{color}-500/5 dark:bg-{color}-500/10\n- Borders: border-{color}-500/30 dark:border-{color}-500/20\n\nBuild: SUCCESS \\(CSS: 170.51 KB, +0.22 KB\\)\nWeeks 1-4 complete: 24 components, 240+ color fixes total\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\"\" && git push origin main')",
       "Bash(bash -c 'sleep 5 && curl -s -X POST https://backboard.railway.app/graphql/v2 -H \"\"Content-Type: application/json\"\" -H \"\"Project-Access-Token: 4615359f-6328-413f-b418-4f0c6979161a\"\" -d \"\"{\\\\\"\"query\\\\\"\": \\\\\"\"query { deployments\\(first: 1, input: { serviceId: \\\\\\\\\\\\\"\"28ce02bc-f4ad-4ea7-aab6-bffc98a47e2f\\\\\\\\\\\\\"\" }\\) { edges { node { id status createdAt } } } }\\\\\"\"}\"\" | jq -r \"\".data.deployments.edges[0].node | \\\\\"\"ID: \\\\\\(.id\\)\\\\nStatus: \\\\\\(.status\\)\\\\nCreated: \\\\\\(.createdAt\\)\\\\\"\"\"\"')",
       "Bash(git diff:*)",
-      "Bash(git grep:*)"
+      "Bash(git grep:*)",
+      "Bash(npm test:coverage:*)",
+      "Bash(do if [ ! -f \"$f%.ts.test.ts\" ])",
+      "Bash(then echo \"NO TEST: $f\")",
+      "Bash(tasklist:*)"
     ]
   }
 }

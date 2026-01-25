@@ -1107,3 +1107,197 @@ export const insertContentPlannerPostSchema = createInsertSchema(contentPlannerP
 // Type exports
 export type InsertContentPlannerPost = z.infer<typeof insertContentPlannerPostSchema>;
 export type ContentPlannerPost = typeof contentPlannerPosts.$inferSelect;
+
+// ============================================
+// SOCIAL MEDIA SCHEDULING TABLES (Phase 8)
+// ============================================
+
+/**
+ * Social Platform enum for social connections
+ */
+export const socialPlatformEnum = z.enum(['linkedin', 'instagram']);
+
+/**
+ * Social Account Type enum
+ */
+export const socialAccountTypeEnum = z.enum(['personal', 'business', 'page']);
+
+/**
+ * Scheduled Post Status enum
+ */
+export const scheduledPostStatusEnum = z.enum([
+  'draft',
+  'scheduled',
+  'publishing',
+  'published',
+  'failed',
+  'cancelled',
+  'account_disconnected'
+]);
+
+/**
+ * Post Failure Reason enum
+ */
+export const postFailureReasonEnum = z.enum([
+  'token_expired',
+  'rate_limited',
+  'content_policy_violation',
+  'image_too_large',
+  'image_format_invalid',
+  'network_error',
+  'api_error',
+  'account_disconnected',
+  'unknown'
+]);
+
+/**
+ * Social Connections - OAuth tokens for LinkedIn/Instagram accounts
+ * Tokens are encrypted with AES-256-GCM at rest
+ */
+export const socialConnections = pgTable("social_connections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+
+  // Platform identification
+  platform: varchar("platform", { length: 20 }).notNull(), // 'linkedin' | 'instagram'
+
+  // Encrypted token storage (AES-256-GCM)
+  accessToken: text("access_token").notNull(), // ENCRYPTED
+  refreshToken: text("refresh_token"), // LinkedIn only, ENCRYPTED
+  tokenIv: text("token_iv").notNull(), // Base64 encoded IV
+  tokenAuthTag: text("token_auth_tag").notNull(), // Base64 encoded auth tag
+
+  // Token lifecycle
+  tokenExpiresAt: timestamp("token_expires_at").notNull(),
+  lastRefreshedAt: timestamp("last_refreshed_at"),
+
+  // Platform user info
+  platformUserId: varchar("platform_user_id", { length: 255 }),
+  platformUsername: varchar("platform_username", { length: 255 }),
+  profilePictureUrl: text("profile_picture_url"),
+
+  // Account classification
+  accountType: varchar("account_type", { length: 20 }), // 'personal' | 'business' | 'page'
+  scopes: text("scopes").array(), // ['w_member_social', 'r_liteprofile']
+
+  // Status
+  isActive: boolean("is_active").default(true).notNull(),
+  lastUsedAt: timestamp("last_used_at"),
+  lastErrorAt: timestamp("last_error_at"),
+  lastErrorMessage: text("last_error_message"),
+
+  connectedAt: timestamp("connected_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  // Index for efficient user lookups
+  idxUserPlatform: index("idx_social_conn_user_platform").on(table.userId, table.platform),
+  idxUserId: index("idx_social_conn_user_id").on(table.userId),
+}));
+
+/**
+ * Scheduled Posts - Posts queued for automatic publishing
+ * Supports LinkedIn and Instagram with status tracking
+ */
+export const scheduledPosts = pgTable("scheduled_posts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  connectionId: varchar("connection_id").notNull().references(() => socialConnections.id, { onDelete: "cascade" }),
+
+  // Content
+  caption: text("caption").notNull(),
+  hashtags: text("hashtags").array(),
+  imageUrl: text("image_url"), // Cloudinary URL (public)
+  imagePublicId: text("image_public_id"), // Cloudinary ID for cleanup
+
+  // Scheduling
+  scheduledFor: timestamp("scheduled_for").notNull(),
+  timezone: varchar("timezone", { length: 50 }).default("UTC").notNull(),
+
+  // Status tracking
+  status: varchar("status", { length: 25 }).default("draft").notNull(), // draft | scheduled | publishing | published | failed | cancelled | account_disconnected
+  publishedAt: timestamp("published_at"),
+  platformPostId: varchar("platform_post_id", { length: 255 }), // LinkedIn/Instagram post ID
+  platformPostUrl: text("platform_post_url"), // URL to view the post
+
+  // Error handling
+  errorMessage: text("error_message"),
+  failureReason: varchar("failure_reason", { length: 50 }), // token_expired | rate_limited | content_policy_violation | etc.
+  retryCount: integer("retry_count").default(0).notNull(),
+  nextRetryAt: timestamp("next_retry_at"),
+
+  // Traceability - link to generation source
+  generationId: varchar("generation_id").references(() => generations.id, { onDelete: "set null" }),
+  templateId: varchar("template_id", { length: 100 }), // Content Planner template ID
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  // Index for efficient calendar queries
+  idxUserScheduled: index("idx_sched_posts_user_scheduled").on(table.userId, table.scheduledFor),
+  idxConnectionStatus: index("idx_sched_posts_conn_status").on(table.connectionId, table.status),
+  // Index for the scheduler job to find due posts
+  idxStatusScheduledFor: index("idx_sched_posts_status_time").on(table.status, table.scheduledFor),
+}));
+
+/**
+ * Post Analytics - Performance metrics for published posts
+ * Fetched periodically from LinkedIn/Instagram APIs
+ */
+export const postAnalytics = pgTable("post_analytics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  scheduledPostId: varchar("scheduled_post_id").notNull().references(() => scheduledPosts.id, { onDelete: "cascade" }),
+
+  // When analytics were fetched
+  fetchedAt: timestamp("fetched_at").defaultNow().notNull(),
+
+  // Engagement metrics
+  impressions: integer("impressions"),
+  reach: integer("reach"),
+  likes: integer("likes"),
+  comments: integer("comments"),
+  shares: integer("shares"),
+  clicks: integer("clicks"),
+  saves: integer("saves"), // Instagram only
+
+  // Calculated metrics
+  engagementRate: real("engagement_rate"), // (likes + comments + shares) / impressions * 100
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  // Index for time-series queries
+  idxPostFetched: index("idx_post_analytics_post_fetched").on(table.scheduledPostId, table.fetchedAt),
+}));
+
+// Insert schemas for social media tables
+export const insertSocialConnectionSchema = createInsertSchema(socialConnections, {
+  platform: socialPlatformEnum,
+  accountType: socialAccountTypeEnum.optional(),
+}).omit({
+  id: true,
+  connectedAt: true,
+  updatedAt: true,
+});
+
+export const insertScheduledPostSchema = createInsertSchema(scheduledPosts, {
+  status: scheduledPostStatusEnum,
+  failureReason: postFailureReasonEnum.optional(),
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPostAnalyticsSchema = createInsertSchema(postAnalytics).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Type exports for social media tables
+export type InsertSocialConnection = z.infer<typeof insertSocialConnectionSchema>;
+export type SocialConnection = typeof socialConnections.$inferSelect;
+
+export type InsertScheduledPost = z.infer<typeof insertScheduledPostSchema>;
+export type ScheduledPost = typeof scheduledPosts.$inferSelect;
+
+export type InsertPostAnalytics = z.infer<typeof insertPostAnalyticsSchema>;
+export type PostAnalytics = typeof postAnalytics.$inferSelect;
