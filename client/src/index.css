@@ -438,3 +438,35 @@
 .animate-spin-reverse {
   animation: spin-reverse 1s linear infinite;
 }
+
+/* ========================================
+   PHASE 2: INTERACTION UPGRADES - RIPPLE EFFECTS
+   ======================================== */
+
+/* Material Design ripple effect */
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  transform: scale(0);
+  animation: ripple-animation 600ms ease-out;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.dark .ripple {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+@keyframes ripple-animation {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* Card interactive - for elements that should have ripple */
+.card-interactive {
+  position: relative;
+  overflow: hidden;
+}

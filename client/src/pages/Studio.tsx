@@ -51,6 +51,8 @@ import { TextOnlyMode } from "@/components/TextOnlyMode";
 import { getTemplateById, type ContentTemplate } from "@shared/contentTemplates";
 import { toast } from "sonner";
 import { useHaptic } from "@/hooks/useHaptic";
+import { useRipple } from "@/hooks/useRipple";
+import { useKeyboardShortcuts, type ShortcutConfig } from "@/hooks/useKeyboardShortcuts";
 
 // Icons
 import {
@@ -425,10 +427,12 @@ export default function Studio() {
   const { isHistoryOpen, selectedGenerationId, openHistory, closeHistory, selectGeneration } = useHistoryPanelUrl();
   const [historyPanelOpen, setHistoryPanelOpen] = useState(isHistoryOpen);
 
-  // 2026 UX: Haptic feedback and copy state
+  // 2026 UX: Haptic feedback, ripple effects, and copy state
   const { haptic } = useHaptic();
+  const { createRipple } = useRipple();
   const [justCopied, setJustCopied] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
 
   // Refs for scroll tracking
   const generateButtonRef = useRef<HTMLDivElement>(null);
@@ -870,6 +874,57 @@ export default function Studio() {
     setGeneratedCopy(""); // Clear generated copy
   };
 
+  // Keyboard shortcuts for power users
+  const shortcuts: ShortcutConfig[] = [
+    {
+      key: 'g',
+      ctrlKey: true,
+      callback: () => {
+        if (state === 'idle' && selectedProducts.length > 0) {
+          handleGenerate();
+        }
+      },
+      description: 'Generate image',
+      disabled: state !== 'idle' || selectedProducts.length === 0
+    },
+    {
+      key: 'd',
+      ctrlKey: true,
+      callback: () => {
+        if (generatedImage) {
+          handleDownloadWithFeedback();
+        }
+      },
+      description: 'Download image',
+      disabled: !generatedImage
+    },
+    {
+      key: 'r',
+      ctrlKey: true,
+      callback: handleReset,
+      description: 'Reset workspace',
+      disabled: state === 'idle' && !generatedImage
+    },
+    {
+      key: '/',
+      callback: () => {
+        const promptTextarea = document.getElementById('prompt-textarea');
+        if (promptTextarea) {
+          promptTextarea.focus();
+        }
+      },
+      description: 'Focus prompt'
+    },
+    {
+      key: '?',
+      shiftKey: true,
+      callback: () => setShowKeyboardShortcuts(!showKeyboardShortcuts),
+      description: 'Toggle shortcuts help'
+    }
+  ];
+
+  useKeyboardShortcuts(shortcuts);
+
   // Handle edit
   const handleApplyEdit = async () => {
     if (!editPrompt.trim() || !generationId) return;
@@ -1193,6 +1248,7 @@ export default function Studio() {
               </div>
               <div className="flex flex-col gap-3">
                 <Textarea
+                  id="prompt-textarea"
                   value={quickStartPrompt}
                   onChange={(e) => setQuickStartPrompt(e.target.value)}
                   placeholder="Describe what you want to create... e.g., 'A minimalist product shot with soft natural lighting on a clean white background' or 'Dynamic lifestyle image showing the product in use outdoors'"
@@ -1726,13 +1782,17 @@ export default function Studio() {
                         return (
                           <button
                             key={product.id}
-                            onClick={() => toggleProductSelection(product)}
+                            onClick={(e) => {
+                              createRipple(e);
+                              haptic('light');
+                              toggleProductSelection(product);
+                            }}
                             disabled={!isSelected && selectedProducts.length >= 6}
                             className={cn(
-                              "relative aspect-square min-h-[80px] rounded-xl overflow-hidden border-2 transition-all",
+                              "card-interactive relative aspect-square min-h-[80px] rounded-xl overflow-hidden border-2 transition-all",
                               isSelected
-                                ? "border-primary ring-2 ring-primary/20"
-                                : "border-border hover:border-primary/50",
+                                ? "border-primary ring-2 ring-primary/20 scale-105"
+                                : "border-border hover:border-primary/50 hover:scale-102",
                               !isSelected && selectedProducts.length >= 6 && "opacity-50"
                             )}
                           >
@@ -2625,6 +2685,95 @@ export default function Studio() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Keyboard Shortcuts Help - Floating Button & Dialog */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+        {/* Help Dialog */}
+        {showKeyboardShortcuts && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            className="glass rounded-xl shadow-layered p-5 w-80 mb-2"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary" />
+                Keyboard Shortcuts
+              </h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowKeyboardShortcuts(false)}
+                className="h-6 w-6 p-0"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+
+            <div className="space-y-2.5">
+              {shortcuts.map((shortcut, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "flex items-center justify-between text-xs py-2 px-2.5 rounded-lg transition-colors",
+                    shortcut.disabled
+                      ? "opacity-40"
+                      : "hover:bg-muted/50"
+                  )}
+                >
+                  <span className="text-foreground/80">{shortcut.description}</span>
+                  <div className="flex gap-1">
+                    {shortcut.ctrlKey && (
+                      <kbd className="px-2 py-1 text-[10px] rounded bg-muted border border-border font-mono">
+                        Ctrl
+                      </kbd>
+                    )}
+                    {shortcut.shiftKey && (
+                      <kbd className="px-2 py-1 text-[10px] rounded bg-muted border border-border font-mono">
+                        Shift
+                      </kbd>
+                    )}
+                    <kbd className="px-2 py-1 text-[10px] rounded bg-muted border border-border font-mono">
+                      {shortcut.key.toUpperCase()}
+                    </kbd>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-border/50">
+              <p className="text-[10px] text-muted-foreground text-center">
+                Press <kbd className="px-1.5 py-0.5 text-[9px] rounded bg-muted border border-border font-mono">?</kbd> to toggle this menu
+              </p>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Help Button */}
+        <motion.div
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              haptic('light');
+              setShowKeyboardShortcuts(!showKeyboardShortcuts);
+            }}
+            className={cn(
+              "glass h-11 w-11 rounded-full shadow-layered p-0 flex items-center justify-center group",
+              showKeyboardShortcuts && "ring-2 ring-primary/30 bg-primary/10"
+            )}
+            title="Keyboard Shortcuts (Shift + ?)"
+          >
+            <span className="text-base font-semibold group-hover:scale-110 transition-transform">
+              ?
+            </span>
+          </Button>
+        </motion.div>
+      </div>
     </div>
     </StudioProvider>
   );
