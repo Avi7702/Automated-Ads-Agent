@@ -1355,12 +1355,29 @@ export default function Studio() {
                   Start New
                 </Button>
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={handleDownload}>
-                    <Download className="w-4 h-4 mr-2" />
-                    Download
+                  <Button
+                    variant="outline"
+                    onClick={handleDownloadWithFeedback}
+                    disabled={isDownloading}
+                    className="hover:scale-105 transition-all"
+                  >
+                    {isDownloading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Downloading...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4 mr-2" />
+                        Download
+                      </>
+                    )}
                   </Button>
                   <Link href={`/generation/${generationId}`}>
-                    <Button variant="outline">
+                    <Button
+                      variant="outline"
+                      className="hover:scale-105 transition-all hover:border-primary/50"
+                    >
                       <History className="w-4 h-4 mr-2" />
                       View Details
                     </Button>
@@ -1417,50 +1434,72 @@ export default function Studio() {
                 )}
               </div>
 
-              {/* Action Buttons */}
+              {/* Action Buttons - 2026 UX with active states */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <Button
-                  variant="outline"
-                  className="h-14"
+                  variant={!collapsedSections.refine ? "default" : "outline"}
+                  className={cn(
+                    "h-14 transition-all",
+                    !collapsedSections.refine && "ring-2 ring-primary/30 scale-105"
+                  )}
                   onClick={() => {
                     haptic('light');
                     toggleSection("refine");
+                    if (collapsedSections.refine) {
+                      toast.success("Edit panel opened");
+                    }
                   }}
                 >
+                  {!collapsedSections.refine && <Check className="w-4 h-4 mr-2" />}
                   <Pencil className="w-4 h-4 mr-2" />
                   Edit
                 </Button>
                 <Button
-                  variant="outline"
-                  className="h-14"
+                  variant={!collapsedSections.copy ? "default" : "outline"}
+                  className={cn(
+                    "h-14 transition-all",
+                    !collapsedSections.copy && "ring-2 ring-primary/30 scale-105"
+                  )}
                   onClick={() => {
                     haptic('light');
                     toggleSection("copy");
+                    if (collapsedSections.copy) {
+                      toast.success("Copy panel opened");
+                    }
                   }}
                 >
+                  {!collapsedSections.copy && <Check className="w-4 h-4 mr-2" />}
                   <MessageCircle className="w-4 h-4 mr-2" />
                   Copy
                 </Button>
                 <Button
-                  variant="outline"
-                  className="h-14"
+                  variant={!collapsedSections.preview ? "default" : "outline"}
+                  className={cn(
+                    "h-14 transition-all",
+                    !collapsedSections.preview && "ring-2 ring-primary/30 scale-105"
+                  )}
                   onClick={() => {
                     haptic('light');
                     toggleSection("preview");
-                    if (!generatedCopy) {
-                      handleGenerateCopy();
+                    if (collapsedSections.preview) {
+                      toast.success("Preview panel opened");
+                      if (!generatedCopy) {
+                        handleGenerateCopy();
+                      }
                     }
                   }}
                 >
+                  {!collapsedSections.preview && <Check className="w-4 h-4 mr-2" />}
                   <Eye className="w-4 h-4 mr-2" />
                   Preview
                 </Button>
                 <Button
                   variant="outline"
-                  className="h-14"
+                  className="h-14 hover:scale-105 transition-all"
                   onClick={() => {
                     haptic('light');
                     setShowSaveToCatalog(true);
+                    toast.success("Save dialog opened");
                   }}
                 >
                   <FolderPlus className="w-4 h-4 mr-2" />
