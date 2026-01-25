@@ -49,6 +49,8 @@ import { CarouselBuilder } from "@/components/CarouselBuilder";
 import { BeforeAfterBuilder } from "@/components/BeforeAfterBuilder";
 import { TextOnlyMode } from "@/components/TextOnlyMode";
 import { getTemplateById, type ContentTemplate } from "@shared/contentTemplates";
+import { toast } from "sonner";
+import { useHaptic } from "@/hooks/useHaptic";
 
 // Icons
 import {
@@ -419,6 +421,10 @@ export default function Studio() {
   // History panel URL state
   const { isHistoryOpen, selectedGenerationId, openHistory, closeHistory, selectGeneration } = useHistoryPanelUrl();
   const [historyPanelOpen, setHistoryPanelOpen] = useState(isHistoryOpen);
+
+  // 2026 UX: Haptic feedback and copy state
+  const { haptic } = useHaptic();
+  const [justCopied, setJustCopied] = useState(false);
 
   // Refs for scroll tracking
   const generateButtonRef = useRef<HTMLDivElement>(null);
@@ -2183,15 +2189,40 @@ export default function Studio() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-1"
+                      className={cn(
+                        "flex-1 transition-all",
+                        justCopied && "bg-green-500/10 border-green-500"
+                      )}
                       disabled={!generatedImage || !generatedCopy}
-                      onClick={() => {
-                        if (generatedCopy) {
-                          navigator.clipboard.writeText(generatedCopy);
-                        }
+                      onClick={async () => {
+                        if (!generatedCopy) return;
+
+                        // Immediate haptic feedback
+                        haptic('light');
+
+                        // Copy to clipboard
+                        await navigator.clipboard.writeText(generatedCopy);
+
+                        // Visual state change
+                        setJustCopied(true);
+                        setTimeout(() => setJustCopied(false), 2000);
+
+                        // Success toast
+                        toast.success('✓ Copied to clipboard!', {
+                          duration: 2000
+                        });
                       }}
                     >
-                      📋 Copy Text
+                      {justCopied ? (
+                        <>
+                          <Check className="w-4 h-4 mr-2" />
+                          Copied!
+                        </>
+                      ) : (
+                        <>
+                          📋 Copy Text
+                        </>
+                      )}
                     </Button>
                     <Button
                       variant="outline"
@@ -2267,15 +2298,40 @@ export default function Studio() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex-1"
+                  className={cn(
+                    "flex-1 transition-all",
+                    justCopied && "bg-green-500/10 border-green-500"
+                  )}
                   disabled={!generatedCopy}
-                  onClick={() => {
-                    if (generatedCopy) {
-                      navigator.clipboard.writeText(generatedCopy);
-                    }
+                  onClick={async () => {
+                    if (!generatedCopy) return;
+
+                    // Immediate haptic feedback
+                    haptic('light');
+
+                    // Copy to clipboard
+                    await navigator.clipboard.writeText(generatedCopy);
+
+                    // Visual state change
+                    setJustCopied(true);
+                    setTimeout(() => setJustCopied(false), 2000);
+
+                    // Success toast
+                    toast.success('✓ Copied to clipboard!', {
+                      duration: 2000
+                    });
                   }}
                 >
-                  📋 Copy
+                  {justCopied ? (
+                    <>
+                      <Check className="w-4 h-4 mr-2" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      📋 Copy
+                    </>
+                  )}
                 </Button>
                 <Button
                   variant="outline"
