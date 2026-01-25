@@ -263,3 +263,178 @@
   opacity: 0.1;
   transition: opacity 0ms;
 }
+
+/* ========================================
+   2026 UX MODERNIZATION - PHASE 1: VISUAL POLISH
+   ======================================== */
+
+/* Neumorphic shadows - 2026 depth and hierarchy */
+.neomorph {
+  box-shadow:
+    8px 8px 16px rgba(0, 0, 0, 0.1),
+    -8px -8px 16px rgba(255, 255, 255, 0.7);
+}
+
+.dark .neomorph {
+  box-shadow:
+    8px 8px 16px rgba(0, 0, 0, 0.4),
+    -8px -8px 16px rgba(255, 255, 255, 0.02);
+}
+
+.neomorph-inset {
+  box-shadow:
+    inset 4px 4px 8px rgba(0, 0, 0, 0.1),
+    inset -4px -4px 8px rgba(255, 255, 255, 0.7);
+}
+
+.dark .neomorph-inset {
+  box-shadow:
+    inset 4px 4px 8px rgba(0, 0, 0, 0.5),
+    inset -4px -4px 8px rgba(255, 255, 255, 0.02);
+}
+
+/* Layered shadows for visual depth */
+.shadow-layered {
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    0 4px 8px rgba(0, 0, 0, 0.04),
+    0 12px 24px rgba(0, 0, 0, 0.03);
+}
+
+.dark .shadow-layered {
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 4px 8px rgba(0, 0, 0, 0.2),
+    0 12px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* Glass morphism - modern backdrop blur effects */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.dark .glass {
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Gradient borders - AI aesthetic */
+.gradient-border {
+  position: relative;
+  border: none;
+}
+
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: linear-gradient(135deg,
+    hsl(var(--primary)) 0%,
+    hsl(280 65% 60%) 50%,
+    hsl(var(--primary)) 100%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+/* AI Sparkle animations - rotating, glowing magic indicators */
+@keyframes sparkle {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.2) rotate(180deg);
+  }
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 4px currentColor);
+  }
+  50% {
+    filter: drop-shadow(0 0 12px currentColor) drop-shadow(0 0 20px currentColor);
+  }
+}
+
+.ai-sparkle {
+  animation: sparkle 2s ease-in-out infinite;
+}
+
+.ai-glow {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* Animated gradient text */
+.text-gradient-animated {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--primary)),
+    hsl(280 65% 60%),
+    hsl(var(--primary))
+  );
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradient-shift 3s ease infinite;
+}
+
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% center;
+  }
+  50% {
+    background-position: 100% center;
+  }
+}
+
+/* Floating animations for background gradients */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) translateX(0);
+  }
+  50% {
+    transform: translateY(-20px) translateX(10px);
+  }
+}
+
+@keyframes float-delayed {
+  0%, 100% {
+    transform: translateY(0) translateX(0);
+  }
+  50% {
+    transform: translateY(20px) translateX(-10px);
+  }
+}
+
+.animate-float {
+  animation: float 8s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+  animation: float-delayed 10s ease-in-out infinite;
+}
+
+/* Reverse spin for orbital loaders */
+@keyframes spin-reverse {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+.animate-spin-reverse {
+  animation: spin-reverse 1s linear infinite;
+}

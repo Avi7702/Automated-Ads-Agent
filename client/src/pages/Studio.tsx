@@ -150,7 +150,10 @@ function Section({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className={cn(
-          "rounded-2xl border border-border bg-card/30 backdrop-blur-sm overflow-hidden",
+          "rounded-2xl overflow-hidden transition-all duration-300",
+          isOpen ? "neomorph shadow-layered" : "border border-border/50 shadow-sm",
+          "bg-gradient-to-br from-card via-card to-card/50",
+          "hover:shadow-xl hover:border-primary/20",
           className
         )}
       >
@@ -309,9 +312,9 @@ function StickyGenerateBar({
           </>
         ) : (
           <>
-            <Sparkles className="w-5 h-5 mr-2" />
+            <Sparkles className="w-5 h-5 mr-2 ai-sparkle text-primary ai-glow" />
             Generate Image
-          </>
+</>
         )}
       </Button>
       <p className="text-center text-xs text-muted-foreground mt-2">
@@ -1107,10 +1110,11 @@ export default function Studio() {
   return (
     <StudioProvider>
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/20 selection:text-primary font-sans relative">
-      {/* Background Ambience */}
+      {/* Background Ambience - 2026 floating gradients */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/5 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-500/5 dark:bg-blue-500/10 blur-[120px] rounded-full" />
+        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-gradient-to-br from-primary/10 via-purple-500/8 to-transparent blur-[120px] rounded-full animate-float" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-gradient-to-tl from-blue-500/10 via-cyan-500/8 to-transparent blur-[120px] rounded-full animate-float-delayed" />
+        <div className="absolute top-[40%] right-[20%] w-[30%] h-[30%] bg-gradient-radial from-violet-500/5 to-transparent blur-[100px] rounded-full animate-pulse" />
       </div>
 
       {/* Header */}
@@ -1206,7 +1210,7 @@ export default function Studio() {
                     onClick={handleQuickStartGenerate}
                     disabled={!quickStartPrompt.trim()}
                   >
-                    <Sparkles className="w-4 h-4 mr-2" />
+                    <Sparkles className="w-4 h-4 mr-2 ai-sparkle text-primary ai-glow" />
                     Generate Now
                   </Button>
                 </div>
@@ -1222,20 +1226,35 @@ export default function Studio() {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex flex-col items-center justify-center py-20 text-center space-y-8"
+              className="flex flex-col items-center justify-center min-h-[400px] space-y-6"
             >
-              <div className="relative w-32 h-32">
-                <div className="absolute inset-0 rounded-full border-t-2 border-primary animate-spin" />
-                <div className="absolute inset-4 rounded-full border-r-2 border-purple-600 dark:border-purple-400 animate-spin-slow" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Sparkles className="w-12 h-12 text-primary" />
-                </div>
+              {/* Orbital loader with enhanced depth */}
+              <div className="relative w-24 h-24">
+                <div className="absolute inset-0 rounded-full border-4 border-primary/20" />
+                <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-primary animate-spin" />
+                <div className="absolute inset-2 rounded-full border-4 border-transparent border-r-purple-500 animate-spin-reverse" style={{ animationDuration: '1.5s' }} />
+                <Sparkles className="absolute inset-0 m-auto w-8 h-8 text-primary ai-glow" />
               </div>
-              <div className="space-y-2">
-                <h2 className="text-2xl font-display font-medium">Generating content...</h2>
-                <p className="text-muted-foreground">
-                  This usually takes 10-30 seconds
+
+              {/* Progress text with animated gradient */}
+              <div className="text-center space-y-2">
+                <p className="text-lg font-semibold text-gradient-animated">
+                  Generating magic...
                 </p>
+                <p className="text-sm text-muted-foreground">
+                  This usually takes 5-10 seconds
+                </p>
+              </div>
+
+              {/* Pulse indicator */}
+              <div className="flex gap-2">
+                {[0, 1, 2].map(i => (
+                  <div
+                    key={i}
+                    className="w-2 h-2 rounded-full bg-primary animate-pulse"
+                    style={{ animationDelay: `${i * 200}ms` }}
+                  />
+                ))}
               </div>
             </motion.div>
           )}
@@ -1442,7 +1461,7 @@ export default function Studio() {
                           </>
                         ) : (
                           <>
-                            <Sparkles className="w-4 h-4 mr-2" />
+                            <Sparkles className="w-4 h-4 mr-2 ai-sparkle text-primary ai-glow" />
                             Generate Ad Copy
                           </>
                         )}
@@ -1507,7 +1526,7 @@ export default function Studio() {
                 className="space-y-4"
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="w-5 h-5 text-primary" />
+                  <Sparkles className="w-5 h-5 text-primary ai-sparkle ai-glow" />
                   <h3 className="font-medium">Choose Your Path</h3>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -2208,7 +2227,7 @@ export default function Studio() {
                   disabled={(selectedProducts.length === 0 && tempUploads.length === 0) || !prompt.trim()}
                   className="w-full h-16 text-lg rounded-2xl"
                 >
-                  <Sparkles className="w-5 h-5 mr-2" />
+                  <Sparkles className="w-5 h-5 mr-2 ai-sparkle text-primary ai-glow" />
                   Generate Image
                 </Button>
                 <p className="text-center text-sm text-muted-foreground mt-3">
