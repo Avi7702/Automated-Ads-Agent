@@ -871,6 +871,8 @@ export default function Studio() {
   const handleApplyEdit = async () => {
     if (!editPrompt.trim() || !generationId) return;
 
+    // Immediate haptic feedback
+    haptic('light');
     setIsEditing(true);
 
     try {
@@ -886,9 +888,16 @@ export default function Studio() {
         throw new Error(data.error || "Edit failed");
       }
 
+      // Success feedback
+      haptic('medium');
+      toast.success('✓ Changes applied!', {
+        duration: 2000
+      });
+
       setLocation(`/generation/${data.generationId}`);
     } catch (error: any) {
-      alert(error.message || "Edit failed");
+      haptic('heavy');
+      toast.error(`✗ ${error.message || "Edit failed"}`);
     } finally {
       setIsEditing(false);
     }
@@ -921,6 +930,8 @@ export default function Studio() {
   const handleGenerateCopy = async () => {
     if (!generationId) return;
 
+    // Immediate haptic feedback
+    haptic('light');
     setIsGeneratingCopy(true);
 
     try {
@@ -959,9 +970,16 @@ export default function Studio() {
         setGeneratedCopy(data.variations[0].copy);
         // Auto-expand preview section
         setCollapsedSections((prev) => ({ ...prev, preview: false }));
+
+        // Success feedback
+        haptic('medium');
+        toast.success('✓ Copy generated!', {
+          duration: 2000
+        });
       }
     } catch (error: any) {
-      alert(error.message || "Failed to generate copy");
+      haptic('heavy');
+      toast.error(`✗ ${error.message || "Failed to generate copy"}`);
     } finally {
       setIsGeneratingCopy(false);
     }
@@ -1262,41 +1280,30 @@ export default function Studio() {
               {/* Action Buttons */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <Button
-                  variant={!collapsedSections.refine ? "default" : "outline"}
-                  className={cn(
-                    "h-14 transition-all",
-                    !collapsedSections.refine && "ring-2 ring-primary/30"
-                  )}
+                  variant="outline"
+                  className="h-14"
                   onClick={() => {
                     haptic('light');
                     toggleSection("refine");
                   }}
                 >
-                  {!collapsedSections.refine && <Check className="w-4 h-4 mr-2" />}
                   <Pencil className="w-4 h-4 mr-2" />
                   Edit
                 </Button>
                 <Button
-                  variant={!collapsedSections.copy ? "default" : "outline"}
-                  className={cn(
-                    "h-14 transition-all",
-                    !collapsedSections.copy && "ring-2 ring-primary/30"
-                  )}
+                  variant="outline"
+                  className="h-14"
                   onClick={() => {
                     haptic('light');
                     toggleSection("copy");
                   }}
                 >
-                  {!collapsedSections.copy && <Check className="w-4 h-4 mr-2" />}
                   <MessageCircle className="w-4 h-4 mr-2" />
                   Copy
                 </Button>
                 <Button
-                  variant={!collapsedSections.preview ? "default" : "outline"}
-                  className={cn(
-                    "h-14 transition-all",
-                    !collapsedSections.preview && "ring-2 ring-primary/30"
-                  )}
+                  variant="outline"
+                  className="h-14"
                   onClick={() => {
                     haptic('light');
                     toggleSection("preview");
@@ -1305,7 +1312,6 @@ export default function Studio() {
                     }
                   }}
                 >
-                  {!collapsedSections.preview && <Check className="w-4 h-4 mr-2" />}
                   <Eye className="w-4 h-4 mr-2" />
                   Preview
                 </Button>
