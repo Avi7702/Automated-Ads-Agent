@@ -4,6 +4,7 @@ import { History, Star, Clock, ChevronLeft, ChevronRight } from "lucide-react";
 import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { GenerationDTO } from "@shared/types/api";
+import { useHaptic } from "@/hooks/useHaptic";
 
 interface HistoryTimelineProps {
   currentGenerationId?: string | null;
@@ -19,6 +20,8 @@ export function HistoryTimeline({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const [clickedId, setClickedId] = useState<string | null>(null);
+  const { haptic } = useHaptic();
 
   // Fetch recent generations
   const { data: generations = [], isLoading } = useQuery<GenerationDTO[]>({
@@ -156,14 +159,21 @@ export function HistoryTimeline({
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
                 transition={{ delay: index * 0.05 }}
-                onClick={() => onSelect(generation)}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  haptic('light');
+                  setClickedId(generation.id);
+                  setTimeout(() => setClickedId(null), 300);
+                  onSelect(generation);
+                }}
                 className={cn(
                   "relative flex-shrink-0 group",
                   "w-20 h-20 rounded-lg overflow-hidden",
                   "border-2 transition-all",
                   isCurrent
                     ? "border-primary ring-2 ring-primary/30"
-                    : "border-border hover:border-primary/50"
+                    : "border-border hover:border-primary/50",
+                  clickedId === generation.id && "ring-4 ring-primary/50"
                 )}
               >
                 {/* Thumbnail */}

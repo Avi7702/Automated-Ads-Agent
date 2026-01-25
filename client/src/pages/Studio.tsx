@@ -425,6 +425,7 @@ export default function Studio() {
   // 2026 UX: Haptic feedback and copy state
   const { haptic } = useHaptic();
   const [justCopied, setJustCopied] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // Refs for scroll tracking
   const generateButtonRef = useRef<HTMLDivElement>(null);
@@ -823,6 +824,36 @@ export default function Studio() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // 2026 UX: Download with feedback
+  const handleDownloadWithFeedback = async () => {
+    if (!generatedImage) return;
+
+    // Immediate haptic feedback
+    haptic('light');
+
+    // Show loading state
+    setIsDownloading(true);
+
+    try {
+      // Small delay to ensure loading state is visible
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      handleDownload();
+
+      // Success feedback
+      haptic('medium');
+      toast.success('✓ Image downloaded!', {
+        duration: 2000
+      });
+    } catch (error) {
+      haptic('heavy');
+      toast.error('✗ Download failed');
+    } finally {
+      // Keep loading state briefly so user sees the feedback
+      setTimeout(() => setIsDownloading(false), 500);
+    }
   };
 
   // Handle reset
@@ -1231,38 +1262,60 @@ export default function Studio() {
               {/* Action Buttons */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <Button
-                  variant="outline"
-                  className="h-14"
-                  onClick={() => toggleSection("refine")}
+                  variant={!collapsedSections.refine ? "default" : "outline"}
+                  className={cn(
+                    "h-14 transition-all",
+                    !collapsedSections.refine && "ring-2 ring-primary/30"
+                  )}
+                  onClick={() => {
+                    haptic('light');
+                    toggleSection("refine");
+                  }}
                 >
+                  {!collapsedSections.refine && <Check className="w-4 h-4 mr-2" />}
                   <Pencil className="w-4 h-4 mr-2" />
                   Edit
                 </Button>
                 <Button
-                  variant="outline"
-                  className="h-14"
-                  onClick={() => toggleSection("copy")}
+                  variant={!collapsedSections.copy ? "default" : "outline"}
+                  className={cn(
+                    "h-14 transition-all",
+                    !collapsedSections.copy && "ring-2 ring-primary/30"
+                  )}
+                  onClick={() => {
+                    haptic('light');
+                    toggleSection("copy");
+                  }}
                 >
+                  {!collapsedSections.copy && <Check className="w-4 h-4 mr-2" />}
                   <MessageCircle className="w-4 h-4 mr-2" />
                   Copy
                 </Button>
                 <Button
-                  variant="outline"
-                  className="h-14"
+                  variant={!collapsedSections.preview ? "default" : "outline"}
+                  className={cn(
+                    "h-14 transition-all",
+                    !collapsedSections.preview && "ring-2 ring-primary/30"
+                  )}
                   onClick={() => {
+                    haptic('light');
                     toggleSection("preview");
                     if (!generatedCopy) {
                       handleGenerateCopy();
                     }
                   }}
                 >
+                  {!collapsedSections.preview && <Check className="w-4 h-4 mr-2" />}
                   <Eye className="w-4 h-4 mr-2" />
                   Preview
                 </Button>
                 <Button
                   variant="outline"
                   className="h-14"
-                  onClick={() => setShowSaveToCatalog(true)}
+                  onClick={() => {
+                    haptic('light');
+                    setShowSaveToCatalog(true);
+                  }}
                 >
                   <FolderPlus className="w-4 h-4 mr-2" />
                   Save
@@ -2228,10 +2281,19 @@ export default function Studio() {
                       variant="outline"
                       size="sm"
                       className="flex-1"
-                      disabled={!generatedImage}
-                      onClick={handleDownload}
+                      disabled={!generatedImage || isDownloading}
+                      onClick={handleDownloadWithFeedback}
                     >
-                      📥 Download
+                      {isDownloading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Downloading...
+                        </>
+                      ) : (
+                        <>
+                          📥 Download
+                        </>
+                      )}
                     </Button>
                   </div>
                 </div>
@@ -2337,10 +2399,19 @@ export default function Studio() {
                   variant="outline"
                   size="sm"
                   className="flex-1"
-                  disabled={!generatedImage}
-                  onClick={handleDownload}
+                  disabled={!generatedImage || isDownloading}
+                  onClick={handleDownloadWithFeedback}
                 >
-                  📥 Download
+                  {isDownloading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Downloading...
+                    </>
+                  ) : (
+                    <>
+                      📥 Download
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
