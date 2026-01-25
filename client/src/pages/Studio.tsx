@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { cn, getProductImageUrl } from "@/lib/utils";
 import type { Product, PromptTemplate, PerformingAdTemplate, AdSceneTemplate } from "@shared/schema";
+import type { GenerationDTO } from "@shared/types/api";
 
 // Components
 import { Button } from "@/components/ui/button";
@@ -930,12 +931,9 @@ export default function Studio() {
   };
 
   // Handle loading a generation from history
-  const handleLoadFromHistory = (generation: any) => {
-    // Handle both Cloudinary URLs and local paths
-    const imagePath = generation.generatedImagePath?.startsWith("http")
-      ? generation.generatedImagePath
-      : `/${generation.generatedImagePath}`;
-    setGeneratedImage(imagePath);
+  const handleLoadFromHistory = (generation: GenerationDTO) => {
+    // imageUrl is already transformed by DTO (handles Cloudinary vs local paths)
+    setGeneratedImage(generation.imageUrl);
     setGenerationId(generation.id);
     setPrompt(generation.prompt || "");
     setState("result");

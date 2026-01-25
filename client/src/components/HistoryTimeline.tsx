@@ -3,11 +3,11 @@ import { cn } from "@/lib/utils";
 import { History, Star, Clock, ChevronLeft, ChevronRight } from "lucide-react";
 import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { Generation } from "@shared/schema";
+import type { GenerationDTO } from "@shared/types/api";
 
 interface HistoryTimelineProps {
   currentGenerationId?: string | null;
-  onSelect: (generation: Generation) => void;
+  onSelect: (generation: GenerationDTO) => void;
   className?: string;
 }
 
@@ -21,7 +21,7 @@ export function HistoryTimeline({
   const [canScrollRight, setCanScrollRight] = useState(false);
 
   // Fetch recent generations
-  const { data: generations = [], isLoading } = useQuery<Generation[]>({
+  const { data: generations = [], isLoading } = useQuery<GenerationDTO[]>({
     queryKey: ["generations"],
     queryFn: async () => {
       const res = await fetch("/api/generations?limit=20");
@@ -168,7 +168,7 @@ export function HistoryTimeline({
               >
                 {/* Thumbnail */}
                 <img
-                  src={generation.generatedImagePath?.startsWith("http") ? generation.generatedImagePath : `/${generation.generatedImagePath}`}
+                  src={generation.imageUrl}
                   alt={generation.prompt?.slice(0, 30) || "Generated"}
                   className="w-full h-full object-cover"
                   loading="lazy"
