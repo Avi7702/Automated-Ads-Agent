@@ -1,4 +1,5 @@
 import { Switch, Route, Redirect } from "wouter";
+import { lazy, Suspense } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
@@ -8,29 +9,31 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import NotFound from "@/pages/not-found";
+
+// Eager load only critical pages
 import Login from "@/pages/Login";
 import Studio from "@/pages/Studio";
-import Gallery from "@/pages/Gallery";
-import GenerationDetail from "@/pages/GenerationDetail";
-import BrandProfile from "@/pages/BrandProfile";
-import Templates from "@/pages/Templates";
-import TemplateAdmin from "@/pages/TemplateAdmin";
-import QuotaDashboard from "@/pages/QuotaDashboard";
-import ProductLibrary from "@/pages/ProductLibrary";
-import InstallationScenarios from "@/pages/InstallationScenarios";
-import BrandImageLibrary from "@/pages/BrandImageLibrary";
-import TemplateLibrary from "@/pages/TemplateLibrary";
-import SystemMap from "@/pages/SystemMap";
-import ApiKeySettings from "@/pages/ApiKeySettings";
-import LearnFromWinners from "@/pages/LearnFromWinners";
-// Phase 3 consolidated pages
-import Library from "@/pages/Library";
-import Settings from "@/pages/Settings";
-// Content Planner
-import ContentPlanner from "@/pages/ContentPlanner";
-// Phase 8.1: Social Accounts Management
-import SocialAccounts from "@/pages/SocialAccounts";
+
+// Lazy load all other pages to reduce initial bundle size
+const Library = lazy(() => import("@/pages/Library"));
+const Settings = lazy(() => import("@/pages/Settings"));
+const ContentPlanner = lazy(() => import("@/pages/ContentPlanner"));
+const SocialAccounts = lazy(() => import("@/pages/SocialAccounts"));
+const TemplateAdmin = lazy(() => import("@/pages/TemplateAdmin"));
+const SystemMap = lazy(() => import("@/pages/SystemMap"));
+const NotFound = lazy(() => import("@/pages/not-found"));
+
+// Loading fallback component
+function PageLoader() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm text-muted-foreground">Loading...</p>
+      </div>
+    </div>
+  );
+}
 
 function Router() {
   return (
@@ -45,30 +48,38 @@ function Router() {
         </ProtectedRoute>
       </Route>
 
-      {/* Phase 3: Consolidated Routes */}
+      {/* Phase 3: Consolidated Routes - Lazy Loaded */}
       <Route path="/library">
         <ProtectedRoute>
-          <Library />
+          <Suspense fallback={<PageLoader />}>
+            <Library />
+          </Suspense>
         </ProtectedRoute>
       </Route>
 
       <Route path="/settings">
         <ProtectedRoute>
-          <Settings />
+          <Suspense fallback={<PageLoader />}>
+            <Settings />
+          </Suspense>
         </ProtectedRoute>
       </Route>
 
       {/* Content Planner - Strategic posting guide */}
       <Route path="/content-planner">
         <ProtectedRoute>
-          <ContentPlanner />
+          <Suspense fallback={<PageLoader />}>
+            <ContentPlanner />
+          </Suspense>
         </ProtectedRoute>
       </Route>
 
       {/* Phase 8.1: Social Accounts Management */}
       <Route path="/social-accounts">
         <ProtectedRoute>
-          <SocialAccounts />
+          <Suspense fallback={<PageLoader />}>
+            <SocialAccounts />
+          </Suspense>
         </ProtectedRoute>
       </Route>
 
@@ -119,18 +130,26 @@ function Router() {
 
       <Route path="/admin/templates">
         <ProtectedRoute>
-          <TemplateAdmin />
+          <Suspense fallback={<PageLoader />}>
+            <TemplateAdmin />
+          </Suspense>
         </ProtectedRoute>
       </Route>
 
       {/* Developer Tools */}
       <Route path="/system-map">
         <ProtectedRoute>
-          <SystemMap />
+          <Suspense fallback={<PageLoader />}>
+            <SystemMap />
+          </Suspense>
         </ProtectedRoute>
       </Route>
 
-      <Route component={NotFound} />
+      <Route>
+        <Suspense fallback={<PageLoader />}>
+          <NotFound />
+        </Suspense>
+      </Route>
     </Switch>
   );
 }

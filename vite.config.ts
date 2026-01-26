@@ -40,6 +40,42 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Separate React and core libraries
+          'vendor-react': ['react', 'react-dom', 'react/jsx-runtime'],
+          // Separate React Query
+          'vendor-query': ['@tanstack/react-query'],
+          // Separate UI components library
+          'vendor-ui': [
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-dropdown-menu',
+            '@radix-ui/react-select',
+            '@radix-ui/react-tabs',
+            '@radix-ui/react-toast',
+            '@radix-ui/react-tooltip',
+            '@radix-ui/react-popover',
+            '@radix-ui/react-alert-dialog',
+            '@radix-ui/react-label',
+            '@radix-ui/react-checkbox',
+            '@radix-ui/react-switch',
+            '@radix-ui/react-slider',
+            '@radix-ui/react-progress',
+          ],
+          // Separate heavy charting library (used only in QuotaDashboard)
+          'vendor-charts': ['recharts'],
+          // Separate flow diagram library (used only in SystemMap)
+          'vendor-flow': ['@xyflow/react'],
+          // Separate date/form utilities
+          'vendor-utils': ['date-fns', 'react-hook-form', 'zod'],
+          // Separate icons
+          'vendor-icons': ['lucide-react'],
+        },
+      },
+    },
+    // Increase chunk size warning limit (we're splitting intentionally)
+    chunkSizeWarningLimit: 1000,
   },
   server: {
     host: "127.0.0.1",
