@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo, useMemo } from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,9 @@ export function Header({ currentPage }: HeaderProps) {
 
   // Determine active page from location if not provided
   // Phase 3: Simplified to 3 main routes + Content Planner
-  const activePage = currentPage || (() => {
+  // Memoized to prevent re-calculation on every render
+  const activePage = useMemo(() => {
+    if (currentPage) return currentPage;
     if (location === "/" || location.startsWith("/?")) return "studio";
     if (location.startsWith("/library")) return "library";
     if (location.startsWith("/settings")) return "settings";
@@ -29,7 +31,7 @@ export function Header({ currentPage }: HeaderProps) {
     if (["/products", "/brand-images", "/template-library", "/templates", "/installation-scenarios", "/learn-from-winners"].includes(location)) return "library";
     if (location === "/usage" || location === "/settings/api-keys" || location === "/brand-profile") return "settings";
     return "studio";
-  })();
+  }, [currentPage, location]);
 
   // Phase 3: Simplified navigation - 5 main items (including Content Planner & Social Accounts)
   const navItems = [
@@ -135,4 +137,5 @@ export function Header({ currentPage }: HeaderProps) {
   );
 }
 
-export default Header;
+// Memoized to prevent unnecessary re-renders on parent re-renders
+export default memo(Header);

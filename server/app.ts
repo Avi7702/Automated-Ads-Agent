@@ -12,6 +12,7 @@ import { initGracefulShutdown, onShutdown } from "./utils/gracefulShutdown";
 import { validateEnvOrExit } from "./lib/validateEnv";
 import { initSentry, sentryRequestHandler, sentryErrorHandler, captureException } from "./lib/sentry";
 import { trackError } from "./services/errorTrackingService";
+import compression from "compression";
 
 export function log(message: string, source = "express") {
   // Use structured logger in production, formatted console in development
@@ -19,6 +20,9 @@ export function log(message: string, source = "express") {
 }
 
 export const app = express();
+
+// Response compression (gzip/brotli) - reduces bundle size by ~65%
+app.use(compression());
 
 // Trust proxy for Railway/Heroku/etc - required for secure cookies behind reverse proxy
 app.set('trust proxy', 1);

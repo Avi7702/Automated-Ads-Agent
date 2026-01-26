@@ -153,6 +153,101 @@ You must verify information before responding. Never make assumptions about code
 
 ---
 
+## MANDATORY: Issue Tracking & Documentation
+
+**CRITICAL REQUIREMENT:** Every error, bug, or production issue MUST be documented in `docs/ISSUE-TRACKER.md` before fixing.
+
+### When to Log an Issue
+
+You MUST create an issue entry whenever:
+
+- ❌ Production error occurs (500 errors, crashes, data loss)
+- ❌ TypeScript compilation fails
+- ❌ Build fails (`npm run build` errors)
+- ❌ Tests fail (`npm test` errors)
+- ❌ Performance regression (user reports "slow")
+- ❌ Security vulnerability discovered
+- ❌ User reports a problem/bug
+- ❌ Integration breaks (API, database, third-party service)
+- ❌ Feature not working as expected
+
+### How to Log an Issue
+
+**Before fixing ANY problem:**
+
+1. **Open `docs/ISSUE-TRACKER.md`**
+2. **Add a new issue entry** using the template at the top of the file
+3. **Investigate the root cause** (use agents if needed)
+4. **Document your findings** with evidence (file paths, line numbers, error messages)
+5. **Implement the fix** with code snippets in the issue entry
+6. **Update the issue status** when deployed/verified
+
+### Issue Entry Requirements
+
+Every issue MUST include:
+
+```markdown
+### Issue #XXX: [Short Title]
+
+**Timestamp:** YYYY-MM-DD HH:MM UTC
+**Subject:** One-line description
+**Severity:** CRITICAL / HIGH / MEDIUM / LOW
+**Status:** Discovered / Investigating / Fixed / Deployed / Verified
+
+**Description:** What went wrong and how it manifested
+**Root Cause:** Technical reason for the issue
+**Impact:** Effect on users/system
+**Investigation Method:** How we identified the root cause
+**Solution Applied:** What we did to fix it (include code)
+**Files Modified:** List with line numbers
+**Commit Hash:** Git commit or TBD
+**Prevention:** How to avoid this in future
+**Related Issues:** Links to similar issues
+**Lessons Learned:** Key takeaways
+```
+
+### Workflow Integration
+
+**Issue tracking is integrated into:**
+
+1. **Before committing** - Update issue status to "Fixed (pending deployment)"
+2. **After deployment** - Update issue status to "Deployed"
+3. **Code review** - Verify issue logged if fixing a bug
+4. **Post-mortem** - Update "Lessons Learned" section
+
+### Examples
+
+**✅ CORRECT - Professional Approach:**
+
+```
+User: "500 error on /api/social/accounts"
+Agent: "Let me investigate and log this issue"
+1. Deploy investigation agents
+2. Document findings in ISSUE-TRACKER.md (Issue #001)
+3. Create implementation plan
+4. Fix the issue
+5. Update issue status to "Fixed"
+```
+
+**❌ WRONG - Throwing Patches:**
+
+```
+User: "500 error on /api/social/accounts"
+Agent: "Let me quickly fix that" (no investigation, no documentation)
+```
+
+### Why This Matters
+
+- **Learning** - We learn from past mistakes
+- **Prevention** - Understand patterns to avoid repeating issues
+- **Context** - Future agents understand what was tried before
+- **Professionalism** - User demanded "make a professional plan, don't just throw patches"
+- **Accountability** - Track what went wrong and why
+
+**THIS IS NOT OPTIONAL.** If you fix a bug without logging it, you're not doing professional work.
+
+---
+
 ## MANDATORY: All Agents Must Follow These Rules
 
 ### Before Starting ANY Task

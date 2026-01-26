@@ -21,7 +21,17 @@ export async function serveStatic(app: Express, server: Server) {
     );
   }
 
-  app.use(express.static(distPath));
+  // Serve static assets with aggressive caching (content-hashed filenames are immutable)
+  app.use(express.static(distPath, {
+    maxAge: '1y',  // Cache for 1 year (safe due to content hash in filenames)
+    immutable: true,  // Tell browser file will NEVER change
+    setHeaders: (res, path) => {
+      // HTML files should NOT be cached (no content hash, always fresh)
+      if (path.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-cache');
+      }
+    }
+  }));
 
   // fall through to index.html if the file doesn't exist
   app.use("/{*path}", (_req, res) => {
