@@ -463,6 +463,7 @@ export default function Studio() {
   // Refs for scroll tracking
   const generateButtonRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
+  const zoomContainerRef = useRef<HTMLDivElement>(null);
 
   // Auth
   const { data: authUser } = useQuery({
@@ -555,6 +556,21 @@ export default function Studio() {
   useEffect(() => {
     setHistoryPanelOpen(isHistoryOpen);
   }, [isHistoryOpen]);
+
+  // Handle wheel event for zoom with passive: false to allow preventDefault
+  useEffect(() => {
+    const container = zoomContainerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const delta = -e.deltaY * 0.001;
+      setImageScale(prev => Math.max(0.5, Math.min(3, prev + delta)));
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => container.removeEventListener('wheel', handleWheel);
+  }, []);
 
   // Load generation from URL param (?generation=:id)
   useEffect(() => {
@@ -1387,19 +1403,16 @@ export default function Studio() {
               </div>
 
               {/* Generated Image with Pinch-to-Zoom */}
-              <div className="rounded-2xl overflow-hidden border border-border bg-black relative touch-none select-none">
+              <div
+                ref={zoomContainerRef}
+                className="rounded-2xl overflow-hidden border border-border bg-black relative touch-none select-none"
+              >
                 <motion.div
                   style={{
                     scale: imageScale,
                     x: imagePosition.x,
                     y: imagePosition.y,
                     cursor: imageScale > 1 ? 'grab' : 'default'
-                  }}
-                  onWheel={(e) => {
-                    e.preventDefault();
-                    const delta = -e.deltaY * 0.001;
-                    const newScale = Math.max(0.5, Math.min(3, imageScale + delta));
-                    setImageScale(newScale);
                   }}
                   onDoubleClick={() => {
                     // Reset zoom on double-click
@@ -1449,6 +1462,10 @@ export default function Studio() {
                     toggleSection("refine");
                     if (collapsedSections.refine) {
                       toast.success("Edit panel opened");
+                      // Scroll to the refine section after it opens
+                      setTimeout(() => {
+                        document.getElementById('refine')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }, 100);
                     }
                   }}
                 >
@@ -1467,6 +1484,10 @@ export default function Studio() {
                     toggleSection("copy");
                     if (collapsedSections.copy) {
                       toast.success("Copy panel opened");
+                      // Scroll to the ask-ai section after it opens
+                      setTimeout(() => {
+                        document.getElementById('ask-ai')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }, 100);
                     }
                   }}
                 >
@@ -1485,6 +1506,10 @@ export default function Studio() {
                     toggleSection("preview");
                     if (collapsedSections.preview) {
                       toast.success("Preview panel opened");
+                      // Scroll to the linkedin-preview section after it opens
+                      setTimeout(() => {
+                        document.getElementById('linkedin-preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }, 100);
                       if (!generatedCopy) {
                         handleGenerateCopy();
                       }

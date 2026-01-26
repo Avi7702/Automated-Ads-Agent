@@ -216,7 +216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Invalid credentials" });
       }
 
-      const valid = await authService.comparePassword(password, user.passwordHash || "");
+      const valid = await authService.comparePassword(password, user.passwordHash || user.password);
       if (!valid) {
         authService.recordFailedLogin(email);
         telemetry.trackAuth({
