@@ -61,6 +61,7 @@ import {
   ChevronDown,
   ChevronUp,
   Check,
+  Copy,
   X,
   Search,
   Filter,
@@ -1453,7 +1454,7 @@ export default function Studio() {
               </div>
 
               {/* Action Buttons - 2026 UX with active states */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
                 <Button
                   variant={activeActionButton === 'edit' ? "default" : "outline"}
                   className={cn(
@@ -1538,6 +1539,40 @@ export default function Studio() {
                 >
                   <FolderPlus className="w-4 h-4 mr-2" />
                   Save
+                </Button>
+                <Button
+                  variant={justCopied ? "default" : "outline"}
+                  className={cn(
+                    "h-14 transition-all",
+                    justCopied && "bg-green-500/10 border-green-500"
+                  )}
+                  disabled={!generatedCopy}
+                  onClick={async () => {
+                    if (!generatedCopy) return;
+
+                    haptic('light');
+
+                    try {
+                      await navigator.clipboard.writeText(generatedCopy);
+                      setJustCopied(true);
+                      setTimeout(() => setJustCopied(false), 2000);
+                      toast.success('✓ Copied to clipboard!', { duration: 2000 });
+                    } catch (error) {
+                      toast.error('Failed to copy to clipboard');
+                    }
+                  }}
+                >
+                  {justCopied ? (
+                    <>
+                      <Check className="w-4 h-4 mr-2" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4 mr-2" />
+                      Copy Text
+                    </>
+                  )}
                 </Button>
               </div>
 
