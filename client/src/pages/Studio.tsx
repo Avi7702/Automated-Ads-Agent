@@ -470,10 +470,6 @@ export default function Studio() {
   const { data: authUser } = useQuery({
     queryKey: ["auth"],
     queryFn: async () => {
-      // Check for session cookie first (prevents 401 console errors)
-      const hasSession = document.cookie.split(';').some(c => c.trim().startsWith('connect.sid='));
-      if (!hasSession) return null;
-
       const res = await fetch("/api/auth/me", { credentials: "include" });
       if (!res.ok) return null;
       return res.json();
@@ -1073,8 +1069,6 @@ export default function Studio() {
       // Use the first variation
       if (data.variations && data.variations.length > 0) {
         setGeneratedCopy(data.variations[0].copy);
-        // Auto-expand preview section
-        setCollapsedSections((prev) => ({ ...prev, preview: false }));
 
         // Success feedback
         haptic('medium');
@@ -1515,9 +1509,6 @@ export default function Studio() {
                       setTimeout(() => {
                         document.getElementById('linkedin-preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                       }, 100);
-                      if (!generatedCopy) {
-                        handleGenerateCopy();
-                      }
                     }
                   }}
                 >

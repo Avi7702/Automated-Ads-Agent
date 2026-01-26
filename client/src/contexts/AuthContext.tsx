@@ -29,19 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth();
   }, []);
 
-  // Helper: Check if session cookie exists (avoids 401 console errors)
-  const hasSessionCookie = () => {
-    return document.cookie.split(';').some(cookie => cookie.trim().startsWith('connect.sid='));
-  };
-
   const checkAuth = async () => {
-    // Skip API call if no session cookie exists (prevents 401 console error)
-    if (!hasSessionCookie()) {
-      setUser(null);
-      setIsLoading(false);
-      return;
-    }
-
     try {
       const res = await fetch("/api/auth/me", { credentials: "include" });
       if (res.ok) {
