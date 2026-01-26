@@ -8,7 +8,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface HeaderProps {
-  currentPage?: "studio" | "library" | "settings" | "content-planner";
+  currentPage?: "studio" | "library" | "settings" | "content-planner" | "social-accounts";
 }
 
 export function Header({ currentPage }: HeaderProps) {
@@ -23,6 +23,7 @@ export function Header({ currentPage }: HeaderProps) {
     if (location.startsWith("/library")) return "library";
     if (location.startsWith("/settings")) return "settings";
     if (location.startsWith("/content-planner")) return "content-planner";
+    if (location.startsWith("/social-accounts")) return "social-accounts";
     // Legacy routes map to their consolidated equivalents
     if (location === "/gallery" || location.startsWith("/generation/")) return "studio";
     if (["/products", "/brand-images", "/template-library", "/templates", "/installation-scenarios", "/learn-from-winners"].includes(location)) return "library";
@@ -30,10 +31,11 @@ export function Header({ currentPage }: HeaderProps) {
     return "studio";
   })();
 
-  // Phase 3: Simplified navigation - 4 main items (including Content Planner)
+  // Phase 3: Simplified navigation - 5 main items (including Content Planner & Social Accounts)
   const navItems = [
     { id: "studio", label: "Studio", href: "/" },
     { id: "content-planner", label: "Content Planner", href: "/content-planner" },
+    { id: "social-accounts", label: "Social Accounts", href: "/social-accounts" },
     { id: "library", label: "Library", href: "/library" },
     { id: "settings", label: "Settings", href: "/settings" },
   ];
