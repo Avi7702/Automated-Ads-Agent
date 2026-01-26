@@ -5,6 +5,11 @@ import { db, pool } from "./db";
 import { seedBrandProfile } from "./seeds/seedBrandProfile";
 import multer from "multer";
 
+// Modular Router System (Sprint 2)
+import { routerModules } from "./routes/index";
+import { registerRouters } from "./routes/utils/registerRouters";
+import { buildRouterContext } from "./routes/utils/buildContext";
+
 import { saveOriginalFile, saveGeneratedImage, deleteFile } from "./fileStorage";
 import { insertGenerationSchema, insertProductSchema, insertPromptTemplateSchema, insertInstallationScenarioSchema, insertProductRelationshipSchema } from "@shared/schema";
 import { validate } from "./middleware/validate";
@@ -13,6 +18,7 @@ import path from "path";
 import { v2 as cloudinary } from "cloudinary";
 import { authService } from "./services/authService";
 import { requireAuth, optionalAuth } from "./middleware/auth";
+import { validateN8nWebhook } from "./middleware/webhookAuth";
 import { extendedTimeout, haltOnTimeout } from "./middleware/timeout";
 import { isServerShuttingDown } from "./utils/gracefulShutdown";
 import { createRateLimiter } from "./middleware/rateLimit";
@@ -31,6 +37,11 @@ import { validateFileType, uploadPatternLimiter, checkPatternQuota } from "./mid
 import { toGenerationDTO, toGenerationDTOArray } from "./dto/generationDTO";
 import { extractPatterns, processUploadForPatterns, getRelevantPatterns, formatPatternsForPrompt } from "./services/patternExtractionService";
 import { startPatternCleanupScheduler } from "./jobs/patternCleanupJob";
+import { generationQueue, generationQueueEvents } from "./lib/queue";
+import { JobType, JobProgress } from "./jobs/types";
+import { visionAnalysisService } from "./services/visionAnalysisService";
+import { ideaBankService } from "./services/ideaBankService";
+import { productKnowledgeService } from "./services/productKnowledgeService";
 
 // Lazy-load Google Cloud Monitoring to prevent any import-time errors
 let googleCloudMonitoringService: any = null;
@@ -88,7 +99,40 @@ const genaiImage = genAI;
 const genai = genaiText;
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Liveness probe - is the process running?
+  // ============================================
+  // MODULAR ROUTERS (Sprint 2 Migration)
+  // These routers handle their endpoints independently.
+  // Legacy endpoints below are being migrated gradually.
+  // ============================================
+  const routerContext = buildRouterContext();
+  registerRouters(app, routerModules, routerContext);
+  logger.info({
+    routerCount: routerModules.length,
+    endpoints: routerModules.reduce((sum, m) => sum + m.endpointCount, 0)
+  }, 'Modular routers registered');
+
+  // ============================================
+  // LEGACY ENDPOINTS (Being Migrated)
+  // The following endpoints are still in this file
+  // and will be removed as routers are completed.
+  // ============================================
+
+  // NOTE: Health endpoints migrated to health.router.ts
+  // NOTE: Auth endpoints migrated to auth.router.ts
+  // NOTE: Monitoring endpoints migrated to monitoring.router.ts
+  // NOTE: Templates endpoints migrated to templates.router.ts
+  // NOTE: Brand Images endpoints migrated to brandImages.router.ts
+  // NOTE: File Search endpoints migrated to catalog.router.ts
+  // NOTE: Installation Scenarios endpoints migrated to scenarios.router.ts
+  // NOTE: Learned Patterns endpoints migrated to patterns.router.ts
+  // NOTE: Copywriting standalone endpoint migrated to copywriting.router.ts
+  // NOTE: Social endpoints migrated to social.router.ts
+  // NOTE: N8N callback migrated to n8n.router.ts
+  // NOTE: Content Planner endpoints migrated to planning.router.ts
+  // NOTE: Analyze Image endpoint migrated to image.router.ts
+
+  // LEGACY: Liveness probe - keeping for backwards compatibility during migration
+  // Will be removed once migration is complete and verified
   app.get("/api/health/live", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
@@ -881,17 +925,15 @@ Consider these product relationships and usage contexts when generating the imag
     }
   });
 
-  // Edit generation - Multi-turn image editing using stored conversation history
-  // Extended timeout (120s) for image editing which can take 30-90+ seconds
-  app.post("/api/generations/:id/edit", extendedTimeout, haltOnTimeout, async (req, res) => {
-    const startTime = Date.now();
+  // Edit generation - Async version using BullMQ job queue
+  // Returns immediately with jobId, client polls /api/jobs/:jobId for status
+  app.post("/api/generations/:id/edit", async (req, res) => {
     const userId = (req as any).session?.userId;
-    let success = false;
-    let errorType: string | undefined;
 
     try {
       const { id } = req.params;
       const { editPrompt } = req.body;
+      const generationId = id;
 
       // Validate input
       if (!editPrompt || editPrompt.trim().length === 0) {
@@ -901,7 +943,7 @@ Consider these product relationships and usage contexts when generating the imag
         });
       }
 
-      // Load the parent generation
+      // Load the parent generation to validate it exists and supports editing
       const parentGeneration = await storage.getGenerationById(id);
 
       if (!parentGeneration) {
@@ -919,198 +961,202 @@ Consider these product relationships and usage contexts when generating the imag
         });
       }
 
-      // Get the stored conversation history
-      // JSONB column returns parsed object directly, no need to JSON.parse
-      let history: any[];
-      const storedHistory = parentGeneration.conversationHistory;
-
-      if (typeof storedHistory === 'string') {
-        // Handle legacy data that might be double-stringified
-        try {
-          history = JSON.parse(storedHistory);
-        } catch (e) {
-          return res.status(500).json({
-            success: false,
-            error: "Failed to parse conversation history"
-          });
-        }
-      } else if (Array.isArray(storedHistory)) {
-        // JSONB returns parsed array directly
-        history = storedHistory;
-      } else {
-        return res.status(500).json({
-          success: false,
-          error: "Invalid conversation history format"
-        });
-      }
-
-      logger.info({ module: 'Edit', generationId: id, prompt: editPrompt }, 'Editing generation');
-
-      // Append the new edit request to the history
-      // This is the key to multi-turn editing - we send the FULL history
-      history.push({
-        role: "user",
-        parts: [{ text: editPrompt }]
-      });
-
-      // Call Gemini with the full conversation history
-      // The thought signatures in the history allow Gemini to "remember" the image
-      // MUST use genaiImage (direct Google API) - Replit AI Integrations doesn't support image models
-      if (!genaiImage) {
-        return res.status(500).json({
-          success: false,
-          error: "Image editing requires GEMINI_API_KEY or GOOGLE_API_KEY (direct API)"
-        });
-      }
-
-      const modelName = "gemini-3-pro-image-preview";
-      logger.info({ module: 'Edit', model: modelName }, 'Using model (direct Google API)');
-
-      const result = await genaiImage.models.generateContent({
-        model: modelName,
-        contents: history,
-      });
-
-      logger.info({ module: 'Edit', modelVersion: result.modelVersion, candidates: result.candidates?.length }, 'Model response received');
-      const usageMetadata = (result as any).usageMetadata;
-      if (usageMetadata) {
-        logger.info({ module: 'Edit', usageMetadata }, 'Captured usageMetadata');
-      }
-
-      // Extract the new image
-      if (!result.candidates?.[0]?.content?.parts) {
-        return res.status(500).json({
-          success: false,
-          error: "Gemini did not return a valid response. Try a different edit prompt."
-        });
-      }
-
-      const modelResponse = result.candidates[0].content;
-      const imagePart = modelResponse.parts?.find((p: any) => p.inlineData);
-
-      if (!imagePart || !imagePart.inlineData || !imagePart.inlineData.data) {
-        return res.status(500).json({
-          success: false,
-          error: "Gemini did not return an image. Try a different edit prompt."
-        });
-      }
-
-      // Save the new image
-      const generatedImageData = imagePart.inlineData.data;
-      const mimeType = imagePart.inlineData.mimeType || "image/png";
-      const format = mimeType.split("/")[1] || "png";
-      const generatedImagePath = await saveGeneratedImage(generatedImageData, format);
-
-      // Update history with the new response (for potential future edits)
-      history.push(modelResponse);
-
-      // Create a NEW generation record (don't overwrite the original)
-      // Pass history as object - Drizzle handles JSONB serialization
+      // Create a new generation record for the edit (status: pending)
       const newGeneration = await storage.saveGeneration({
         prompt: parentGeneration.prompt,
         editPrompt: editPrompt.trim(),
-        generatedImagePath,
-        conversationHistory: history,  // Pass as object, Drizzle handles JSONB
+        generatedImagePath: parentGeneration.generatedImagePath, // Placeholder, will be updated by worker
+        conversationHistory: parentGeneration.conversationHistory,
         parentGenerationId: parentGeneration.id,
         originalImagePaths: parentGeneration.originalImagePaths,
         resolution: parentGeneration.resolution || "2K",
+        status: 'pending',
       });
 
-      logger.info({ module: 'Edit', generationId: newGeneration.id, parentId: id }, 'Created new generation from parent');
-      // Persist usage/cost estimate for adaptive pricing
-      try {
-        const durationMsForUsage = Date.now() - startTime;
-        const resolution = normalizeResolution(parentGeneration.resolution) || '2K';
-        const inputImagesCount = Array.isArray(parentGeneration.originalImagePaths) ? parentGeneration.originalImagePaths.length : 0;
+      logger.info({ module: 'Edit', generationId: newGeneration.id, parentId: id }, 'Created pending generation for async edit');
 
-        const cost = estimateGenerationCostMicros({
-          resolution,
-          inputImagesCount,
-          promptChars: String(editPrompt).length,
-          usageMetadata: (typeof usageMetadata === "object" ? usageMetadata : null),
-        });
+      // Enqueue job for background processing
+      const job = await generationQueue.add('edit-generation', {
+        jobType: JobType.EDIT,
+        userId: userId || 'anonymous',
+        generationId: parseInt(newGeneration.id, 10),
+        editPrompt: editPrompt.trim(),
+        originalImageUrl: parentGeneration.generatedImagePath,
+        createdAt: new Date().toISOString(),
+      });
 
-        await storage.saveGenerationUsage({
-          generationId: newGeneration.id,
-          brandId: userId || "anonymous",
-          model: modelName,
-          operation: "edit",
-          resolution,
-          inputImagesCount,
-          promptChars: String(editPrompt).length,
-          durationMs: durationMsForUsage,
-          inputTokens: cost.inputTokens,
-          outputTokens: cost.outputTokens,
-          estimatedCostMicros: cost.estimatedCostMicros,
-          estimationSource: cost.estimationSource,
-        });
-      } catch (e) {
-        logger.warn({ module: 'Edit', err: e }, 'Failed to persist generation usage (run db:push?)');
-      }
+      logger.info({ module: 'Edit', jobId: job.id, generationId: newGeneration.id }, 'Edit job enqueued');
 
-      success = true;
-
+      // Return immediately with job info - client should poll for status
       return res.json({
         success: true,
         generationId: newGeneration.id,
-        imageUrl: generatedImagePath.startsWith("http") ? generatedImagePath : `/${generatedImagePath}`,
+        jobId: job.id,
+        status: 'pending',
+        message: 'Edit job started. Poll /api/jobs/:jobId for status.',
         parentId: parentGeneration.id,
-        canEdit: true
       });
 
     } catch (error: any) {
-      logger.error({ module: 'Edit', err: error }, 'Edit error');
-      errorType = errorType || (error.name || 'unknown');
+      logger.error({ module: 'Edit', err: error }, 'Edit enqueue error');
 
       telemetry.trackError({
         endpoint: '/api/generations/:id/edit',
-        errorType: errorType || 'unknown',
+        errorType: error.name || 'unknown',
         statusCode: 500,
         userId,
       });
 
       return res.status(500).json({
         success: false,
-        error: error.message || "Failed to edit image"
+        error: error.message || "Failed to start edit job"
       });
-    } finally {
-      // Track Gemini API usage and cost
-      const durationMs = Date.now() - startTime;
-      const inputTokensEstimate = Math.ceil((req.body.editPrompt?.length || 0) * 0.25);
-
-      telemetry.trackGeminiUsage({
-        model: 'gemini-3-pro-image-preview',
-        operation: 'edit',
-        inputTokens: inputTokensEstimate,
-        outputTokens: 0,
-        durationMs,
-        userId,
-        success,
-        errorType,
-      });
-
-      // Track for quota monitoring dashboard
-      try {
-        await quotaMonitoringService.trackApiCall({
-          brandId: userId || 'anonymous',
-          operation: 'edit',
-          model: 'gemini-3-pro-image-preview',
-          success,
-          durationMs,
-          inputTokens: inputTokensEstimate,
-          outputTokens: 0,
-          costMicros: success ? estimateGenerationCostMicros({
-            resolution: '2K', // Edits use same resolution as parent
-            inputImagesCount: 1,
-            promptChars: String(req.body.editPrompt || '').length,
-          }).estimatedCostMicros : 0,
-          errorType,
-          isRateLimited: errorType === 'RESOURCE_EXHAUSTED' || errorType === 'rate_limit',
-        });
-      } catch (trackError) {
-        logger.warn({ module: 'Edit', err: trackError }, 'Failed to track quota');
-      }
     }
+  });
+
+  // Job status endpoint - Poll this to check job progress
+  app.get("/api/jobs/:jobId", async (req, res) => {
+    try {
+      const { jobId } = req.params;
+
+      const job = await generationQueue.getJob(jobId);
+
+      if (!job) {
+        return res.status(404).json({
+          success: false,
+          error: 'Job not found'
+        });
+      }
+
+      const state = await job.getState();
+      const progress = job.progress;
+
+      // Get the generation record if available
+      let generation = null;
+      if (job.data.generationId) {
+        generation = await storage.getGenerationById(String(job.data.generationId));
+      }
+
+      return res.json({
+        success: true,
+        jobId: job.id,
+        state, // 'waiting', 'active', 'completed', 'failed', 'delayed'
+        progress, // { stage, percentage, message }
+        data: {
+          jobType: job.data.jobType,
+          generationId: job.data.generationId,
+          createdAt: job.data.createdAt,
+        },
+        returnvalue: job.returnvalue, // Result when completed
+        failedReason: job.failedReason, // Error when failed
+        // Include generation data if available and completed
+        generation: generation ? {
+          id: generation.id,
+          status: generation.status,
+          generatedImagePath: generation.generatedImagePath,
+          imageUrl: generation.generatedImagePath?.startsWith("http")
+            ? generation.generatedImagePath
+            : generation.generatedImagePath ? `/${generation.generatedImagePath}` : null,
+        } : null,
+      });
+
+    } catch (error: any) {
+      logger.error({ module: 'JobStatus', err: error }, 'Error getting job status');
+      return res.status(500).json({
+        success: false,
+        error: error.message || "Failed to get job status"
+      });
+    }
+  });
+
+  // SSE endpoint for real-time job status updates
+  // Clients connect once and receive push updates instead of polling
+  app.get("/api/jobs/:jobId/stream", requireAuth, async (req, res) => {
+    const jobId = req.params.jobId;
+
+    // Set SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');  // Disable nginx buffering
+
+    // Send initial status
+    const job = await generationQueue.getJob(jobId);
+    if (!job) {
+      res.write(`data: ${JSON.stringify({ type: 'error', message: 'Job not found' })}\n\n`);
+      return res.end();
+    }
+
+    const state = await job.getState();
+    const progress = job.progress as JobProgress | undefined;
+    res.write(`data: ${JSON.stringify({
+      type: 'status',
+      state,
+      progress: progress || { percentage: 0 }
+    })}\n\n`);
+
+    // If job is already completed or failed, send final state and close
+    if (state === 'completed') {
+      res.write(`data: ${JSON.stringify({
+        type: 'completed',
+        result: job.returnvalue
+      })}\n\n`);
+      return res.end();
+    }
+
+    if (state === 'failed') {
+      res.write(`data: ${JSON.stringify({
+        type: 'failed',
+        error: job.failedReason || 'Unknown error'
+      })}\n\n`);
+      return res.end();
+    }
+
+    // Listen for job events
+    const progressListener = async ({ jobId: eventJobId, data }: { jobId: string; data: JobProgress }) => {
+      if (eventJobId === jobId) {
+        res.write(`data: ${JSON.stringify({ type: 'progress', progress: data })}\n\n`);
+      }
+    };
+
+    const completedListener = async ({ jobId: eventJobId, returnvalue }: { jobId: string; returnvalue: any }) => {
+      if (eventJobId === jobId) {
+        res.write(`data: ${JSON.stringify({
+          type: 'completed',
+          result: returnvalue
+        })}\n\n`);
+        cleanup();
+        res.end();
+      }
+    };
+
+    const failedListener = async ({ jobId: eventJobId, failedReason }: { jobId: string; failedReason: string }) => {
+      if (eventJobId === jobId) {
+        res.write(`data: ${JSON.stringify({
+          type: 'failed',
+          error: failedReason
+        })}\n\n`);
+        cleanup();
+        res.end();
+      }
+    };
+
+    // Cleanup function to remove all listeners
+    const cleanup = () => {
+      generationQueueEvents.off('progress', progressListener);
+      generationQueueEvents.off('completed', completedListener);
+      generationQueueEvents.off('failed', failedListener);
+    };
+
+    generationQueueEvents.on('progress', progressListener);
+    generationQueueEvents.on('completed', completedListener);
+    generationQueueEvents.on('failed', failedListener);
+
+    // Cleanup on connection close (client disconnects)
+    req.on('close', () => {
+      logger.debug({ module: 'SSE', jobId }, 'Client disconnected from SSE stream');
+      cleanup();
+    });
   });
 
   // Analyze generation - Ask AI about the transformation
@@ -1333,11 +1379,20 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         return res.status(404).json({ error: "Product not found" });
       }
 
+      const productId = req.params.id;
+
       // Delete from Cloudinary
       await cloudinary.uploader.destroy(product.cloudinaryPublicId);
 
+      // Invalidate all caches for this product
+      await Promise.all([
+        visionAnalysisService.invalidateAnalysisCache(productId),
+        productKnowledgeService.invalidateProductKnowledgeCache(productId),
+      ]);
+      logger.info({ module: 'DeleteProduct', productId }, 'Product caches invalidated');
+
       // Delete from database
-      await storage.deleteProduct(req.params.id);
+      await storage.deleteProduct(productId);
 
       res.json({ success: true });
     } catch (error: any) {
@@ -1350,6 +1405,16 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   app.delete("/api/products", async (req, res) => {
     try {
       const products = await storage.getProducts();
+      const productIds = products.map(p => p.id);
+
+      // Invalidate all caches for products being deleted
+      if (productIds.length > 0) {
+        await Promise.all([
+          ...productIds.map(id => visionAnalysisService.invalidateAnalysisCache(id)),
+          productKnowledgeService.invalidateMultiProductKnowledgeCache(productIds),
+        ]);
+        logger.info({ module: 'ClearProducts', productCount: productIds.length }, 'Product caches invalidated');
+      }
 
       for (const product of products) {
         await storage.deleteProduct(product.id);
@@ -1826,7 +1891,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   });
 
   // Admin: Force verification of Brand Profile Seed
-  app.post("/api/admin/seed-brand", async (req, res) => {
+  app.post("/api/admin/seed-brand", requireAuth, async (req, res) => {
     try {
       logger.info({ module: 'Admin' }, 'Force seeding brand profile');
       await seedBrandProfile();
@@ -1838,7 +1903,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   });
 
   // Admin: Seed Products
-  app.post("/api/admin/seed-products", async (req, res) => {
+  app.post("/api/admin/seed-products", requireAuth, async (req, res) => {
     try {
       logger.info({ module: 'Admin' }, 'Seeding products');
       const { seedProducts } = await import("./seeds/seedProducts");
@@ -1852,7 +1917,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   });
 
   // Admin: Seed Installation Scenarios
-  app.post("/api/admin/seed-installation-scenarios", async (req, res) => {
+  app.post("/api/admin/seed-installation-scenarios", requireAuth, async (req, res) => {
     try {
       logger.info({ module: 'Admin' }, 'Seeding installation scenarios');
       const { seedInstallationScenarios } = await import("./seeds/seedInstallationScenarios");
@@ -1865,7 +1930,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   });
 
   // Admin: Seed Product Relationships
-  app.post("/api/admin/seed-relationships", async (req, res) => {
+  app.post("/api/admin/seed-relationships", requireAuth, async (req, res) => {
     try {
       logger.info({ module: 'Admin' }, 'Seeding product relationships');
       const { seedProductRelationships } = await import("./seeds/seedRelationships");
@@ -1878,7 +1943,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   });
 
   // Admin: Seed Brand Images
-  app.post("/api/admin/seed-brand-images", async (req, res) => {
+  app.post("/api/admin/seed-brand-images", requireAuth, async (req, res) => {
     try {
       logger.info({ module: 'Admin' }, 'Seeding brand images');
       const { seedBrandImages } = await import("./seeds/seedBrandImages");
@@ -1892,7 +1957,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   });
 
   // Admin: Seed Performing Templates
-  app.post("/api/admin/seed-templates", async (req, res) => {
+  app.post("/api/admin/seed-templates", requireAuth, async (req, res) => {
     try {
       logger.info({ module: 'Admin' }, 'Seeding performing templates');
       const { seedPerformingTemplates } = await import("./seeds/seedTemplates");
@@ -1905,7 +1970,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   });
 
   // Admin: Run All Seeds
-  app.post("/api/admin/seed-all", async (req, res) => {
+  app.post("/api/admin/seed-all", requireAuth, async (req, res) => {
     try {
       logger.info({ module: 'Admin' }, 'Running all seeds');
       const { runAllSeeds } = await import("./seeds/runAllSeeds");
@@ -1923,7 +1988,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // =============================================================================
 
   // Get available categories for scraping
-  app.get("/api/admin/scraper/categories", async (req, res) => {
+  app.get("/api/admin/scraper/categories", requireAuth, async (req, res) => {
     try {
       const { getAvailableCategories } = await import("./services/ndsWebsiteScraper");
       const categories = getAvailableCategories();
@@ -1935,7 +2000,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   });
 
   // Scrape all products from NDS website
-  app.post("/api/admin/scraper/scrape-all", async (req, res) => {
+  app.post("/api/admin/scraper/scrape-all", requireAuth, async (req, res) => {
     try {
       logger.info({ module: 'Scraper' }, 'Starting full website scrape');
       const { scrapeNDSWebsite } = await import("./services/ndsWebsiteScraper");
@@ -1949,7 +2014,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   });
 
   // Scrape a single category
-  app.post("/api/admin/scraper/scrape-category/:category", async (req, res) => {
+  app.post("/api/admin/scraper/scrape-category/:category", requireAuth, async (req, res) => {
     try {
       const { category } = req.params;
       logger.info({ module: 'Scraper', category }, 'Scraping category');
@@ -4576,7 +4641,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    * Webhook handler for n8n posting results
    * Called by n8n workflows after posting to social platforms
    */
-  app.post('/api/n8n/callback', validate(n8nCallbackSchema), async (req, res) => {
+  app.post('/api/n8n/callback', validateN8nWebhook, validate(n8nCallbackSchema), async (req, res) => {
     try {
       const {
         scheduledPostId,

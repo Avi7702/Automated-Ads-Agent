@@ -1,0 +1,194 @@
+/**
+ * Auth Router
+ * Authentication endpoints for user registration, login, and session management
+ *
+ * Endpoints:
+ * - POST /api/auth/register - Register new user
+ * - POST /api/auth/login - Login user
+ * - POST /api/auth/logout - Logout user
+ * - GET /api/auth/me - Get current user
+ * - GET /api/auth/demo - Get or create demo session
+ */
+
+import type { Router, Request, Response } from 'express';
+import type { RouterContext, RouterFactory, RouterModule } from '../types/router';
+import { createRouter, asyncHandler, handleRouteError } from './utils/createRouter';
+
+export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
+  const router = createRouter();
+  const { storage, logger, telemetry } = ctx.services;
+  const { authService } = ctx.domainServices;
+  const { requireAuth } = ctx.middleware;
+
+  /**
+   * POST /register - Register a new user account
+   */
+  router.post('/register', asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({ error: 'Email and password required' });
+      }
+
+      if (password.length < 8) {
+        return res.status(400).json({ error: 'Password must be at least 8 characters' });
+      }
+
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(409).json({ error: 'User already exists' });
+      }
+
+      const hashedPassword = await authService.hashPassword(password);
+      const user = await storage.createUser(email, hashedPassword);
+
+      (req as any).session.userId = user.id;
+
+      telemetry.trackAuth({
+        action: 'register',
+        success: true,
+        userId: user.id,
+      });
+
+      res.json({ id: user.id, email: user.email });
+    } catch (error: any) {
+      logger.error({ module: 'Auth', action: 'register', err: error }, 'Registration error');
+
+      telemetry.trackAuth({
+        action: 'register',
+        success: false,
+        reason: error.message,
+      });
+
+      res.status(500).json({ error: 'Registration failed' });
+    }
+  }));
+
+  /**
+   * POST /login - Login existing user
+   */
+  router.post('/login', asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({ error: 'Email and password required' });
+      }
+
+      // Check lockout
+      if (authService.isLockedOut(email)) {
+        const remaining = authService.getLockoutTimeRemaining(email);
+        return res.status(429).json({
+          error: 'Too many failed attempts. Try again later.',
+          retryAfter: remaining
+        });
+      }
+
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        authService.recordFailedLogin(email);
+        telemetry.trackAuth({
+          action: 'login',
+          success: false,
+          reason: 'user_not_found',
+        });
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+
+      const valid = await authService.comparePassword(password, user.passwordHash || user.password);
+      if (!valid) {
+        authService.recordFailedLogin(email);
+        telemetry.trackAuth({
+          action: 'login',
+          success: false,
+          reason: 'invalid_password',
+        });
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+
+      authService.clearFailedLogins(email);
+      (req as any).session.userId = user.id;
+
+      telemetry.trackAuth({
+        action: 'login',
+        success: true,
+        userId: user.id,
+      });
+
+      res.json({ id: user.id, email: user.email });
+    } catch (error: any) {
+      logger.error({ module: 'Auth', action: 'login', err: error }, 'Login error');
+
+      telemetry.trackAuth({
+        action: 'login',
+        success: false,
+        reason: error.message,
+      });
+
+      res.status(500).json({ error: 'Login failed' });
+    }
+  }));
+
+  /**
+   * POST /logout - Logout current user
+   */
+  router.post('/logout', (req: Request, res: Response) => {
+    (req as any).session.destroy((err: any) => {
+      if (err) {
+        return res.status(500).json({ error: 'Logout failed' });
+      }
+      res.json({ success: true });
+    });
+  });
+
+  /**
+   * GET /me - Get current authenticated user
+   */
+  router.get('/me', requireAuth, asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).session.userId;
+      const user = await storage.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      res.json({ id: user.id, email: user.email });
+    } catch (error: any) {
+      logger.error({ module: 'Auth', action: 'me', err: error }, 'Get user error');
+      res.status(500).json({ error: 'Failed to get user' });
+    }
+  }));
+
+  /**
+   * GET /demo - Auto-login as demo user for single-tenant mode
+   */
+  router.get('/demo', asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const demoEmail = 'demo@company.com';
+      let user = await storage.getUserByEmail(demoEmail);
+
+      if (!user) {
+        // Create demo user if doesn't exist
+        const hashedPassword = await authService.hashPassword('demo123');
+        user = await storage.createUser(demoEmail, hashedPassword);
+      }
+
+      (req as any).session.userId = user.id;
+      res.json({ id: user.id, email: user.email, isDemo: true });
+    } catch (error: any) {
+      logger.error({ module: 'Auth', action: 'demo', err: error }, 'Demo login error');
+      res.status(500).json({ error: 'Demo login failed' });
+    }
+  }));
+
+  return router;
+};
+
+export const authRouterModule: RouterModule = {
+  prefix: '/api/auth',
+  factory: authRouter,
+  description: 'User authentication and session management',
+  endpointCount: 5,
+  requiresAuth: false,
+  tags: ['authentication', 'users']
+};
