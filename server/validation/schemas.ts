@@ -78,6 +78,47 @@ export const saveApiKeySchema = z.object({
   apiSecret: z.string().optional(),
 });
 
+// ========================================
+// n8n CONFIGURATION VAULT
+// ========================================
+
+export const saveN8nConfigSchema = z.object({
+  baseUrl: z.string().url('Invalid n8n instance URL').refine(
+    (url) => url.startsWith('https://'),
+    { message: 'n8n URL must use HTTPS in production' }
+  ),
+  apiKey: z.string().min(10, 'API key must be at least 10 characters').optional(),
+});
+
+export type SaveN8nConfigInput = z.infer<typeof saveN8nConfigSchema>;
+
+// ========================================
+// SOCIAL CONNECTIONS - n8n INTEGRATION
+// ========================================
+
+export const n8nCallbackSchema = z.object({
+  scheduledPostId: z.string().uuid('Invalid post ID format'),
+  platform: z.enum(['linkedin', 'instagram', 'facebook', 'twitter', 'tiktok', 'youtube', 'pinterest']),
+  success: z.boolean(),
+  platformPostId: z.string().optional(),
+  platformPostUrl: z.string().url().optional(),
+  error: z.string().optional(),
+  errorCode: z.string().optional(),
+  executionId: z.string().min(1, 'Execution ID required'),
+  postedAt: z.string().datetime().optional(),
+});
+
+export const syncAccountSchema = z.object({
+  platform: z.enum(['linkedin', 'instagram', 'facebook', 'twitter', 'tiktok', 'youtube', 'pinterest']),
+  n8nCredentialId: z.string().min(1, 'n8n credential ID required'),
+  platformUserId: z.string().min(1, 'Platform user ID required'),
+  platformUsername: z.string().min(1, 'Platform username required'),
+  accountType: z.enum(['personal', 'business', 'page']).optional(),
+});
+
+export type N8nCallbackInput = z.infer<typeof n8nCallbackSchema>;
+export type SyncAccountInput = z.infer<typeof syncAccountSchema>;
+
 // ============================================
 // LEARN FROM WINNERS - PATTERN SCHEMAS
 // ============================================

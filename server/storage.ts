@@ -52,6 +52,9 @@ import {
   // Content Planner types
   type ContentPlannerPost,
   type InsertContentPlannerPost,
+  // Social Connections types (Phase 8.1)
+  type SocialConnection,
+  type InsertSocialConnection,
   generations,
   generationUsage,
   products,
@@ -83,6 +86,8 @@ import {
   patternApplicationHistory,
   // Content Planner tables
   contentPlannerPosts,
+  // Social Media tables (Phase 8.1)
+  socialConnections,
 } from "@shared/schema";
 import { decryptApiKey } from "./services/encryptionService";
 import { db } from "./db";
@@ -265,6 +270,27 @@ export interface IStorage {
 
   // Key resolution with fallback
   resolveApiKey(userId: string, service: string): Promise<{ key: string | null; source: 'user' | 'environment' | 'none' }>;
+
+  // ============================================
+  // N8N CONFIGURATION VAULT (Phase 8.1)
+  // ============================================
+
+  // n8n Configuration Vault
+  saveN8nConfig(userId: string, baseUrl: string, apiKey?: string): Promise<void>;
+  getN8nConfig(userId: string): Promise<{ baseUrl: string; apiKey?: string } | null>;
+  deleteN8nConfig(userId: string): Promise<void>;
+
+  // ============================================
+  // SOCIAL CONNECTION MANAGEMENT (Phase 8.1)
+  // ============================================
+
+  // Social Connection CRUD operations
+  getSocialConnections(userId: string): Promise<SocialConnection[]>;
+  getSocialConnectionById(id: string): Promise<SocialConnection | null>;
+  getSocialConnectionByPlatform(userId: string, platform: string): Promise<SocialConnection | null>;
+  createSocialConnection(data: InsertSocialConnection): Promise<SocialConnection>;
+  updateSocialConnection(id: string, updates: Partial<SocialConnection>): Promise<SocialConnection>;
+  deleteSocialConnection(id: string): Promise<void>;
 
   // ============================================
   // LEARN FROM WINNERS - PATTERN OPERATIONS
@@ -1793,6 +1819,166 @@ export class DbStorage implements IStorage {
    */
   async deleteContentPlannerPost(id: string): Promise<void> {
     await db.delete(contentPlannerPosts).where(eq(contentPlannerPosts.id, id));
+  }
+
+  // ========================================
+  // N8N CONFIGURATION VAULT (AES-256-GCM ENCRYPTED)
+  // ========================================
+
+  async saveN8nConfig(userId: string, baseUrl: string, apiKey?: string): Promise<void> {
+    const { encryptApiKey } = await import('./services/encryptionService');
+
+    // Encrypt API key using existing encryption service
+    const encryptedData = apiKey
+      ? await encryptApiKey(apiKey)
+      : null;
+
+    await db
+      .insert(userApiKeys)
+      .values({
+        userId,
+        service: 'n8n',
+        encryptedKey: encryptedData?.ciphertext || null,
+        keyIv: encryptedData?.iv || null,
+        keyAuthTag: encryptedData?.authTag || null,
+        keyPreview: apiKey ? `${apiKey.substring(0, 8)}...` : 'Not configured',
+        metadata: { baseUrl },
+        isValid: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: [userApiKeys.userId, userApiKeys.service],
+        set: {
+          encryptedKey: encryptedData?.ciphertext || null,
+          keyIv: encryptedData?.iv || null,
+          keyAuthTag: encryptedData?.authTag || null,
+          keyPreview: apiKey ? `${apiKey.substring(0, 8)}...` : 'Not configured',
+          metadata: { baseUrl },
+          updatedAt: new Date(),
+        },
+      });
+
+    logger.info({ userId, service: 'n8n' }, 'n8n configuration saved to encrypted vault');
+  }
+
+  async getN8nConfig(userId: string): Promise<{ baseUrl: string; apiKey?: string } | null> {
+    const [row] = await db
+      .select()
+      .from(userApiKeys)
+      .where(and(
+        eq(userApiKeys.userId, userId),
+        eq(userApiKeys.service, 'n8n')
+      ))
+      .limit(1);
+
+    if (!row || !row.metadata?.baseUrl) return null;
+
+    // Decrypt API key if present
+    const apiKey = row.encryptedKey && row.keyIv && row.keyAuthTag
+      ? await decryptApiKey({
+          ciphertext: row.encryptedKey,
+          iv: row.keyIv,
+          authTag: row.keyAuthTag,
+        })
+      : undefined;
+
+    return {
+      baseUrl: row.metadata.baseUrl as string,
+      apiKey,
+    };
+  }
+
+  async deleteN8nConfig(userId: string): Promise<void> {
+    await db
+      .delete(userApiKeys)
+      .where(and(
+        eq(userApiKeys.userId, userId),
+        eq(userApiKeys.service, 'n8n')
+      ));
+
+    logger.info({ userId }, 'n8n configuration deleted from vault');
+  }
+
+  // ========================================
+  // SOCIAL CONNECTION MANAGEMENT
+  // ========================================
+
+  async getSocialConnections(userId: string): Promise<SocialConnection[]> {
+    return db
+      .select()
+      .from(socialConnections)
+      .where(eq(socialConnections.userId, userId))
+      .orderBy(desc(socialConnections.connectedAt));
+  }
+
+  async getSocialConnectionById(id: string): Promise<SocialConnection | null> {
+    const [connection] = await db
+      .select()
+      .from(socialConnections)
+      .where(eq(socialConnections.id, id))
+      .limit(1);
+
+    return connection || null;
+  }
+
+  async getSocialConnectionByPlatform(
+    userId: string,
+    platform: string
+  ): Promise<SocialConnection | null> {
+    const [connection] = await db
+      .select()
+      .from(socialConnections)
+      .where(and(
+        eq(socialConnections.userId, userId),
+        eq(socialConnections.platform, platform)
+      ))
+      .limit(1);
+
+    return connection || null;
+  }
+
+  async createSocialConnection(data: InsertSocialConnection): Promise<SocialConnection> {
+    const [connection] = await db
+      .insert(socialConnections)
+      .values({
+        ...data,
+        connectedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+
+    logger.info({ userId: data.userId, platform: data.platform }, 'Social connection created');
+    return connection;
+  }
+
+  async updateSocialConnection(
+    id: string,
+    updates: Partial<SocialConnection>
+  ): Promise<SocialConnection> {
+    const [connection] = await db
+      .update(socialConnections)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(socialConnections.id, id))
+      .returning();
+
+    if (!connection) {
+      throw new Error(`Social connection not found: ${id}`);
+    }
+
+    logger.info({ connectionId: id }, 'Social connection updated');
+    return connection;
+  }
+
+  async deleteSocialConnection(id: string): Promise<void> {
+    await db
+      .delete(socialConnections)
+      .where(eq(socialConnections.id, id));
+
+    logger.info({ connectionId: id }, 'Social connection deleted');
   }
 }
 

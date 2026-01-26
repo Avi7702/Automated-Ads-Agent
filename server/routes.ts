@@ -25,7 +25,7 @@ import { brandImageRecommendationRAG } from "./services/brandImageRecommendation
 import { matchTemplateForContext, analyzeTemplatePatterns, suggestTemplateCustomizations } from "./services/templatePatternRAG";
 import { encryptApiKey, generateKeyPreview, validateMasterKeyConfigured, EncryptionConfigError } from "./services/encryptionService";
 import { validateApiKey, isValidService, getSupportedServices, type ServiceName } from "./services/apiKeyValidationService";
-import { saveApiKeySchema, uploadPatternSchema, updatePatternSchema, applyPatternSchema, ratePatternSchema, listPatternsQuerySchema, generateCompletePostSchema } from "./validation/schemas";
+import { saveApiKeySchema, uploadPatternSchema, updatePatternSchema, applyPatternSchema, ratePatternSchema, listPatternsQuerySchema, generateCompletePostSchema, saveN8nConfigSchema, n8nCallbackSchema, syncAccountSchema } from "./validation/schemas";
 import { logger } from "./lib/logger";
 import { validateFileType, uploadPatternLimiter, checkPatternQuota } from "./middleware/uploadValidation";
 import { toGenerationDTO, toGenerationDTOArray } from "./dto/generationDTO";
@@ -4333,6 +4333,288 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   });
 
   // ===== END API KEY MANAGEMENT ENDPOINTS =====
+
+  // ========================================
+  // N8N CONFIGURATION VAULT
+  // ========================================
+
+  /**
+   * POST /api/settings/n8n
+   * Save encrypted n8n configuration (base URL + API key)
+   */
+  app.post('/api/settings/n8n', requireAuth, validate(saveN8nConfigSchema), async (req, res) => {
+    try {
+      const { baseUrl, apiKey } = req.body;
+
+      await storage.saveN8nConfig(req.user!.id, baseUrl, apiKey);
+
+      res.json({
+        success: true,
+        message: 'n8n configuration saved securely',
+      });
+    } catch (error) {
+      logger.error({ module: 'n8nVault', err: error }, 'Failed to save n8n config');
+      res.status(500).json({
+        success: false,
+        error: 'Failed to save n8n configuration'
+      });
+    }
+  });
+
+  /**
+   * GET /api/settings/n8n
+   * Retrieve n8n configuration (returns base URL + whether API key exists)
+   */
+  app.get('/api/settings/n8n', requireAuth, async (req, res) => {
+    try {
+      const config = await storage.getN8nConfig(req.user!.id);
+
+      if (!config) {
+        return res.json({ configured: false });
+      }
+
+      // Never return the actual API key, only indicate if it exists
+      res.json({
+        configured: true,
+        baseUrl: config.baseUrl,
+        hasApiKey: !!config.apiKey,
+      });
+    } catch (error) {
+      logger.error({ module: 'n8nVault', err: error }, 'Failed to fetch n8n config');
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch n8n configuration'
+      });
+    }
+  });
+
+  /**
+   * DELETE /api/settings/n8n
+   * Delete n8n configuration from encrypted vault
+   */
+  app.delete('/api/settings/n8n', requireAuth, async (req, res) => {
+    try {
+      await storage.deleteN8nConfig(req.user!.id);
+
+      res.json({
+        success: true,
+        message: 'n8n configuration deleted',
+      });
+    } catch (error) {
+      logger.error({ module: 'n8nVault', err: error }, 'Failed to delete n8n config');
+      res.status(500).json({
+        success: false,
+        error: 'Failed to delete n8n configuration'
+      });
+    }
+  });
+
+  // ========================================
+  // SOCIAL ACCOUNTS MANAGEMENT - PHASE 8.1
+  // ========================================
+
+  /**
+   * GET /api/social/accounts
+   * List all connected social accounts for current user
+   * Returns sanitized data (no OAuth tokens)
+   */
+  app.get('/api/social/accounts', requireAuth, async (req, res) => {
+    try {
+      const connections = await storage.getSocialConnections(req.user!.id);
+
+      // Sanitize: Remove sensitive OAuth token data
+      const safeConnections = connections.map(conn => ({
+        id: conn.id,
+        userId: conn.userId,
+        platform: conn.platform,
+        platformUserId: conn.platformUserId,
+        platformUsername: conn.platformUsername,
+        profilePictureUrl: conn.profilePictureUrl,
+        accountType: conn.accountType,
+        scopes: conn.scopes,
+        isActive: conn.isActive,
+        tokenExpiresAt: conn.tokenExpiresAt,
+        lastUsedAt: conn.lastUsedAt,
+        lastErrorAt: conn.lastErrorAt,
+        lastErrorMessage: conn.lastErrorMessage,
+        connectedAt: conn.connectedAt,
+        updatedAt: conn.updatedAt,
+      }));
+
+      res.json({ accounts: safeConnections });
+    } catch (error) {
+      logger.error({ module: 'SocialAccounts', err: error }, 'Failed to fetch accounts');
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch social accounts'
+      });
+    }
+  });
+
+  /**
+   * DELETE /api/social/accounts/:id
+   * Disconnect a social account
+   */
+  app.delete('/api/social/accounts/:id', requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // Verify ownership
+      const connection = await storage.getSocialConnectionById(id);
+
+      if (!connection) {
+        return res.status(404).json({
+          success: false,
+          error: 'Account not found'
+        });
+      }
+
+      if (connection.userId !== req.user!.id) {
+        return res.status(403).json({
+          success: false,
+          error: 'Unauthorized: You do not own this account'
+        });
+      }
+
+      await storage.deleteSocialConnection(id);
+
+      logger.info({
+        userId: req.user!.id,
+        platform: connection.platform
+      }, 'Social account disconnected');
+
+      res.json({
+        success: true,
+        message: `${connection.platform} account disconnected`
+      });
+    } catch (error) {
+      logger.error({
+        module: 'SocialAccounts',
+        err: error,
+        connectionId: req.params.id
+      }, 'Failed to disconnect account');
+
+      res.status(500).json({
+        success: false,
+        error: 'Failed to disconnect account'
+      });
+    }
+  });
+
+  /**
+   * POST /api/social/sync-accounts
+   * Sync account from n8n to local database
+   * Called after user configures OAuth in n8n
+   */
+  app.post('/api/social/sync-accounts', requireAuth, validate(syncAccountSchema), async (req, res) => {
+    try {
+      const {
+        platform,
+        n8nCredentialId,
+        platformUserId,
+        platformUsername,
+        accountType
+      } = req.body;
+
+      // Check if connection already exists
+      const existing = await storage.getSocialConnectionByPlatform(req.user!.id, platform);
+
+      if (existing) {
+        // Update existing connection
+        const updated = await storage.updateSocialConnection(existing.id, {
+          platformUserId,
+          platformUsername,
+          accountType: accountType || 'personal',
+          isActive: true,
+          lastErrorAt: null,
+          lastErrorMessage: null,
+        });
+
+        return res.json({
+          success: true,
+          data: updated,
+          message: `${platform} account synced (updated)`,
+        });
+      }
+
+      // Create new connection
+      const connection = await storage.createSocialConnection({
+        userId: req.user!.id,
+        platform,
+        platformUserId,
+        platformUsername,
+        accountType: accountType || 'personal',
+        isActive: true,
+        // OAuth fields (managed by n8n, placeholder values)
+        accessToken: 'managed_by_n8n',
+        tokenIv: 'n8n',
+        tokenAuthTag: 'n8n',
+        tokenExpiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days
+      });
+
+      res.json({
+        success: true,
+        data: connection,
+        message: `${platform} account synced (new)`,
+      });
+    } catch (error) {
+      logger.error({
+        module: 'SocialAccounts',
+        err: error,
+        platform: req.body.platform
+      }, 'Failed to sync account from n8n');
+
+      res.status(500).json({
+        success: false,
+        error: 'Failed to sync account from n8n'
+      });
+    }
+  });
+
+  /**
+   * POST /api/n8n/callback
+   * Webhook handler for n8n posting results
+   * Called by n8n workflows after posting to social platforms
+   */
+  app.post('/api/n8n/callback', validate(n8nCallbackSchema), async (req, res) => {
+    try {
+      const {
+        scheduledPostId,
+        platform,
+        success,
+        platformPostId,
+        platformPostUrl,
+        error,
+        executionId,
+        postedAt,
+      } = req.body;
+
+      logger.info({
+        scheduledPostId,
+        platform,
+        success,
+        executionId,
+      }, 'n8n callback received');
+
+      // TODO: Update scheduledPosts table (Phase 8.2 - Approval Queue)
+      // For now, just log and acknowledge
+
+      res.json({
+        success: true,
+        message: 'Callback received and processed'
+      });
+    } catch (error) {
+      logger.error({
+        module: 'n8nCallback',
+        err: error
+      }, 'Failed to process n8n callback');
+
+      res.status(500).json({
+        success: false,
+        error: 'Failed to process callback'
+      });
+    }
+  });
 
   // ===== LEARN FROM WINNERS - AD PATTERN ENDPOINTS =====
 

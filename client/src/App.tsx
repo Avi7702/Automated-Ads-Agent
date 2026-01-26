@@ -29,6 +29,8 @@ import Library from "@/pages/Library";
 import Settings from "@/pages/Settings";
 // Content Planner
 import ContentPlanner from "@/pages/ContentPlanner";
+// Phase 8.1: Social Accounts Management
+import SocialAccounts from "@/pages/SocialAccounts";
 
 function Router() {
   return (
@@ -60,6 +62,13 @@ function Router() {
       <Route path="/content-planner">
         <ProtectedRoute>
           <ContentPlanner />
+        </ProtectedRoute>
+      </Route>
+
+      {/* Phase 8.1: Social Accounts Management */}
+      <Route path="/social-accounts">
+        <ProtectedRoute>
+          <SocialAccounts />
         </ProtectedRoute>
       </Route>
 
