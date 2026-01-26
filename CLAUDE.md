@@ -85,6 +85,54 @@ You must verify information before responding. Never make assumptions about code
 
 ---
 
+## MANDATORY: TypeScript Strict Mode & Test Coverage
+
+### TypeScript Requirements (NON-NEGOTIABLE)
+
+**Before ANY code changes, ensure:**
+
+1. ✅ `npm run check` passes with ZERO errors
+2. ✅ All new code passes strict TypeScript checks:
+   - `strict: true`
+   - `noUncheckedIndexedAccess: true` - Array access returns T | undefined
+   - `noImplicitOverride: true` - Explicit override keyword required
+   - `exactOptionalPropertyTypes: true` - No undefined for optional props
+   - `noUnusedLocals: true` - No unused variables
+   - `noUnusedParameters: true` - No unused function params
+   - `noFallthroughCasesInSwitch: true` - All switch cases return/break
+
+**Forbidden Patterns:**
+
+- ❌ `any` types (use `unknown` and type guards)
+- ❌ `@ts-ignore` or `@ts-expect-error` (fix the type issue)
+- ❌ Non-null assertions (`!`) without proof of non-nullability
+- ❌ Implicit returns in functions (always explicit)
+- ❌ Array access without null checks: `arr[0]` → `arr[0] ?? fallback`
+
+### Test Coverage Requirements (80%+ MANDATORY)
+
+**Before committing ANY feature/fix:**
+
+1. ✅ Write tests FIRST (TDD: Red → Green → Refactor)
+2. ✅ Run `npm run test:coverage` and verify:
+   - Statements: ≥80%
+   - Branches: ≥75%
+   - Functions: ≥80%
+   - Lines: ≥80%
+3. ✅ All tests must pass: `npm test`
+4. ✅ E2E tests for user-facing features: `npm run test:e2e`
+
+**Test Requirements by Change Type:**
+
+- **New Feature** → Unit + Integration + E2E tests
+- **Bug Fix** → Regression test that would have caught the bug
+- **Refactor** → All existing tests still pass
+- **API Endpoint** → Integration tests with supertest
+
+**Coverage will FAIL the build if below 80%** - this is enforced in `vitest.config.ts`.
+
+---
+
 ## When Answering Questions
 
 - Show which files you checked

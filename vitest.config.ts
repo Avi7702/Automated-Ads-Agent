@@ -56,15 +56,15 @@ export default defineConfig({
         'e2e/**',
         'scripts/**',
       ],
-      // Coverage thresholds - fail if below these
+      // Coverage thresholds - fail if below these (80%+ requirement)
       thresholds: {
-        // Global thresholds
-        statements: 50,
-        branches: 40,
-        functions: 50,
-        lines: 50,
-        // Per-file thresholds (more lenient for now)
-        perFile: false,
+        // Global thresholds (everything-claude-code standard)
+        statements: 80,
+        branches: 75,
+        functions: 80,
+        lines: 80,
+        // Per-file thresholds enforced
+        perFile: true,
       },
     },
   },
