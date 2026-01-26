@@ -374,6 +374,7 @@ export default function Studio() {
   const [showStickyGenerate, setShowStickyGenerate] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [activeActionButton, setActiveActionButton] = useState<'edit' | 'copy' | 'preview' | 'save' | null>(null);
 
   // Quick start mode
   const [quickStartMode, setQuickStartMode] = useState(false);
@@ -1437,49 +1438,50 @@ export default function Studio() {
               {/* Action Buttons - 2026 UX with active states */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <Button
-                  variant={!collapsedSections.refine ? "default" : "outline"}
+                  variant={activeActionButton === 'edit' ? "default" : "outline"}
                   className={cn(
                     "h-14 transition-all",
-                    !collapsedSections.refine && "ring-2 ring-primary/30 scale-105"
+                    activeActionButton === 'edit' && "ring-2 ring-primary/30 scale-105"
                   )}
                   onClick={() => {
                     haptic('light');
+                    setActiveActionButton('edit');
                     toggleSection("refine");
                     if (collapsedSections.refine) {
                       toast.success("Edit panel opened");
                     }
                   }}
                 >
-                  {!collapsedSections.refine && <Check className="w-4 h-4 mr-2" />}
                   <Pencil className="w-4 h-4 mr-2" />
                   Edit
                 </Button>
                 <Button
-                  variant={!collapsedSections.copy ? "default" : "outline"}
+                  variant={activeActionButton === 'copy' ? "default" : "outline"}
                   className={cn(
                     "h-14 transition-all",
-                    !collapsedSections.copy && "ring-2 ring-primary/30 scale-105"
+                    activeActionButton === 'copy' && "ring-2 ring-primary/30 scale-105"
                   )}
                   onClick={() => {
                     haptic('light');
+                    setActiveActionButton('copy');
                     toggleSection("copy");
                     if (collapsedSections.copy) {
                       toast.success("Copy panel opened");
                     }
                   }}
                 >
-                  {!collapsedSections.copy && <Check className="w-4 h-4 mr-2" />}
                   <MessageCircle className="w-4 h-4 mr-2" />
                   Copy
                 </Button>
                 <Button
-                  variant={!collapsedSections.preview ? "default" : "outline"}
+                  variant={activeActionButton === 'preview' ? "default" : "outline"}
                   className={cn(
                     "h-14 transition-all",
-                    !collapsedSections.preview && "ring-2 ring-primary/30 scale-105"
+                    activeActionButton === 'preview' && "ring-2 ring-primary/30 scale-105"
                   )}
                   onClick={() => {
                     haptic('light');
+                    setActiveActionButton('preview');
                     toggleSection("preview");
                     if (collapsedSections.preview) {
                       toast.success("Preview panel opened");
@@ -1489,15 +1491,18 @@ export default function Studio() {
                     }
                   }}
                 >
-                  {!collapsedSections.preview && <Check className="w-4 h-4 mr-2" />}
                   <Eye className="w-4 h-4 mr-2" />
                   Preview
                 </Button>
                 <Button
-                  variant="outline"
-                  className="h-14 hover:scale-105 transition-all"
+                  variant={activeActionButton === 'save' ? "default" : "outline"}
+                  className={cn(
+                    "h-14 transition-all",
+                    activeActionButton === 'save' && "ring-2 ring-primary/30 scale-105"
+                  )}
                   onClick={() => {
                     haptic('light');
+                    setActiveActionButton('save');
                     setShowSaveToCatalog(true);
                     toast.success("Save dialog opened");
                   }}
