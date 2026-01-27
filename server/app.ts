@@ -14,6 +14,7 @@ import { validateEnvOrExit } from "./lib/validateEnv";
 import { initSentry, sentryRequestHandler, sentryErrorHandler, captureException } from "./lib/sentry";
 import { trackError } from "./services/errorTrackingService";
 import compression from "compression";
+import cookieParser from "cookie-parser";
 import { startGenerationWorker, closeGenerationWorker } from "./workers/generationWorkerInstance";
 import { closeQueues } from "./lib/queue";
 
@@ -72,6 +73,9 @@ app.use(express.json({
   }
 }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
+
+// Cookie parser - required for CSRF and session handling
+app.use(cookieParser());
 
 // Session middleware - uses Redis if available, falls back to memory store
 let sessionStore: session.Store | undefined;
