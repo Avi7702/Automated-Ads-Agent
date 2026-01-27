@@ -26,6 +26,7 @@
   "notes": "removed framer motion dependency",
   "dependencies": {
     "@google/genai": "^1.30.0",
+    "cookie-parser": "^1.4.7",
     "@hookform/resolvers": "^5.2.2",
     "@jridgewell/trace-mapping": "^0.3.25",
     "@mendable/firecrawl-js": "^4.10.0",
@@ -122,6 +123,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
+    "@types/cookie-parser": "^1.4.8",
     "@replit/vite-plugin-cartographer": "^0.4.4",
     "@replit/vite-plugin-dev-banner": "^0.1.1",
     "@replit/vite-plugin-runtime-error-modal": "^0.0.3",
