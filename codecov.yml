@@ -1,0 +1,60 @@
+# Codecov configuration
+# https://docs.codecov.com/docs/codecov-yaml
+
+coverage:
+  # Coverage status checks
+  status:
+    project:
+      default:
+        # Target 80% coverage - fail if below
+        target: 80%
+        # Allow 2% drop from baseline before failing
+        threshold: 2%
+        # Only check if there are changes
+        only_pulls: true
+    patch:
+      default:
+        # New code should have 80% coverage
+        target: 80%
+        # Allow some flexibility for edge cases
+        threshold: 5%
+
+  # Precision of coverage percentages
+  precision: 2
+  round: down
+  range: "70...100"
+
+# Comment settings for PRs
+comment:
+  layout: "reach,diff,flags,files,footer"
+  behavior: default
+  require_changes: true
+  require_base: false
+  require_head: true
+
+# Ignore paths
+ignore:
+  - "node_modules/**"
+  - "dist/**"
+  - "coverage/**"
+  - "**/*.d.ts"
+  - "**/*.config.*"
+  - "**/mockData/**"
+  - "e2e/**"
+  - "scripts/**"
+  - "docs/**"
+
+# Flags for different test types
+flags:
+  backend:
+    paths:
+      - server/
+    carryforward: true
+  frontend:
+    paths:
+      - client/
+    carryforward: true
+
+# GitHub checks
+github_checks:
+  annotations: true

@@ -3,6 +3,7 @@ import { type Server } from "node:http";
 import express, { type Express, type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import session from "express-session";
+import { doubleCsrf } from "csrf-csrf";
 import { registerRoutes } from "./routes";
 import { logger, apiLogger } from "./lib/logger";
 import { requestIdMiddleware } from "./middleware/requestId";
@@ -13,6 +14,8 @@ import { validateEnvOrExit } from "./lib/validateEnv";
 import { initSentry, sentryRequestHandler, sentryErrorHandler, captureException } from "./lib/sentry";
 import { trackError } from "./services/errorTrackingService";
 import compression from "compression";
+import { startGenerationWorker, closeGenerationWorker } from "./workers/generationWorkerInstance";
+import { closeQueues } from "./lib/queue";
 
 export function log(message: string, source = "express") {
   // Use structured logger in production, formatted console in development
@@ -110,6 +113,37 @@ app.use(session({
   },
 }));
 
+// CSRF Protection - protects all state-changing operations (POST/PUT/DELETE)
+// Validate CSRF secret in production - MUST be set for multi-instance deployments
+const csrfSecret = process.env.CSRF_SECRET;
+if (process.env.NODE_ENV === 'production' && !csrfSecret) {
+  logger.error({ security: true }, 'CRITICAL: CSRF_SECRET not set in production. Application cannot start securely.');
+  process.exit(1);
+}
+// Generate a random secret if not provided (for development only)
+const effectiveCsrfSecret = csrfSecret || require('crypto').randomBytes(32).toString('hex');
+
+const { generateToken, doubleCsrfProtection } = doubleCsrf({
+  getSecret: () => effectiveCsrfSecret,
+  cookieName: process.env.NODE_ENV === 'production' ? '__Host-csrf' : 'csrf',
+  cookieOptions: {
+    sameSite: 'strict',
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    path: '/',
+  },
+  size: 64, // Token size in bytes
+  ignoredMethods: ['GET', 'HEAD', 'OPTIONS'],
+});
+
+// Apply CSRF protection middleware
+app.use(doubleCsrfProtection);
+
+// CSRF token endpoint - clients must fetch this before making state-changing requests
+app.get('/api/csrf-token', (req: Request, res: Response) => {
+  res.json({ csrfToken: generateToken(req, res) });
+});
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -151,6 +185,9 @@ export default async function runApp(
 
   // Validate environment variables before starting
   validateEnvOrExit();
+
+  // Start the generation worker for async job processing
+  startGenerationWorker();
 
   const server = await registerRoutes(app);
 
@@ -204,7 +241,23 @@ export default async function runApp(
   onShutdown(async () => {
     logger.info({ module: 'shutdown' }, 'Starting graceful shutdown');
 
-    // Close Redis first (sessions depend on Redis)
+    // Close generation worker first (stop accepting new jobs)
+    try {
+      await closeGenerationWorker();
+      logger.info({ module: 'shutdown' }, 'Generation worker closed');
+    } catch (err) {
+      logger.error({ module: 'shutdown', err }, 'Error closing generation worker');
+    }
+
+    // Close BullMQ queue connections
+    try {
+      await closeQueues();
+      logger.info({ module: 'shutdown' }, 'Queue connections closed');
+    } catch (err) {
+      logger.error({ module: 'shutdown', err }, 'Error closing queue connections');
+    }
+
+    // Close Redis (sessions depend on Redis)
     if (process.env.REDIS_URL) {
       try {
         const { closeRedisClient } = require('./lib/redis');

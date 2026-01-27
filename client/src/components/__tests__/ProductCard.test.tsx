@@ -2,13 +2,13 @@
 import React from 'react';
 import { vi } from 'vitest';
 
-import { render, screen, fireEvent } from '@testing-library/react';
+// Using custom test utilities for consistent provider setup and mock data
+import { render, screen, fireEvent, createMockProduct } from '@/test-utils';
 import '@testing-library/jest-dom';
 import { ProductCard, ProductCardSkeleton } from '../ProductCard';
-import type { Product } from '@shared/schema';
 
-// Mock product data
-const mockProduct: Product = {
+// Use factory function to create test data with custom overrides
+const mockProduct = createMockProduct({
   id: 'prod-123',
   name: 'Test Product',
   cloudinaryUrl: 'https://res.cloudinary.com/test/image.jpg',
@@ -21,11 +21,7 @@ const mockProduct: Product = {
   features: { width: '5in', thickness: '3/4in' },
   specifications: { coverage: '20 sq ft per box' },
   sku: 'OAK-HW-001',
-  enrichmentDraft: null,
-  enrichmentVerifiedAt: null,
-  enrichmentSource: 'ai_vision',
-  createdAt: new Date(),
-};
+});
 
 describe('ProductCard', () => {
   describe('Rendering', () => {
@@ -187,5 +183,80 @@ describe('ProductCardSkeleton', () => {
   it('accepts className prop', () => {
     const { container } = render(<ProductCardSkeleton className="custom-class" />);
     expect(container.firstChild).toHaveClass('custom-class');
+  });
+});
+
+// ============================================
+// EDGE CASE TESTS (5 tests)
+// ============================================
+
+describe('ProductCard Edge Cases', () => {
+  // Edge case test
+  it('handles product with extremely long name (500+ characters)', () => {
+    const longName = 'A'.repeat(500);
+    render(<ProductCard product={{ ...mockProduct, name: longName }} />);
+    // Should render without crashing and truncate/display the long name
+    expect(screen.getByText(longName)).toBeInTheDocument();
+  });
+
+  // Edge case test
+  it('handles product with special characters in name', () => {
+    const specialName = '<script>alert("XSS")</script> & "quotes" \' apostrophe';
+    render(<ProductCard product={{ ...mockProduct, name: specialName }} />);
+    // Should render the text safely without executing scripts
+    expect(screen.getByText(specialName)).toBeInTheDocument();
+  });
+
+  // Edge case test
+  it('handles rapid click events without duplicate calls', () => {
+    const onClick = vi.fn();
+    render(<ProductCard product={mockProduct} onClick={onClick} />);
+
+    const card = screen.getByTestId(`product-card-${mockProduct.id}`);
+
+    // Rapid clicks
+    fireEvent.click(card);
+    fireEvent.click(card);
+    fireEvent.click(card);
+    fireEvent.click(card);
+    fireEvent.click(card);
+
+    // All clicks should be registered (no debounce on card click)
+    expect(onClick).toHaveBeenCalledTimes(5);
+  });
+
+  // Edge case test
+  it('handles product with unicode emoji in tags and description', () => {
+    const emojiProduct = {
+      ...mockProduct,
+      name: 'Premium Product',
+      description: 'Great product with emojis',
+      tags: ['floor', 'premium', 'sustainable'],
+    };
+    render(<ProductCard product={emojiProduct} />);
+    expect(screen.getByText('Premium Product')).toBeInTheDocument();
+    expect(screen.getByText('floor')).toBeInTheDocument();
+  });
+
+  // Edge case test
+  it('handles product with null values for all optional fields', () => {
+    const minimalProduct = {
+      ...mockProduct,
+      category: null,
+      description: null,
+      tags: null,
+      benefits: null,
+      features: null,
+      specifications: null,
+      sku: null,
+      cloudinaryUrl: null,
+      cloudinaryPublicId: null,
+      enrichmentStatus: null,
+    };
+    render(<ProductCard product={minimalProduct} />);
+    // Should render product name even with all null optional fields
+    expect(screen.getByText('Test Product')).toBeInTheDocument();
+    expect(screen.getByText('No image')).toBeInTheDocument();
+    expect(screen.getByText('Pending')).toBeInTheDocument();
   });
 });

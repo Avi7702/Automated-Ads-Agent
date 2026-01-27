@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -362,12 +361,16 @@ export function ProductRelationships({ productId, className }: ProductRelationsh
   });
 
   // Group relationships by type
-  const groupedRelationships = relationships.reduce((acc, rel) => {
+  const groupedRelationships = relationships.reduce<Record<string, ProductRelationship[]>>((acc, rel) => {
     const type = rel.relationshipType;
-    if (!acc[type]) acc[type] = [];
-    acc[type].push(rel);
+    const existingArray = acc[type];
+    if (!existingArray) {
+      acc[type] = [rel];
+    } else {
+      existingArray.push(rel);
+    }
     return acc;
-  }, {} as Record<string, ProductRelationship[]>);
+  }, {});
 
   return (
     <Card className={className}>

@@ -10,10 +10,14 @@
  * Pipeline: Vision Analysis -> KB Retrieval -> Template Matching -> LLM Reasoning
  *
  * Security: KB-first policy, web search disabled by default
+ *
+ * Caching: Idea suggestions are cached in Redis with 5-minute time buckets
+ * to balance freshness with performance (1-hour TTL).
  */
 
 import { logger } from "../lib/logger";
 import { generateContentWithRetry } from "../lib/geminiClient";
+import { getCacheService, CACHE_TTL } from "../lib/cacheService";
 import { storage } from "../storage";
 import { visionAnalysisService, type VisionAnalysisResult } from "./visionAnalysisService";
 import { queryFileSearchStore } from "./fileSearchService";
@@ -164,6 +168,27 @@ export async function generateSuggestions(
         message: "Either productId or uploadDescriptions is required",
       },
     };
+  }
+
+  // Check Redis cache for freestyle mode suggestions
+  // Cache key includes: userId, productIds, userGoal hash, and 5-minute time bucket
+  const cache = getCacheService();
+  const productIds = productId ? [productId] : [];
+  const cacheKey = buildSuggestionCacheKey(userId, productIds, userGoal, mode, templateId);
+
+  // Only cache freestyle mode without uploads (uploads are ephemeral)
+  const isCacheable = mode === 'freestyle' && uploadDescriptions.length === 0;
+
+  if (isCacheable) {
+    try {
+      const cached = await cache.get<IdeaBankSuggestResponse>(cacheKey);
+      if (cached) {
+        logger.info({ module: 'IdeaBank', userId, productId, cached: true }, 'Redis cache hit for suggestions');
+        return { success: true, response: cached };
+      }
+    } catch (err) {
+      logger.warn({ module: 'IdeaBank', err }, 'Redis cache lookup failed, continuing with generation');
+    }
   }
 
   // 1. Fetch product if provided
@@ -335,6 +360,16 @@ export async function generateSuggestions(
         recipe, // Include recipe for /api/transform context
       };
 
+      // Cache the response for future requests (only cacheable requests)
+      if (isCacheable) {
+        try {
+          await cache.set(cacheKey, response, CACHE_TTL.IDEA_SUGGESTIONS);
+          logger.info({ module: 'IdeaBank', userId, productId, cached: false }, 'Suggestions cached in Redis');
+        } catch (cacheErr) {
+          logger.warn({ module: 'IdeaBank', cacheErr }, 'Failed to cache suggestions in Redis');
+        }
+      }
+
       return { success: true, response };
     }
   } catch (err) {
@@ -347,6 +382,31 @@ export async function generateSuggestions(
       },
     };
   }
+}
+
+/**
+ * Build a cache key for idea suggestions
+ * Includes time bucket (5-minute granularity) to balance freshness with cache hits
+ */
+function buildSuggestionCacheKey(
+  userId: string,
+  productIds: string[],
+  userGoal?: string,
+  mode?: string,
+  templateId?: string
+): string {
+  const cache = getCacheService();
+  const baseKey = cache.ideasKey(userId, productIds);
+
+  // Add userGoal hash if present (to differentiate different goal queries)
+  const goalHash = userGoal
+    ? `-g${userGoal.slice(0, 20).replace(/[^a-zA-Z0-9]/g, '')}`
+    : '';
+
+  // Add mode and templateId for template mode
+  const modeKey = mode === 'template' && templateId ? `-t${templateId}` : '';
+
+  return `${baseKey}${goalHash}${modeKey}`;
 }
 
 /**
@@ -1178,7 +1238,32 @@ function buildGenerationRecipe(params: {
   return recipe;
 }
 
+/**
+ * Invalidate cached idea suggestions for a user
+ * Called when underlying data changes (e.g., product updates, brand profile changes)
+ *
+ * @param userId - The user ID whose suggestions should be invalidated
+ * @param productIds - Optional specific product IDs to invalidate
+ */
+export async function invalidateIdeaCache(userId: string, productIds?: string[]): Promise<void> {
+  const cache = getCacheService();
+
+  try {
+    // Build pattern to match user's cached suggestions
+    // Pattern: ideas:{userId}:* matches all suggestions for this user
+    const pattern = productIds && productIds.length > 0
+      ? `ideas:${userId}:${[...productIds].sort().join(',')}:*`
+      : `ideas:${userId}:*`;
+
+    const deleted = await cache.invalidate(pattern);
+    logger.info({ module: 'IdeaBank', userId, productIds, keysDeleted: deleted }, 'Idea cache invalidated');
+  } catch (err) {
+    logger.error({ module: 'IdeaBank', err }, 'Failed to invalidate idea cache');
+  }
+}
+
 export const ideaBankService = {
   generateSuggestions,
   getMatchedTemplates,
+  invalidateIdeaCache,
 };

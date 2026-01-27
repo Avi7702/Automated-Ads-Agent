@@ -11,9 +11,14 @@
  * 3. Get installation scenarios for products
  * 4. Access brand images for visual context
  * 5. Format context for LLM consumption
+ *
+ * Caching: Product knowledge is cached in Redis with 24-hour TTL.
+ * This data changes infrequently and is expensive to compute.
  */
 
 import { storage } from "../storage";
+import { logger } from "../lib/logger";
+import { getCacheService, CACHE_TTL } from "../lib/cacheService";
 import type {
   Product,
   ProductRelationship,
@@ -89,16 +94,33 @@ export interface BrandImageInfo {
 
 /**
  * Build enhanced context for a single product
+ * Uses Redis cache with 24-hour TTL to avoid repeated database queries
  */
 export async function buildEnhancedContext(
   productId: string,
   userId: string
 ): Promise<EnhancedProductContext | null> {
+  const cache = getCacheService();
+  const cacheKey = cache.kbKey(productId);
+
+  // Try Redis cache first
+  try {
+    const cached = await cache.get<EnhancedProductContext>(cacheKey);
+    if (cached) {
+      logger.info({ module: 'ProductKnowledge', productId, cached: true }, 'Redis cache hit for product knowledge');
+      return cached;
+    }
+  } catch (err) {
+    logger.warn({ module: 'ProductKnowledge', err }, 'Redis cache lookup failed, computing fresh context');
+  }
+
   // 1. Fetch primary product
   const product = await storage.getProductById(productId);
   if (!product) {
     return null;
   }
+
+  logger.info({ module: 'ProductKnowledge', productId, cached: false }, 'Cache miss, building enhanced context');
 
   // 2. Fetch related data in parallel
   const [relationships, scenarios, brandImages] = await Promise.all([
@@ -139,13 +161,23 @@ export async function buildEnhancedContext(
     brandImages: brandImagesInfo,
   });
 
-  return {
+  const context: EnhancedProductContext = {
     product: productInfo,
     relatedProducts: relatedProductsInfo,
     installationScenarios: installationScenariosInfo,
     brandImages: brandImagesInfo,
     formattedContext,
   };
+
+  // Cache the result
+  try {
+    await cache.set(cacheKey, context, CACHE_TTL.PRODUCT_KNOWLEDGE);
+    logger.info({ module: 'ProductKnowledge', productId }, 'Product knowledge cached in Redis');
+  } catch (cacheErr) {
+    logger.warn({ module: 'ProductKnowledge', cacheErr }, 'Failed to cache product knowledge');
+  }
+
+  return context;
 }
 
 /**
@@ -406,6 +438,44 @@ function groupBy<T>(arr: T[], key: keyof T): Record<string, T[]> {
 }
 
 // ============================================
+// CACHE INVALIDATION
+// ============================================
+
+/**
+ * Invalidate cached product knowledge for a specific product
+ * Call this when product data, relationships, or scenarios change
+ */
+export async function invalidateProductKnowledgeCache(productId: string): Promise<void> {
+  const cache = getCacheService();
+
+  try {
+    const deleted = await cache.invalidate(`kb:${productId}:*`);
+    logger.info({ module: 'ProductKnowledge', productId, keysDeleted: deleted }, 'Product knowledge cache invalidated');
+  } catch (err) {
+    logger.error({ module: 'ProductKnowledge', err }, 'Failed to invalidate product knowledge cache');
+  }
+}
+
+/**
+ * Invalidate cached product knowledge for multiple products
+ * Useful when bulk operations affect multiple products
+ */
+export async function invalidateMultiProductKnowledgeCache(productIds: string[]): Promise<void> {
+  const cache = getCacheService();
+
+  try {
+    let totalDeleted = 0;
+    for (const productId of productIds) {
+      const deleted = await cache.invalidate(`kb:${productId}:*`);
+      totalDeleted += deleted;
+    }
+    logger.info({ module: 'ProductKnowledge', productIds, totalKeysDeleted: totalDeleted }, 'Multiple product knowledge caches invalidated');
+  } catch (err) {
+    logger.error({ module: 'ProductKnowledge', err }, 'Failed to invalidate product knowledge caches');
+  }
+}
+
+// ============================================
 // EXPORTS
 // ============================================
 
@@ -415,4 +485,6 @@ export const productKnowledgeService = {
   getFormattedRelationships,
   searchProductsByTagWithContext,
   getScenariosByRoomType,
+  invalidateProductKnowledgeCache,
+  invalidateMultiProductKnowledgeCache,
 };

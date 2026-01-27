@@ -8,14 +8,18 @@
  * - Usage context suggestions
  * - Target demographic inference
  *
- * Implements caching via productAnalyses table to avoid redundant API calls.
+ * Implements multi-layer caching:
+ * 1. Redis cache (fast, 7-day TTL) - checked first
+ * 2. Database cache (persistent, via productAnalyses table) - checked second
  */
 
+import crypto from "crypto";
 import { generateContentWithRetry } from "../lib/geminiClient";
 import { storage } from "../storage";
 import type { ProductAnalysis, InsertProductAnalysis, Product } from "@shared/schema";
 import { createRateLimitMap } from "../utils/memoryManager";
 import { logger } from "../lib/logger";
+import { getCacheService, CACHE_TTL } from "../lib/cacheService";
 
 // Rate limiting: max 10 analysis requests per minute per user
 // Now bounded with automatic cleanup of expired entries (max 10000 users)
@@ -77,8 +81,19 @@ export function generateImageFingerprint(product: Product): string {
 }
 
 /**
+ * Generate an MD5 hash of the image URL for cache key
+ */
+function generateImageHash(imageUrl: string): string {
+  return crypto.createHash("md5").update(imageUrl).digest("hex");
+}
+
+/**
  * Analyze a product image using Gemini Vision
- * Returns cached result if available and fingerprint matches
+ *
+ * Multi-layer caching strategy:
+ * 1. Redis cache (fast, 7-day TTL) - checked first for speed
+ * 2. Database cache (persistent) - checked second for durability
+ * 3. Fresh analysis via Gemini Vision - only on cache miss
  */
 export async function analyzeProductImage(
   product: Product,
@@ -97,38 +112,61 @@ export async function analyzeProductImage(
   }
 
   const fingerprint = generateImageFingerprint(product);
+  const cache = getCacheService();
+  const imageHash = generateImageHash(product.cloudinaryUrl);
+  const cacheKey = cache.visionKey(product.id, imageHash);
 
   // Check cache unless force refresh requested
   if (!forceRefresh) {
+    // Layer 1: Try Redis cache first (fastest)
     try {
-      const cached = await storage.getProductAnalysisByProductId(product.id);
-      if (cached && cached.imageFingerprint === fingerprint) {
-        return {
-          success: true,
-          analysis: {
-            category: cached.category || "unknown",
-            subcategory: cached.subcategory || "unknown",
-            materials: cached.materials || [],
-            colors: cached.colors || [],
-            style: cached.style || "unknown",
-            usageContext: cached.usageContext || "",
-            targetDemographic: cached.targetDemographic || "",
-            detectedText: cached.detectedText,
-            confidence: cached.confidence || 80,
-          },
-        };
+      const redisCached = await cache.get<VisionAnalysisResult>(cacheKey);
+      if (redisCached) {
+        logger.info({ module: 'VisionAnalysis', productId: product.id, cached: true, layer: 'redis' }, 'Redis cache hit');
+        return { success: true, analysis: redisCached };
       }
     } catch (err) {
-      logger.error({ module: 'VisionAnalysis', err }, 'Cache lookup failed');
+      logger.warn({ module: 'VisionAnalysis', err }, 'Redis cache lookup failed, falling back to database');
+    }
+
+    // Layer 2: Try database cache (durable)
+    try {
+      const dbCached = await storage.getProductAnalysisByProductId(product.id);
+      if (dbCached && dbCached.imageFingerprint === fingerprint) {
+        const analysis: VisionAnalysisResult = {
+          category: dbCached.category || "unknown",
+          subcategory: dbCached.subcategory || "unknown",
+          materials: dbCached.materials || [],
+          colors: dbCached.colors || [],
+          style: dbCached.style || "unknown",
+          usageContext: dbCached.usageContext || "",
+          targetDemographic: dbCached.targetDemographic || "",
+          detectedText: dbCached.detectedText,
+          confidence: dbCached.confidence || 80,
+        };
+
+        // Backfill Redis cache for future fast access
+        try {
+          await cache.set(cacheKey, analysis, CACHE_TTL.VISION_ANALYSIS);
+          logger.info({ module: 'VisionAnalysis', productId: product.id, cached: true, layer: 'database' }, 'Database cache hit, backfilled Redis');
+        } catch (backfillErr) {
+          logger.warn({ module: 'VisionAnalysis', backfillErr }, 'Failed to backfill Redis cache');
+        }
+
+        return { success: true, analysis };
+      }
+    } catch (err) {
+      logger.error({ module: 'VisionAnalysis', err }, 'Database cache lookup failed');
       // Continue to fresh analysis if cache fails
     }
   }
 
-  // Perform fresh analysis via Gemini Vision
+  // Layer 3: Perform fresh analysis via Gemini Vision
   try {
+    logger.info({ module: 'VisionAnalysis', productId: product.id, cached: false }, 'Cache miss, performing fresh analysis');
     const analysisResult = await callGeminiVision(product.cloudinaryUrl, product.name);
 
-    // Save to cache
+    // Save to both cache layers
     const analysisData: InsertProductAnalysis = {
       productId: product.id,
       imageFingerprint: fingerprint,
@@ -144,12 +182,19 @@ export async function analyzeProductImage(
       modelVersion: VISION_MODEL,
     };
 
-    // Upsert: update existing or create new
+    // Save to database (durable cache)
     const existing = await storage.getProductAnalysisByProductId(product.id);
     if (existing) {
       await storage.updateProductAnalysis(product.id, analysisData);
     } else {
       await storage.saveProductAnalysis(analysisData);
+    }
+
+    // Save to Redis cache (fast cache)
+    try {
+      await cache.set(cacheKey, analysisResult, CACHE_TTL.VISION_ANALYSIS);
+    } catch (cacheErr) {
+      logger.warn({ module: 'VisionAnalysis', cacheErr }, 'Failed to save to Redis cache');
     }
 
     return { success: true, analysis: analysisResult };
@@ -288,12 +333,24 @@ export async function getCachedAnalysis(productId: string): Promise<ProductAnaly
 
 /**
  * Invalidate cached analysis for a product
+ * Clears both Redis and database caches
  */
 export async function invalidateAnalysisCache(productId: string): Promise<void> {
+  const cache = getCacheService();
+
+  // Invalidate Redis cache (pattern match all image hashes for this product)
+  try {
+    const deleted = await cache.invalidate(`vision:${productId}:*`);
+    logger.info({ module: 'VisionAnalysis', productId, redisKeysDeleted: deleted }, 'Redis cache invalidated');
+  } catch (err) {
+    logger.error({ module: 'VisionAnalysis', err }, 'Failed to invalidate Redis cache');
+  }
+
+  // Invalidate database cache
   try {
     await storage.deleteProductAnalysis(productId);
   } catch (err) {
-    logger.error({ module: 'VisionAnalysis', err }, 'Failed to invalidate cache');
+    logger.error({ module: 'VisionAnalysis', err }, 'Failed to invalidate database cache');
   }
 }
 

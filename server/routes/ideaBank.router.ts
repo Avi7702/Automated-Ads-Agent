@@ -1,0 +1,204 @@
+/**
+ * Idea Bank Router
+ * AI-powered idea generation and template matching
+ *
+ * Endpoints:
+ * - POST /api/idea-bank/suggest - Generate AI suggestions
+ * - GET /api/idea-bank/templates/:productId - Get matched templates
+ */
+
+import type { Router, Request, Response } from 'express';
+import type { RouterContext, RouterFactory, RouterModule } from '../types/router';
+import { createRouter, asyncHandler } from './utils/createRouter';
+
+export const ideaBankRouter: RouterFactory = (ctx: RouterContext): Router => {
+  const router = createRouter();
+  const { logger } = ctx.services;
+  const { ideaBank } = ctx.domainServices;
+  const { requireAuth } = ctx.middleware;
+
+  /**
+   * POST /suggest - Generate idea bank suggestions
+   * Supports single product, multiple products, and upload descriptions
+   * Optional auth for single-tenant mode
+   */
+  router.post('/suggest', asyncHandler(async (req: Request, res: Response) => {
+    try {
+      // Use authenticated userId or default system user for single-tenant mode
+      const userId = (req.session as any)?.userId || 'system-user';
+      const {
+        productId, productIds, uploadDescriptions, userGoal,
+        enableWebSearch, maxSuggestions,
+        mode = 'freestyle', // Default to freestyle for backward compatibility
+        templateId // Required when mode = 'template'
+      } = req.body;
+
+      // Validate template mode requirements
+      if (mode === 'template' && !templateId) {
+        return res.status(400).json({
+          error: 'templateId is required when mode is "template"'
+        });
+      }
+
+      // Support both single productId and multiple productIds
+      const ids = productIds || (productId ? [productId] : []);
+
+      // Validate upload descriptions if provided
+      const validUploadDescriptions: string[] = Array.isArray(uploadDescriptions)
+        ? uploadDescriptions.filter((d: any) => typeof d === 'string' && d.trim().length > 0).slice(0, 6)
+        : [];
+
+      // Require at least products or upload descriptions
+      if (ids.length === 0 && validUploadDescriptions.length === 0) {
+        return res.status(400).json({ error: 'productId, productIds, or uploadDescriptions is required' });
+      }
+
+      // For multiple products, aggregate suggestions from each
+      if (ids.length > 1) {
+        const results = await Promise.all(
+          ids.slice(0, 6).map((id: string) => // Limit to 6 products max
+            ideaBank.generateSuggestions({
+              productId: id,
+              userId,
+              userGoal,
+              uploadDescriptions: validUploadDescriptions,
+              enableWebSearch: enableWebSearch || false,
+              maxSuggestions: 2, // Fewer per product when multiple
+              mode,
+              templateId,
+            })
+          )
+        );
+
+        // Filter successful results and aggregate
+        const successfulResults = results.filter(r => r.success);
+        if (successfulResults.length === 0) {
+          return res.status(500).json({ error: 'Failed to generate suggestions for all products' });
+        }
+
+        // Merge suggestions and aggregate analysis status
+        const allSuggestions: any[] = [];
+        const aggregateStatus = {
+          visionComplete: false,
+          kbQueried: false,
+          templatesMatched: 0,
+          webSearchUsed: false,
+          uploadDescriptionsUsed: validUploadDescriptions.length,
+        };
+
+        for (const result of successfulResults) {
+          if (result.success) {
+            allSuggestions.push(...result.response.suggestions);
+            aggregateStatus.visionComplete = aggregateStatus.visionComplete || result.response.analysisStatus.visionComplete;
+            aggregateStatus.kbQueried = aggregateStatus.kbQueried || result.response.analysisStatus.kbQueried;
+            aggregateStatus.templatesMatched += result.response.analysisStatus.templatesMatched;
+            aggregateStatus.webSearchUsed = aggregateStatus.webSearchUsed || result.response.analysisStatus.webSearchUsed;
+          }
+        }
+
+        // Sort by confidence and limit
+        const sortedSuggestions = allSuggestions
+          .sort((a, b) => b.confidence - a.confidence)
+          .slice(0, Math.min(maxSuggestions || 6, 10));
+
+        return res.json({
+          suggestions: sortedSuggestions,
+          analysisStatus: aggregateStatus,
+        });
+      }
+
+      // Single product OR uploads-only flow
+      const result = await ideaBank.generateSuggestions({
+        productId: ids.length > 0 ? ids[0] : undefined,
+        userId,
+        userGoal,
+        uploadDescriptions: validUploadDescriptions,
+        enableWebSearch: enableWebSearch || false,
+        maxSuggestions: Math.min(maxSuggestions || 3, 5),
+        mode,
+        templateId,
+      });
+
+      if (!result.success) {
+        const statusCode = result.error.code === 'RATE_LIMITED' ? 429 :
+          result.error.code === 'PRODUCT_NOT_FOUND' ? 404 : 500;
+        return res.status(statusCode).json({ error: result.error.message, code: result.error.code });
+      }
+
+      // Response shape changes based on mode
+      if (mode === 'template') {
+        // Type assertion: service returns IdeaBankTemplateResponse when mode='template'
+        const templateResponse = result.response as import('@shared/types/ideaBank').IdeaBankTemplateResponse;
+        return res.json({
+          slotSuggestions: templateResponse.slotSuggestions,
+          template: templateResponse.template,
+          mergedPrompt: templateResponse.mergedPrompt,
+          analysisStatus: templateResponse.analysisStatus,
+          recipe: templateResponse.recipe
+        });
+      }
+
+      // Existing freestyle response
+      // Type assertion: when mode !== 'template', service returns IdeaBankSuggestResponse
+      const response = result.response as import('@shared/types/ideaBank').IdeaBankSuggestResponse;
+
+      // Check if suggestions array is empty and provide helpful message
+      if (!response.suggestions || response.suggestions.length === 0) {
+        return res.status(200).json({
+          suggestions: [],
+          analysisStatus: {
+            ...response.analysisStatus,
+            message: 'No suggestions generated. Try adding products or images.',
+            details: 'AI analysis completed but no viable prompts found.'
+          }
+        });
+      }
+
+      res.json(response);
+    } catch (error: any) {
+      logger.error({ module: 'IdeaBankSuggest', err: error }, 'Error suggesting ideas');
+
+      // Return structured error with retry signal
+      res.status(500).json({
+        error: 'Failed to generate suggestions',
+        message: 'Please try again or contact support',
+        fallback: true // Signal to client this is retryable
+      });
+    }
+  }));
+
+  /**
+   * GET /templates/:productId - Get matched templates for a product
+   */
+  router.get('/templates/:productId', requireAuth, asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const { productId } = req.params;
+      const userId = (req.session as any).userId;
+
+      const result = await ideaBank.getMatchedTemplates(productId, userId);
+
+      if (!result) {
+        return res.status(404).json({ error: 'Product not found or analysis failed' });
+      }
+
+      res.json({
+        templates: result.templates,
+        productAnalysis: result.analysis,
+      });
+    } catch (error: any) {
+      logger.error({ module: 'IdeaBankTemplates', err: error }, 'Error fetching templates');
+      res.status(500).json({ error: 'Failed to get matched templates' });
+    }
+  }));
+
+  return router;
+};
+
+export const ideaBankRouterModule: RouterModule = {
+  prefix: '/api/idea-bank',
+  factory: ideaBankRouter,
+  description: 'AI-powered idea generation and template matching',
+  endpointCount: 2,
+  requiresAuth: false, // suggest is optional auth
+  tags: ['ai', 'ideas', 'templates']
+};

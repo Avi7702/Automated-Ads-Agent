@@ -5,3 +5,5 @@ export {
   useLibraryTabUrl,
   useSettingsSectionUrl,
 } from './useUrlState';
+export { useJobStatus } from './useJobStatus';
+export type { JobStatus, JobProgress, UseJobStatusOptions } from './useJobStatus';

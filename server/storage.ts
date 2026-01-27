@@ -55,6 +55,13 @@ import {
   // Social Connections types (Phase 8.1)
   type SocialConnection,
   type InsertSocialConnection,
+  // Approval Queue types (Phase 8)
+  type ApprovalQueue,
+  type InsertApprovalQueue,
+  type ApprovalAuditLog,
+  type InsertApprovalAuditLog,
+  type ApprovalSettings,
+  type InsertApprovalSettings,
   generations,
   generationUsage,
   products,
@@ -88,6 +95,10 @@ import {
   contentPlannerPosts,
   // Social Media tables (Phase 8.1)
   socialConnections,
+  // Approval Queue tables (Phase 8)
+  approvalQueue,
+  approvalAuditLog,
+  approvalSettings,
 } from "@shared/schema";
 import { decryptApiKey } from "./services/encryptionService";
 import { db } from "./db";
@@ -98,6 +109,7 @@ export interface IStorage {
   saveGeneration(generation: InsertGeneration): Promise<Generation>;
   getGenerations(limit?: number): Promise<Generation[]>;
   getGenerationById(id: string): Promise<Generation | undefined>;
+  updateGeneration(id: number | string, updates: Partial<InsertGeneration>): Promise<Generation>;
   deleteGeneration(id: string): Promise<void>;
   getEditHistory(generationId: string): Promise<Generation[]>;
 
@@ -332,6 +344,31 @@ export interface IStorage {
   getContentPlannerPostsByUser(userId: string, startDate?: Date, endDate?: Date): Promise<ContentPlannerPost[]>;
   getWeeklyBalance(userId: string): Promise<{ category: string; count: number }[]>;
   deleteContentPlannerPost(id: string): Promise<void>;
+
+  // ============================================
+  // APPROVAL QUEUE OPERATIONS (Phase 8)
+  // ============================================
+
+  // Approval Queue CRUD operations
+  createApprovalQueue(data: InsertApprovalQueue): Promise<ApprovalQueue>;
+  getApprovalQueue(id: string): Promise<ApprovalQueue | null>;
+  getApprovalQueueForUser(userId: string, filters?: {
+    status?: string;
+    priority?: string;
+    platform?: string;
+    dateFrom?: Date;
+    dateTo?: Date;
+  }): Promise<ApprovalQueue[]>;
+  updateApprovalQueue(id: string, updates: Partial<ApprovalQueue>): Promise<ApprovalQueue>;
+  deleteApprovalQueue(id: string): Promise<void>;
+
+  // Approval Audit Log operations
+  createApprovalAuditLog(data: InsertApprovalAuditLog): Promise<ApprovalAuditLog>;
+  getApprovalAuditLog(approvalQueueId: string): Promise<ApprovalAuditLog[]>;
+
+  // Approval Settings operations
+  getApprovalSettings(userId: string): Promise<ApprovalSettings | null>;
+  updateApprovalSettings(userId: string, settings: Partial<ApprovalSettings>): Promise<ApprovalSettings>;
 }
 
 export class DbStorage implements IStorage {
@@ -381,6 +418,16 @@ export class DbStorage implements IStorage {
 
   async deleteGeneration(id: string): Promise<void> {
     await db.delete(generations).where(eq(generations.id, id));
+  }
+
+  async updateGeneration(id: number | string, updates: Partial<InsertGeneration>): Promise<Generation> {
+    const stringId = String(id);
+    const [generation] = await db
+      .update(generations)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(generations.id, stringId))
+      .returning();
+    return generation;
   }
 
   async saveProduct(insertProduct: InsertProduct): Promise<Product> {
@@ -1979,6 +2026,161 @@ export class DbStorage implements IStorage {
       .where(eq(socialConnections.id, id));
 
     logger.info({ connectionId: id }, 'Social connection deleted');
+  }
+
+  // ========================================
+  // APPROVAL QUEUE MANAGEMENT (Phase 8)
+  // ========================================
+
+  async createApprovalQueue(data: InsertApprovalQueue): Promise<ApprovalQueue> {
+    const [item] = await db
+      .insert(approvalQueue)
+      .values({
+        ...data,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+
+    logger.info({ userId: data.userId, queueItemId: item.id }, 'Approval queue item created');
+    return item;
+  }
+
+  async getApprovalQueue(id: string): Promise<ApprovalQueue | null> {
+    const [item] = await db
+      .select()
+      .from(approvalQueue)
+      .where(eq(approvalQueue.id, id))
+      .limit(1);
+
+    return item || null;
+  }
+
+  async getApprovalQueueForUser(
+    userId: string,
+    filters?: {
+      status?: string;
+      priority?: string;
+      platform?: string;
+      dateFrom?: Date;
+      dateTo?: Date;
+    }
+  ): Promise<ApprovalQueue[]> {
+    const conditions = [eq(approvalQueue.userId, userId)];
+
+    if (filters?.status) {
+      conditions.push(eq(approvalQueue.status, filters.status));
+    }
+    if (filters?.priority) {
+      conditions.push(eq(approvalQueue.priority, filters.priority));
+    }
+    if (filters?.dateFrom) {
+      conditions.push(gte(approvalQueue.createdAt, filters.dateFrom));
+    }
+    if (filters?.dateTo) {
+      conditions.push(lte(approvalQueue.createdAt, filters.dateTo));
+    }
+
+    return db
+      .select()
+      .from(approvalQueue)
+      .where(and(...conditions))
+      .orderBy(desc(approvalQueue.createdAt));
+  }
+
+  async updateApprovalQueue(
+    id: string,
+    updates: Partial<ApprovalQueue>
+  ): Promise<ApprovalQueue> {
+    const [item] = await db
+      .update(approvalQueue)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(approvalQueue.id, id))
+      .returning();
+
+    if (!item) {
+      throw new Error(`Approval queue item not found: ${id}`);
+    }
+
+    logger.info({ queueItemId: id, status: item.status }, 'Approval queue item updated');
+    return item;
+  }
+
+  async deleteApprovalQueue(id: string): Promise<void> {
+    await db
+      .delete(approvalQueue)
+      .where(eq(approvalQueue.id, id));
+
+    logger.info({ queueItemId: id }, 'Approval queue item deleted');
+  }
+
+  async createApprovalAuditLog(data: InsertApprovalAuditLog): Promise<ApprovalAuditLog> {
+    const [log] = await db
+      .insert(approvalAuditLog)
+      .values({
+        ...data,
+        createdAt: new Date(),
+      })
+      .returning();
+
+    logger.info({ approvalQueueId: data.approvalQueueId, eventType: data.eventType }, 'Audit log created');
+    return log;
+  }
+
+  async getApprovalAuditLog(approvalQueueId: string): Promise<ApprovalAuditLog[]> {
+    return db
+      .select()
+      .from(approvalAuditLog)
+      .where(eq(approvalAuditLog.approvalQueueId, approvalQueueId))
+      .orderBy(desc(approvalAuditLog.createdAt));
+  }
+
+  async getApprovalSettings(userId: string): Promise<ApprovalSettings | null> {
+    const [settings] = await db
+      .select()
+      .from(approvalSettings)
+      .where(eq(approvalSettings.userId, userId))
+      .limit(1);
+
+    return settings || null;
+  }
+
+  async updateApprovalSettings(
+    userId: string,
+    settingsUpdates: Partial<ApprovalSettings>
+  ): Promise<ApprovalSettings> {
+    // Try to update existing settings
+    const existing = await this.getApprovalSettings(userId);
+
+    if (existing) {
+      const [updated] = await db
+        .update(approvalSettings)
+        .set({
+          ...settingsUpdates,
+          updatedAt: new Date(),
+        })
+        .where(eq(approvalSettings.userId, userId))
+        .returning();
+
+      return updated;
+    }
+
+    // Create new settings if none exist
+    const [created] = await db
+      .insert(approvalSettings)
+      .values({
+        userId,
+        ...settingsUpdates,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as InsertApprovalSettings)
+      .returning();
+
+    logger.info({ userId }, 'Approval settings created');
+    return created;
   }
 }
 

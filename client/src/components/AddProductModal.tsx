@@ -1,7 +1,6 @@
-// @ts-nocheck
 import { useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useDropzone } from "react-dropzone";
+import { useDropzone, type FileRejection } from "react-dropzone";
 import { motion, AnimatePresence } from "framer-motion";
 import { Upload, X, Image, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 
@@ -58,11 +57,16 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
   };
 
   // Dropzone configuration
-  const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: any[]) => {
+  const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: FileRejection[]) => {
     setUploadError(null);
 
     if (rejectedFiles.length > 0) {
-      const error = rejectedFiles[0].errors[0];
+      const firstRejection = rejectedFiles[0];
+      const error = firstRejection?.errors[0];
+      if (!error) {
+        setUploadError("File rejected.");
+        return;
+      }
       if (error.code === "file-too-large") {
         setUploadError("File is too large. Maximum size is 10MB.");
       } else if (error.code === "file-invalid-type") {
@@ -75,6 +79,8 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
 
     if (acceptedFiles.length > 0) {
       const selectedFile = acceptedFiles[0];
+      if (!selectedFile) return;
+
       setFile(selectedFile);
 
       // Create preview

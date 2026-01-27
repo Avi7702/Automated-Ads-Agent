@@ -19,7 +19,10 @@ export const sessions = pgTable("sessions", {
   userId: varchar("user_id").notNull().references(() => users.id),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  userIdIdx: index("sessions_user_id_idx").on(table.userId),
+  expiresAtIdx: index("sessions_expires_at_idx").on(table.expiresAt),
+}));
 
 export const generations = pgTable("generations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -38,7 +41,12 @@ export const generations = pgTable("generations", {
   editCount: integer("edit_count").default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  userIdIdx: index("generations_user_id_idx").on(table.userId),
+  createdAtIdx: index("generations_created_at_idx").on(table.createdAt),
+  parentIdIdx: index("generations_parent_id_idx").on(table.parentGenerationId),
+  statusIdx: index("generations_status_idx").on(table.status),
+}));
 
 export const products = pgTable("products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -62,7 +70,11 @@ export const products = pgTable("products", {
   enrichmentSource: varchar("enrichment_source", { length: 50 }), // ai_vision | ai_search | user_manual | imported
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  categoryIdx: index("products_category_idx").on(table.category),
+  createdAtIdx: index("products_created_at_idx").on(table.createdAt),
+  enrichmentStatusIdx: index("products_enrichment_status_idx").on(table.enrichmentStatus),
+}));
 
 export const promptTemplates = pgTable("prompt_templates", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -71,7 +83,10 @@ export const promptTemplates = pgTable("prompt_templates", {
   category: varchar("category", { length: 100 }),
   tags: text("tags").array().default(sql`ARRAY[]::text[]`),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  categoryIdx: index("prompt_templates_category_idx").on(table.category),
+  createdAtIdx: index("prompt_templates_created_at_idx").on(table.createdAt),
+}));
 
 export const adCopy = pgTable("ad_copy", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -113,7 +128,13 @@ export const adCopy = pgTable("ad_copy", {
   parentCopyId: varchar("parent_copy_id"),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  userIdIdx: index("ad_copy_user_id_idx").on(table.userId),
+  generationIdIdx: index("ad_copy_generation_id_idx").on(table.generationId),
+  platformIdx: index("ad_copy_platform_idx").on(table.platform),
+  createdAtIdx: index("ad_copy_created_at_idx").on(table.createdAt),
+  frameworkIdx: index("ad_copy_framework_idx").on(table.framework),
+}));
 
 // ============================================
 // INTELLIGENT IDEA BANK TABLES
@@ -159,7 +180,12 @@ export const adSceneTemplates = pgTable("ad_scene_templates", {
   createdBy: varchar("created_by").references(() => users.id, { onDelete: "set null" }),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  categoryIdx: index("ad_scene_templates_category_idx").on(table.category),
+  createdByIdx: index("ad_scene_templates_created_by_idx").on(table.createdBy),
+  isGlobalIdx: index("ad_scene_templates_is_global_idx").on(table.isGlobal),
+  createdAtIdx: index("ad_scene_templates_created_at_idx").on(table.createdAt),
+}));
 
 /**
  * Brand Profiles - Extended brand configuration per user
@@ -189,7 +215,9 @@ export const brandProfiles = pgTable("brand_profiles", {
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  userIdIdx: index("brand_profiles_user_id_idx").on(table.userId),
+}));
 
 /**
  * Product Analyses - Cached vision analysis results
@@ -221,6 +249,8 @@ export const productAnalyses = pgTable("product_analyses", {
 }, (table) => ({
   // Unique constraint on productId to ensure one analysis per product
   productIdUnique: unique().on(table.productId),
+  productIdIdx: index("product_analyses_product_id_idx").on(table.productId),
+  categoryIdx: index("product_analyses_category_idx").on(table.category),
 }));
 
 
@@ -259,7 +289,12 @@ export const installationScenarios = pgTable("installation_scenarios", {
   // Status
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  userIdIdx: index("installation_scenarios_user_id_idx").on(table.userId),
+  scenarioTypeIdx: index("installation_scenarios_scenario_type_idx").on(table.scenarioType),
+  primaryProductIdIdx: index("installation_scenarios_primary_product_id_idx").on(table.primaryProductId),
+  isActiveIdx: index("installation_scenarios_is_active_idx").on(table.isActive),
+}));
 
 /**
  * Product Relationships - How products relate to each other
@@ -283,6 +318,10 @@ export const productRelationships = pgTable("product_relationships", {
 }, (table) => ({
   // Unique constraint to prevent duplicate relationships
   uniqueRelationship: unique().on(table.sourceProductId, table.targetProductId, table.relationshipType),
+  userIdIdx: index("product_relationships_user_id_idx").on(table.userId),
+  sourceProductIdIdx: index("product_relationships_source_product_id_idx").on(table.sourceProductId),
+  targetProductIdIdx: index("product_relationships_target_product_id_idx").on(table.targetProductId),
+  relationshipTypeIdx: index("product_relationships_relationship_type_idx").on(table.relationshipType),
 }));
 
 /**
@@ -311,7 +350,12 @@ export const brandImages = pgTable("brand_images", {
   aspectRatio: varchar("aspect_ratio", { length: 10 }), // 1:1, 16:9, 4:5, 9:16
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  userIdIdx: index("brand_images_user_id_idx").on(table.userId),
+  categoryIdx: index("brand_images_category_idx").on(table.category),
+  scenarioIdIdx: index("brand_images_scenario_id_idx").on(table.scenarioId),
+  createdAtIdx: index("brand_images_created_at_idx").on(table.createdAt),
+}));
 
 
 // ============================================
@@ -378,7 +422,13 @@ export const performingAdTemplates = pgTable("performing_ad_templates", {
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  userIdIdx: index("performing_ad_templates_user_id_idx").on(table.userId),
+  categoryIdx: index("performing_ad_templates_category_idx").on(table.category),
+  isActiveIdx: index("performing_ad_templates_is_active_idx").on(table.isActive),
+  isFeaturedIdx: index("performing_ad_templates_is_featured_idx").on(table.isFeatured),
+  createdAtIdx: index("performing_ad_templates_created_at_idx").on(table.createdAt),
+}));
 
 
 // ============================================
@@ -412,7 +462,12 @@ export const generationUsage = pgTable("generation_usage", {
   estimationSource: varchar("estimation_source", { length: 20 }).notNull(), // usageMetadata | pricingFormula | fallback
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  generationIdIdx: index("generation_usage_generation_id_idx").on(table.generationId),
+  brandIdIdx: index("generation_usage_brand_id_idx").on(table.brandId),
+  operationIdx: index("generation_usage_operation_idx").on(table.operation),
+  createdAtIdx: index("generation_usage_created_at_idx").on(table.createdAt),
+}));
 
 export const insertGenerationSchema = createInsertSchema(generations).omit({
   id: true,
@@ -607,6 +662,9 @@ export const geminiQuotaMetrics = pgTable("gemini_quota_metrics", {
 }, (table) => ({
   // Unique constraint on window + brand
   uniqueWindow: unique().on(table.windowType, table.windowStart, table.brandId),
+  brandIdIdx: index("gemini_quota_metrics_brand_id_idx").on(table.brandId),
+  windowTypeIdx: index("gemini_quota_metrics_window_type_idx").on(table.windowType),
+  windowStartIdx: index("gemini_quota_metrics_window_start_idx").on(table.windowStart),
 }));
 
 /**
@@ -631,7 +689,11 @@ export const geminiRateLimitEvents = pgTable("gemini_rate_limit_events", {
   requestMetadata: jsonb("request_metadata"), // { resolution, imageCount, promptLength }
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  brandIdIdx: index("gemini_rate_limit_events_brand_id_idx").on(table.brandId),
+  createdAtIdx: index("gemini_rate_limit_events_created_at_idx").on(table.createdAt),
+  limitTypeIdx: index("gemini_rate_limit_events_limit_type_idx").on(table.limitType),
+}));
 
 /**
  * Quota alert configurations
@@ -653,7 +715,11 @@ export const geminiQuotaAlerts = pgTable("gemini_quota_alerts", {
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  brandIdIdx: index("gemini_quota_alerts_brand_id_idx").on(table.brandId),
+  alertTypeIdx: index("gemini_quota_alerts_alert_type_idx").on(table.alertType),
+  isEnabledIdx: index("gemini_quota_alerts_is_enabled_idx").on(table.isEnabled),
+}));
 
 // Quota monitoring schemas and types
 export const insertGeminiQuotaMetricsSchema = createInsertSchema(geminiQuotaMetrics).omit({
@@ -707,7 +773,11 @@ export const googleQuotaSnapshots = pgTable("google_quota_snapshots", {
   brandId: varchar("brand_id"), // Optional: scope to specific brand/tenant
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  projectIdIdx: index("google_quota_snapshots_project_id_idx").on(table.projectId),
+  syncedAtIdx: index("google_quota_snapshots_synced_at_idx").on(table.syncedAt),
+  syncStatusIdx: index("google_quota_snapshots_sync_status_idx").on(table.syncStatus),
+}));
 
 /**
  * Sync job history
@@ -733,7 +803,11 @@ export const googleQuotaSyncHistory = pgTable("google_quota_sync_history", {
   triggerType: varchar("trigger_type", { length: 20 }).notNull(), // 'scheduled' | 'manual' | 'startup'
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  statusIdx: index("google_quota_sync_history_status_idx").on(table.status),
+  startedAtIdx: index("google_quota_sync_history_started_at_idx").on(table.startedAt),
+  triggerTypeIdx: index("google_quota_sync_history_trigger_type_idx").on(table.triggerType),
+}));
 
 // Google Cloud Monitoring schemas and types
 export const insertGoogleQuotaSnapshotSchema = createInsertSchema(googleQuotaSnapshots).omit({
@@ -784,6 +858,9 @@ export const userApiKeys = pgTable("user_api_keys", {
 }, (table) => ({
   // Each user can only have one key per service
   uniqueUserService: unique().on(table.userId, table.service),
+  userIdIdx: index("user_api_keys_user_id_idx").on(table.userId),
+  serviceIdx: index("user_api_keys_service_idx").on(table.service),
+  isValidIdx: index("user_api_keys_is_valid_idx").on(table.isValid),
 }));
 
 /**
@@ -808,7 +885,12 @@ export const apiKeyAuditLog = pgTable("api_key_audit_log", {
 
   // Timestamp
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  userIdIdx: index("api_key_audit_log_user_id_idx").on(table.userId),
+  serviceIdx: index("api_key_audit_log_service_idx").on(table.service),
+  actionIdx: index("api_key_audit_log_action_idx").on(table.action),
+  createdAtIdx: index("api_key_audit_log_created_at_idx").on(table.createdAt),
+}));
 
 // API Key Management enum constraints
 const apiKeyServiceEnum = z.enum(['gemini', 'cloudinary', 'firecrawl', 'redis']);
@@ -1301,3 +1383,173 @@ export type ScheduledPost = typeof scheduledPosts.$inferSelect;
 
 export type InsertPostAnalytics = z.infer<typeof insertPostAnalyticsSchema>;
 export type PostAnalytics = typeof postAnalytics.$inferSelect;
+
+// ============================================
+// APPROVAL QUEUE TABLES (Phase 8)
+// ============================================
+
+/**
+ * Approval Queue Status enum
+ */
+export const approvalQueueStatusEnum = z.enum([
+  'pending_review',
+  'approved',
+  'rejected',
+  'needs_revision',
+  'scheduled',
+  'published',
+  'failed'
+]);
+
+/**
+ * Approval Priority enum
+ */
+export const approvalPriorityEnum = z.enum(['low', 'medium', 'high', 'urgent']);
+
+/**
+ * AI Recommendation enum
+ */
+export const aiRecommendationEnum = z.enum(['auto_approve', 'human_review', 'reject']);
+
+/**
+ * Approval Queue - Human-in-the-loop approval workflow
+ * AI-generated content passes through here before publishing
+ */
+export const approvalQueue = pgTable("approval_queue", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+
+  // Content references (one or the other)
+  adCopyId: varchar("ad_copy_id").references(() => adCopy.id, { onDelete: "cascade" }),
+  generationId: varchar("generation_id").references(() => generations.id, { onDelete: "cascade" }),
+
+  // Review status
+  status: varchar("status", { length: 25 }).default("pending_review").notNull(),
+  priority: varchar("priority", { length: 10 }).default("medium").notNull(),
+
+  // AI evaluation
+  aiConfidenceScore: real("ai_confidence_score"), // 0-100
+  aiRecommendation: varchar("ai_recommendation", { length: 20 }), // auto_approve | human_review | reject
+  aiReasoning: text("ai_reasoning"),
+
+  // Safety checks (jsonb for flexibility)
+  safetyChecksPassed: jsonb("safety_checks_passed").$type<{
+    hateSpeech: boolean;
+    violence: boolean;
+    sexualContent: boolean;
+    dangerousContent: boolean;
+    harassmentBullying: boolean;
+  }>(),
+
+  // Compliance flags
+  complianceFlags: text("compliance_flags").array(), // ['legal_claim', 'pricing_info', 'safety_flagged']
+
+  // Scheduling
+  scheduledFor: timestamp("scheduled_for"),
+
+  // Human review
+  reviewedBy: varchar("reviewed_by").references(() => users.id, { onDelete: "set null" }),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewNotes: text("review_notes"),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  idxUserStatus: index("idx_approval_queue_user_status").on(table.userId, table.status),
+  idxPriority: index("idx_approval_queue_priority").on(table.priority),
+  idxScheduledFor: index("idx_approval_queue_scheduled").on(table.scheduledFor),
+}));
+
+/**
+ * Approval Audit Log - Complete history of approval decisions
+ * Required for compliance and transparency
+ */
+export const approvalAuditLog = pgTable("approval_audit_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  approvalQueueId: varchar("approval_queue_id").notNull().references(() => approvalQueue.id, { onDelete: "cascade" }),
+
+  // Event type
+  eventType: varchar("event_type", { length: 30 }).notNull(), // created | auto_approved | approved | rejected | needs_revision
+
+  // Who made the decision
+  userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+  userName: varchar("user_name", { length: 255 }),
+  userRole: varchar("user_role", { length: 50 }),
+  isSystemAction: boolean("is_system_action").default(false).notNull(),
+
+  // Status change
+  previousStatus: varchar("previous_status", { length: 25 }),
+  newStatus: varchar("new_status", { length: 25 }).notNull(),
+
+  // Decision details
+  decision: varchar("decision", { length: 20 }), // approve | reject | request_revision
+  decisionReason: text("decision_reason"),
+  decisionNotes: text("decision_notes"),
+
+  // Content snapshot at time of decision
+  snapshot: jsonb("snapshot").$type<{
+    caption?: string;
+    platform?: string;
+    imageUrl?: string;
+    hashtags?: string[];
+  }>(),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  idxApprovalQueueId: index("idx_audit_log_queue_id").on(table.approvalQueueId),
+  idxEventType: index("idx_audit_log_event_type").on(table.eventType),
+  idxCreatedAt: index("idx_audit_log_created_at").on(table.createdAt),
+}));
+
+/**
+ * Approval Settings - User preferences for auto-approval
+ */
+export const approvalSettings = pgTable("approval_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }).unique(),
+
+  // Auto-approval settings
+  autoApproveEnabled: boolean("auto_approve_enabled").default(false).notNull(),
+  minConfidenceForAutoApprove: integer("min_confidence_for_auto_approve").default(95).notNull(), // 0-100
+
+  // Notification preferences
+  notifyOnPending: boolean("notify_on_pending").default(true).notNull(),
+  notifyOnAutoApprove: boolean("notify_on_auto_approve").default(false).notNull(),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  idxUserId: index("idx_approval_settings_user_id").on(table.userId),
+}));
+
+// Insert schemas for approval queue tables
+export const insertApprovalQueueSchema = createInsertSchema(approvalQueue, {
+  status: approvalQueueStatusEnum,
+  priority: approvalPriorityEnum,
+  aiRecommendation: aiRecommendationEnum.optional(),
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertApprovalAuditLogSchema = createInsertSchema(approvalAuditLog).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertApprovalSettingsSchema = createInsertSchema(approvalSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Type exports for approval queue tables
+export type InsertApprovalQueue = z.infer<typeof insertApprovalQueueSchema>;
+export type ApprovalQueue = typeof approvalQueue.$inferSelect;
+
+export type InsertApprovalAuditLog = z.infer<typeof insertApprovalAuditLogSchema>;
+export type ApprovalAuditLog = typeof approvalAuditLog.$inferSelect;
+
+export type InsertApprovalSettings = z.infer<typeof insertApprovalSettingsSchema>;
+export type ApprovalSettings = typeof approvalSettings.$inferSelect;

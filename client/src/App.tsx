@@ -1,6 +1,6 @@
 import { Switch, Route, Redirect } from "wouter";
-import { lazy, Suspense } from "react";
-import { queryClient } from "./lib/queryClient";
+import { lazy, Suspense, useEffect } from "react";
+import { queryClient, initializeCsrf } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/toaster";
@@ -14,11 +14,15 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Login from "@/pages/Login";
 import Studio from "@/pages/Studio";
 
+// Optimized Studio (memoized components) - for A/B testing
+const StudioOptimized = lazy(() => import("@/pages/StudioOptimized"));
+
 // Lazy load all other pages to reduce initial bundle size
 const Library = lazy(() => import("@/pages/Library"));
 const Settings = lazy(() => import("@/pages/Settings"));
 const ContentPlanner = lazy(() => import("@/pages/ContentPlanner"));
 const SocialAccounts = lazy(() => import("@/pages/SocialAccounts"));
+const ApprovalQueue = lazy(() => import("@/pages/ApprovalQueue"));
 const TemplateAdmin = lazy(() => import("@/pages/TemplateAdmin"));
 const SystemMap = lazy(() => import("@/pages/SystemMap"));
 const NotFound = lazy(() => import("@/pages/not-found"));
@@ -79,6 +83,15 @@ function Router() {
         <ProtectedRoute>
           <Suspense fallback={<PageLoader />}>
             <SocialAccounts />
+          </Suspense>
+        </ProtectedRoute>
+      </Route>
+
+      {/* Phase 8: Approval Queue */}
+      <Route path="/approval-queue">
+        <ProtectedRoute>
+          <Suspense fallback={<PageLoader />}>
+            <ApprovalQueue />
           </Suspense>
         </ProtectedRoute>
       </Route>
@@ -145,6 +158,15 @@ function Router() {
         </ProtectedRoute>
       </Route>
 
+      {/* Performance Testing: Optimized Studio with memoized components */}
+      <Route path="/studio-v2">
+        <ProtectedRoute>
+          <Suspense fallback={<PageLoader />}>
+            <StudioOptimized />
+          </Suspense>
+        </ProtectedRoute>
+      </Route>
+
       <Route>
         <Suspense fallback={<PageLoader />}>
           <NotFound />
@@ -155,6 +177,11 @@ function Router() {
 }
 
 function App() {
+  // Initialize CSRF token on app load
+  useEffect(() => {
+    initializeCsrf();
+  }, []);
+
   return (
     <ErrorBoundary>
       <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
