@@ -74,11 +74,14 @@ export const approvalQueueRouter: RouterFactory = (ctx: RouterContext): Router =
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error({ module: 'ApprovalQueue', err: error, errorMessage }, 'Failed to fetch queue items');
+      const errorCode = (error as any)?.code;
+      logger.error({ module: 'ApprovalQueue', err: error, errorMessage, errorCode }, 'Failed to fetch queue items');
       res.status(500).json({
         success: false,
         error: 'Failed to fetch approval queue',
-        details: process.env.NODE_ENV !== 'production' ? errorMessage : undefined,
+        // Temporarily expose error details to diagnose the issue
+        details: errorMessage,
+        code: errorCode,
       });
     }
   }));

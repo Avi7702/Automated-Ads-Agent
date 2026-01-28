@@ -2088,13 +2088,11 @@ export class DbStorage implements IStorage {
         .where(and(...conditions))
         .orderBy(desc(approvalQueue.createdAt));
     } catch (error: unknown) {
-      // Handle case where table doesn't exist yet (schema push pending)
+      // Log detailed error info to diagnose the issue
       const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes('relation') && errorMessage.includes('does not exist')) {
-        logger.warn({ module: 'Storage' }, 'approval_queue table does not exist yet - returning empty array');
-        return [];
-      }
-      throw error;
+      const errorCode = (error as any)?.code;
+      logger.error({ module: 'Storage', errorMessage, errorCode, error }, 'approval_queue query failed');
+      throw error;  // Re-throw to see in API response
     }
   }
 
