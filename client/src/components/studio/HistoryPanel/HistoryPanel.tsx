@@ -50,7 +50,7 @@ export function HistoryPanel({
   onSelectGeneration,
   className,
 }: HistoryPanelProps) {
-  const [activeTab, setActiveTab] = useState<TabId>('recent');
+  const [activeTab, setActiveTab] = useState<TabId>('all');
   const { selectedGenerationId, selectGeneration } = useHistoryPanelUrl();
 
   // Fetch generations
