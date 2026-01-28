@@ -2066,26 +2066,36 @@ export class DbStorage implements IStorage {
       dateTo?: Date;
     }
   ): Promise<ApprovalQueue[]> {
-    const conditions = [eq(approvalQueue.userId, userId)];
+    try {
+      const conditions = [eq(approvalQueue.userId, userId)];
 
-    if (filters?.status) {
-      conditions.push(eq(approvalQueue.status, filters.status));
-    }
-    if (filters?.priority) {
-      conditions.push(eq(approvalQueue.priority, filters.priority));
-    }
-    if (filters?.dateFrom) {
-      conditions.push(gte(approvalQueue.createdAt, filters.dateFrom));
-    }
-    if (filters?.dateTo) {
-      conditions.push(lte(approvalQueue.createdAt, filters.dateTo));
-    }
+      if (filters?.status) {
+        conditions.push(eq(approvalQueue.status, filters.status));
+      }
+      if (filters?.priority) {
+        conditions.push(eq(approvalQueue.priority, filters.priority));
+      }
+      if (filters?.dateFrom) {
+        conditions.push(gte(approvalQueue.createdAt, filters.dateFrom));
+      }
+      if (filters?.dateTo) {
+        conditions.push(lte(approvalQueue.createdAt, filters.dateTo));
+      }
 
-    return db
-      .select()
-      .from(approvalQueue)
-      .where(and(...conditions))
-      .orderBy(desc(approvalQueue.createdAt));
+      return await db
+        .select()
+        .from(approvalQueue)
+        .where(and(...conditions))
+        .orderBy(desc(approvalQueue.createdAt));
+    } catch (error: unknown) {
+      // Handle case where table doesn't exist yet (schema push pending)
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('relation') && errorMessage.includes('does not exist')) {
+        logger.warn({ module: 'Storage' }, 'approval_queue table does not exist yet - returning empty array');
+        return [];
+      }
+      throw error;
+    }
   }
 
   async updateApprovalQueue(
