@@ -15,6 +15,7 @@ import {
   ImagePlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { apiRequest } from "@/lib/queryClient";
 import type { InstallationScenario, Product } from "@shared/schema";
 
 // Components
@@ -484,8 +485,7 @@ export default function InstallationScenarios({ embedded = false, selectedId }: 
   const { data: scenarios, isLoading } = useQuery<InstallationScenario[]>({
     queryKey: ["installation-scenarios"],
     queryFn: async () => {
-      const response = await fetch("/api/installation-scenarios");
-      if (!response.ok) throw new Error("Failed to fetch scenarios");
+      const response = await apiRequest("GET", "/api/installation-scenarios");
       return response.json();
     },
   });
@@ -494,8 +494,7 @@ export default function InstallationScenarios({ embedded = false, selectedId }: 
   const { data: products = [] } = useQuery<Product[]>({
     queryKey: ["products"],
     queryFn: async () => {
-      const response = await fetch("/api/products");
-      if (!response.ok) throw new Error("Failed to fetch products");
+      const response = await apiRequest("GET", "/api/products");
       return response.json();
     },
   });
@@ -503,12 +502,7 @@ export default function InstallationScenarios({ embedded = false, selectedId }: 
   // Create scenario mutation
   const createMutation = useMutation({
     mutationFn: async (data: Partial<InstallationScenario>) => {
-      const response = await fetch("/api/installation-scenarios", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error("Failed to create scenario");
+      const response = await apiRequest("POST", "/api/installation-scenarios", data);
       return response.json();
     },
     onSuccess: () => {
@@ -520,12 +514,7 @@ export default function InstallationScenarios({ embedded = false, selectedId }: 
   // Update scenario mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<InstallationScenario> }) => {
-      const response = await fetch(`/api/installation-scenarios/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error("Failed to update scenario");
+      const response = await apiRequest("PUT", `/api/installation-scenarios/${id}`, data);
       return response.json();
     },
     onSuccess: () => {
@@ -538,10 +527,7 @@ export default function InstallationScenarios({ embedded = false, selectedId }: 
   // Delete scenario mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/installation-scenarios/${id}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error("Failed to delete scenario");
+      await apiRequest("DELETE", `/api/installation-scenarios/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["installation-scenarios"] });
