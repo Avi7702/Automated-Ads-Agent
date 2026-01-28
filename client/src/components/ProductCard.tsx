@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Pencil, Sparkles, Trash2, ImageOff } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -92,6 +92,11 @@ export function ProductCard({
 }: ProductCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [imageError, setImageError] = useState(false);
+
+  // Reset image error state when cloudinaryUrl changes
+  useEffect(() => {
+    setImageError(false);
+  }, [product.cloudinaryUrl]);
 
   if (isLoading) {
     return <ProductCardSkeleton className={className} />;
