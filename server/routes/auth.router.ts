@@ -144,15 +144,24 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
 
   /**
    * GET /me - Get current authenticated user
+   * Returns 200 with authenticated: false if not logged in (no 401 in console)
    */
-  router.get('/me', requireAuth, asyncHandler(async (req: Request, res: Response) => {
+  router.get('/me', asyncHandler(async (req: Request, res: Response) => {
     try {
-      const userId = (req as any).session.userId;
+      const userId = (req as any).session?.userId;
+
+      // Not authenticated - return 200 with authenticated: false (no console error)
+      if (!userId) {
+        return res.json({ authenticated: false });
+      }
+
       const user = await storage.getUserById(userId);
       if (!user) {
-        return res.status(404).json({ error: 'User not found' });
+        // Session refers to non-existent user
+        return res.json({ authenticated: false });
       }
-      res.json({ id: user.id, email: user.email });
+
+      res.json({ authenticated: true, id: user.id, email: user.email });
     } catch (error: any) {
       logger.error({ module: 'Auth', action: 'me', err: error }, 'Get user error');
       res.status(500).json({ error: 'Failed to get user' });
