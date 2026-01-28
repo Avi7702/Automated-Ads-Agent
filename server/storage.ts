@@ -2089,11 +2089,13 @@ export class DbStorage implements IStorage {
         .where(and(...conditions))
         .orderBy(desc(approvalQueue.createdAt));
     } catch (error: unknown) {
-      // Log detailed error info to diagnose the issue
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      // If table doesn't exist (42P01), return empty array
       const errorCode = (error as any)?.code;
-      logger.error({ module: 'Storage', errorMessage, errorCode, error }, 'approval_queue query failed');
-      throw error;  // Re-throw to see in API response
+      if (errorCode === '42P01') {
+        logger.warn({ module: 'Storage' }, 'approval_queue table does not exist - returning empty array');
+        return [];
+      }
+      throw error;
     }
   }
 
