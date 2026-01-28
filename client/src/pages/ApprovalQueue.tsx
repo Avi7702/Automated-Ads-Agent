@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { Header } from "@/components/layout/Header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -401,9 +402,11 @@ export default function ApprovalQueue() {
   const standardItems = items.filter(item => item.priority === 'medium' || item.priority === 'low');
 
   return (
-    <div className="container mx-auto p-4 sm:p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <>
+      <Header currentPage="approval-queue" />
+      <div className="container mx-auto p-4 sm:p-6 space-y-6">
+        {/* Page Title */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Content Approval Queue</h1>
           <p className="text-muted-foreground mt-1">
@@ -662,6 +665,7 @@ export default function ApprovalQueue() {
           isProcessing={isProcessing}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }
