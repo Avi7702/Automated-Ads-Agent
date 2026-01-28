@@ -15,15 +15,12 @@ import { promisify } from "util";
 const execAsync = promisify(exec);
 
 export async function pushSchema() {
-    // Skip schema push by default in production (tables should already exist)
-    // Set FORCE_SCHEMA_PUSH=true to run schema push in production
-    const isProduction = process.env.NODE_ENV === 'production';
+    // Run schema push by default in all environments (drizzle-kit push is idempotent)
+    // Set SKIP_SCHEMA_PUSH=true to disable
     const skipSchemaPush = process.env.SKIP_SCHEMA_PUSH === 'true';
-    const forceSchemaPush = process.env.FORCE_SCHEMA_PUSH === 'true';
 
-    if (skipSchemaPush || (isProduction && !forceSchemaPush)) {
-        logger.info({ module: 'db' }, 'Schema push skipped - tables should already exist');
-        logger.info({ module: 'db' }, 'Set FORCE_SCHEMA_PUSH=true to run schema push');
+    if (skipSchemaPush) {
+        logger.info({ module: 'db' }, 'Schema push skipped via SKIP_SCHEMA_PUSH=true');
         return;
     }
 
