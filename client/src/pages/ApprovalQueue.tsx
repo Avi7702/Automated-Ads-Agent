@@ -106,10 +106,12 @@ export default function ApprovalQueue() {
       }
 
       const data = await response.json();
-      setItems(data.items || []);
+      // Handle both response formats: {items:[]} or {data:{items:[]}}
+      const items = data.data?.items || data.items || [];
+      setItems(items);
 
       // Calculate stats
-      const pending = data.items.filter((item: ApprovalQueueItem) => item.status === 'pending_review');
+      const pending = items.filter((item: ApprovalQueueItem) => item.status === 'pending_review');
       const avgScore = pending.reduce((sum: number, item: ApprovalQueueItem) =>
         sum + (item.aiConfidenceScore || 0), 0) / (pending.length || 1);
 
