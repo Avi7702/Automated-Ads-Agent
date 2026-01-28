@@ -9,7 +9,7 @@
   "scripts": {
     "dev:client": "vite dev --port 5000",
     "dev": "cross-env NODE_ENV=development tsx server/index-dev.ts",
-    "build": "vite build && esbuild server/index-prod.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/index.mjs",
+    "build": "vite build && esbuild server/index-prod.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/index.mjs && npm run db:push",
     "start": "node dist/index.mjs",
     "check": "tsc",
     "db:push": "drizzle-kit push",
@@ -26,7 +26,6 @@
   "notes": "removed framer motion dependency",
   "dependencies": {
     "@google/genai": "^1.30.0",
-    "cookie-parser": "^1.4.7",
     "@hookform/resolvers": "^5.2.2",
     "@jridgewell/trace-mapping": "^0.3.25",
     "@mendable/firecrawl-js": "^4.10.0",
@@ -75,6 +74,7 @@
     "connect-pg-simple": "^10.0.0",
     "connect-redis": "^7.1.1",
     "connect-timeout": "^1.9.1",
+    "cookie-parser": "^1.4.7",
     "csrf-csrf": "^3.0.8",
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
@@ -123,7 +123,6 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
-    "@types/cookie-parser": "^1.4.8",
     "@replit/vite-plugin-cartographer": "^0.4.4",
     "@replit/vite-plugin-dev-banner": "^0.1.1",
     "@replit/vite-plugin-runtime-error-modal": "^0.0.3",
@@ -132,6 +131,7 @@
     "@testing-library/react": "^16.3.1",
     "@types/connect-pg-simple": "^7.0.3",
     "@types/connect-timeout": "^1.9.0",
+    "@types/cookie-parser": "^1.4.8",
     "@types/express": "5.0.6",
     "@types/express-session": "^1.18.0",
     "@types/file-saver": "^2.0.7",
