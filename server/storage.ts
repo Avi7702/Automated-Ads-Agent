@@ -103,6 +103,7 @@ import {
 import { decryptApiKey } from "./services/encryptionService";
 import { db } from "./db";
 import { and, eq, desc, ilike, inArray, or, arrayContains, gte, lte, sql } from "drizzle-orm";
+import { logger } from "./lib/logger";
 
 export interface IStorage {
   // Generation CRUD operations
