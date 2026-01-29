@@ -17,6 +17,7 @@ import compression from "compression";
 import cookieParser from "cookie-parser";
 import { startGenerationWorker, closeGenerationWorker } from "./workers/generationWorkerInstance";
 import { closeQueues } from "./lib/queue";
+import { apiVersioningMiddleware } from "./middleware/apiVersioning";
 
 export function log(message: string, source = "express") {
   // Use structured logger in production, formatted console in development
@@ -78,6 +79,10 @@ app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
 // Cookie parser - required for CSRF and session handling
 app.use(cookieParser());
+
+// API Versioning (Task 5.2)
+// Rewrites /api/v1/* → /api/* and adds version/deprecation headers
+app.use(apiVersioningMiddleware);
 
 // Session middleware - uses Redis if available, falls back to memory store
 let sessionStore: session.Store | undefined;
