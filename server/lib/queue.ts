@@ -10,12 +10,13 @@
  * - Workers are defined separately in server/workers/
  */
 
-import { Queue, QueueEvents } from 'bullmq';
+import { Queue, QueueEvents, Job } from 'bullmq';
 import { RedisOptions } from 'ioredis';
 import { logger } from './logger';
 import {
   GenerationJobData,
   GenerationJobResult,
+  DeadLetterJobData,
   QUEUE_NAMES,
   DEFAULT_JOB_OPTIONS,
 } from '../jobs/types';
@@ -83,6 +84,151 @@ export const generationQueue = new Queue<GenerationJobData, GenerationJobResult>
     },
   }
 );
+
+/**
+ * Dead Letter Queue for jobs that have exhausted all retries
+ *
+ * Stores failed job data + error context for admin review and potential retry.
+ * Jobs are automatically moved here when they fail after all retry attempts.
+ */
+export const deadLetterQueue = new Queue<DeadLetterJobData>(
+  QUEUE_NAMES.DEAD_LETTER,
+  {
+    connection,
+    defaultJobOptions: {
+      removeOnComplete: { count: 500 }, // Keep last 500 resolved DLQ items
+      removeOnFail: false, // Never auto-remove DLQ failures
+    },
+  }
+);
+
+/**
+ * Move a failed job to the Dead Letter Queue
+ * Called when a job has exhausted all retry attempts
+ */
+export async function moveToDeadLetterQueue(
+  job: Job<GenerationJobData, GenerationJobResult>,
+  error: Error
+): Promise<void> {
+  try {
+    const dlqData: DeadLetterJobData = {
+      originalQueue: QUEUE_NAMES.GENERATION,
+      jobId: job.id ?? 'unknown',
+      jobData: job.data,
+      error: error.message,
+      stackTrace: error.stack,
+      failedAt: new Date().toISOString(),
+      attempts: job.attemptsMade,
+      maxAttempts: (job.opts.attempts ?? DEFAULT_JOB_OPTIONS.attempts) as number,
+    };
+
+    await deadLetterQueue.add('failed-job', dlqData, {
+      jobId: `dlq-${job.id ?? Date.now()}`,
+    });
+
+    logger.info(
+      {
+        module: 'Queue',
+        event: 'dead-letter',
+        originalJobId: job.id,
+        jobType: job.data.jobType,
+        attempts: job.attemptsMade,
+        error: error.message,
+      },
+      'Job moved to dead letter queue'
+    );
+  } catch (dlqError) {
+    logger.error(
+      {
+        module: 'Queue',
+        event: 'dead-letter-error',
+        originalJobId: job.id,
+        dlqError,
+      },
+      'Failed to move job to dead letter queue'
+    );
+  }
+}
+
+/**
+ * Retry a job from the Dead Letter Queue by re-adding it to the original queue
+ */
+export async function retryDeadLetterJob(dlqJobId: string): Promise<{ success: boolean; newJobId?: string; error?: string }> {
+  try {
+    const dlqJob = await deadLetterQueue.getJob(dlqJobId);
+    if (!dlqJob) {
+      return { success: false, error: 'DLQ job not found' };
+    }
+
+    const dlqData = dlqJob.data;
+
+    // Re-add to the original generation queue
+    const newJob = await generationQueue.add(
+      dlqData.jobData.jobType,
+      dlqData.jobData,
+      {
+        attempts: DEFAULT_JOB_OPTIONS.attempts,
+        backoff: DEFAULT_JOB_OPTIONS.backoff,
+        removeOnComplete: DEFAULT_JOB_OPTIONS.removeOnComplete,
+        removeOnFail: DEFAULT_JOB_OPTIONS.removeOnFail,
+      }
+    );
+
+    // Remove from DLQ after successful re-queue
+    await dlqJob.remove();
+
+    logger.info(
+      {
+        module: 'Queue',
+        event: 'dead-letter-retry',
+        dlqJobId,
+        newJobId: newJob.id,
+        jobType: dlqData.jobData.jobType,
+      },
+      'DLQ job retried successfully'
+    );
+
+    return { success: true, newJobId: newJob.id };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.error(
+      { module: 'Queue', event: 'dead-letter-retry-error', dlqJobId, error },
+      'Failed to retry DLQ job'
+    );
+    return { success: false, error: message };
+  }
+}
+
+/**
+ * List jobs in the Dead Letter Queue with pagination
+ */
+export async function listDeadLetterJobs(
+  start = 0,
+  end = 19
+): Promise<{
+  jobs: Array<{
+    id: string | undefined;
+    data: DeadLetterJobData;
+    timestamp: number | undefined;
+  }>;
+  total: number;
+}> {
+  const [jobs, total] = await Promise.all([
+    deadLetterQueue.getJobs(['waiting', 'delayed', 'completed', 'failed'], start, end),
+    deadLetterQueue.getJobCounts('waiting', 'delayed', 'completed', 'failed'),
+  ]);
+
+  const totalCount = Object.values(total).reduce((sum, count) => sum + count, 0);
+
+  return {
+    jobs: jobs.map((job) => ({
+      id: job.id,
+      data: job.data,
+      timestamp: job.timestamp,
+    })),
+    total: totalCount,
+  };
+}
 
 /**
  * Queue events listener for monitoring job progress
@@ -168,8 +314,9 @@ export async function closeQueues(): Promise<void> {
     await Promise.all([
       generationQueue.close(),
       generationQueueEvents.close(),
+      deadLetterQueue.close(),
     ]);
-    logger.info({ module: 'Queue' }, 'Queue connections closed');
+    logger.info({ module: 'Queue' }, 'Queue connections closed (including DLQ)');
   } catch (error) {
     logger.error(
       { module: 'Queue', error },
@@ -196,6 +343,7 @@ export async function isQueueHealthy(): Promise<boolean> {
 
 /**
  * Get queue statistics for monitoring
+ * Includes generation queue stats and dead letter queue count
  */
 export async function getQueueStats(): Promise<{
   waiting: number;
@@ -203,16 +351,20 @@ export async function getQueueStats(): Promise<{
   completed: number;
   failed: number;
   delayed: number;
+  deadLetterCount: number;
 }> {
-  const [waiting, active, completed, failed, delayed] = await Promise.all([
+  const [waiting, active, completed, failed, delayed, dlqCounts] = await Promise.all([
     generationQueue.getWaitingCount(),
     generationQueue.getActiveCount(),
     generationQueue.getCompletedCount(),
     generationQueue.getFailedCount(),
     generationQueue.getDelayedCount(),
+    deadLetterQueue.getJobCounts('waiting', 'delayed', 'completed', 'failed'),
   ]);
 
-  return { waiting, active, completed, failed, delayed };
+  const deadLetterCount = Object.values(dlqCounts).reduce((sum, count) => sum + count, 0);
+
+  return { waiting, active, completed, failed, delayed, deadLetterCount };
 }
 
 // Log connection status on module load
@@ -220,8 +372,9 @@ logger.info(
   {
     module: 'Queue',
     queueName: QUEUE_NAMES.GENERATION,
+    dlqName: QUEUE_NAMES.DEAD_LETTER,
     host: connection.host,
     port: connection.port,
   },
-  'Queue infrastructure initialized'
+  'Queue infrastructure initialized (with DLQ)'
 );

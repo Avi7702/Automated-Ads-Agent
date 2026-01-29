@@ -184,7 +184,30 @@ export const DEFAULT_JOB_OPTIONS: JobOptions = {
  */
 export const QUEUE_NAMES = {
   GENERATION: 'generation-jobs',
+  DEAD_LETTER: 'dead-letter-jobs',
 } as const;
+
+/**
+ * Data stored in the dead letter queue for failed jobs
+ */
+export interface DeadLetterJobData {
+  /** Original queue the job came from */
+  originalQueue: string;
+  /** Original job ID */
+  jobId: string;
+  /** Original job data */
+  jobData: GenerationJobData;
+  /** Error message from the failure */
+  error: string;
+  /** Error stack trace if available */
+  stackTrace?: string;
+  /** Timestamp when the job was moved to DLQ */
+  failedAt: string;
+  /** Number of attempts made before failure */
+  attempts: number;
+  /** Maximum attempts configured */
+  maxAttempts: number;
+}
 
 /**
  * Type guard to check if job data is a GenerateJobData

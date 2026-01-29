@@ -14,10 +14,12 @@
 import { Worker } from 'bullmq';
 import { logger } from '../lib/logger';
 import { processGenerationJob } from '../jobs/generationWorker';
+import { moveToDeadLetterQueue } from '../lib/queue';
 import {
   GenerationJobData,
   GenerationJobResult,
   QUEUE_NAMES,
+  DEFAULT_JOB_OPTIONS,
 } from '../jobs/types';
 
 /**
@@ -78,8 +80,8 @@ export function startGenerationWorker(): Worker<GenerationJobData, GenerationJob
       connection,
       concurrency: parseInt(process.env.WORKER_CONCURRENCY || '5'), // Process up to 5 jobs in parallel
       lockDuration: 180000, // 3 minutes lock (jobs can take up to 2 min)
-      stalledInterval: 60000, // Check for stalled jobs every 60s
-      maxStalledCount: 2, // Allow 2 stalls before failing
+      stalledInterval: 30000, // Check for stalled jobs every 30s (Phase 3 hardening)
+      maxStalledCount: 2, // Allow 2 stalls before marking failed → moves to DLQ
     }
   );
 
@@ -116,15 +118,28 @@ export function startGenerationWorker(): Worker<GenerationJobData, GenerationJob
   });
 
   generationWorker.on('failed', (job, error) => {
+    const maxAttempts = (job?.opts.attempts ?? DEFAULT_JOB_OPTIONS.attempts) as number;
+    const hasExhaustedRetries = job !== undefined && job.attemptsMade >= maxAttempts;
+
     logger.error(
       {
         module: 'Worker',
         jobId: job?.id,
         jobType: job?.data.jobType,
         error: error.message,
+        attemptsMade: job?.attemptsMade,
+        maxAttempts,
+        exhaustedRetries: hasExhaustedRetries,
       },
-      'Job failed'
+      hasExhaustedRetries
+        ? 'Job failed - all retries exhausted, moving to DLQ'
+        : 'Job failed - will retry'
     );
+
+    // Move to DLQ when all retries are exhausted
+    if (hasExhaustedRetries && job !== undefined) {
+      void moveToDeadLetterQueue(job, error);
+    }
   });
 
   generationWorker.on('error', (error) => {
