@@ -3,14 +3,23 @@ import { v4 as uuidv4 } from 'uuid';
 import { storage } from '../storage';
 import type { User } from '../../shared/schema';
 import { createAuthFailedLoginsMap } from '../utils/memoryManager';
+import { logger } from '../lib/logger';
+import * as redisLockout from './redisAuthLockout';
 
 const BCRYPT_ROUNDS = 12;
 const LOCKOUT_THRESHOLD = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 
-// In-memory failed login tracking
-// Now bounded with automatic cleanup of expired lockouts (max 5000 entries)
+// In-memory failed login tracking (fallback when Redis is unavailable)
 const failedLogins = createAuthFailedLoginsMap(5000);
+
+/**
+ * Check if Redis-backed lockout is available.
+ * Returns true when REDIS_URL is set in the environment.
+ */
+function isRedisLockoutEnabled(): boolean {
+  return Boolean(process.env.REDIS_URL);
+}
 
 export interface AuthResult {
   success: boolean;
@@ -140,8 +149,9 @@ export async function comparePassword(password: string, hash: string): Promise<b
   return bcrypt.compare(password, hash);
 }
 
-// Check if an email is locked out
-export function isLockedOut(email: string): boolean {
+// --- In-memory lockout helpers (used as fallback) ---
+
+function isLockedOutInMemory(email: string): boolean {
   const record = failedLogins.get(email);
   if (!record || !record.lockedUntil) return false;
   if (Date.now() > record.lockedUntil) {
@@ -151,15 +161,13 @@ export function isLockedOut(email: string): boolean {
   return true;
 }
 
-// Get remaining lockout time in seconds
-export function getLockoutTimeRemaining(email: string): number {
+function getLockoutTimeRemainingInMemory(email: string): number {
   const record = failedLogins.get(email);
   if (!record || !record.lockedUntil) return 0;
   return Math.max(0, Math.ceil((record.lockedUntil - Date.now()) / 1000));
 }
 
-// Record a failed login attempt
-export function recordFailedLogin(email: string): void {
+function recordFailedLoginInMemory(email: string): void {
   const record = failedLogins.get(email) || { count: 0 };
   record.count++;
   if (record.count >= LOCKOUT_THRESHOLD) {
@@ -168,9 +176,60 @@ export function recordFailedLogin(email: string): void {
   failedLogins.set(email, record);
 }
 
-// Clear failed login attempts
-export function clearFailedLogins(email: string): void {
+function clearFailedLoginsInMemory(email: string): void {
   failedLogins.delete(email);
+}
+
+// --- Public async lockout API (Redis-first with in-memory fallback) ---
+
+/** Check if an email is locked out */
+export async function isLockedOut(email: string): Promise<boolean> {
+  if (isRedisLockoutEnabled()) {
+    try {
+      return await redisLockout.isLockedOut(email);
+    } catch (_err: unknown) {
+      logger.warn({ module: 'AuthService', email }, 'Redis lockout check failed, falling back to in-memory');
+    }
+  }
+  return isLockedOutInMemory(email);
+}
+
+/** Get remaining lockout time in seconds */
+export async function getLockoutTimeRemaining(email: string): Promise<number> {
+  if (isRedisLockoutEnabled()) {
+    try {
+      return await redisLockout.getLockoutTimeRemaining(email);
+    } catch (_err: unknown) {
+      logger.warn({ module: 'AuthService', email }, 'Redis lockout TTL check failed, falling back to in-memory');
+    }
+  }
+  return getLockoutTimeRemainingInMemory(email);
+}
+
+/** Record a failed login attempt */
+export async function recordFailedLogin(email: string): Promise<void> {
+  if (isRedisLockoutEnabled()) {
+    try {
+      await redisLockout.recordFailedLogin(email);
+      return;
+    } catch (_err: unknown) {
+      logger.warn({ module: 'AuthService', email }, 'Redis record failed login failed, falling back to in-memory');
+    }
+  }
+  recordFailedLoginInMemory(email);
+}
+
+/** Clear failed login attempts */
+export async function clearFailedLogins(email: string): Promise<void> {
+  if (isRedisLockoutEnabled()) {
+    try {
+      await redisLockout.clearFailedLogins(email);
+      return;
+    } catch (_err: unknown) {
+      logger.warn({ module: 'AuthService', email }, 'Redis clear failed logins failed, falling back to in-memory');
+    }
+  }
+  clearFailedLoginsInMemory(email);
 }
 
 // Export as an object for routes.ts compatibility

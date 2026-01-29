@@ -77,8 +77,8 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
       }
 
       // Check lockout
-      if (authService.isLockedOut(email)) {
-        const remaining = authService.getLockoutTimeRemaining(email);
+      if (await authService.isLockedOut(email)) {
+        const remaining = await authService.getLockoutTimeRemaining(email);
         return res.status(429).json({
           error: 'Too many failed attempts. Try again later.',
           retryAfter: remaining
@@ -87,7 +87,7 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
 
       const user = await storage.getUserByEmail(email);
       if (!user) {
-        authService.recordFailedLogin(email);
+        await authService.recordFailedLogin(email);
         telemetry.trackAuth({
           action: 'login',
           success: false,
@@ -98,7 +98,7 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
 
       const valid = await authService.comparePassword(password, user.passwordHash || user.password);
       if (!valid) {
-        authService.recordFailedLogin(email);
+        await authService.recordFailedLogin(email);
         telemetry.trackAuth({
           action: 'login',
           success: false,
@@ -107,7 +107,7 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
-      authService.clearFailedLogins(email);
+      await authService.clearFailedLogins(email);
       (req as any).session.userId = user.id;
 
       telemetry.trackAuth({

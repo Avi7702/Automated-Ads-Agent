@@ -198,7 +198,7 @@ export default async function runApp(
   initSentry();
 
   // Validate environment variables before starting
-  validateEnvOrExit();
+  await validateEnvOrExit();
 
   // Start the generation worker for async job processing
   startGenerationWorker();

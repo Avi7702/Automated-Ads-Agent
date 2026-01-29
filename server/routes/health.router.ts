@@ -11,6 +11,27 @@
 import type { Router } from 'express';
 import type { RouterContext, RouterFactory, RouterModule } from '../types/router';
 import { createRouter, asyncHandler } from './utils/createRouter';
+import { getRedisClient } from '../lib/redis';
+
+interface RedisHealthStatus {
+  connected: boolean;
+  latency?: string;
+}
+
+async function checkRedisHealth(): Promise<RedisHealthStatus> {
+  if (!process.env.REDIS_URL) {
+    return { connected: false };
+  }
+  try {
+    const client = getRedisClient();
+    const start = Date.now();
+    await client.ping();
+    const latencyMs = Date.now() - start;
+    return { connected: true, latency: `${latencyMs}ms` };
+  } catch {
+    return { connected: false };
+  }
+}
 
 export const healthRouter: RouterFactory = (ctx: RouterContext): Router => {
   const router = createRouter();
@@ -37,36 +58,42 @@ export const healthRouter: RouterFactory = (ctx: RouterContext): Router => {
       });
     }
 
+    let dbOk = false;
     try {
-      // Check database connectivity with a simple query
       await pool.query('SELECT 1');
-
-      res.json({
-        status: 'ready',
-        timestamp: new Date().toISOString(),
-        checks: {
-          database: 'ok'
-        }
-      });
+      dbOk = true;
     } catch (err) {
-      logger.error({ module: 'Health', err }, 'Readiness check failed');
-      res.status(503).json({
-        status: 'not_ready',
-        timestamp: new Date().toISOString(),
-        checks: {
-          database: 'failed'
-        }
-      });
+      logger.error({ module: 'Health', err }, 'Database readiness check failed');
     }
+
+    const redisHealth = await checkRedisHealth();
+
+    const allReady = dbOk;
+    const statusCode = allReady ? 200 : 503;
+
+    res.status(statusCode).json({
+      status: allReady ? 'ready' : 'not_ready',
+      timestamp: new Date().toISOString(),
+      checks: {
+        database: dbOk ? 'ok' : 'failed',
+        redis: redisHealth,
+      }
+    });
   }));
 
   /**
    * GET / - General health status
-   * Legacy endpoint for backwards compatibility
+   * Legacy endpoint for backwards compatibility, now includes Redis status
    */
-  router.get('/', (_req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
-  });
+  router.get('/', asyncHandler(async (_req, res) => {
+    const redisHealth = await checkRedisHealth();
+
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      redis: redisHealth,
+    });
+  }));
 
   return router;
 };

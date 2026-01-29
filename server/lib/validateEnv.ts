@@ -6,6 +6,7 @@
  */
 
 import { logger } from './logger';
+import { getRedisClient } from './redis';
 
 interface EnvVar {
   name: string;
@@ -120,7 +121,12 @@ export function validateEnvironment(): ValidationResult {
       errors.push('SESSION_SECRET is required in production');
     }
     if (!process.env.REDIS_URL) {
-      warnings.push('REDIS_URL not set - sessions will use memory store (not recommended for production)');
+      errors.push('REDIS_URL is required in production - rate limiting, sessions, and lockouts depend on Redis');
+    }
+  } else {
+    // Development: warn but don't block
+    if (!process.env.REDIS_URL) {
+      warnings.push('REDIS_URL not set - using in-memory fallbacks (not suitable for production)');
     }
   }
 
@@ -156,11 +162,30 @@ export function validateEnvironment(): ValidationResult {
 }
 
 /**
- * Validates environment and exits if critical errors found
- * Call this early in app startup
+ * Checks Redis connectivity by sending a PING command.
+ * Returns true if Redis responds, false otherwise.
+ * Only called when REDIS_URL is configured.
  */
-export function validateEnvOrExit(): void {
+async function checkRedisConnectivity(): Promise<boolean> {
+  try {
+    const client = getRedisClient();
+    const result = await client.ping();
+    return result === 'PONG';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Validates environment and exits if critical errors found.
+ * Call this early in app startup.
+ *
+ * This is async because it performs a Redis connectivity check
+ * when REDIS_URL is configured in production.
+ */
+export async function validateEnvOrExit(): Promise<void> {
   const result = validateEnvironment();
+  const isProduction = process.env.NODE_ENV === 'production';
 
   // Log warnings
   for (const warning of result.warnings) {
@@ -176,6 +201,21 @@ export function validateEnvOrExit(): void {
     logger.error({ env: true }, '');
     logger.error({ env: true }, 'Please set the required environment variables and restart.');
     process.exit(1);
+  }
+
+  // In production, verify Redis is actually reachable (not just configured)
+  if (isProduction && process.env.REDIS_URL) {
+    logger.info({ env: true }, 'Checking Redis connectivity...');
+    const redisConnected = await checkRedisConnectivity();
+    if (!redisConnected) {
+      logger.error({ env: true }, '❌ Redis connectivity check failed:');
+      logger.error({ env: true }, '   - REDIS_URL is set but Redis did not respond to PING');
+      logger.error({ env: true }, '   - Rate limiting, sessions, and lockouts require a working Redis connection');
+      logger.error({ env: true }, '');
+      logger.error({ env: true }, 'Please verify Redis is running and REDIS_URL is correct.');
+      process.exit(1);
+    }
+    logger.info({ env: true }, '✓ Redis connectivity verified');
   }
 
   logger.info({ env: true }, '✓ Environment validation passed');

@@ -241,8 +241,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check lockout
-      if (authService.isLockedOut(email)) {
-        const remaining = authService.getLockoutTimeRemaining(email);
+      if (await authService.isLockedOut(email)) {
+        const remaining = await authService.getLockoutTimeRemaining(email);
         return res.status(429).json({
           error: "Too many failed attempts. Try again later.",
           retryAfter: remaining
@@ -251,7 +251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const user = await storage.getUserByEmail(email);
       if (!user) {
-        authService.recordFailedLogin(email);
+        await authService.recordFailedLogin(email);
         telemetry.trackAuth({
           action: 'login',
           success: false,
@@ -262,7 +262,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const valid = await authService.comparePassword(password, user.passwordHash || user.password);
       if (!valid) {
-        authService.recordFailedLogin(email);
+        await authService.recordFailedLogin(email);
         telemetry.trackAuth({
           action: 'login',
           success: false,
@@ -271,7 +271,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Invalid credentials" });
       }
 
-      authService.clearFailedLogins(email);
+      await authService.clearFailedLogins(email);
       (req as any).session.userId = user.id;
 
       telemetry.trackAuth({
