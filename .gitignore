@@ -30,6 +30,10 @@ node_modules/
 # tasks.json
 # tasks/
 
+# Claude Code local settings (contains credentials)
+.claude/*.local.*
+.claude/railway.env
+
 # Playwright
 e2e/.auth/user.json
 e2e/test-results/

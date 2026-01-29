@@ -36,7 +36,9 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Vite dev needs these
+      scriptSrc: process.env.NODE_ENV === 'production'
+        ? ["'self'"]
+        : ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Vite dev needs these
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://*.cloudinary.com", "https://images.unsplash.com", "https://nextdaysteel.co.uk", "https://placehold.co"],
       connectSrc: ["'self'", "https://generativelanguage.googleapis.com", "https://nextdaysteel.co.uk", "https://*.nextdaysteel.co.uk", "wss:", "ws:"],
@@ -90,10 +92,18 @@ if (process.env.REDIS_URL) {
     });
     logger.info({ store: 'redis' }, 'Using Redis session store');
   } catch (error) {
+    if (process.env.NODE_ENV === 'production') {
+      logger.error({ store: 'redis', error }, 'CRITICAL: Redis session store failed in production. Cannot use memory store.');
+      process.exit(1);
+    }
     logger.warn({ store: 'memory', reason: 'redis_unavailable' }, 'Redis not available, using memory session store');
   }
 } else {
-  logger.warn({ store: 'memory', reason: 'no_redis_url' }, 'REDIS_URL not set, using memory session store');
+  if (process.env.NODE_ENV === 'production') {
+    logger.error({ store: 'none' }, 'CRITICAL: REDIS_URL not set in production. Sessions require Redis for persistence and multi-instance support.');
+    process.exit(1);
+  }
+  logger.warn({ store: 'memory', reason: 'no_redis_url' }, 'REDIS_URL not set, using memory session store (dev only)');
 }
 
 // Validate session secret in production
