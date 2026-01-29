@@ -9,7 +9,8 @@
  */
 
 import { genAI } from './gemini';
-import { logger } from './logger';
+import { geminiLogger } from './logger';
+import { recordGeminiSuccess, recordGeminiFailure } from './geminiHealthMonitor';
 
 interface RetryConfig {
   maxRetries: number;
@@ -36,9 +37,10 @@ const RETRYABLE_ERRORS = [
 /**
  * Check if error is retryable
  */
-function isRetryableError(error: any): boolean {
-  const errorCode = error?.code || error?.name || '';
-  const errorMessage = error?.message || '';
+function isRetryableError(error: unknown): boolean {
+  const err = error as Record<string, unknown> | null | undefined;
+  const errorCode = String(err?.code ?? err?.name ?? '');
+  const errorMessage = String(err?.message ?? '');
 
   return RETRYABLE_ERRORS.some(code =>
     errorCode.includes(code) || errorMessage.includes(code)
@@ -48,9 +50,11 @@ function isRetryableError(error: any): boolean {
 /**
  * Extract retry delay from error (if provided by API)
  */
-function getRetryDelay(error: any, attempt: number, config: RetryConfig): number {
+function getRetryDelay(error: unknown, attempt: number, config: RetryConfig): number {
+  const err = error as Record<string, unknown> | null | undefined;
+  const details = err?.details as Record<string, unknown> | undefined;
   // Check for Retry-After header in error
-  const retryAfter = error?.retryAfter || error?.details?.retryAfter;
+  const retryAfter = err?.retryAfter ?? details?.retryAfter;
   if (retryAfter && typeof retryAfter === 'number') {
     return Math.min(retryAfter * 1000, config.maxDelayMs);
   }
@@ -82,34 +86,49 @@ export async function callGeminiWithRetry<T>(
   context: { operation: string; requestId?: string },
   config: RetryConfig = DEFAULT_RETRY_CONFIG
 ): Promise<T> {
-  let lastError: any;
+  let lastError: unknown;
+  const startTime = Date.now();
 
   for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
     try {
-      return await operation();
-    } catch (error: any) {
+      const result = await operation();
+      // Record success for health monitoring (fire-and-forget)
+      recordGeminiSuccess();
+      return result;
+    } catch (error: unknown) {
       lastError = error;
+      const err = error as Record<string, unknown>;
 
       if (!isRetryableError(error) || attempt === config.maxRetries) {
-        logger.error({
+        const duration = Date.now() - startTime;
+        const errorType = classifyError(error);
+
+        // Structured error log with classification
+        geminiLogger.error({
           err: error,
+          errorType,
           operation: context.operation,
           requestId: context.requestId,
-          attempt,
+          attempts: attempt + 1,
+          duration,
           retryable: isRetryableError(error),
-        }, 'Gemini API call failed');
+        }, `Gemini API call failed after ${attempt + 1} attempt(s) [${errorType}]`);
+
+        // Record failure for health monitoring (fire-and-forget)
+        recordGeminiFailure(errorType);
+
         throw error;
       }
 
       const delay = getRetryDelay(error, attempt, config);
 
-      logger.warn({
+      geminiLogger.warn({
         operation: context.operation,
         requestId: context.requestId,
         attempt,
         nextRetryMs: delay,
-        errorCode: error?.code || error?.name,
-        errorMessage: error?.message?.substring(0, 100),
+        errorCode: err?.code ?? err?.name,
+        errorMessage: String(err?.message ?? '').substring(0, 100),
       }, 'Gemini API call failed, retrying');
 
       await sleep(delay);
@@ -117,6 +136,19 @@ export async function callGeminiWithRetry<T>(
   }
 
   throw lastError;
+}
+
+/**
+ * Classify an error using the existing isQuotaError() and isServiceUnavailableError() helpers.
+ */
+function classifyError(error: unknown): 'quota' | 'unavailable' | 'unknown' {
+  if (isQuotaError(error)) {
+    return 'quota';
+  }
+  if (isServiceUnavailableError(error)) {
+    return 'unavailable';
+  }
+  return 'unknown';
 }
 
 /**
@@ -144,9 +176,10 @@ export async function generateContentWithRetry(
  * Check if an error is a quota/rate limit error
  * Useful for showing user-friendly messages
  */
-export function isQuotaError(error: any): boolean {
-  const errorMessage = error?.message || '';
-  const errorCode = error?.code || '';
+export function isQuotaError(error: unknown): boolean {
+  const err = error as Record<string, unknown> | null | undefined;
+  const errorMessage = String(err?.message ?? '');
+  const errorCode = String(err?.code ?? '');
   return errorMessage.includes('429') ||
          errorMessage.includes('RESOURCE_EXHAUSTED') ||
          errorCode.includes('RESOURCE_EXHAUSTED');
@@ -155,7 +188,8 @@ export function isQuotaError(error: any): boolean {
 /**
  * Check if an error is a service unavailable error
  */
-export function isServiceUnavailableError(error: any): boolean {
-  const errorMessage = error?.message || '';
+export function isServiceUnavailableError(error: unknown): boolean {
+  const err = error as Record<string, unknown> | null | undefined;
+  const errorMessage = String(err?.message ?? '');
   return errorMessage.includes('503') || errorMessage.includes('UNAVAILABLE');
 }

@@ -12,6 +12,8 @@ import type { Router } from 'express';
 import type { RouterContext, RouterFactory, RouterModule } from '../types/router';
 import { createRouter, asyncHandler } from './utils/createRouter';
 import { getRedisClient } from '../lib/redis';
+import { getGeminiHealthStatus } from '../lib/geminiHealthMonitor';
+import type { GeminiHealth } from '../lib/geminiHealthMonitor';
 
 interface RedisHealthStatus {
   connected: boolean;
@@ -83,15 +85,22 @@ export const healthRouter: RouterFactory = (ctx: RouterContext): Router => {
 
   /**
    * GET / - General health status
-   * Legacy endpoint for backwards compatibility, now includes Redis status
+   * Legacy endpoint for backwards compatibility, now includes Redis and Gemini status
    */
   router.get('/', asyncHandler(async (_req, res) => {
     const redisHealth = await checkRedisHealth();
+    let geminiHealth: GeminiHealth = { status: 'unknown', failureRate: 0, lastSuccess: null };
+    try {
+      geminiHealth = await getGeminiHealthStatus();
+    } catch {
+      // If health check fails, return unknown status
+    }
 
     res.json({
       status: 'ok',
       timestamp: new Date().toISOString(),
       redis: redisHealth,
+      gemini: geminiHealth,
     });
   }));
 
