@@ -931,18 +931,18 @@ export class DbStorage implements IStorage {
   async getBrandImagesForProducts(productIds: string[], userId: string): Promise<BrandImage[]> {
     if (productIds.length === 0) return [];
 
-    // Get images that have any of the productIds in their productIds array
-    // and belong to the specified user
-    const allImages = await db
+    // Optimize: Use PostgreSQL array overlap operator (&&) to filter in the database
+    // instead of fetching all user images and filtering in memory (O(n) -> O(log n) with GIN index)
+    return await db
       .select()
       .from(brandImages)
-      .where(eq(brandImages.userId, userId))
+      .where(
+        and(
+          eq(brandImages.userId, userId),
+          sql`${brandImages.productIds} && ARRAY[${sql.join(productIds.map(id => sql`${id}`), sql`, `)}]::text[]`
+        )
+      )
       .orderBy(desc(brandImages.createdAt));
-
-    // Filter images that contain any of the requested productIds
-    return allImages.filter(img =>
-      img.productIds?.some(pid => productIds.includes(pid))
-    );
   }
 
   async getBrandImagesByCategory(userId: string, category: string): Promise<BrandImage[]> {
@@ -1080,42 +1080,40 @@ export class DbStorage implements IStorage {
       objective?: string;
     }
   ): Promise<PerformingAdTemplate[]> {
-    // Start with base query
-    let templates = await db
-      .select()
-      .from(performingAdTemplates)
-      .where(
-        and(
-          eq(performingAdTemplates.userId, userId),
-          eq(performingAdTemplates.isActive, true)
-        )
-      )
-      .orderBy(desc(performingAdTemplates.estimatedEngagementRate));
+    const conditions = [
+      eq(performingAdTemplates.userId, userId),
+      eq(performingAdTemplates.isActive, true)
+    ];
 
-    // Apply filters
+    // Optimize: Push filters to the database instead of filtering in memory.
+    // This reduces payload size and memory usage on the application server.
     if (filters.category) {
-      templates = templates.filter(t => t.category === filters.category);
+      conditions.push(eq(performingAdTemplates.category, filters.category));
     }
     if (filters.platform) {
-      templates = templates.filter(t => t.targetPlatforms?.includes(filters.platform!));
+      conditions.push(arrayContains(performingAdTemplates.targetPlatforms, [filters.platform]));
     }
     if (filters.mood) {
-      templates = templates.filter(t => t.mood === filters.mood);
+      conditions.push(eq(performingAdTemplates.mood, filters.mood));
     }
     if (filters.style) {
-      templates = templates.filter(t => t.style === filters.style);
+      conditions.push(eq(performingAdTemplates.style, filters.style));
     }
     if (filters.engagementTier) {
-      templates = templates.filter(t => t.engagementTier === filters.engagementTier);
+      conditions.push(eq(performingAdTemplates.engagementTier, filters.engagementTier));
     }
     if (filters.industry) {
-      templates = templates.filter(t => t.bestForIndustries?.includes(filters.industry!));
+      conditions.push(arrayContains(performingAdTemplates.bestForIndustries, [filters.industry]));
     }
     if (filters.objective) {
-      templates = templates.filter(t => t.bestForObjectives?.includes(filters.objective!));
+      conditions.push(arrayContains(performingAdTemplates.bestForObjectives, [filters.objective]));
     }
 
-    return templates;
+    return await db
+      .select()
+      .from(performingAdTemplates)
+      .where(and(...conditions))
+      .orderBy(desc(performingAdTemplates.estimatedEngagementRate));
   }
 
   // ============================================
@@ -1836,10 +1834,12 @@ export class DbStorage implements IStorage {
     weekStart.setDate(now.getDate() - daysSinceMonday);
     weekStart.setHours(0, 0, 0, 0);
 
-    // Get all posts from this week
-    const posts = await db
+    // Optimize: Use database-side aggregation (GROUP BY + COUNT)
+    // instead of fetching all posts and counting in memory
+    return await db
       .select({
         category: contentPlannerPosts.category,
+        count: sql<number>`count(*)::int`,
       })
       .from(contentPlannerPosts)
       .where(
@@ -1847,19 +1847,8 @@ export class DbStorage implements IStorage {
           eq(contentPlannerPosts.userId, userId),
           gte(contentPlannerPosts.postedAt, weekStart)
         )
-      );
-
-    // Count by category
-    const countMap: Record<string, number> = {};
-    for (const post of posts) {
-      countMap[post.category] = (countMap[post.category] || 0) + 1;
-    }
-
-    // Return as array
-    return Object.entries(countMap).map(([category, count]) => ({
-      category,
-      count,
-    }));
+      )
+      .groupBy(contentPlannerPosts.category);
   }
 
   /**
