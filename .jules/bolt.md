@@ -1,0 +1,3 @@
+## 2026-02-05 - Parallel Orchestration in Idea Bank
+**Learning:** The `generateSuggestions` function in `IdeaBankService` was identified as a major performance bottleneck due to its sequential execution of high-latency tasks (Vision AI, DB lookups, RAG queries). The critical path latency was the sum of all tasks.
+**Action:** Always look for independent I/O-bound operations in orchestration services and parallelize them using `Promise.all`. Group operations into stages based on data dependencies to maximize concurrency while maintaining correctness. Wrap async calls in `Promise.resolve()` when parallelizing to gracefully handle Vitest mocks that might return `undefined`.

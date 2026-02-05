@@ -191,85 +191,97 @@ export async function generateSuggestions(
     }
   }
 
-  // 1. Fetch product if provided
-  let product: Product | undefined;
-  if (hasProduct) {
-    product = await storage.getProductById(productId);
-    if (!product) {
-      return {
-        success: false,
-        error: {
-          code: "PRODUCT_NOT_FOUND",
-          message: "Product not found",
-        },
-      };
-    }
+  // PERFORMANCE OPTIMIZATION: Parallelize independent operations to reduce critical path latency.
+  // We use a multi-stage parallelization strategy to maximize throughput while respecting data dependencies.
+
+  // STAGE 1: Parallelize brand profile and primary product fetching
+  // These are independent database lookups.
+  const [brandProfile, product] = await Promise.all([
+    storage.getBrandProfileByUserId(userId),
+    productId ? storage.getProductById(productId) : Promise.resolve(undefined),
+  ]);
+
+  if (productId && !product) {
+    return {
+      success: false,
+      error: {
+        code: "PRODUCT_NOT_FOUND",
+        message: "Product not found",
+      },
+    };
   }
 
-  // 2. Get or perform vision analysis (only if product exists)
-  let productAnalysis: VisionAnalysisResult | null = null;
-  if (product) {
-    const analysisResult = await visionAnalysisService.analyzeProductImage(product, userId);
-    if (!analysisResult.success) {
-      return {
-        success: false,
-        error: {
-          code: "ANALYSIS_FAILED",
-          message: analysisResult.error.message,
-        },
-      };
-    }
-    productAnalysis = analysisResult.analysis;
-  }
+  // STAGE 2: Parallelize vision analysis and enhanced product context building
+  // Both depend on the product/productId but are independent of each other.
+  // analyzeProductImage can be high-latency (calls Gemini Vision on cache miss),
+  // so parallelizing it with DB-heavy buildEnhancedContext is a major win.
+  const analysisPromise = product
+    ? visionAnalysisService.analyzeProductImage(product, userId)
+    : Promise.resolve({ success: true as const, analysis: null });
 
-  // 3. Fetch brand profile if exists
-  const brandProfile = await storage.getBrandProfileByUserId(userId);
+  const enhancedContextPromise = productId
+    ? Promise.resolve(productKnowledgeService.buildEnhancedContext(productId, userId))
+    : Promise.resolve(null);
 
-  // 3.5 Build enhanced product context (Phase 0.5) - only if product exists
-  let enhancedContext: EnhancedProductContext | null = null;
-  if (productId) {
-    try {
-      enhancedContext = await productKnowledgeService.buildEnhancedContext(productId, userId);
-    } catch (err) {
+  const [analysisResult, enhancedContext] = await Promise.all([
+    analysisPromise,
+    enhancedContextPromise.catch(err => {
       logger.error({ module: 'IdeaBank', err }, 'Failed to build enhanced context');
-      // Continue without enhanced context - not a fatal error
-    }
-  }
+      return null;
+    }) as Promise<EnhancedProductContext | null>
+  ]);
 
-  // 4. Query KB for relevant context
+  if (!analysisResult.success) {
+    return {
+      success: false,
+      error: {
+        code: "ANALYSIS_FAILED",
+        message: analysisResult.error.message,
+      },
+    };
+  }
+  const productAnalysis = analysisResult.analysis;
+
+  // STAGE 3: Parallelize knowledge base retrieval, template matching, and pattern extraction
+  // These depend on productAnalysis (category/style) and brandProfile (industry).
+  // queryFileSearchStore involves LLM-based RAG which is high-latency.
+  const kbQuery = buildKBQueryExtended(product, productAnalysis, uploadDescriptions, userGoal);
+  const kbPromise = Promise.resolve(queryFileSearchStore({ query: kbQuery, maxResults: 5 }))
+    .catch(err => {
+      logger.error({ module: 'IdeaBank', err }, 'KB query failed');
+      return null;
+    });
+
+  const templatesPromise = productAnalysis && mode === 'freestyle'
+    ? Promise.resolve(matchTemplates(productAnalysis))
+    : Promise.resolve([]);
+
+  const patternsPromise = Promise.resolve(getRelevantPatterns({
+    userId,
+    category: productAnalysis?.category ?? undefined,
+    platform: undefined,
+    industry: brandProfile?.industry ?? undefined,
+    maxPatterns: 3,
+  })).catch(err => {
+    logger.error({ module: 'IdeaBank', err }, 'Failed to fetch learned patterns');
+    return [];
+  });
+
+  const [kbResult, matchedTemplates, learnedPatterns] = await Promise.all([
+    kbPromise,
+    templatesPromise,
+    patternsPromise,
+  ]);
+
   let kbContext: string | null = null;
   let kbCitations: string[] = [];
-  try {
-    const kbQuery = buildKBQueryExtended(product, productAnalysis, uploadDescriptions, userGoal);
-    const kbResult = await queryFileSearchStore({ query: kbQuery, maxResults: 5 });
-    if (kbResult) {
-      kbContext = sanitizeKBContent(kbResult.context);
-      kbCitations = kbResult.citations || [];
-    }
-  } catch (err) {
-    logger.error({ module: 'IdeaBank', err }, 'KB query failed');
-    // Continue without KB context - not a fatal error
+  if (kbResult) {
+    kbContext = sanitizeKBContent(kbResult.context);
+    kbCitations = kbResult.citations || [];
   }
 
-  // 5. Match templates based on product analysis (if available) - only for freestyle mode
-  const matchedTemplates = productAnalysis && mode === 'freestyle' ? await matchTemplates(productAnalysis) : [];
-
-  // 5.5 Fetch learned patterns from user's pattern library (Learn from Winners)
-  let learnedPatterns: LearnedAdPattern[] = [];
-  try {
-    learnedPatterns = await getRelevantPatterns({
-      userId,
-      category: productAnalysis?.category ?? undefined, // Convert null to undefined
-      platform: undefined, // Could be passed from request in future
-      industry: brandProfile?.industry ?? undefined,
-      maxPatterns: 3,
-    });
-    if (learnedPatterns.length > 0) {
-      logger.info({ module: 'IdeaBank', patternCount: learnedPatterns.length }, 'Learned patterns found for suggestion context');
-    }
-  } catch (err) {
-    logger.error({ module: 'IdeaBank', err }, 'Failed to fetch learned patterns');
-    // Continue without patterns - not a fatal error
+  if (learnedPatterns.length > 0) {
+    logger.info({ module: 'IdeaBank', patternCount: learnedPatterns.length }, 'Learned patterns found for suggestion context');
   }
 
   // 6. Branch based on mode
