@@ -931,18 +931,18 @@ export class DbStorage implements IStorage {
   async getBrandImagesForProducts(productIds: string[], userId: string): Promise<BrandImage[]> {
     if (productIds.length === 0) return [];
 
-    // Get images that have any of the productIds in their productIds array
-    // and belong to the specified user
-    const allImages = await db
+    // Optimized: Filter in database using PostgreSQL overlap operator (&&)
+    // This prevents fetching all brand images for a user into application memory
+    return await db
       .select()
       .from(brandImages)
-      .where(eq(brandImages.userId, userId))
+      .where(
+        and(
+          eq(brandImages.userId, userId),
+          sql`${brandImages.productIds} && ARRAY[${sql.join(productIds.map(id => sql`${id}`), sql`, `)}]::text[]`
+        )
+      )
       .orderBy(desc(brandImages.createdAt));
-
-    // Filter images that contain any of the requested productIds
-    return allImages.filter(img =>
-      img.productIds?.some(pid => productIds.includes(pid))
-    );
   }
 
   async getBrandImagesByCategory(userId: string, category: string): Promise<BrandImage[]> {
@@ -1836,10 +1836,12 @@ export class DbStorage implements IStorage {
     weekStart.setDate(now.getDate() - daysSinceMonday);
     weekStart.setHours(0, 0, 0, 0);
 
-    // Get all posts from this week
-    const posts = await db
+    // Optimized: Use database-side aggregation (GROUP BY + count)
+    // This avoids fetching all weekly posts and counting them in JavaScript
+    const results = await db
       .select({
         category: contentPlannerPosts.category,
+        count: sql<number>`count(*)::int`,
       })
       .from(contentPlannerPosts)
       .where(
@@ -1847,19 +1849,10 @@ export class DbStorage implements IStorage {
           eq(contentPlannerPosts.userId, userId),
           gte(contentPlannerPosts.postedAt, weekStart)
         )
-      );
+      )
+      .groupBy(contentPlannerPosts.category);
 
-    // Count by category
-    const countMap: Record<string, number> = {};
-    for (const post of posts) {
-      countMap[post.category] = (countMap[post.category] || 0) + 1;
-    }
-
-    // Return as array
-    return Object.entries(countMap).map(([category, count]) => ({
-      category,
-      count,
-    }));
+    return results;
   }
 
   /**
