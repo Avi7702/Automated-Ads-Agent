@@ -149,7 +149,7 @@ export default function GalleryPage() {
                 onClick={() => navigate(`/?generation=${gen.id}`)}
               >
                 <img
-                  src={gen.generatedImagePath}
+                  src={(gen as any).imageUrl ?? gen.generatedImagePath}
                   alt={gen.prompt.slice(0, 80)}
                   className="w-full h-full object-cover"
                   loading="lazy"

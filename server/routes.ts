@@ -785,7 +785,7 @@ Consider these product relationships and usage contexts when generating the imag
         // Return the file path or Cloudinary URL for the frontend to use
         res.json({
           success: true,
-          imageUrl: generatedImagePath.startsWith("http") ? generatedImagePath : `/${generatedImagePath}`,
+          imageUrl: generatedImagePath.startsWith("http") ? generatedImagePath : `/${generatedImagePath.replace(/\\/g, '/')}`,
           generationId: generation.id,
           prompt: prompt,
           canEdit: true,
@@ -1057,7 +1057,7 @@ Consider these product relationships and usage contexts when generating the imag
           generatedImagePath: generation.generatedImagePath,
           imageUrl: generation.generatedImagePath?.startsWith("http")
             ? generation.generatedImagePath
-            : generation.generatedImagePath ? `/${generation.generatedImagePath}` : null,
+            : generation.generatedImagePath ? `/${generation.generatedImagePath.replace(/\\/g, '/')}` : null,
         } : null,
       });
 

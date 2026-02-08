@@ -18,9 +18,11 @@ import { GenerationDTO } from '@shared/types/api';
  */
 export function toGenerationDTO(generation: Generation): GenerationDTO {
   // Smart URL handling: Cloudinary URLs start with http/https, local paths don't
-  const imageUrl = generation.generatedImagePath?.startsWith('http')
-    ? generation.generatedImagePath
-    : `/${generation.generatedImagePath || generation.imagePath || ''}`;
+  // Normalize Windows backslashes to forward slashes for URL compatibility
+  const rawPath = generation.generatedImagePath || generation.imagePath || '';
+  const imageUrl = rawPath.startsWith('http')
+    ? rawPath
+    : `/${rawPath.replace(/\\/g, '/')}`;
 
   return {
     id: generation.id,

@@ -399,7 +399,7 @@ export const jobsRouter: RouterFactory = (ctx: RouterContext): Router => {
           generatedImagePath: generation.generatedImagePath,
           imageUrl: generation.generatedImagePath?.startsWith('http')
             ? generation.generatedImagePath
-            : generation.generatedImagePath ? `/${generation.generatedImagePath}` : null,
+            : generation.generatedImagePath ? `/${generation.generatedImagePath.replace(/\\/g, '/')}` : null,
         } : null,
       });
 
