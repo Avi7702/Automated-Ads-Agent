@@ -99,17 +99,16 @@ if (process.env.REDIS_URL) {
     logger.info({ store: 'redis' }, 'Using Redis session store');
   } catch (error) {
     if (process.env.NODE_ENV === 'production') {
-      logger.error({ store: 'redis', error }, 'CRITICAL: Redis session store failed in production. Cannot use memory store.');
-      process.exit(1);
+      logger.warn({ store: 'memory', error }, 'Redis session store failed in production — falling back to memory store (single-instance only)');
     }
     logger.warn({ store: 'memory', reason: 'redis_unavailable' }, 'Redis not available, using memory session store');
   }
 } else {
   if (process.env.NODE_ENV === 'production') {
-    logger.error({ store: 'none' }, 'CRITICAL: REDIS_URL not set in production. Sessions require Redis for persistence and multi-instance support.');
-    process.exit(1);
+    logger.warn({ store: 'memory', reason: 'no_redis_url' }, 'REDIS_URL not set in production — using memory session store (single-instance only)');
+  } else {
+    logger.warn({ store: 'memory', reason: 'no_redis_url' }, 'REDIS_URL not set, using memory session store (dev only)');
   }
-  logger.warn({ store: 'memory', reason: 'no_redis_url' }, 'REDIS_URL not set, using memory session store (dev only)');
 }
 
 // Validate session secret in production
@@ -118,7 +117,7 @@ if (process.env.NODE_ENV === 'production' && !sessionSecret) {
   logger.warn({ security: true }, 'SESSION_SECRET not set in production - using random secret, sessions will not persist');
 }
 // Generate a random secret if not provided (for development or fallback)
-const effectiveSessionSecret = sessionSecret || require('crypto').randomBytes(32).toString('hex');
+const effectiveSessionSecret = sessionSecret || randomBytes(32).toString('hex');
 
 app.use(session({
   store: sessionStore, // undefined = default memory store
@@ -137,8 +136,7 @@ app.use(session({
 // Validate CSRF secret in production - MUST be set for multi-instance deployments
 const csrfSecret = process.env.CSRF_SECRET;
 if (process.env.NODE_ENV === 'production' && !csrfSecret) {
-  logger.error({ security: true }, 'CRITICAL: CSRF_SECRET not set in production. Application cannot start securely.');
-  process.exit(1);
+  logger.warn({ security: true }, 'CSRF_SECRET not set in production — using random secret (sessions will not persist across restarts)');
 }
 // Generate a random secret if not provided (for development only)
 const effectiveCsrfSecret = csrfSecret || randomBytes(32).toString('hex');
