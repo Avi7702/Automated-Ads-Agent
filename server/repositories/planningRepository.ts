@@ -4,7 +4,7 @@ import {
   contentPlannerPosts,
 } from "@shared/schema";
 import { db } from "../db";
-import { and, eq, desc, gte, lte } from "drizzle-orm";
+import { and, eq, desc, gte, lte, sql } from "drizzle-orm";
 
 export async function createContentPlannerPost(post: InsertContentPlannerPost): Promise<ContentPlannerPost> {
   const [result] = await db
@@ -42,9 +42,11 @@ export async function getWeeklyBalance(userId: string): Promise<{ category: stri
   weekStart.setDate(now.getDate() - daysSinceMonday);
   weekStart.setHours(0, 0, 0, 0);
 
-  const posts = await db
+  // Use database-side aggregation for better performance and reduced memory usage
+  return await db
     .select({
       category: contentPlannerPosts.category,
+      count: sql<number>`count(*)::int`,
     })
     .from(contentPlannerPosts)
     .where(
@@ -52,17 +54,8 @@ export async function getWeeklyBalance(userId: string): Promise<{ category: stri
         eq(contentPlannerPosts.userId, userId),
         gte(contentPlannerPosts.postedAt, weekStart)
       )
-    );
-
-  const countMap: Record<string, number> = {};
-  for (const post of posts) {
-    countMap[post.category] = (countMap[post.category] || 0) + 1;
-  }
-
-  return Object.entries(countMap).map(([category, count]) => ({
-    category,
-    count,
-  }));
+    )
+    .groupBy(contentPlannerPosts.category);
 }
 
 export async function deleteContentPlannerPost(id: string): Promise<void> {
