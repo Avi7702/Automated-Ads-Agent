@@ -115,13 +115,13 @@ export function validateEnvironment(): ValidationResult {
     warnings.push('CLOUDINARY not configured - image storage will use fallback');
   }
 
-  // Production-specific warnings
+  // Production-specific warnings (downgraded from errors for single-instance deployments)
   if (isProduction) {
     if (!process.env.SESSION_SECRET) {
-      errors.push('SESSION_SECRET is required in production');
+      warnings.push('SESSION_SECRET not set in production — using random secret (sessions lost on restart)');
     }
     if (!process.env.REDIS_URL) {
-      errors.push('REDIS_URL is required in production - rate limiting, sessions, and lockouts depend on Redis');
+      warnings.push('REDIS_URL not set in production — using in-memory fallbacks (single-instance only)');
     }
   } else {
     // Development: warn but don't block
@@ -208,14 +208,11 @@ export async function validateEnvOrExit(): Promise<void> {
     logger.info({ env: true }, 'Checking Redis connectivity...');
     const redisConnected = await checkRedisConnectivity();
     if (!redisConnected) {
-      logger.error({ env: true }, '❌ Redis connectivity check failed:');
-      logger.error({ env: true }, '   - REDIS_URL is set but Redis did not respond to PING');
-      logger.error({ env: true }, '   - Rate limiting, sessions, and lockouts require a working Redis connection');
-      logger.error({ env: true }, '');
-      logger.error({ env: true }, 'Please verify Redis is running and REDIS_URL is correct.');
-      process.exit(1);
+      logger.warn({ env: true }, '⚠️  Redis connectivity check failed — REDIS_URL is set but Redis did not respond');
+      logger.warn({ env: true }, '   Rate limiting and sessions will use in-memory fallback (single-instance only)');
+    } else {
+      logger.info({ env: true }, '✓ Redis connectivity verified');
     }
-    logger.info({ env: true }, '✓ Redis connectivity verified');
   }
 
   logger.info({ env: true }, '✓ Environment validation passed');

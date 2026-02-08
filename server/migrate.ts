@@ -17,10 +17,14 @@ const execAsync = promisify(exec);
 export async function pushSchema() {
     // Run schema push by default in all environments (drizzle-kit push is idempotent)
     // Set SKIP_SCHEMA_PUSH=true to disable
-    const skipSchemaPush = process.env.SKIP_SCHEMA_PUSH === 'true';
+    // Skip schema push in production by default — tables should exist from migrations/CI.
+    // drizzle-kit is a devDependency and not available at runtime.
+    // Set SKIP_SCHEMA_PUSH=false to force push (e.g. in staging).
+    const skipSchemaPush = process.env.SKIP_SCHEMA_PUSH !== 'false'
+        && process.env.NODE_ENV === 'production';
 
-    if (skipSchemaPush) {
-        logger.info({ module: 'db' }, 'Schema push skipped via SKIP_SCHEMA_PUSH=true');
+    if (skipSchemaPush || process.env.SKIP_SCHEMA_PUSH === 'true') {
+        logger.info({ module: 'db' }, 'Schema push skipped (production default or SKIP_SCHEMA_PUSH=true)');
         return;
     }
 
