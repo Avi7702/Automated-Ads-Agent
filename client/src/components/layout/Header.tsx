@@ -26,9 +26,8 @@ export function Header({ currentPage }: HeaderProps) {
     if (location.startsWith("/settings")) return "settings";
     // Legacy routes map to their consolidated equivalents
     if (location.startsWith("/content-planner") || location.startsWith("/approval-queue") || location.startsWith("/social-accounts")) return "pipeline";
-    if (location.startsWith("/library")) return "studio";
+    if (location.startsWith("/library")) return "library";
     if (location.startsWith("/generation/")) return "studio";
-    if (["/products", "/brand-images", "/template-library", "/templates", "/installation-scenarios", "/learn-from-winners"].includes(location)) return "studio";
     if (location === "/usage" || location === "/settings/api-keys" || location === "/brand-profile") return "settings";
     return "studio";
   }, [currentPage, location]);
@@ -38,6 +37,7 @@ export function Header({ currentPage }: HeaderProps) {
     { id: "studio", label: "Studio", href: "/" },
     { id: "gallery", label: "Gallery", href: "/gallery" },
     { id: "pipeline", label: "Pipeline", href: "/pipeline" },
+    { id: "library", label: "Library", href: "/library" },
     { id: "settings", label: "Settings", href: "/settings" },
   ];
 
