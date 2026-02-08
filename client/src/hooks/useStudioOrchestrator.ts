@@ -202,7 +202,7 @@ export function useStudioOrchestrator() {
   const filteredProducts = useMemo(
     () =>
       products.filter((product) => {
-        const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesSearch = (product.name || "").toLowerCase().includes(searchQuery.toLowerCase());
         const matchesCategory = categoryFilter === "all" || product.category === categoryFilter;
         return matchesSearch && matchesCategory;
       }),
@@ -367,11 +367,11 @@ export function useStudioOrchestrator() {
             twitter: "Twitter",
             tiktok: "TikTok",
           };
-          const mappedPlatform = platformMap[bestPlatform.toLowerCase()] || bestPlatform;
+          const mappedPlatform = platformMap[bestPlatform?.toLowerCase()] || bestPlatform || "LinkedIn";
           setPlatform(mappedPlatform);
 
-          const format = contentPlannerTemplate.bestPlatforms[0].format;
-          const formatLower = format.toLowerCase();
+          const format = contentPlannerTemplate.bestPlatforms[0]?.format;
+          const formatLower = (format || "").toLowerCase();
           const formatAspectRatioMap: Record<string, string> = {
             carousel: "1080x1350",
             reel: "1080x1920",

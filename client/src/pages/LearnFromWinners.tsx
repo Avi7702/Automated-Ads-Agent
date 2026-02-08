@@ -632,10 +632,10 @@ export default function LearnFromWinners({ embedded = false, selectedId }: Learn
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       return (
-        p.name.toLowerCase().includes(query) ||
-        p.category.toLowerCase().includes(query) ||
-        p.platform.toLowerCase().includes(query) ||
-        p.industry?.toLowerCase().includes(query)
+        (p.name || "").toLowerCase().includes(query) ||
+        (p.category || "").toLowerCase().includes(query) ||
+        (p.platform || "").toLowerCase().includes(query) ||
+        (p.industry || "").toLowerCase().includes(query)
       );
     }
     return true;

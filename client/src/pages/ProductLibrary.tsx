@@ -254,9 +254,9 @@ export default function ProductLibrary({ embedded = false, selectedId }: Product
 
   // Filter products by search query
   const filteredProducts = products?.filter((product) =>
-    product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+    (product.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (product.category || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    product.tags?.some(tag => (tag || "").toLowerCase().includes(searchQuery.toLowerCase()))
   ) ?? [];
 
   // Handle product click

@@ -33,7 +33,7 @@ export default function GalleryPage() {
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      result = result.filter((g) => g.prompt.toLowerCase().includes(q));
+      result = result.filter((g) => (g.prompt || "").toLowerCase().includes(q));
     }
 
     result.sort((a, b) => {

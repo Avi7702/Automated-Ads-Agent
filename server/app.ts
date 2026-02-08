@@ -43,7 +43,7 @@ app.use(helmet({
         : ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Vite dev needs these
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://*.cloudinary.com", "https://images.unsplash.com", "https://nextdaysteel.co.uk", "https://placehold.co"],
-      connectSrc: ["'self'", "https://generativelanguage.googleapis.com", "https://nextdaysteel.co.uk", "https://*.nextdaysteel.co.uk", "wss:", "ws:"],
+      connectSrc: ["'self'", "https://generativelanguage.googleapis.com", "https://nextdaysteel.co.uk", "https://*.nextdaysteel.co.uk", "https://res.cloudinary.com", "https://*.cloudinary.com", "https://fonts.googleapis.com", "https://fonts.gstatic.com", "https://placehold.co", "https://images.unsplash.com", "wss:", "ws:"],
       fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],

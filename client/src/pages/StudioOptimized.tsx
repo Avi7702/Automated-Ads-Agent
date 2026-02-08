@@ -1022,11 +1022,11 @@ export default function StudioOptimized() {
             twitter: 'Twitter',
             tiktok: 'TikTok',
           };
-          const mappedPlatform = platformMap[bestPlatform.toLowerCase()] || bestPlatform;
+          const mappedPlatform = platformMap[bestPlatform?.toLowerCase()] || bestPlatform || 'LinkedIn';
           setPlatform(mappedPlatform);
 
-          const format = contentPlannerTemplate.bestPlatforms[0].format;
-          const formatLower = format.toLowerCase();
+          const format = contentPlannerTemplate.bestPlatforms[0]?.format;
+          const formatLower = (format || '').toLowerCase();
 
           const formatAspectRatioMap: Record<string, string> = {
             carousel: '1080x1350',
