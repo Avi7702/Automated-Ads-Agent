@@ -37,11 +37,16 @@ setup('verify auth session is valid', async ({ request }) => {
 
   if (response.ok()) {
     const user = await response.json();
-    console.log('Session verified for user:', user.email);
-    expect(user).toHaveProperty('id');
-    expect(user).toHaveProperty('email');
+    if (user && user.id) {
+      console.log('Session verified for user:', user.email);
+      expect(user).toHaveProperty('id');
+      expect(user).toHaveProperty('email');
+    } else {
+      // API returned 200 but { authenticated: false } — no session in this context
+      console.log('No existing session found in this context, will use stored auth state');
+    }
   } else {
-    // This is expected if we haven't saved the session yet
+    // Non-200 response — no session yet
     console.log('No existing session found, will create new one');
   }
 });

@@ -1,4 +1,5 @@
 import { type Server } from "node:http";
+import { randomBytes } from "node:crypto";
 
 import express, { type Express, type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
@@ -140,7 +141,7 @@ if (process.env.NODE_ENV === 'production' && !csrfSecret) {
   process.exit(1);
 }
 // Generate a random secret if not provided (for development only)
-const effectiveCsrfSecret = csrfSecret || require('crypto').randomBytes(32).toString('hex');
+const effectiveCsrfSecret = csrfSecret || randomBytes(32).toString('hex');
 
 const { generateToken, doubleCsrfProtection } = doubleCsrf({
   getSecret: () => effectiveCsrfSecret,

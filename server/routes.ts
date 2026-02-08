@@ -1969,6 +1969,19 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
     }
   });
 
+  // Admin: Seed Ad Scene Templates
+  app.post("/api/admin/seed-ad-scene-templates", requireAuth, async (req, res) => {
+    try {
+      logger.info({ module: 'Admin' }, 'Seeding ad scene templates');
+      const { seedAdSceneTemplates } = await import("./seeds/seedAdSceneTemplates");
+      const results = await seedAdSceneTemplates();
+      res.json({ success: true, message: "Ad scene templates seeded successfully", results });
+    } catch (error: any) {
+      logger.error({ module: 'Admin', err: error }, 'Ad scene templates seed failed');
+      res.status(500).json({ error: "Seed failed", details: error.message });
+    }
+  });
+
   // Admin: Run All Seeds
   app.post("/api/admin/seed-all", requireAuth, async (req, res) => {
     try {

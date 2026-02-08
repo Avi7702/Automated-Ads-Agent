@@ -7,6 +7,7 @@ import {
   User,
   Key,
   BarChart3,
+  Database,
   Loader2,
   ChevronRight,
 } from 'lucide-react';
@@ -15,9 +16,11 @@ import {
 const BrandProfile = lazy(() => import('./BrandProfile'));
 const ApiKeySettings = lazy(() => import('./ApiKeySettings'));
 const QuotaDashboard = lazy(() => import('./QuotaDashboard'));
+const KnowledgeBaseSection = lazy(() => import('@/components/settings/KnowledgeBaseSection').then(m => ({ default: m.KnowledgeBaseSection })));
 
 const sections = [
   { id: 'brand', label: 'Brand Profile', icon: User, description: 'Manage your brand identity and voice' },
+  { id: 'knowledge-base', label: 'Knowledge Base', icon: Database, description: 'Products, scenarios, and brand assets' },
   { id: 'api-keys', label: 'API Keys', icon: Key, description: 'Configure external service integrations' },
   { id: 'usage', label: 'Usage & Quotas', icon: BarChart3, description: 'Monitor API usage and costs' },
 ] as const;
@@ -100,6 +103,7 @@ export default function Settings() {
             <div className="bg-card rounded-lg border border-border p-6 max-h-[calc(100vh-200px)] overflow-y-auto">
               <Suspense fallback={<SectionLoading />}>
                 {activeSection === 'brand' && <BrandProfileContent />}
+                {activeSection === 'knowledge-base' && <KnowledgeBaseSection />}
                 {activeSection === 'api-keys' && <ApiKeySettingsContent />}
                 {activeSection === 'usage' && <QuotaDashboardContent />}
               </Suspense>

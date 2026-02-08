@@ -18,11 +18,10 @@ import Studio from "@/pages/Studio";
 const StudioOptimized = lazy(() => import("@/pages/StudioOptimized"));
 
 // Lazy load all other pages to reduce initial bundle size
+const GalleryPage = lazy(() => import("@/pages/GalleryPage"));
+const Pipeline = lazy(() => import("@/pages/Pipeline"));
 const Library = lazy(() => import("@/pages/Library"));
 const Settings = lazy(() => import("@/pages/Settings"));
-const ContentPlanner = lazy(() => import("@/pages/ContentPlanner"));
-const SocialAccounts = lazy(() => import("@/pages/SocialAccounts"));
-const ApprovalQueue = lazy(() => import("@/pages/ApprovalQueue"));
 const TemplateAdmin = lazy(() => import("@/pages/TemplateAdmin"));
 const SystemMap = lazy(() => import("@/pages/SystemMap"));
 const NotFound = lazy(() => import("@/pages/not-found"));
@@ -52,7 +51,23 @@ function Router() {
         </ProtectedRoute>
       </Route>
 
-      {/* Phase 3: Consolidated Routes - Lazy Loaded */}
+      {/* Unified Studio: 4 main routes */}
+      <Route path="/gallery">
+        <ProtectedRoute>
+          <Suspense fallback={<PageLoader />}>
+            <GalleryPage />
+          </Suspense>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/pipeline">
+        <ProtectedRoute>
+          <Suspense fallback={<PageLoader />}>
+            <Pipeline />
+          </Suspense>
+        </ProtectedRoute>
+      </Route>
+
       <Route path="/library">
         <ProtectedRoute>
           <Suspense fallback={<PageLoader />}>
@@ -69,38 +84,20 @@ function Router() {
         </ProtectedRoute>
       </Route>
 
-      {/* Content Planner - Strategic posting guide */}
+      {/* Legacy routes → Pipeline */}
       <Route path="/content-planner">
-        <ProtectedRoute>
-          <Suspense fallback={<PageLoader />}>
-            <ContentPlanner />
-          </Suspense>
-        </ProtectedRoute>
+        <Redirect to="/pipeline?tab=planner" />
       </Route>
 
-      {/* Phase 8.1: Social Accounts Management */}
-      <Route path="/social-accounts">
-        <ProtectedRoute>
-          <Suspense fallback={<PageLoader />}>
-            <SocialAccounts />
-          </Suspense>
-        </ProtectedRoute>
-      </Route>
-
-      {/* Phase 8: Approval Queue */}
       <Route path="/approval-queue">
-        <ProtectedRoute>
-          <Suspense fallback={<PageLoader />}>
-            <ApprovalQueue />
-          </Suspense>
-        </ProtectedRoute>
+        <Redirect to="/pipeline?tab=approval" />
       </Route>
 
-      {/* Legacy routes - redirect to consolidated pages */}
-      <Route path="/gallery">
-        <Redirect to="/?view=history" />
+      <Route path="/social-accounts">
+        <Redirect to="/pipeline?tab=accounts" />
       </Route>
 
+      {/* Legacy routes → Studio / Settings */}
       <Route path="/generation/:id">
         {(params: { id: string }) => <Redirect to={`/?generation=${params.id}`} />}
       </Route>

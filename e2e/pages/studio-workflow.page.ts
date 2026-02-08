@@ -73,6 +73,50 @@ export class StudioWorkflowPage {
   readonly generateCopyButton: Locator;
   readonly copyCaption: Locator;
 
+  // InspectorPanel (right column — 4 tabs)
+  readonly inspectorEditTab: Locator;
+  readonly inspectorCopyTab: Locator;
+  readonly inspectorAskAITab: Locator;
+  readonly inspectorDetailsTab: Locator;
+
+  // InspectorPanel — Edit tab
+  readonly editTabTextarea: Locator;
+  readonly editTabPresets: Locator;
+  readonly editTabApplyButton: Locator;
+
+  // InspectorPanel — Copy tab
+  readonly copyTabQuickButton: Locator;
+  readonly copyTabTextarea: Locator;
+  readonly copyTabCopyClipboard: Locator;
+  readonly copyTabAdvancedToggle: Locator;
+  readonly copyTabPanel: Locator;
+
+  // InspectorPanel — Ask AI tab
+  readonly askAIInput: Locator;
+  readonly askAISendButton: Locator;
+  readonly askAIResponse: Locator;
+  readonly askAIQuickChips: Locator;
+
+  // InspectorPanel — Details tab
+  readonly detailsPromptText: Locator;
+  readonly detailsCopyPrompt: Locator;
+  readonly detailsMetadataBadges: Locator;
+  readonly detailsGenerationId: Locator;
+  readonly detailsDownloadButton: Locator;
+  readonly detailsSaveButton: Locator;
+  readonly detailsLinkedInPreview: Locator;
+
+  // IdeaBankBar (bottom bar)
+  readonly ideaBankBar: Locator;
+  readonly ideaBankBarChips: Locator;
+  readonly ideaBankBarRefresh: Locator;
+  readonly ideaBankBarEmptyChip: Locator;
+  readonly ideaBankBarLoading: Locator;
+
+  // Upload zone
+  readonly uploadZone: Locator;
+  readonly uploadInput: Locator;
+
   // Error/loading states
   readonly loadingSpinner: Locator;
   readonly errorMessage: Locator;
@@ -98,8 +142,8 @@ export class StudioWorkflowPage {
     this.selectedTemplateBadge = page.locator('[class*="Badge"]').filter({ hasText: /Selected/i });
 
     // Prompt
-    this.promptTextarea = page.locator('textarea').filter({ has: page.locator('..').filter({ hasText: /prompt|describe/i }) });
-    this.quickStartInput = page.locator('input[placeholder*="Just describe"]');
+    this.promptTextarea = page.locator('textarea[placeholder*="Describe your ideal ad creative"]');
+    this.quickStartInput = page.locator('textarea[placeholder*="Describe what you want to create"]');
     this.generateNowButton = page.getByRole('button', { name: /Generate Now/i });
     this.generateImageButton = page.getByRole('button', { name: /Generate Image/i });
 
@@ -137,8 +181,8 @@ export class StudioWorkflowPage {
     this.catalogCategorySelect = page.locator('[class*="Select"]').filter({ hasText: /category/i });
     this.saveToLibraryButton = page.getByRole('button', { name: /Save to Library/i });
 
-    // History
-    this.historyToggle = page.getByRole('button', { name: /History/i });
+    // History (use first() to avoid duplicate — header button + sidebar icon)
+    this.historyToggle = page.getByRole('button', { name: /History/i }).first();
     this.historyPanel = page.locator('[class*="HistoryPanel"], [class*="history"]').filter({ has: page.locator('img') });
     this.historyItems = page.locator('[class*="history"] [class*="Card"], [class*="HistoryItem"]');
 
@@ -146,6 +190,51 @@ export class StudioWorkflowPage {
     this.linkedInPreview = page.locator('text=LinkedIn Preview').locator('..');
     this.generateCopyButton = page.locator('[data-testid="generate-copy-button-linkedin"]');
     this.copyCaption = page.locator('[class*="CopywritingPanel"], [class*="copy-panel"]');
+
+    // InspectorPanel tabs (match by icon + optional label)
+    const inspectorContainer = page.locator('.sticky.top-24, .lg\\:block .rounded-2xl').first();
+    this.inspectorEditTab = inspectorContainer.getByRole('button', { name: /Edit/i }).first();
+    this.inspectorCopyTab = inspectorContainer.getByRole('button', { name: /Copy/i }).first();
+    this.inspectorAskAITab = inspectorContainer.getByRole('button', { name: /Ask AI/i }).first();
+    this.inspectorDetailsTab = inspectorContainer.getByRole('button', { name: /Details/i }).first();
+
+    // InspectorPanel — Edit tab content (use .first() to avoid duplicate with inline edit)
+    this.editTabTextarea = page.locator('textarea[placeholder*="Describe what changes"]').first();
+    this.editTabPresets = page.locator('button').filter({ hasText: /Warmer lighting|Cooler tones|More contrast|Softer look/i });
+    this.editTabApplyButton = page.getByRole('button', { name: /Apply Changes/i }).first();
+
+    // InspectorPanel — Copy tab content
+    this.copyTabQuickButton = page.getByRole('button', { name: /Generate Quick Copy|Regenerate Quick Copy/i });
+    this.copyTabTextarea = page.locator('.overflow-y-auto textarea').first();
+    this.copyTabCopyClipboard = page.getByRole('button', { name: /Copy to Clipboard|Copied/i });
+    this.copyTabAdvancedToggle = page.locator('button').filter({ hasText: /Advanced Copy Studio/i });
+    this.copyTabPanel = page.locator('[data-testid="copywriting-panel"]');
+
+    // InspectorPanel — Ask AI tab content
+    this.askAIInput = page.locator('input[placeholder*="Ask about this generation"]');
+    this.askAISendButton = page.locator('.flex.gap-2 button[class*="icon"], button').filter({ has: page.locator('svg') }).last();
+    this.askAIResponse = page.locator('.rounded-lg.bg-muted\\/50');
+    this.askAIQuickChips = page.locator('button').filter({ hasText: /What makes this image|Suggest improvements|What audience|Rate this/i });
+
+    // InspectorPanel — Details tab content
+    this.detailsPromptText = page.locator('text=/Prompt/i').locator('..').locator('p');
+    this.detailsCopyPrompt = page.locator('button').filter({ hasText: /^Copy$/i }).first();
+    this.detailsMetadataBadges = page.locator('.flex.flex-wrap.gap-2 [class*="Badge"]');
+    this.detailsGenerationId = page.locator('.font-mono.text-foreground\\/60');
+    this.detailsDownloadButton = page.getByRole('button', { name: /Download Image/i });
+    this.detailsSaveButton = page.getByRole('button', { name: /Save to Catalog/i });
+    this.detailsLinkedInPreview = page.locator('text=/LinkedIn Preview/i').last();
+
+    // IdeaBankBar (bottom horizontal bar)
+    this.ideaBankBar = page.locator('.mt-6.hidden.lg\\:block').first();
+    this.ideaBankBarChips = page.locator('.scrollbar-hide button.rounded-full').filter({ has: page.locator('span.truncate, span.text-xs') });
+    this.ideaBankBarRefresh = page.locator('.mt-6 button').filter({ has: page.locator('svg') }).first();
+    this.ideaBankBarEmptyChip = page.locator('button').filter({ hasText: /Get AI suggestions/i });
+    this.ideaBankBarLoading = page.locator('text=/Generating ideas/i');
+
+    // Upload zone
+    this.uploadZone = page.locator('[class*="UploadZone"], [class*="upload-zone"], label').filter({ hasText: /Upload|Drop|drag/i }).first();
+    this.uploadInput = page.locator('input[type="file"]').first();
 
     // Loading/error
     this.loadingSpinner = page.locator('[class*="animate-spin"]');
@@ -232,9 +321,23 @@ export class StudioWorkflowPage {
   }
 
   /**
-   * Select a template by index
+   * Switch to template mode by clicking "Use Template" button.
+   * Must be called before accessing templateCards.
+   */
+  async switchToTemplateMode() {
+    const useTemplateBtn = this.page.locator('button').filter({ hasText: /Use Template/i });
+    if (await useTemplateBtn.isVisible().catch(() => false)) {
+      await useTemplateBtn.click();
+      // Wait for TemplateLibrary to render
+      await this.page.waitForTimeout(1000);
+    }
+  }
+
+  /**
+   * Select a template by index (auto-switches to template mode first)
    */
   async selectTemplate(index: number = 0) {
+    await this.switchToTemplateMode();
     await this.templateCards.nth(index).click();
     await this.page.waitForTimeout(200);
   }
@@ -250,10 +353,15 @@ export class StudioWorkflowPage {
    * Enter detailed generation prompt
    */
   async enterPrompt(prompt: string) {
-    if (await this.promptTextarea.isVisible()) {
+    // Wait briefly for view transitions after product selection
+    await this.page.waitForTimeout(500);
+    if (await this.promptTextarea.isVisible().catch(() => false)) {
       await this.promptTextarea.fill(prompt);
-    } else {
+    } else if (await this.quickStartInput.isVisible().catch(() => false)) {
       await this.quickStartInput.fill(prompt);
+    } else {
+      // Fallback: try any visible textarea with id="prompt-textarea"
+      await this.page.locator('#prompt-textarea').first().fill(prompt);
     }
   }
 
@@ -273,17 +381,25 @@ export class StudioWorkflowPage {
   }
 
   /**
-   * Wait for generation to complete via SSE
+   * Wait for generation to complete via SSE.
+   * Returns true if generation succeeded, false if error/timeout.
    */
-  async waitForGenerationComplete(timeout: number = 120000) {
+  async waitForGenerationComplete(timeout: number = 120000): Promise<boolean> {
     // First wait for generating state to appear
     await this.generatingIndicator.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
 
-    // Then wait for it to complete (Start New button appears, or generated image visible)
-    await Promise.race([
-      this.startNewButton.waitFor({ state: 'visible', timeout }),
-      this.generatedImage.waitFor({ state: 'visible', timeout }),
-    ]);
+    // Then wait for completion: result image, Start New button, or error toast
+    try {
+      await Promise.race([
+        this.startNewButton.waitFor({ state: 'visible', timeout }),
+        this.generatedImage.waitFor({ state: 'visible', timeout }),
+        this.toastNotification.waitFor({ state: 'visible', timeout }),
+      ]);
+      // Check if we got a result or an error
+      return await this.generatedImage.isVisible().catch(() => false);
+    } catch {
+      return false;
+    }
   }
 
   /**
@@ -502,5 +618,83 @@ export class StudioWorkflowPage {
       path: `e2e/screenshots/studio-${name}.png`,
       fullPage: true,
     });
+  }
+
+  // ─── InspectorPanel helpers ────────────────────────────
+
+  /**
+   * Switch to an InspectorPanel tab
+   */
+  async switchInspectorTab(tab: 'edit' | 'copy' | 'ask-ai' | 'details') {
+    const tabMap = {
+      'edit': this.inspectorEditTab,
+      'copy': this.inspectorCopyTab,
+      'ask-ai': this.inspectorAskAITab,
+      'details': this.inspectorDetailsTab,
+    };
+    await tabMap[tab].click();
+    await this.page.waitForTimeout(300);
+  }
+
+  /**
+   * Click an edit preset chip in the Edit tab
+   */
+  async clickEditPreset(presetText: string) {
+    await this.switchInspectorTab('edit');
+    await this.page.locator('button').filter({ hasText: new RegExp(presetText, 'i') }).click();
+  }
+
+  /**
+   * Generate quick copy from the Copy tab
+   */
+  async generateQuickCopy() {
+    await this.switchInspectorTab('copy');
+    await this.copyTabQuickButton.click();
+    await this.page.waitForTimeout(3000);
+  }
+
+  /**
+   * Ask AI a question from the Ask AI tab
+   */
+  async askAI(question: string) {
+    await this.switchInspectorTab('ask-ai');
+    await this.askAIInput.fill(question);
+    await this.askAISendButton.click();
+    // Wait for response
+    await this.askAIResponse.waitFor({ state: 'visible', timeout: 30000 }).catch(() => {});
+  }
+
+  /**
+   * Click an IdeaBankBar chip by index
+   */
+  async clickIdeaBankChip(index: number = 0) {
+    await this.ideaBankBarChips.nth(index).waitFor({ state: 'visible', timeout: 15000 });
+    await this.ideaBankBarChips.nth(index).click();
+    await this.page.waitForTimeout(300);
+  }
+
+  /**
+   * Refresh IdeaBankBar suggestions
+   */
+  async refreshIdeaBank() {
+    await this.ideaBankBarRefresh.click();
+    await this.page.waitForTimeout(500);
+  }
+
+  /**
+   * Upload a file to the upload zone
+   */
+  async uploadFile(filePath: string) {
+    await this.uploadInput.setInputFiles(filePath);
+    await this.page.waitForTimeout(1000);
+  }
+
+  /**
+   * Check if products are available in the DB
+   */
+  async hasProducts(): Promise<boolean> {
+    await this.waitForProductsLoaded();
+    const count = await this.productCards.count();
+    return count > 0;
   }
 }

@@ -8,7 +8,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface HeaderProps {
-  currentPage?: "studio" | "library" | "settings" | "content-planner" | "social-accounts" | "approval-queue";
+  currentPage?: "studio" | "gallery" | "pipeline" | "library" | "settings" | "content-planner" | "social-accounts" | "approval-queue";
 }
 
 export function Header({ currentPage }: HeaderProps) {
@@ -17,30 +17,27 @@ export function Header({ currentPage }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Determine active page from location if not provided
-  // Phase 3: Simplified to 3 main routes + Content Planner
-  // Memoized to prevent re-calculation on every render
+  // Unified Studio: 4 main routes
   const activePage = useMemo(() => {
     if (currentPage) return currentPage;
     if (location === "/" || location.startsWith("/?")) return "studio";
-    if (location.startsWith("/library")) return "library";
+    if (location.startsWith("/gallery")) return "gallery";
+    if (location.startsWith("/pipeline")) return "pipeline";
     if (location.startsWith("/settings")) return "settings";
-    if (location.startsWith("/content-planner")) return "content-planner";
-    if (location.startsWith("/social-accounts")) return "social-accounts";
-    if (location.startsWith("/approval-queue")) return "approval-queue";
     // Legacy routes map to their consolidated equivalents
-    if (location === "/gallery" || location.startsWith("/generation/")) return "studio";
-    if (["/products", "/brand-images", "/template-library", "/templates", "/installation-scenarios", "/learn-from-winners"].includes(location)) return "library";
+    if (location.startsWith("/content-planner") || location.startsWith("/approval-queue") || location.startsWith("/social-accounts")) return "pipeline";
+    if (location.startsWith("/library")) return "studio";
+    if (location.startsWith("/generation/")) return "studio";
+    if (["/products", "/brand-images", "/template-library", "/templates", "/installation-scenarios", "/learn-from-winners"].includes(location)) return "studio";
     if (location === "/usage" || location === "/settings/api-keys" || location === "/brand-profile") return "settings";
     return "studio";
   }, [currentPage, location]);
 
-  // Phase 3: Simplified navigation - 6 main items (including Content Planner, Social Accounts & Approval Queue)
+  // Unified Studio: 4 focused nav items
   const navItems = [
     { id: "studio", label: "Studio", href: "/" },
-    { id: "content-planner", label: "Content Planner", href: "/content-planner" },
-    { id: "approval-queue", label: "Approval Queue", href: "/approval-queue" },
-    { id: "social-accounts", label: "Social Accounts", href: "/social-accounts" },
-    { id: "library", label: "Library", href: "/library" },
+    { id: "gallery", label: "Gallery", href: "/gallery" },
+    { id: "pipeline", label: "Pipeline", href: "/pipeline" },
     { id: "settings", label: "Settings", href: "/settings" },
   ];
 

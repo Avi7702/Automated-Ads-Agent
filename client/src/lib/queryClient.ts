@@ -21,7 +21,7 @@ async function fetchCsrfToken(): Promise<string> {
 }
 
 // Get CSRF token, fetching if necessary (singleton pattern to avoid race conditions)
-async function getCsrfToken(): Promise<string> {
+export async function getCsrfToken(): Promise<string> {
   if (csrfToken) {
     return csrfToken;
   }

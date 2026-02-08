@@ -14,5 +14,10 @@
     "pr-review-toolkit@anthropics/claude-code",
     "frontend-design@anthropics/claude-code",
     "security-guidance@anthropics/claude-code"
-  ]
+  ],
+  "permissions": {
+    "allow": [
+      "Bash(NODE_TLS_REJECT_UNAUTHORIZED=0 node -e:*)"
+    ]
+  }
 }

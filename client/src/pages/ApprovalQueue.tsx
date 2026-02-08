@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/layout/Header";
+
+interface ApprovalQueueProps {
+  embedded?: boolean;
+}
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -61,7 +65,7 @@ interface QueueStats {
   highPriorityCount: number;
 }
 
-export default function ApprovalQueue() {
+export default function ApprovalQueue({ embedded = false }: ApprovalQueueProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<ApprovalQueueItem[]>([]);
@@ -403,7 +407,7 @@ export default function ApprovalQueue() {
 
   return (
     <>
-      <Header currentPage="approval-queue" />
+      {!embedded && <Header currentPage="approval-queue" />}
       <div className="container mx-auto p-4 sm:p-6 space-y-6">
         {/* Page Title */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

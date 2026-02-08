@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Header } from '@/components/layout/Header';
+
+interface SocialAccountsProps {
+  embedded?: boolean;
+}
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -8,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { SocialConnection } from '@/types/social';
 import { RefreshCw, Link as LinkIcon, AlertCircle, ExternalLink } from 'lucide-react';
 
-export default function SocialAccounts() {
+export default function SocialAccounts({ embedded = false }: SocialAccountsProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -102,8 +106,8 @@ export default function SocialAccounts() {
 
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header currentPage="settings" />
+    <div className={embedded ? "" : "min-h-screen bg-background"}>
+      {!embedded && <Header currentPage="settings" />}
 
       <main className="container mx-auto px-4 py-6 max-w-5xl">
         {/* Header */}

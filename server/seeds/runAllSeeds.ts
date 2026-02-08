@@ -5,6 +5,7 @@ import { seedInstallationScenarios } from "./seedInstallationScenarios";
 import { seedProductRelationships } from "./seedRelationships";
 import { seedBrandImages, seedBrandImagesFromSampleData, seedBrandImagesFromCloudinary } from "./seedBrandImages";
 import { seedPerformingTemplates } from "./seedTemplates";
+import { seedAdSceneTemplates } from "./seedAdSceneTemplates";
 
 /**
  * Master Seed Script for NDS (Next Day Steel)
@@ -32,6 +33,7 @@ import { seedPerformingTemplates } from "./seedTemplates";
  *   --skip-relationships Skip product relationships
  *   --skip-images       Skip brand images
  *   --skip-templates    Skip performing templates
+ *   --skip-ad-scenes    Skip ad scene templates
  */
 
 interface SeedOptions {
@@ -43,6 +45,7 @@ interface SeedOptions {
   skipImages?: boolean;
   skipTemplates?: boolean;
   skipBrandProfile?: boolean;
+  skipAdSceneTemplates?: boolean;
 }
 
 interface SeedResults {
@@ -52,6 +55,7 @@ interface SeedResults {
   relationships?: { created: number; skipped: number; errors: number };
   brandImages?: { created: number; updated: number; errors: number; skipped?: number };
   templates?: { created: number; updated: number; errors: number };
+  adSceneTemplates?: { created: number; updated: number; errors: number };
   totalTime: number;
 }
 
@@ -74,6 +78,7 @@ export async function runAllSeeds(options: SeedOptions = {}): Promise<SeedResult
   console.log(`   Relationships: ${options.skipRelationships ? "⏭️  SKIP" : "✅ RUN"}`);
   console.log(`   Brand Images:  ${options.skipImages ? "⏭️  SKIP" : "✅ RUN"}`);
   console.log(`   Templates:     ${options.skipTemplates ? "⏭️  SKIP" : "✅ RUN"}`);
+  console.log(`   Ad Scenes:    ${options.skipAdSceneTemplates ? "⏭️  SKIP" : "✅ RUN"}`);
   console.log(`   Data Source:   ${options.sampleOnly ? "SAMPLE ONLY" : options.cloudinaryOnly ? "CLOUDINARY ONLY" : "SAMPLE + CLOUDINARY"}`);
   console.log("\n");
 
@@ -180,6 +185,19 @@ export async function runAllSeeds(options: SeedOptions = {}): Promise<SeedResult
     }
   }
 
+  // 7. Ad Scene Templates (used by Studio template cards + Idea Bank)
+  if (!options.skipAdSceneTemplates) {
+    console.log("\n" + "─".repeat(50));
+    console.log("STEP 7/7: Ad Scene Templates");
+    console.log("─".repeat(50));
+    try {
+      results.adSceneTemplates = await seedAdSceneTemplates();
+    } catch (err) {
+      console.error("❌ Ad Scene Templates seeding failed:", err);
+      results.adSceneTemplates = { created: 0, updated: 0, errors: 1 };
+    }
+  }
+
   // Summary
   results.totalTime = Date.now() - startTime;
 
@@ -226,6 +244,13 @@ export async function runAllSeeds(options: SeedOptions = {}): Promise<SeedResult
     console.log(`    Errors:  ${results.templates.errors}`);
   }
 
+  if (results.adSceneTemplates) {
+    console.log(`\n  Ad Scene Templates:`);
+    console.log(`    Created: ${results.adSceneTemplates.created}`);
+    console.log(`    Updated: ${results.adSceneTemplates.updated}`);
+    console.log(`    Errors:  ${results.adSceneTemplates.errors}`);
+  }
+
   console.log(`\n  Total Time: ${(results.totalTime / 1000).toFixed(2)}s`);
   console.log("\n" + "═".repeat(60) + "\n");
 
@@ -244,6 +269,7 @@ if (process.argv[1]?.includes("runAllSeeds")) {
     skipImages: args.includes("--skip-images"),
     skipTemplates: args.includes("--skip-templates"),
     skipBrandProfile: args.includes("--skip-brand-profile"),
+    skipAdSceneTemplates: args.includes("--skip-ad-scenes"),
   };
 
   runAllSeeds(options)

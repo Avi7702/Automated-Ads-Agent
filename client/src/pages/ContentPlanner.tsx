@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Header } from '@/components/layout/Header';
+
+interface ContentPlannerProps {
+  embedded?: boolean;
+}
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -145,7 +149,7 @@ const categoryColors: Record<string, string> = {
  * - 30 researched templates with hooks, structures, examples
  * - Mark as posted functionality
  */
-export default function ContentPlanner() {
+export default function ContentPlanner({ embedded = false }: ContentPlannerProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
@@ -295,8 +299,8 @@ export default function ContentPlanner() {
 
   if (templatesLoading || balanceLoading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header currentPage="content-planner" />
+      <div className={embedded ? "" : "min-h-screen bg-background"}>
+        {!embedded && <Header currentPage="content-planner" />}
         <main className="container mx-auto px-4 py-6 flex items-center justify-center">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </main>
@@ -307,8 +311,8 @@ export default function ContentPlanner() {
   const categories = templatesData?.categories || [];
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header currentPage="content-planner" />
+    <div className={embedded ? "" : "min-h-screen bg-background"}>
+      {!embedded && <Header currentPage="content-planner" />}
 
       <main className="container mx-auto px-4 py-6">
         {/* Page Header */}

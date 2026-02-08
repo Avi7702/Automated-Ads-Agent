@@ -220,6 +220,13 @@
   .mt-safe {
     margin-top: env(safe-area-inset-top);
   }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* 2026 UX: Button Feedback Animations */
