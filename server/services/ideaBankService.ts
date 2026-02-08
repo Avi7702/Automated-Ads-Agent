@@ -18,6 +18,8 @@
 import { logger } from "../lib/logger";
 import { generateContentWithRetry } from "../lib/geminiClient";
 import { getCacheService, CACHE_TTL } from "../lib/cacheService";
+import { sanitizeForPrompt, sanitizeKBContent, sanitizeOutputString } from "../lib/promptSanitizer";
+import { safeParseLLMResponse, ideaSuggestionArraySchema } from "../validation/llmResponseSchemas";
 import { storage } from "../storage";
 import { visionAnalysisService, type VisionAnalysisResult } from "./visionAnalysisService";
 import { queryFileSearchStore } from "./fileSearchService";
@@ -466,22 +468,7 @@ function buildKBQueryExtended(
   return parts.filter(Boolean).join(" ");
 }
 
-/**
- * Sanitize KB content to prevent prompt injection
- */
-function sanitizeKBContent(content: string): string {
-  if (!content) return "";
-
-  // Remove potential prompt injection patterns
-  return content
-    .replace(/```[\s\S]*?```/g, "") // Remove code blocks
-    .replace(/\[INST\]|\[\/INST\]/gi, "") // Remove instruction markers
-    .replace(/<\|.*?\|>/g, "") // Remove special tokens
-    .replace(/system:|user:|assistant:/gi, "") // Remove role markers
-    .replace(/ignore (previous|above|all) instructions/gi, "[filtered]")
-    .replace(/you are now|pretend to be|act as if/gi, "[filtered]")
-    .slice(0, 5000); // Limit length
-}
+// sanitizeKBContent is now imported from ../lib/promptSanitizer
 
 /**
  * Match templates based on product analysis
@@ -727,7 +714,7 @@ IMPORTANT: These uploaded images should be incorporated into your ad concepts. C
   }
 
   if (userGoal) {
-    prompt += `\n## User's Goal\n${sanitizeString(userGoal)}\n`;
+    prompt += `\n## User's Goal\n${sanitizeForPrompt(userGoal, { maxLength: 500, context: 'idea_bank_goal' })}\n`;
   }
 
   if (brandProfile) {
@@ -794,13 +781,8 @@ function sanitizePrompt(prompt: string): string {
     .slice(0, 1000);
 }
 
-/**
- * Sanitize a string
- */
-function sanitizeString(input: unknown): string {
-  if (typeof input !== "string") return "";
-  return input.replace(/[<>]/g, "").trim().slice(0, 500);
-}
+// sanitizeString replaced by sanitizeOutputString from ../lib/promptSanitizer
+const sanitizeString = sanitizeOutputString;
 
 /**
  * Validate generation mode
@@ -1018,7 +1000,7 @@ ${uploadDescriptions.map((desc, i) => `${i + 1}. "${desc}"`).join("\n")}
 
   // Add user goal
   if (userGoal) {
-    prompt += `\n## User's Goal\n${sanitizeString(userGoal)}\n`;
+    prompt += `\n## User's Goal\n${sanitizeForPrompt(userGoal, { maxLength: 500, context: 'idea_bank_goal' })}\n`;
   }
 
   // Add brand profile

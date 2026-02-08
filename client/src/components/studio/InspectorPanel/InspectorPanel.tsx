@@ -39,10 +39,14 @@ export const InspectorPanel = memo(function InspectorPanel({
   return (
     <div className={cn("flex flex-col h-full", className)}>
       {/* Tab bar */}
-      <div className="flex border-b border-border bg-background/50 shrink-0">
+      <div className="flex border-b border-border bg-background/50 shrink-0" role="tablist" aria-label="Inspector tabs">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
+            role="tab"
+            aria-selected={activeTab === id}
+            aria-controls={`inspector-panel-${id}`}
+            aria-label={label}
             onClick={() => setActiveTab(id)}
             className={cn(
               "flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 text-xs font-medium transition-colors relative",
@@ -51,7 +55,7 @@ export const InspectorPanel = memo(function InspectorPanel({
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
-            <Icon className="w-3.5 h-3.5" />
+            <Icon className="w-3.5 h-3.5" aria-hidden="true" />
             <span className="hidden xl:inline">{label}</span>
             {activeTab === id && (
               <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full" />
@@ -61,7 +65,7 @@ export const InspectorPanel = memo(function InspectorPanel({
       </div>
 
       {/* Tab content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto" role="tabpanel" id={`inspector-panel-${activeTab}`}>
         {activeTab === "edit" && <EditTab orch={orch} />}
         {activeTab === "copy" && <CopyTab orch={orch} />}
         {activeTab === "ask-ai" && <AskAITab orch={orch} />}

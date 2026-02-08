@@ -9,6 +9,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { PWAUpdatePrompt } from "@/components/PWAUpdatePrompt";
 
 // Eager load only critical pages
 import Login from "@/pages/Login";
@@ -185,6 +186,9 @@ function App() {
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <TooltipProvider>
+              <a href="#main-content" className="skip-to-content">
+                Skip to main content
+              </a>
               <Toaster />
               <SonnerToaster
                 position="bottom-right"
@@ -193,7 +197,10 @@ function App() {
                   className: 'font-sans'
                 }}
               />
-              <Router />
+              <main id="main-content">
+                <Router />
+              </main>
+              <PWAUpdatePrompt />
             </TooltipProvider>
           </AuthProvider>
         </QueryClientProvider>

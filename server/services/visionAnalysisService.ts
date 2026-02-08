@@ -18,6 +18,8 @@ import { generateContentWithRetry } from "../lib/geminiClient";
 import { storage } from "../storage";
 import type { ProductAnalysis, InsertProductAnalysis, Product } from "@shared/schema";
 import { createRateLimitMap } from "../utils/memoryManager";
+import { sanitizeOutputString } from "../lib/promptSanitizer";
+import { safeParseLLMResponse, visionAnalysisSchema } from "../validation/llmResponseSchemas";
 import { logger } from "../lib/logger";
 import { getCacheService, CACHE_TTL } from "../lib/cacheService";
 
@@ -254,24 +256,19 @@ Be accurate and specific. If uncertain about a field, use your best judgment but
 
   const text = response.text || "";
 
-  // Extract JSON from response
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error("Failed to parse vision analysis response");
-  }
+  // Extract and validate JSON response with Zod schema
+  const parsed = safeParseLLMResponse(text, visionAnalysisSchema, 'vision_analysis');
 
-  const parsed = JSON.parse(jsonMatch[0]) as VisionAnalysisResult;
-
-  // Validate and sanitize response
+  // Sanitize output strings
   return {
-    category: sanitizeString(parsed.category) || "unknown",
-    subcategory: sanitizeString(parsed.subcategory) || "unknown",
-    materials: Array.isArray(parsed.materials) ? parsed.materials.map(sanitizeString).filter(Boolean) : [],
-    colors: Array.isArray(parsed.colors) ? parsed.colors.map(sanitizeString).filter(Boolean) : [],
-    style: sanitizeString(parsed.style) || "unknown",
-    usageContext: sanitizeString(parsed.usageContext) || "",
-    targetDemographic: sanitizeString(parsed.targetDemographic) || "",
-    detectedText: parsed.detectedText ? sanitizeString(parsed.detectedText) : null,
+    category: sanitizeOutputString(parsed.category) || "unknown",
+    subcategory: sanitizeOutputString(parsed.subcategory) || "unknown",
+    materials: Array.isArray(parsed.materials) ? parsed.materials.map(sanitizeOutputString).filter(Boolean) : [],
+    colors: Array.isArray(parsed.colors) ? parsed.colors.map(sanitizeOutputString).filter(Boolean) : [],
+    style: sanitizeOutputString(parsed.style) || "unknown",
+    usageContext: sanitizeOutputString(parsed.usageContext) || "",
+    targetDemographic: sanitizeOutputString(parsed.targetDemographic) || "",
+    detectedText: parsed.detectedText ? sanitizeOutputString(parsed.detectedText) : null,
     confidence: typeof parsed.confidence === "number" ? Math.min(100, Math.max(0, parsed.confidence)) : 80,
   };
 }
@@ -308,15 +305,8 @@ async function fetchImageAsBase64(url: string): Promise<string> {
 /**
  * Sanitize a string to prevent prompt injection
  */
-function sanitizeString(input: unknown): string {
-  if (typeof input !== "string") return "";
-  // Remove any potential prompt injection patterns
-  return input
-    .replace(/[<>]/g, "") // Remove angle brackets
-    .replace(/\n/g, " ") // Replace newlines with spaces
-    .trim()
-    .slice(0, 500); // Limit length
-}
+// sanitizeString replaced by sanitizeOutputString from ../lib/promptSanitizer
+const sanitizeString = sanitizeOutputString;
 
 /**
  * Get cached analysis for a product, or null if not available

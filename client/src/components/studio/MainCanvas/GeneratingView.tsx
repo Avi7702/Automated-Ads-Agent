@@ -9,6 +9,9 @@ export function GeneratingView() {
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
       className="flex flex-col items-center justify-center min-h-[400px] space-y-8"
+      role="status"
+      aria-live="polite"
+      aria-label="Generating image"
     >
       {/* Orbital loader */}
       <div className="relative w-28 h-28">

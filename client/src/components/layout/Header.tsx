@@ -66,9 +66,9 @@ export function Header({ currentPage }: HeaderProps) {
         </Button>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="hidden md:flex items-center gap-1" aria-label="Main navigation">
           {navItems.map((item) => (
-            <Link key={item.id} href={item.href}>
+            <Link key={item.id} href={item.href} aria-current={activePage === item.id ? "page" : undefined}>
               <span
                 className={cn(
                   "px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer",
@@ -96,6 +96,7 @@ export function Header({ currentPage }: HeaderProps) {
                 size="sm"
                 onClick={logout}
                 className="text-muted-foreground hover:text-foreground min-h-11 md:min-h-9"
+                aria-label="Sign out"
               >
                 <LogOut className="w-4 h-4" />
               </Button>

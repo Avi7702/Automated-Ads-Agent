@@ -247,18 +247,22 @@ async function checkGeminiSafety(
 
     return { hateSpeech, violence, sexualContent, harassment };
   } catch (error: any) {
-    // If Gemini API fails, log warning and default to PASS
-    // We don't want safety checks to block content generation due to API errors
+    // FAIL-CLOSED: If Gemini Safety API fails, default to BLOCK (all flags false = unsafe).
+    // This prevents unsafe content from passing through on API failures.
+    // Set SAFETY_FAIL_OPEN=true in non-production environments to bypass this.
+    const failOpen = process.env.SAFETY_FAIL_OPEN === 'true' && process.env.NODE_ENV !== 'production';
+
     logger.warn({
       err: error,
       errorMessage: error?.message,
-    }, 'Gemini Safety API failed, defaulting to PASS');
+      failOpen,
+    }, `Gemini Safety API failed, defaulting to ${failOpen ? 'PASS (dev override)' : 'BLOCK (fail-closed)'}`);
 
     return {
-      hateSpeech: true,
-      violence: true,
-      sexualContent: true,
-      harassment: true,
+      hateSpeech: failOpen,
+      violence: failOpen,
+      sexualContent: failOpen,
+      harassment: failOpen,
     };
   }
 }

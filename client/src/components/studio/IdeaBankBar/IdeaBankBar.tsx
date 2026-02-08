@@ -65,10 +65,10 @@ function IdeaBankBarComponent({ orch, className }: IdeaBankBarProps) {
   }
 
   return (
-    <div className={cn("flex items-center gap-2", className)}>
+    <div className={cn("flex items-center gap-2", className)} role="region" aria-label="Idea suggestions">
       {/* Label + Refresh */}
       <div className="flex items-center gap-1.5 shrink-0">
-        <Sparkles className="w-3.5 h-3.5 text-primary" />
+        <Sparkles className="w-3.5 h-3.5 text-primary" aria-hidden="true" />
         <span className="text-xs font-medium text-muted-foreground hidden sm:inline">Ideas</span>
         <Button
           variant="ghost"
@@ -76,11 +76,12 @@ function IdeaBankBarComponent({ orch, className }: IdeaBankBarProps) {
           className="h-6 w-6"
           onClick={fetchSuggestions}
           disabled={loading}
+          aria-label={loading ? "Loading suggestions" : "Refresh suggestions"}
         >
           {loading ? (
-            <Loader2 className="w-3 h-3 animate-spin" />
+            <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />
           ) : (
-            <RefreshCw className="w-3 h-3" />
+            <RefreshCw className="w-3 h-3" aria-hidden="true" />
           )}
         </Button>
       </div>
@@ -94,8 +95,9 @@ function IdeaBankBarComponent({ orch, className }: IdeaBankBarProps) {
               size="icon"
               className="h-7 w-7 shrink-0"
               onClick={() => scroll("left")}
+              aria-label="Scroll suggestions left"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-4 h-4" aria-hidden="true" />
             </Button>
           </motion.div>
         )}
@@ -106,6 +108,8 @@ function IdeaBankBarComponent({ orch, className }: IdeaBankBarProps) {
         ref={scrollRef}
         onScroll={updateScrollState}
         className="flex gap-2 overflow-x-auto scrollbar-hide py-1 min-w-0 flex-1"
+        aria-live="polite"
+        aria-atomic="false"
       >
         {loading && suggestions.length === 0 && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground px-3 py-2">
@@ -154,8 +158,9 @@ function IdeaBankBarComponent({ orch, className }: IdeaBankBarProps) {
               size="icon"
               className="h-7 w-7 shrink-0"
               onClick={() => scroll("right")}
+              aria-label="Scroll suggestions right"
             >
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-4 h-4" aria-hidden="true" />
             </Button>
           </motion.div>
         )}

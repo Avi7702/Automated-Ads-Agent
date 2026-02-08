@@ -2,6 +2,8 @@ import { logger } from '../lib/logger';
 import { generateContentWithRetry } from '../lib/geminiClient';
 import type { GenerateCopyInput } from '../validation/schemas';
 import { getFileSearchStoreForGeneration, queryFileSearchStore, FileCategory } from './fileSearchService';
+import { sanitizeForPrompt } from '../lib/promptSanitizer';
+import { safeParseLLMResponse, generatedCopySchema } from '../validation/llmResponseSchemas';
 
 // Platform character limits (2025 standards)
 interface PlatformLimits {
@@ -161,7 +163,7 @@ class CopywritingService {
       ...(tools && { tools }),
     }, { operation: 'ad_copy_generation' });
     const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    const generatedCopy = JSON.parse(text);
+    const generatedCopy = safeParseLLMResponse(text, generatedCopySchema, 'ad_copy_generation');
 
     // Calculate character counts
     const characterCounts = {
@@ -198,35 +200,37 @@ class CopywritingService {
 
     const task = `Write compelling ad copy variation #${variationNumber} for a ${request.platform} advertisement using ${framework} framework. This copy must grab attention in 3-8 seconds, resonate with the target audience, and drive them to take action.`;
 
+    const s = (v: string) => sanitizeForPrompt(v, { maxLength: 500, context: 'copy_ptcf' });
+
     // CONTEXT
     const context = `
 PRODUCT INFORMATION:
-- Name: ${request.productName}
-- Description: ${request.productDescription}
-${request.productBenefits ? `- Key Benefits: ${request.productBenefits.join(', ')}` : ''}
-${request.uniqueValueProp ? `- Unique Value: ${request.uniqueValueProp}` : ''}
-- Industry: ${request.industry}
+- Name: ${s(request.productName)}
+- Description: ${s(request.productDescription)}
+${request.productBenefits ? `- Key Benefits: ${request.productBenefits.map(s).join(', ')}` : ''}
+${request.uniqueValueProp ? `- Unique Value: ${s(request.uniqueValueProp)}` : ''}
+- Industry: ${s(request.industry)}
 
-${request.campaignObjective ? `CAMPAIGN GOAL: ${request.campaignObjective.toUpperCase()}` : ''}
+${request.campaignObjective ? `CAMPAIGN GOAL: ${s(request.campaignObjective).toUpperCase()}` : ''}
 
 TARGET AUDIENCE:
 ${request.targetAudience ? `
-- Demographics: ${request.targetAudience.demographics}
-- Psychographics: ${request.targetAudience.psychographics}
-- Pain Points: ${request.targetAudience.painPoints.join(', ')}
+- Demographics: ${s(request.targetAudience.demographics)}
+- Psychographics: ${s(request.targetAudience.psychographics)}
+- Pain Points: ${request.targetAudience.painPoints.map(s).join(', ')}
 ` : 'General audience - use broad appeal messaging'}
 
 BRAND VOICE & TONE:
 ${request.brandVoice ? `
-- Core Principles: ${request.brandVoice.principles.join(', ')}
-- Words to USE: ${request.brandVoice.wordsToUse?.join(', ') || 'N/A'}
-- Words to AVOID: ${request.brandVoice.wordsToAvoid?.join(', ') || 'N/A'}
-` : `Tone: ${request.tone.charAt(0).toUpperCase() + request.tone.slice(1)}`}
+- Core Principles: ${request.brandVoice.principles.map(s).join(', ')}
+- Words to USE: ${request.brandVoice.wordsToUse?.map(s).join(', ') || 'N/A'}
+- Words to AVOID: ${request.brandVoice.wordsToAvoid?.map(s).join(', ') || 'N/A'}
+` : `Tone: ${s(request.tone.charAt(0).toUpperCase() + request.tone.slice(1))}`}
 
 ${request.socialProof ? `
 SOCIAL PROOF (incorporate if relevant):
-${request.socialProof.testimonial || ''}
-${request.socialProof.stats || ''}
+${request.socialProof.testimonial ? s(request.socialProof.testimonial) : ''}
+${request.socialProof.stats ? s(request.socialProof.stats) : ''}
 ` : ''}
 
 PLATFORM REQUIREMENTS (${request.platform.toUpperCase()}):
@@ -283,35 +287,37 @@ ${ragContext}
 IMPORTANT: Use these reference materials as inspiration and context, but do NOT copy them directly. Adapt the successful patterns, hooks, and approaches to match THIS specific product and audience.
 ` : '';
 
-    // CONTEXT (same as before)
+    const s = (v: string) => sanitizeForPrompt(v, { maxLength: 500, context: 'copy_ptcf_rag' });
+
+    // CONTEXT (same as before, with sanitization)
     const context = `
 PRODUCT INFORMATION:
-- Name: ${request.productName}
-- Description: ${request.productDescription}
-${request.productBenefits ? `- Key Benefits: ${request.productBenefits.join(', ')}` : ''}
-${request.uniqueValueProp ? `- Unique Value: ${request.uniqueValueProp}` : ''}
-- Industry: ${request.industry}
+- Name: ${s(request.productName)}
+- Description: ${s(request.productDescription)}
+${request.productBenefits ? `- Key Benefits: ${request.productBenefits.map(s).join(', ')}` : ''}
+${request.uniqueValueProp ? `- Unique Value: ${s(request.uniqueValueProp)}` : ''}
+- Industry: ${s(request.industry)}
 
-${request.campaignObjective ? `CAMPAIGN GOAL: ${request.campaignObjective.toUpperCase()}` : ''}
+${request.campaignObjective ? `CAMPAIGN GOAL: ${s(request.campaignObjective).toUpperCase()}` : ''}
 
 TARGET AUDIENCE:
 ${request.targetAudience ? `
-- Demographics: ${request.targetAudience.demographics}
-- Psychographics: ${request.targetAudience.psychographics}
-- Pain Points: ${request.targetAudience.painPoints.join(', ')}
+- Demographics: ${s(request.targetAudience.demographics)}
+- Psychographics: ${s(request.targetAudience.psychographics)}
+- Pain Points: ${request.targetAudience.painPoints.map(s).join(', ')}
 ` : 'General audience - use broad appeal messaging'}
 
 BRAND VOICE & TONE:
 ${request.brandVoice ? `
-- Core Principles: ${request.brandVoice.principles.join(', ')}
-- Words to USE: ${request.brandVoice.wordsToUse?.join(', ') || 'N/A'}
-- Words to AVOID: ${request.brandVoice.wordsToAvoid?.join(', ') || 'N/A'}
-` : `Tone: ${request.tone.charAt(0).toUpperCase() + request.tone.slice(1)}`}
+- Core Principles: ${request.brandVoice.principles.map(s).join(', ')}
+- Words to USE: ${request.brandVoice.wordsToUse?.map(s).join(', ') || 'N/A'}
+- Words to AVOID: ${request.brandVoice.wordsToAvoid?.map(s).join(', ') || 'N/A'}
+` : `Tone: ${s(request.tone.charAt(0).toUpperCase() + request.tone.slice(1))}`}
 
 ${request.socialProof ? `
 SOCIAL PROOF (incorporate if relevant):
-${request.socialProof.testimonial || ''}
-${request.socialProof.stats || ''}
+${request.socialProof.testimonial ? s(request.socialProof.testimonial) : ''}
+${request.socialProof.stats ? s(request.socialProof.stats) : ''}
 ` : ''}
 
 PLATFORM REQUIREMENTS (${request.platform.toUpperCase()}):

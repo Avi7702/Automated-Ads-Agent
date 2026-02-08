@@ -34,6 +34,7 @@ import { validateApiKey, isValidService, getSupportedServices, type ServiceName 
 import { saveApiKeySchema, uploadPatternSchema, updatePatternSchema, applyPatternSchema, ratePatternSchema, listPatternsQuerySchema, generateCompletePostSchema, saveN8nConfigSchema, n8nCallbackSchema, syncAccountSchema } from "./validation/schemas";
 import { logger } from "./lib/logger";
 import { validateFileType, uploadPatternLimiter, checkPatternQuota } from "./middleware/uploadValidation";
+import { promptInjectionGuard } from "./middleware/promptInjectionGuard";
 import { toGenerationDTO, toGenerationDTOArray } from "./dto/generationDTO";
 import { extractPatterns, processUploadForPatterns, getRelevantPatterns, formatPatternsForPrompt } from "./services/patternExtractionService";
 import { startPatternCleanupScheduler } from "./jobs/patternCleanupJob";
@@ -391,7 +392,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Image transformation endpoint (supports both image transformation and text-only generation)
   // Extended timeout (120s) for image generation which can take 30-90+ seconds
-  app.post("/api/transform", extendedTimeout, haltOnTimeout, requireAuth, upload.array("images", 6), async (req, res) => {
+  app.post("/api/transform", extendedTimeout, haltOnTimeout, requireAuth, promptInjectionGuard, upload.array("images", 6), async (req, res) => {
     const startTime = Date.now();
     const userId = req.user?.id;
     let success = false;
@@ -927,7 +928,7 @@ Consider these product relationships and usage contexts when generating the imag
 
   // Edit generation - Async version using BullMQ job queue
   // Returns immediately with jobId, client polls /api/jobs/:jobId for status
-  app.post("/api/generations/:id/edit", async (req, res) => {
+  app.post("/api/generations/:id/edit", promptInjectionGuard, async (req, res) => {
     const userId = (req as any).session?.userId;
 
     try {
@@ -1677,7 +1678,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // COPYWRITING ENDPOINTS
 
   // Generate ad copy with multiple variations
-  app.post("/api/copy/generate", async (req, res) => {
+  app.post("/api/copy/generate", promptInjectionGuard, async (req, res) => {
     try {
       // Use session userId if available, otherwise use a default for demo
       const userId = req.session?.userId || "demo-user";
@@ -2937,7 +2938,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   });
 
   // Generate idea bank suggestions (optional auth for single-tenant mode)
-  app.post("/api/idea-bank/suggest", async (req, res) => {
+  app.post("/api/idea-bank/suggest", promptInjectionGuard, async (req, res) => {
     try {
       // Use authenticated userId or default system user for single-tenant mode
       const userId = (req.session as any)?.userId || "system-user";

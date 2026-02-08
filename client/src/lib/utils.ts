@@ -30,5 +30,11 @@ export function getProductImageUrl(url: string | null | undefined, width: number
     return fallback;
   }
 
+  // Apply Cloudinary auto-optimization transforms for real Cloudinary URLs
+  // f_auto: auto-select best format (WebP/AVIF), q_auto: auto quality, w_auto: responsive width
+  if (url.includes("res.cloudinary.com") && url.includes("/upload/") && !url.includes("f_auto")) {
+    return url.replace("/upload/", `/upload/f_auto,q_auto,w_${width}/`);
+  }
+
   return url;
 }
