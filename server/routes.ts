@@ -91,11 +91,6 @@ if (isCloudinaryConfigured) {
 
 import { genAI, createGeminiClient } from "./lib/gemini";
 
-// Default clients (env-var based, for backward compat)
-const genaiText = genAI;
-const genaiImage = genAI;
-const genai = genaiText;
-
 // Resolve user's Gemini API key (database first, then env var fallback)
 // Returns a GoogleGenAI client configured with the best available key
 async function getGeminiClientForUser(userId: string | undefined): Promise<typeof genAI> {
@@ -4199,6 +4194,13 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         isValid: true,
       });
 
+      // Update global Gemini client so ALL services use the new key immediately
+      if (service === 'gemini') {
+        const { setGlobalGeminiClient } = await import('./lib/geminiClient');
+        const { createGeminiClient } = await import('./lib/gemini');
+        setGlobalGeminiClient(createGeminiClient(trimmedKey));
+      }
+
       // Log successful action
       await storage.logApiKeyAction({
         userId,
@@ -4269,6 +4271,12 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
 
       // Delete the key
       await storage.deleteUserApiKey(userId, service);
+
+      // Revert to env var fallback when user removes their Gemini key
+      if (service === 'gemini') {
+        const { setGlobalGeminiClient } = await import('./lib/geminiClient');
+        setGlobalGeminiClient(null);
+      }
 
       // Log the action
       await storage.logApiKeyAction({
@@ -5454,6 +5462,21 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
 
   // Start pattern cleanup scheduler (Learn from Winners 24-hour TTL)
   startPatternCleanupScheduler();
+
+  // Load user's saved Gemini API key on startup (single-tenant app)
+  (async () => {
+    try {
+      const resolved = await storage.resolveApiKey('system-user', 'gemini');
+      if (resolved.key && resolved.source === 'user') {
+        const { setGlobalGeminiClient } = await import('./lib/geminiClient');
+        const { createGeminiClient } = await import('./lib/gemini');
+        setGlobalGeminiClient(createGeminiClient(resolved.key));
+        logger.info({ source: resolved.source }, 'Loaded user Gemini API key on startup');
+      }
+    } catch (err) {
+      logger.warn({ err }, 'Failed to load user Gemini key on startup');
+    }
+  })();
 
   const httpServer = createServer(app);
   return httpServer;

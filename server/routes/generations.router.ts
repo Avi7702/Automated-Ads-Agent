@@ -17,6 +17,7 @@ import type { Router, Request, Response } from 'express';
 import type { RouterContext, RouterFactory, RouterModule } from '../types/router';
 import { createRouter, asyncHandler } from './utils/createRouter';
 import { JobType, JobProgress } from '../jobs/types';
+import { getGlobalGeminiClient } from '../lib/geminiClient';
 
 export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => {
   const router = createRouter();
@@ -286,7 +287,7 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
       }
 
       // Build multimodal prompt
-      const model = genAIText.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+      const model = getGlobalGeminiClient().getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
 
       const parts: any[] = [
         {

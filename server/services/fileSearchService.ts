@@ -14,8 +14,7 @@
  */
 
 import { logger } from '../lib/logger';
-import { genAI } from '../lib/gemini';
-import { generateContentWithRetry } from '../lib/geminiClient';
+import { generateContentWithRetry, getGlobalGeminiClient } from '../lib/geminiClient';
 import fs from 'fs/promises';
 import path from 'path';
 import { telemetry } from '../instrumentation';
@@ -96,7 +95,7 @@ export enum FileCategory {
 export async function initializeFileSearchStore(): Promise<any | null> {
   try {
     // Check if store already exists
-    const stores = await (genAI as any).fileSearchStores?.list?.();
+    const stores = await (getGlobalGeminiClient() as any).fileSearchStores?.list?.();
     if (!stores || !Array.isArray(stores)) {
       logger.info({ module: 'FileSearch' }, 'File Search Store API not available');
       return null;
@@ -113,7 +112,7 @@ export async function initializeFileSearchStore(): Promise<any | null> {
 
     // Create new store
     logger.info({ module: 'FileSearch' }, 'Creating new File Search Store');
-    const newStore = await (genAI as any).fileSearchStores.create({
+    const newStore = await (getGlobalGeminiClient() as any).fileSearchStores.create({
       config: {
         displayName: FILE_SEARCH_STORE_NAME,
       },
@@ -169,7 +168,7 @@ export async function uploadReferenceFile(params: {
 
     // Upload file to File Search Store
     logger.info({ module: 'FileSearch', fileName }, 'Uploading file to File Search Store');
-    const operation = await (genAI as any).fileSearchStores.uploadToFileSearchStore({
+    const operation = await (getGlobalGeminiClient() as any).fileSearchStores.uploadToFileSearchStore({
       file: filePath,
       fileSearchStoreName: store.name,
       config: {
@@ -220,7 +219,7 @@ export async function uploadReferenceFile(params: {
 export async function listReferenceFiles(category?: FileCategory) {
   try {
     const store = await initializeFileSearchStore();
-    const files = await (genAI as any).fileSearchStores.listFiles({
+    const files = await (getGlobalGeminiClient() as any).fileSearchStores.listFiles({
       fileSearchStoreName: store.name,
     });
 
@@ -246,7 +245,7 @@ export async function listReferenceFiles(category?: FileCategory) {
 export async function deleteReferenceFile(fileId: string) {
   try {
     const store = await initializeFileSearchStore();
-    await (genAI as any).fileSearchStores.deleteFile({
+    await (getGlobalGeminiClient() as any).fileSearchStores.deleteFile({
       fileSearchStoreName: store.name,
       fileName: fileId,
     });

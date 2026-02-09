@@ -12,6 +12,18 @@ import { genAI } from './gemini';
 import { geminiLogger } from './logger';
 import { recordGeminiSuccess, recordGeminiFailure } from './geminiHealthMonitor';
 
+// Global override client — set when user saves their Gemini API key via Settings UI
+let _overrideClient: typeof genAI | null = null;
+
+export function setGlobalGeminiClient(client: typeof genAI | null): void {
+  _overrideClient = client;
+  geminiLogger.info({ hasOverride: !!client }, 'Global Gemini client updated');
+}
+
+export function getGlobalGeminiClient(): typeof genAI {
+  return _overrideClient || genAI;
+}
+
 interface RetryConfig {
   maxRetries: number;
   baseDelayMs: number;
@@ -167,7 +179,7 @@ export async function generateContentWithRetry(
   context: { operation: string; requestId?: string },
   client?: typeof genAI
 ): Promise<Awaited<ReturnType<typeof genAI.models.generateContent>>> {
-  const geminiClient = client || genAI;
+  const geminiClient = client || _overrideClient || genAI;
   return callGeminiWithRetry(
     () => geminiClient.models.generateContent(params),
     context
