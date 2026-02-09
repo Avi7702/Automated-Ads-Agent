@@ -181,6 +181,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
+  // Web Vitals analytics endpoint — logs metrics via Pino
+  app.post("/api/analytics/vitals", express.text({ type: '*/*', limit: '1kb' }), (req, res) => {
+    try {
+      const metric = JSON.parse(req.body as string);
+      logger.info({ module: 'WebVitals', metric: metric.name, value: metric.value, rating: metric.rating }, 'Web Vital reported');
+      res.status(204).end();
+    } catch {
+      res.status(400).end();
+    }
+  });
+
   // Serve static files from attached_assets directory
   app.use("/attached_assets", express.static(path.join(process.cwd(), "attached_assets")));
 
@@ -344,6 +355,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       logger.error({ module: 'Auth', action: 'demo', err: error }, 'Demo login error');
       res.status(500).json({ error: "Demo login failed" });
+    }
+  });
+
+  // POST /api/auth/forgot-password — Request password reset
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
+      // Always return success to avoid email enumeration
+      logger.info({ module: 'Auth', action: 'forgot-password', email }, 'Password reset requested');
+      res.json({ message: "If an account exists with that email, a reset link has been sent." });
+    } catch (error: any) {
+      logger.error({ module: 'Auth', action: 'forgot-password', err: error }, 'Password reset error');
+      res.status(500).json({ error: "Failed to process request" });
+    }
+  });
+
+  // POST /api/auth/reset-password — Reset password with token
+  app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const { token, newPassword } = req.body;
+      if (!token || !newPassword) {
+        return res.status(400).json({ error: "Token and new password are required" });
+      }
+      if (newPassword.length < 8) {
+        return res.status(400).json({ error: "Password must be at least 8 characters" });
+      }
+      // Token validation will be implemented when email service is added
+      logger.info({ module: 'Auth', action: 'reset-password' }, 'Password reset attempted');
+      res.status(501).json({ error: "Email service not configured. Contact administrator." });
+    } catch (error: any) {
+      logger.error({ module: 'Auth', action: 'reset-password', err: error }, 'Password reset error');
+      res.status(500).json({ error: "Failed to reset password" });
+    }
+  });
+
+  // POST /api/auth/verify-email — Verify email with token
+  app.post("/api/auth/verify-email", async (req, res) => {
+    try {
+      const { token } = req.body;
+      if (!token) {
+        return res.status(400).json({ error: "Verification token is required" });
+      }
+      logger.info({ module: 'Auth', action: 'verify-email' }, 'Email verification attempted');
+      res.status(501).json({ error: "Email service not configured. Contact administrator." });
+    } catch (error: any) {
+      logger.error({ module: 'Auth', action: 'verify-email', err: error }, 'Email verification error');
+      res.status(500).json({ error: "Failed to verify email" });
+    }
+  });
+
+  // DELETE /api/auth/account — Delete user account
+  app.delete("/api/auth/account", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      await storage.deleteUser(userId);
+      req.session.destroy(() => {
+        res.json({ message: "Account deleted successfully" });
+      });
+    } catch (error: any) {
+      logger.error({ module: 'Auth', action: 'delete-account', err: error }, 'Account deletion error');
+      res.status(500).json({ error: "Failed to delete account" });
+    }
+  });
+
+  // GET /api/auth/export — Export all user data (data portability)
+  app.get("/api/auth/export", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const user = await storage.getUserById(userId);
+      const generations = await storage.getGenerations(1000);
+      const products = await storage.getProducts(1000);
+
+      res.json({
+        exportedAt: new Date().toISOString(),
+        user: user ? { id: user.id, email: user.email, createdAt: user.createdAt } : null,
+        generations: generations.filter(g => g.userId === userId),
+        products,
+      });
+    } catch (error: any) {
+      logger.error({ module: 'Auth', action: 'export', err: error }, 'Data export error');
+      res.status(500).json({ error: "Failed to export data" });
     }
   });
 
@@ -860,8 +955,9 @@ Consider these product relationships and usage contexts when generating the imag
   // Get all generations (gallery)
   app.get("/api/generations", async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 50;
-      const allGenerations = await storage.getGenerations(limit);
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+      const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+      const allGenerations = await storage.getGenerations(limit, offset);
       res.json(toGenerationDTOArray(allGenerations));
     } catch (error: any) {
       logger.error({ module: 'Generations', err: error }, 'Error fetching generations');
@@ -1359,7 +1455,9 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // Get all products
   app.get("/api/products", async (req, res) => {
     try {
-      const products = await storage.getProducts();
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+      const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+      const products = await storage.getProducts(limit, offset);
       res.json(products);
     } catch (error: any) {
       logger.error({ module: 'Products', err: error }, 'Error fetching products');
@@ -2658,7 +2756,9 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   app.get("/api/brand-images", requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
-      const images = await storage.getBrandImagesByUser(userId);
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+      const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+      const images = await storage.getBrandImagesByUser(userId, limit, offset);
       res.json(images);
     } catch (error: any) {
       logger.error({ module: 'BrandImages', err: error }, 'List error');
@@ -3127,9 +3227,13 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
     try {
       const { category, isGlobal } = req.query;
 
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+      const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
       const templates = await storage.getAdSceneTemplates({
         category: category as string | undefined,
         isGlobal: isGlobal === "true" ? true : isGlobal === "false" ? false : undefined,
+        limit,
+        offset,
       });
 
       res.json({ templates, total: templates.length });
@@ -5463,18 +5567,31 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // Start pattern cleanup scheduler (Learn from Winners 24-hour TTL)
   startPatternCleanupScheduler();
 
-  // Load user's saved Gemini API key on startup (single-tenant app)
+  // Load any saved Gemini API key on startup (single-tenant: find any valid key)
   (async () => {
     try {
-      const resolved = await storage.resolveApiKey('system-user', 'gemini');
-      if (resolved.key && resolved.source === 'user') {
+      const { userApiKeys } = await import('@shared/schema');
+      const { eq, and } = await import('drizzle-orm');
+      const [row] = await db
+        .select()
+        .from(userApiKeys)
+        .where(and(eq(userApiKeys.service, 'gemini'), eq(userApiKeys.isValid, true)))
+        .limit(1);
+
+      if (row) {
+        const { decryptApiKey } = await import('./services/encryptionService');
+        const decryptedKey = decryptApiKey({
+          ciphertext: row.encryptedKey,
+          iv: row.iv,
+          authTag: row.authTag,
+        });
         const { setGlobalGeminiClient } = await import('./lib/geminiClient');
         const { createGeminiClient } = await import('./lib/gemini');
-        setGlobalGeminiClient(createGeminiClient(resolved.key));
-        logger.info({ source: resolved.source }, 'Loaded user Gemini API key on startup');
+        setGlobalGeminiClient(createGeminiClient(decryptedKey));
+        logger.info({ userId: row.userId }, 'Loaded saved Gemini API key on startup');
       }
     } catch (err) {
-      logger.warn({ err }, 'Failed to load user Gemini key on startup');
+      logger.warn({ err }, 'Failed to load saved Gemini key on startup');
     }
   })();
 
