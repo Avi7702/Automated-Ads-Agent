@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type {
   IdeaBankSuggestResponse,
   TemplateSlotSuggestion,
@@ -10,6 +10,7 @@ import type {
 import type { IdeaBankTemplateResponse } from "@shared/types/ideaBank";
 import type { Product } from "@shared/schema";
 import type { AnalyzedUpload } from "@/types/analyzedUpload";
+import { getCsrfToken } from "@/lib/queryClient";
 
 interface UseIdeaBankFetchProps {
   selectedProducts: Product[];
@@ -122,8 +123,18 @@ export function useIdeaBankFetch({
     [mode, onRecipeAvailable]
   );
 
+  // Retry protection: track consecutive failures to prevent endless loops
+  const failCountRef = useRef(0);
+  const MAX_CONSECUTIVE_FAILURES = 3;
+
   // Fetch suggestions handler
   const fetchSuggestions = useCallback(async () => {
+    // Stop if we've failed too many times in a row
+    if (failCountRef.current >= MAX_CONSECUTIVE_FAILURES) {
+      setError("Too many failed attempts. Click refresh to try again.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -140,20 +151,30 @@ export function useIdeaBankFetch({
     };
 
     try {
+      const csrfToken = await getCsrfToken();
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        "x-csrf-token": csrfToken,
+      };
+
       const res = await fetch("/api/idea-bank/suggest", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify(requestBody),
       });
 
       if (res.ok) {
+        failCountRef.current = 0; // Reset on success
         processResponse(await res.json());
       } else {
+        failCountRef.current++;
         await new Promise((resolve) => setTimeout(resolve, 2000));
+        // Refresh CSRF token for retry
+        const freshToken = await getCsrfToken();
         const retryRes = await fetch("/api/idea-bank/suggest", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "x-csrf-token": freshToken },
           credentials: "include",
           body: JSON.stringify(requestBody),
         });
@@ -161,9 +182,11 @@ export function useIdeaBankFetch({
         if (!retryRes.ok) {
           throw new Error("Retry failed - unable to generate suggestions");
         }
+        failCountRef.current = 0; // Reset on success
         processResponse(await retryRes.json());
       }
     } catch (err: unknown) {
+      failCountRef.current++;
       setError(err instanceof Error ? err.message : "Failed to load suggestions");
     } finally {
       setLoading(false);
@@ -198,6 +221,12 @@ export function useIdeaBankFetch({
     }
   }, [productIdsKey, uploadDescriptionsKey, mode, templateId, fetchSuggestions, clearState]);
 
+  // Manual refresh resets fail counter so user can retry
+  const manualRefresh = useCallback(() => {
+    failCountRef.current = 0;
+    return fetchSuggestions();
+  }, [fetchSuggestions]);
+
   return {
     loading,
     error,
@@ -208,6 +237,6 @@ export function useIdeaBankFetch({
     templateContext,
     selectedUploads,
     analyzingCount,
-    fetchSuggestions,
+    fetchSuggestions: manualRefresh,
   };
 }
