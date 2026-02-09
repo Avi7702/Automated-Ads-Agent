@@ -932,17 +932,17 @@ export class DbStorage implements IStorage {
     if (productIds.length === 0) return [];
 
     // Get images that have any of the productIds in their productIds array
-    // and belong to the specified user - Optimized with database-level filtering
-    return await db
+    // and belong to the specified user
+    const allImages = await db
       .select()
       .from(brandImages)
-      .where(
-        and(
-          eq(brandImages.userId, userId),
-          sql`${brandImages.productIds} && ARRAY[${sql.join(productIds.map(id => sql`${id}`), sql`, `)}]::text[]`
-        )
-      )
+      .where(eq(brandImages.userId, userId))
       .orderBy(desc(brandImages.createdAt));
+
+    // Filter images that contain any of the requested productIds
+    return allImages.filter(img =>
+      img.productIds?.some(pid => productIds.includes(pid))
+    );
   }
 
   async getBrandImagesByCategory(userId: string, category: string): Promise<BrandImage[]> {
@@ -1014,17 +1014,16 @@ export class DbStorage implements IStorage {
   }
 
   async getPerformingAdTemplatesByPlatform(userId: string, platform: string): Promise<PerformingAdTemplate[]> {
-    // Get all templates for user and filter by target platform - Optimized with database-level filtering
-    return await db
+    // Get all templates for user and filter by target platform
+    const allTemplates = await db
       .select()
       .from(performingAdTemplates)
-      .where(
-        and(
-          eq(performingAdTemplates.userId, userId),
-          arrayContains(performingAdTemplates.targetPlatforms, [platform])
-        )
-      )
+      .where(eq(performingAdTemplates.userId, userId))
       .orderBy(desc(performingAdTemplates.createdAt));
+
+    return allTemplates.filter(t =>
+      t.targetPlatforms?.includes(platform)
+    );
   }
 
   async getFeaturedPerformingAdTemplates(userId: string): Promise<PerformingAdTemplate[]> {
@@ -1081,38 +1080,42 @@ export class DbStorage implements IStorage {
       objective?: string;
     }
   ): Promise<PerformingAdTemplate[]> {
-    const conditions = [
-      eq(performingAdTemplates.userId, userId),
-      eq(performingAdTemplates.isActive, true)
-    ];
-
-    if (filters.category) {
-      conditions.push(eq(performingAdTemplates.category, filters.category));
-    }
-    if (filters.platform) {
-      conditions.push(arrayContains(performingAdTemplates.targetPlatforms, [filters.platform]));
-    }
-    if (filters.mood) {
-      conditions.push(eq(performingAdTemplates.mood, filters.mood));
-    }
-    if (filters.style) {
-      conditions.push(eq(performingAdTemplates.style, filters.style));
-    }
-    if (filters.engagementTier) {
-      conditions.push(eq(performingAdTemplates.engagementTier, filters.engagementTier));
-    }
-    if (filters.industry) {
-      conditions.push(arrayContains(performingAdTemplates.bestForIndustries, [filters.industry]));
-    }
-    if (filters.objective) {
-      conditions.push(arrayContains(performingAdTemplates.bestForObjectives, [filters.objective]));
-    }
-
-    return await db
+    // Start with base query
+    let templates = await db
       .select()
       .from(performingAdTemplates)
-      .where(and(...conditions))
+      .where(
+        and(
+          eq(performingAdTemplates.userId, userId),
+          eq(performingAdTemplates.isActive, true)
+        )
+      )
       .orderBy(desc(performingAdTemplates.estimatedEngagementRate));
+
+    // Apply filters
+    if (filters.category) {
+      templates = templates.filter(t => t.category === filters.category);
+    }
+    if (filters.platform) {
+      templates = templates.filter(t => t.targetPlatforms?.includes(filters.platform!));
+    }
+    if (filters.mood) {
+      templates = templates.filter(t => t.mood === filters.mood);
+    }
+    if (filters.style) {
+      templates = templates.filter(t => t.style === filters.style);
+    }
+    if (filters.engagementTier) {
+      templates = templates.filter(t => t.engagementTier === filters.engagementTier);
+    }
+    if (filters.industry) {
+      templates = templates.filter(t => t.bestForIndustries?.includes(filters.industry!));
+    }
+    if (filters.objective) {
+      templates = templates.filter(t => t.bestForObjectives?.includes(filters.objective!));
+    }
+
+    return templates;
   }
 
   // ============================================
