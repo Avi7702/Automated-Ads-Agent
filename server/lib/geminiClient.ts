@@ -164,10 +164,12 @@ function classifyError(error: unknown): 'quota' | 'unavailable' | 'unknown' {
  */
 export async function generateContentWithRetry(
   params: Parameters<typeof genAI.models.generateContent>[0],
-  context: { operation: string; requestId?: string }
+  context: { operation: string; requestId?: string },
+  client?: typeof genAI
 ): Promise<Awaited<ReturnType<typeof genAI.models.generateContent>>> {
+  const geminiClient = client || genAI;
   return callGeminiWithRetry(
-    () => genAI.models.generateContent(params),
+    () => geminiClient.models.generateContent(params),
     context
   );
 }

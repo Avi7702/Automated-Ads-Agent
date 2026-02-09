@@ -39,7 +39,7 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: process.env.NODE_ENV === 'production'
-        ? ["'self'"]
+        ? ["'self'", "'sha256-lDUBeBfpPQ4BeVVZpSDsSj8T+WdMfPRFeirOKsgrNAM='", "'sha256-D8ENm9m//g0OfHmuDwTU4MaB7wzJNZ5g9g/pqhRH9uQ='"]
         : ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Vite dev needs these
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://*.cloudinary.com", "https://images.unsplash.com", "https://nextdaysteel.co.uk", "https://placehold.co"],

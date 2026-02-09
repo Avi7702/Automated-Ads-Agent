@@ -89,15 +89,27 @@ if (isCloudinaryConfigured) {
 // 1. genaiText - for text operations (uses Replit AI Integrations for better quotas)
 // 2. genaiImage - for image generation (uses direct Google API as Replit doesn't support image models)
 
-import { genAI } from "./lib/gemini";
+import { genAI, createGeminiClient } from "./lib/gemini";
 
-// Use the shared client for all operations
+// Default clients (env-var based, for backward compat)
 const genaiText = genAI;
 const genaiImage = genAI;
-
-
-// Legacy alias for backward compatibility
 const genai = genaiText;
+
+// Resolve user's Gemini API key (database first, then env var fallback)
+// Returns a GoogleGenAI client configured with the best available key
+async function getGeminiClientForUser(userId: string | undefined): Promise<typeof genAI> {
+  if (!userId) return genAI;
+  try {
+    const resolved = await storage.resolveApiKey(userId, 'gemini');
+    if (resolved.key && resolved.source === 'user') {
+      return createGeminiClient(resolved.key);
+    }
+  } catch {
+    // Fall through to default
+  }
+  return genAI;
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================
@@ -679,10 +691,8 @@ Consider these product relationships and usage contexts when generating the imag
       ];
 
       // Generate content with image input using Gemini image generation model
-      // MUST use genaiImage (direct Google API) - Replit AI Integrations doesn't support image models
-      if (!genaiImage) {
-        throw new Error("Image generation requires GEMINI_API_KEY or GOOGLE_API_KEY (direct API, not AI Integrations)");
-      }
+      // Resolves user-saved API key from database, falls back to env var
+      const geminiClient = await getGeminiClientForUser(userId);
 
       const modelName = "gemini-3-pro-image-preview";
       const validResolutions = ["1K", "2K", "4K"];
@@ -691,7 +701,7 @@ Consider these product relationships and usage contexts when generating the imag
         : "2K";
       logger.info({ module: 'Transform', model: modelName, resolution: requestedResolution }, 'Using model (direct Google API)');
 
-      const result = await genaiImage.models.generateContent({
+      const result = await geminiClient.models.generateContent({
         model: modelName,
         contents,
         config: {
@@ -1255,7 +1265,11 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         }
       });
 
-      const result = await genai.models.generateContent({
+      // Resolve user's Gemini key (database first, env fallback)
+      const analyzeUserId = req.user?.id || (req as any).session?.userId;
+      const analyzeClient = await getGeminiClientForUser(analyzeUserId);
+
+      const result = await analyzeClient.models.generateContent({
         model: modelName,
         contents: [{ role: 'user', parts }],
       });
@@ -4021,7 +4035,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
 
       // Environment variable mapping for checking fallbacks
       const envVarMap: Record<string, string | undefined> = {
-        gemini: process.env.GEMINI_API_KEY,
+        gemini: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY,
         cloudinary: process.env.CLOUDINARY_API_KEY,
         firecrawl: process.env.FIRECRAWL_API_KEY,
         redis: process.env.REDIS_URL,
@@ -4268,7 +4282,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
 
       // Check if environment fallback exists
       const envVarMap: Record<string, string | undefined> = {
-        gemini: process.env.GEMINI_API_KEY,
+        gemini: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY,
         cloudinary: process.env.CLOUDINARY_API_KEY,
         firecrawl: process.env.FIRECRAWL_API_KEY,
         redis: process.env.REDIS_URL,

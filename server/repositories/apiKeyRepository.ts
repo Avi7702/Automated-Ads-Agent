@@ -165,7 +165,7 @@ export async function resolveApiKey(userId: string, service: string): Promise<{ 
   }
 
   const envVarMap: Record<string, string | undefined> = {
-    gemini: process.env.GEMINI_API_KEY,
+    gemini: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY,
     cloudinary: process.env.CLOUDINARY_API_KEY,
     firecrawl: process.env.FIRECRAWL_API_KEY,
     redis: process.env.REDIS_URL,
