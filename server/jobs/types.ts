@@ -38,8 +38,8 @@ export interface BaseJobData {
   jobType: JobType;
   /** User ID who initiated the job */
   userId: string;
-  /** Database generation ID for tracking */
-  generationId: number;
+  /** Database generation ID for tracking (UUID string) */
+  generationId: string;
   /** Timestamp when job was created */
   createdAt: string;
 }
@@ -113,8 +113,8 @@ export type GenerationJobData =
  * Result returned when a job completes successfully
  */
 export interface GenerationJobResult {
-  /** Database generation ID */
-  generationId: number;
+  /** Database generation ID (UUID string) */
+  generationId: string;
   /** Final status of the job */
   status: JobStatus.COMPLETED | JobStatus.FAILED;
   /** URL of the generated/edited image (if successful) */

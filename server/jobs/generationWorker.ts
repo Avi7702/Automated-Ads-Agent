@@ -53,7 +53,7 @@ async function reportProgress(
  */
 async function uploadToCloudinary(
   base64Data: string,
-  generationId: number
+  generationId: string
 ): Promise<{ secure_url: string; public_id: string }> {
   const dataUri = `data:image/png;base64,${base64Data}`;
 
@@ -186,7 +186,7 @@ export async function processGenerationJob(
     // Stage 1: Starting - verify generation exists
     await reportProgress(job, 'starting', 0, 'Initializing job...');
 
-    const existingGeneration = await storage.getGenerationById(String(generationId));
+    const existingGeneration = await storage.getGenerationById(generationId);
     if (!existingGeneration) {
       throw new Error(`Generation not found: ${generationId}`);
     }
