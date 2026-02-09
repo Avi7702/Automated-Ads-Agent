@@ -537,15 +537,17 @@ export default function StudioOptimized() {
     generationRecipe,
   ]);
 
-  // Handle download
-  const handleDownload = useCallback(() => {
+  // Handle download — fetch as blob to bypass cross-origin download restriction
+  const handleDownload = useCallback(async () => {
     if (!generatedImage) return;
+    const response = await fetch(generatedImage);
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = generatedImage;
+    link.href = url;
     link.download = `product-${generationId || Date.now()}.png`;
-    document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   }, [generatedImage, generationId]);
 
   // Download with feedback
