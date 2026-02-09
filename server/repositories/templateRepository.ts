@@ -10,7 +10,7 @@ import {
   performingAdTemplates,
 } from "@shared/schema";
 import { db } from "../db";
-import { and, eq, desc, ilike } from "drizzle-orm";
+import { and, eq, desc, ilike, arrayContains } from "drizzle-orm";
 
 // ============================================
 // PROMPT TEMPLATE OPERATIONS
@@ -169,15 +169,17 @@ export async function getPerformingAdTemplatesByCategory(userId: string, categor
 }
 
 export async function getPerformingAdTemplatesByPlatform(userId: string, platform: string): Promise<PerformingAdTemplate[]> {
-  const allTemplates = await db
+  // Optimization: Move filtering to database using arrayContains
+  return await db
     .select()
     .from(performingAdTemplates)
-    .where(eq(performingAdTemplates.userId, userId))
+    .where(
+      and(
+        eq(performingAdTemplates.userId, userId),
+        arrayContains(performingAdTemplates.targetPlatforms, [platform])
+      )
+    )
     .orderBy(desc(performingAdTemplates.createdAt));
-
-  return allTemplates.filter(t =>
-    t.targetPlatforms?.includes(platform)
-  );
 }
 
 export async function getFeaturedPerformingAdTemplates(userId: string): Promise<PerformingAdTemplate[]> {
@@ -233,38 +235,37 @@ export async function searchPerformingAdTemplates(
     objective?: string;
   }
 ): Promise<PerformingAdTemplate[]> {
-  let templates = await db
-    .select()
-    .from(performingAdTemplates)
-    .where(
-      and(
-        eq(performingAdTemplates.userId, userId),
-        eq(performingAdTemplates.isActive, true)
-      )
-    )
-    .orderBy(desc(performingAdTemplates.estimatedEngagementRate));
+  // Optimization: Move all filters to database level to reduce memory and payload size
+  const conditions = [
+    eq(performingAdTemplates.userId, userId),
+    eq(performingAdTemplates.isActive, true)
+  ];
 
   if (filters.category) {
-    templates = templates.filter(t => t.category === filters.category);
+    conditions.push(eq(performingAdTemplates.category, filters.category));
   }
   if (filters.platform) {
-    templates = templates.filter(t => t.targetPlatforms?.includes(filters.platform!));
+    conditions.push(arrayContains(performingAdTemplates.targetPlatforms, [filters.platform]));
   }
   if (filters.mood) {
-    templates = templates.filter(t => t.mood === filters.mood);
+    conditions.push(eq(performingAdTemplates.mood, filters.mood));
   }
   if (filters.style) {
-    templates = templates.filter(t => t.style === filters.style);
+    conditions.push(eq(performingAdTemplates.style, filters.style));
   }
   if (filters.engagementTier) {
-    templates = templates.filter(t => t.engagementTier === filters.engagementTier);
+    conditions.push(eq(performingAdTemplates.engagementTier, filters.engagementTier));
   }
   if (filters.industry) {
-    templates = templates.filter(t => t.bestForIndustries?.includes(filters.industry!));
+    conditions.push(arrayContains(performingAdTemplates.bestForIndustries, [filters.industry]));
   }
   if (filters.objective) {
-    templates = templates.filter(t => t.bestForObjectives?.includes(filters.objective!));
+    conditions.push(arrayContains(performingAdTemplates.bestForObjectives, [filters.objective]));
   }
 
-  return templates;
+  return await db
+    .select()
+    .from(performingAdTemplates)
+    .where(and(...conditions))
+    .orderBy(desc(performingAdTemplates.estimatedEngagementRate));
 }
