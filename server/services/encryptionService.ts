@@ -48,25 +48,12 @@ export class DecryptionError extends Error {
 }
 
 /**
- * Get the master encryption key from environment variable.
- * Throws EncryptionConfigError if not configured or invalid.
+ * Parse a key string into a 32-byte Buffer.
  */
-function getMasterKey(): Buffer {
-  const keyString = process.env.API_KEY_ENCRYPTION_KEY;
-
-  if (!keyString) {
-    throw new EncryptionConfigError(
-      'API_KEY_ENCRYPTION_KEY environment variable is not configured. ' +
-        'Generate one with: openssl rand -base64 32'
-    );
-  }
-
-  // Decode from base64 or use raw string
+function parseKeyToBuffer(keyString: string): Buffer {
   let keyBuffer: Buffer;
   try {
-    // Try to decode as base64 first
     keyBuffer = Buffer.from(keyString, 'base64');
-    // If the decoded length is wrong, treat as raw string
     if (keyBuffer.length !== KEY_LENGTH) {
       keyBuffer = Buffer.from(keyString, 'utf-8');
     }
@@ -74,17 +61,56 @@ function getMasterKey(): Buffer {
     keyBuffer = Buffer.from(keyString, 'utf-8');
   }
 
-  // Validate key length
   if (keyBuffer.length < KEY_LENGTH) {
     throw new EncryptionConfigError(
-      `API_KEY_ENCRYPTION_KEY must be at least ${KEY_LENGTH} bytes. ` +
+      `Encryption key must be at least ${KEY_LENGTH} bytes. ` +
         `Current length: ${keyBuffer.length} bytes. ` +
-        'Generate one with: openssl rand -base64 32'
+        'Generate one with: openssl rand -base64 32',
     );
   }
 
-  // Use exactly 32 bytes (truncate if longer)
   return keyBuffer.subarray(0, KEY_LENGTH);
+}
+
+/**
+ * Get the master encryption key from environment variable.
+ * Supports comma-separated keys for rotation (first = current, rest = legacy).
+ * Throws EncryptionConfigError if not configured or invalid.
+ */
+function getMasterKey(): Buffer {
+  const keyString = process.env.API_KEY_ENCRYPTION_KEY;
+
+  if (!keyString) {
+    throw new EncryptionConfigError(
+      'API_KEY_ENCRYPTION_KEY environment variable is not configured. ' + 'Generate one with: openssl rand -base64 32',
+    );
+  }
+
+  // Support comma-separated keys — use first (current) for encryption
+  const firstKey = keyString.split(',')[0]?.trim();
+  if (!firstKey) {
+    throw new EncryptionConfigError('API_KEY_ENCRYPTION_KEY is empty');
+  }
+
+  return parseKeyToBuffer(firstKey);
+}
+
+/**
+ * Get all encryption keys (current + legacy) for decryption.
+ * First key is current, rest are legacy (for rotation support).
+ */
+function getAllKeys(): Buffer[] {
+  const keyString = process.env.API_KEY_ENCRYPTION_KEY;
+
+  if (!keyString) {
+    throw new EncryptionConfigError('API_KEY_ENCRYPTION_KEY environment variable is not configured.');
+  }
+
+  return keyString
+    .split(',')
+    .map((k) => k.trim())
+    .filter(Boolean)
+    .map(parseKeyToBuffer);
 }
 
 /**
@@ -110,10 +136,7 @@ export function encryptApiKey(plaintext: string): EncryptedData {
   });
 
   // Encrypt the plaintext
-  const encrypted = Buffer.concat([
-    cipher.update(plaintext, 'utf8'),
-    cipher.final(),
-  ]);
+  const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
 
   // Get the authentication tag
   const authTag = cipher.getAuthTag();
@@ -126,58 +149,56 @@ export function encryptApiKey(plaintext: string): EncryptedData {
 }
 
 /**
+ * Attempt decryption with a specific key.
+ */
+function tryDecryptWithKey(encrypted: EncryptedData, key: Buffer): string | null {
+  try {
+    const ciphertext = Buffer.from(encrypted.ciphertext, 'base64');
+    const iv = Buffer.from(encrypted.iv, 'base64');
+    const authTag = Buffer.from(encrypted.authTag, 'base64');
+
+    if (iv.length !== IV_LENGTH || authTag.length !== AUTH_TAG_LENGTH) {
+      return null;
+    }
+
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv, {
+      authTagLength: AUTH_TAG_LENGTH,
+    });
+    decipher.setAuthTag(authTag);
+
+    const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+
+    return decrypted.toString('utf8');
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Decrypt an encrypted API key using AES-256-GCM.
+ * Supports key rotation: tries all configured keys (current + legacy).
  *
  * @param encrypted - The encrypted data containing ciphertext, IV, and auth tag
  * @returns The decrypted plaintext API key
  * @throws EncryptionConfigError if master key is not configured
- * @throws DecryptionError if decryption fails (invalid data or tampering)
+ * @throws DecryptionError if decryption fails with all keys
  */
 export function decryptApiKey(encrypted: EncryptedData): string {
   if (!encrypted || !encrypted.ciphertext || !encrypted.iv || !encrypted.authTag) {
     throw new DecryptionError('Invalid encrypted data: missing required fields');
   }
 
-  const masterKey = getMasterKey();
+  const keys = getAllKeys();
 
-  try {
-    // Decode base64 components
-    const ciphertext = Buffer.from(encrypted.ciphertext, 'base64');
-    const iv = Buffer.from(encrypted.iv, 'base64');
-    const authTag = Buffer.from(encrypted.authTag, 'base64');
-
-    // Validate component lengths
-    if (iv.length !== IV_LENGTH) {
-      throw new DecryptionError(`Invalid IV length: expected ${IV_LENGTH}, got ${iv.length}`);
+  // Try each key in order (current first, then legacy)
+  for (const key of keys) {
+    const result = tryDecryptWithKey(encrypted, key);
+    if (result !== null) {
+      return result;
     }
-    if (authTag.length !== AUTH_TAG_LENGTH) {
-      throw new DecryptionError(`Invalid auth tag length: expected ${AUTH_TAG_LENGTH}, got ${authTag.length}`);
-    }
-
-    // Create decipher with AES-256-GCM
-    const decipher = crypto.createDecipheriv(ALGORITHM, masterKey, iv, {
-      authTagLength: AUTH_TAG_LENGTH,
-    });
-
-    // Set the authentication tag for verification
-    decipher.setAuthTag(authTag);
-
-    // Decrypt the ciphertext
-    const decrypted = Buffer.concat([
-      decipher.update(ciphertext),
-      decipher.final(), // This will throw if auth tag verification fails
-    ]);
-
-    return decrypted.toString('utf8');
-  } catch (error) {
-    if (error instanceof DecryptionError || error instanceof EncryptionConfigError) {
-      throw error;
-    }
-    // GCM mode throws on auth tag mismatch during decipher.final()
-    throw new DecryptionError(
-      'Decryption failed: data may be corrupted or tampered with'
-    );
   }
+
+  throw new DecryptionError('Decryption failed: data may be corrupted or encrypted with an unknown key');
 }
 
 /**

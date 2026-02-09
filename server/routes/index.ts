@@ -58,6 +58,9 @@ import { planningRouterModule } from './planning.router';
 // Approval queue (Phase 8)
 import { approvalQueueRouterModule } from './approvalQueue.router';
 
+// Style references (Character/Style Consistency)
+import { styleReferencesRouterModule } from './styleReferences.router';
+
 // Admin (security-critical - must be last)
 import { adminRouterModule } from './admin.router';
 
@@ -115,6 +118,9 @@ export const routerModules: RouterModule[] = [
   // Approval queue (Phase 8)
   approvalQueueRouterModule,
 
+  // Style references (Character/Style Consistency)
+  styleReferencesRouterModule,
+
   // Admin (last - security critical)
   adminRouterModule,
 ];
@@ -123,14 +129,14 @@ export const routerModules: RouterModule[] = [
  * Get router module by prefix
  */
 export function getRouterModule(prefix: string): RouterModule | undefined {
-  return routerModules.find(m => m.prefix === prefix);
+  return routerModules.find((m) => m.prefix === prefix);
 }
 
 /**
  * Get all router prefixes
  */
 export function getRouterPrefixes(): string[] {
-  return routerModules.map(m => m.prefix);
+  return routerModules.map((m) => m.prefix);
 }
 
 /**
@@ -159,4 +165,5 @@ export { socialRouterModule } from './social.router';
 export { n8nRouterModule } from './n8n.router';
 export { planningRouterModule } from './planning.router';
 export { approvalQueueRouterModule } from './approvalQueue.router';
+export { styleReferencesRouterModule } from './styleReferences.router';
 export { adminRouterModule } from './admin.router';

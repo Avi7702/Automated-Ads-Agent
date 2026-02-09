@@ -13,39 +13,26 @@
  * Previously 2,963 lines. Decomposed in Phase 2 of Unified Studio redesign.
  */
 
-import { AnimatePresence, motion } from "framer-motion";
-import { Link } from "wouter";
-import { cn } from "@/lib/utils";
+import { AnimatePresence, motion } from 'framer-motion';
+import { Link } from 'wouter';
+import { cn } from '@/lib/utils';
 
 // Components
-import { Header } from "@/components/layout/Header";
-import { StudioProvider } from "@/context/StudioContext";
-import { ComposerView, ResultViewEnhanced, GeneratingView } from "@/components/studio/MainCanvas";
-import { InspectorPanel } from "@/components/studio/InspectorPanel";
-import { IdeaBankBar } from "@/components/studio/IdeaBankBar";
-import { HistoryPanel } from "@/components/studio/HistoryPanel";
-import { SaveToCatalogDialog } from "@/components/SaveToCatalogDialog";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import {
-  Sparkles,
-  History,
-  TrendingUp,
-  Star,
-  Layout,
-  X,
-} from "lucide-react";
+import { Header } from '@/components/layout/Header';
+import { StudioProvider } from '@/context/StudioContext';
+import { ComposerView, ResultViewEnhanced, GeneratingView } from '@/components/studio/MainCanvas';
+import { InspectorPanel } from '@/components/studio/InspectorPanel';
+import { IdeaBankBar } from '@/components/studio/IdeaBankBar';
+import { HistoryPanel } from '@/components/studio/HistoryPanel';
+import { SaveToCatalogDialog } from '@/components/SaveToCatalogDialog';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { Sparkles, History, TrendingUp, Star, Layout, X } from 'lucide-react';
 
 // Hooks
-import { useStudioOrchestrator } from "@/hooks/useStudioOrchestrator";
+import { useStudioOrchestrator } from '@/hooks/useStudioOrchestrator';
 
 // ─── Helper Components ──────────────────────────────────
 
@@ -69,11 +56,9 @@ function ContextBar({
       className="fixed top-20 left-1/2 -translate-x-1/2 z-40 bg-background/90 backdrop-blur-md border border-border rounded-full px-4 py-2 flex items-center gap-3 shadow-lg"
     >
       <span className="text-xs text-muted-foreground">
-        {selectedProducts.length} product{selectedProducts.length !== 1 ? "s" : ""}
+        {selectedProducts.length} product{selectedProducts.length !== 1 ? 's' : ''}
       </span>
-      {selectedTemplate && (
-        <span className="text-xs text-primary">{selectedTemplate.title}</span>
-      )}
+      {selectedTemplate && <span className="text-xs text-primary">{selectedTemplate.title}</span>}
       <span className="text-xs text-muted-foreground">{platform}</span>
     </motion.div>
   );
@@ -111,7 +96,13 @@ function KeyboardShortcutsPanel({
           </div>
           <div className="space-y-2">
             {shortcuts.map((s, i) => (
-              <div key={i} className={cn("flex items-center justify-between text-xs py-2 px-2.5 rounded-lg", s.disabled ? "opacity-40" : "hover:bg-muted/50")}>
+              <div
+                key={i}
+                className={cn(
+                  'flex items-center justify-between text-xs py-2 px-2.5 rounded-lg',
+                  s.disabled ? 'opacity-40' : 'hover:bg-muted/50',
+                )}
+              >
                 <span>{s.description}</span>
                 <div className="flex gap-1">
                   {s.ctrlKey && <kbd className="px-2 py-1 text-[10px] rounded bg-muted border font-mono">Ctrl</kbd>}
@@ -127,8 +118,14 @@ function KeyboardShortcutsPanel({
         <Button
           variant="secondary"
           size="sm"
-          onClick={() => { haptic("light"); onToggle(); }}
-          className={cn("glass h-11 w-11 rounded-full p-0 flex items-center justify-center", visible && "ring-2 ring-primary/30")}
+          onClick={() => {
+            haptic('light');
+            onToggle();
+          }}
+          className={cn(
+            'glass h-11 w-11 rounded-full p-0 flex items-center justify-center',
+            visible && 'ring-2 ring-primary/30',
+          )}
           title="Keyboard Shortcuts (Shift + ?)"
         >
           <span className="text-base font-semibold">?</span>
@@ -165,10 +162,12 @@ export default function Studio() {
         </AnimatePresence>
 
         {/* Main Content */}
-        <main className={cn(
-          "container mx-auto px-6 pt-24 pb-24 lg:pb-12 relative z-10",
-          orch.historyPanelOpen ? "max-w-[1600px]" : "max-w-7xl"
-        )}>
+        <main
+          className={cn(
+            'container mx-auto px-6 pt-24 pb-24 lg:pb-12 relative z-10',
+            orch.historyPanelOpen ? 'max-w-[1600px]' : 'max-w-7xl',
+          )}
+        >
           {/* Hero */}
           <motion.div
             ref={orch.heroRef}
@@ -185,22 +184,26 @@ export default function Studio() {
             <div className="flex justify-center gap-3 pt-2">
               <Button variant="outline" size="sm" onClick={orch.handleHistoryToggle} className="gap-2">
                 <History className="w-4 h-4" />
-                {orch.historyPanelOpen ? "Hide History" : "History"}
+                {orch.historyPanelOpen ? 'Hide History' : 'History'}
               </Button>
             </div>
           </motion.div>
 
           {/* Grid: Center + Right + History */}
-          <div className={cn(
-            "lg:grid lg:gap-8",
-            orch.historyPanelOpen ? "lg:grid-cols-[1fr_400px_320px]" : "lg:grid-cols-[1fr_400px]"
-          )}>
+          <div
+            className={cn(
+              'lg:grid lg:gap-8',
+              orch.historyPanelOpen ? 'lg:grid-cols-[1fr_400px_320px]' : 'lg:grid-cols-[1fr_400px]',
+            )}
+          >
             {/* Center Column — State Machine */}
             <div className="min-w-0">
               <AnimatePresence mode="wait">
-                {orch.state === "idle" && <ComposerView key="composer" orch={orch} />}
-                {orch.state === "generating" && <GeneratingView key="generating" />}
-                {orch.state === "result" && <ResultViewEnhanced key="result" orch={orch} />}
+                {orch.state === 'idle' && <ComposerView key="composer" orch={orch} />}
+                {orch.state === 'generating' && (
+                  <GeneratingView key="generating" onCancel={orch.handleCancelGeneration} />
+                )}
+                {orch.state === 'result' && <ResultViewEnhanced key="result" orch={orch} />}
               </AnimatePresence>
             </div>
 
@@ -217,7 +220,7 @@ export default function Studio() {
               onToggle={orch.handleHistoryToggle}
               onSelectGeneration={(id) => {
                 orch.selectGeneration(id);
-                fetch(`/api/generations/${id}`, { credentials: "include" })
+                fetch(`/api/generations/${id}`, { credentials: 'include' })
                   .then((r) => r.json())
                   .then((data) => {
                     if (data.imageUrl) orch.handleLoadFromHistory(data);
@@ -260,9 +263,7 @@ export default function Studio() {
               <DialogTitle className="flex items-center gap-2">
                 <TrendingUp className="w-5 h-5" /> Template Inspiration
               </DialogTitle>
-              <DialogDescription>
-                Browse high-performing ad templates for creative direction
-              </DialogDescription>
+              <DialogDescription>Browse high-performing ad templates for creative direction</DialogDescription>
             </DialogHeader>
             <div className="flex-1 overflow-y-auto">
               {orch.isLoadingFeatured ? (
@@ -273,7 +274,9 @@ export default function Studio() {
                 <div className="text-center py-20 text-muted-foreground">
                   <p>No featured templates yet.</p>
                   <Link href="/templates">
-                    <Button variant="link" className="mt-2">Browse template library</Button>
+                    <Button variant="link" className="mt-2">
+                      Browse template library
+                    </Button>
                   </Link>
                 </div>
               ) : (
@@ -286,7 +289,11 @@ export default function Studio() {
                     >
                       <div className="aspect-[4/3] overflow-hidden bg-muted relative">
                         {template.previewImageUrl ? (
-                          <img src={template.previewImageUrl} alt={template.name} className="w-full h-full object-cover" />
+                          <img
+                            src={template.previewImageUrl}
+                            alt={template.name}
+                            className="w-full h-full object-cover"
+                          />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
                             <Layout className="w-10 h-10 text-muted-foreground/30" />
@@ -301,8 +308,12 @@ export default function Studio() {
                       <div className="p-3 space-y-1">
                         <h4 className="font-medium text-sm line-clamp-1">{template.name}</h4>
                         <div className="flex flex-wrap gap-1">
-                          {template.mood && <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10">{template.mood}</span>}
-                          {template.style && <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10">{template.style}</span>}
+                          {template.mood && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10">{template.mood}</span>
+                          )}
+                          {template.style && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10">{template.style}</span>
+                          )}
                         </div>
                       </div>
                     </button>

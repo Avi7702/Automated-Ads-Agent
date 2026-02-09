@@ -1,0 +1,137 @@
+# Preview Deployments - Deploy PRs to isolated Railway environments
+# Deploys when a PR is opened/updated, cleans up when PR is closed
+
+name: Preview Deploy
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, closed]
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ============================================
+  # Deploy preview environment
+  # ============================================
+  deploy-preview:
+    name: Deploy Preview
+    runs-on: ubuntu-latest
+    if: github.event.action != 'closed'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy to Railway preview
+        id: deploy
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          # Create or update preview environment
+          ENVIRONMENT_NAME="pr-${{ github.event.number }}"
+          echo "Deploying preview environment: $ENVIRONMENT_NAME"
+
+          # Deploy to Railway with the PR-specific environment
+          railway up \
+            --service "${{ secrets.RAILWAY_SERVICE_ID || '28ce02bc-f4ad-4ea7-aab6-bffc98a47e2f' }}" \
+            --environment "$ENVIRONMENT_NAME" \
+            --detach 2>&1 || true
+
+          # Get the deployment URL
+          PREVIEW_URL="https://${ENVIRONMENT_NAME}.up.railway.app"
+          echo "preview_url=$PREVIEW_URL" >> "$GITHUB_OUTPUT"
+          echo "Preview URL: $PREVIEW_URL"
+
+      - name: Comment preview URL on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const previewUrl = '${{ steps.deploy.outputs.preview_url }}';
+            const body = `## Preview Deployment
+
+            | Status | URL |
+            |--------|-----|
+            | Deploying | [${previewUrl}](${previewUrl}) |
+
+            > This preview will be automatically destroyed when the PR is closed.
+            > Last deployed: ${new Date().toISOString()}`;
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(c =>
+              c.body?.includes('## Preview Deployment')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+  # ============================================
+  # Clean up preview environment on PR close
+  # ============================================
+  cleanup-preview:
+    name: Cleanup Preview
+    runs-on: ubuntu-latest
+    if: github.event.action == 'closed'
+    steps:
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Destroy preview environment
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          ENVIRONMENT_NAME="pr-${{ github.event.number }}"
+          echo "Destroying preview environment: $ENVIRONMENT_NAME"
+
+          # Remove the preview environment
+          railway environment delete "$ENVIRONMENT_NAME" --yes 2>&1 || echo "Environment may already be cleaned up"
+
+      - name: Update PR comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(c =>
+              c.body?.includes('## Preview Deployment')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: '## Preview Deployment\n\nPreview environment has been destroyed.',
+              });
+            }

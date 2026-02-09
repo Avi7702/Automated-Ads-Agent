@@ -10,18 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,13 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -255,9 +239,7 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
 
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories((prev) =>
-      prev.includes(categoryId)
-        ? prev.filter((id) => id !== categoryId)
-        : [...prev, categoryId]
+      prev.includes(categoryId) ? prev.filter((id) => id !== categoryId) : [...prev, categoryId],
     );
   };
 
@@ -299,10 +281,16 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
 
   if (templatesLoading || balanceLoading) {
     return (
-      <div className={embedded ? "" : "min-h-screen bg-background"}>
+      <div className={embedded ? '' : 'min-h-screen bg-background'}>
         {!embedded && <Header currentPage="content-planner" />}
-        <main className="container mx-auto px-4 py-6 flex items-center justify-center">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <main
+          className="container mx-auto px-4 py-6 flex items-center justify-center"
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
+        >
+          <Loader2 className="w-8 h-8 animate-spin text-primary" aria-hidden="true" />
+          <span className="sr-only">Loading content planner...</span>
         </main>
       </div>
     );
@@ -311,16 +299,14 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
   const categories = templatesData?.categories || [];
 
   return (
-    <div className={embedded ? "" : "min-h-screen bg-background"}>
+    <div className={embedded ? '' : 'min-h-screen bg-background'}>
       {!embedded && <Header currentPage="content-planner" />}
 
       <main className="container mx-auto px-4 py-6">
         {/* Page Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold">Content Planner</h1>
-          <p className="text-muted-foreground">
-            Strategic guide for what to post - based on the NDS posting strategy
-          </p>
+          <p className="text-muted-foreground">Strategic guide for what to post - based on the NDS posting strategy</p>
         </div>
 
         {/* Top Section: Balance + Suggestion */}
@@ -332,9 +318,7 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
                 <Target className="w-5 h-5 text-primary" />
                 This Week's Balance
               </CardTitle>
-              <CardDescription>
-                Track your posting distribution across categories
-              </CardDescription>
+              <CardDescription>Track your posting distribution across categories</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {categories.map((category) => {
@@ -354,10 +338,7 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
                         {balance?.current || 0}/{balance?.target || category.weeklyTarget}
                       </span>
                     </div>
-                    <Progress
-                      value={Math.min(balance?.percentage || 0, 100)}
-                      className="h-2"
-                    />
+                    <Progress value={Math.min(balance?.percentage || 0, 100)} className="h-2" />
                   </div>
                 );
               })}
@@ -377,9 +358,7 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
                 <Lightbulb className="w-5 h-5 text-yellow-500" />
                 Suggested Next Post
               </CardTitle>
-              <CardDescription>
-                Based on your current balance, we recommend:
-              </CardDescription>
+              <CardDescription>Based on your current balance, we recommend:</CardDescription>
             </CardHeader>
             <CardContent>
               {suggestionLoading ? (
@@ -391,13 +370,9 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
                       {suggestionData.category.name}
                     </Badge>
                     {suggestionData.suggestedTemplate && (
-                      <h3 className="font-semibold text-lg">
-                        {suggestionData.suggestedTemplate.title}
-                      </h3>
+                      <h3 className="font-semibold text-lg">{suggestionData.suggestedTemplate.title}</h3>
                     )}
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {suggestionData.reason}
-                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">{suggestionData.reason}</p>
                   </div>
                   {suggestionData.suggestedTemplate && (
                     <div className="flex gap-2">
@@ -414,10 +389,7 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
                         <BookOpen className="w-4 h-4 mr-2" />
                         View Guide
                       </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => setMarkAsPostedCategory(suggestionData.category.id)}
-                      >
+                      <Button size="sm" onClick={() => setMarkAsPostedCategory(suggestionData.category.id)}>
                         <Check className="w-4 h-4 mr-2" />
                         Mark as Posted
                       </Button>
@@ -439,9 +411,7 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
                 <MessageSquare className="w-5 h-5 text-primary" />
                 Recent Posts (Last 7 Days)
               </CardTitle>
-              <CardDescription>
-                Posts you've marked as completed. Click delete to undo.
-              </CardDescription>
+              <CardDescription>Posts you've marked as completed. Click delete to undo.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
@@ -479,19 +449,13 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
                                 {post.platform}
                               </Badge>
                             )}
-                            <span className="text-xs text-muted-foreground">
-                              {formattedDate}
-                            </span>
+                            <span className="text-xs text-muted-foreground">{formattedDate}</span>
                           </div>
                           {post.subType && post.subType !== 'general' && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {post.subType.replace(/_/g, ' ')}
-                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">{post.subType.replace(/_/g, ' ')}</p>
                           )}
                           {post.notes && (
-                            <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
-                              {post.notes}
-                            </p>
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{post.notes}</p>
                           )}
                         </div>
                       </div>
@@ -525,21 +489,13 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
               const isExpanded = expandedCategories.includes(category.id);
 
               return (
-                <Collapsible
-                  key={category.id}
-                  open={isExpanded}
-                  onOpenChange={() => toggleCategory(category.id)}
-                >
+                <Collapsible key={category.id} open={isExpanded} onOpenChange={() => toggleCategory(category.id)}>
                   <Card>
                     <CollapsibleTrigger asChild>
                       <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            {isExpanded ? (
-                              <ChevronDown className="w-5 h-5" />
-                            ) : (
-                              <ChevronRight className="w-5 h-5" />
-                            )}
+                            {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
                             <div
                               className={`w-8 h-8 rounded-lg ${categoryColors[category.id]} flex items-center justify-center`}
                             >
@@ -552,14 +508,10 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
                                   {category.percentage}%
                                 </Badge>
                               </CardTitle>
-                              <CardDescription className="text-xs mt-1">
-                                {category.description}
-                              </CardDescription>
+                              <CardDescription className="text-xs mt-1">{category.description}</CardDescription>
                             </div>
                           </div>
-                          <Badge variant="secondary">
-                            {category.templates.length} templates
-                          </Badge>
+                          <Badge variant="secondary">{category.templates.length} templates</Badge>
                         </div>
                       </CardHeader>
                     </CollapsibleTrigger>
@@ -587,12 +539,8 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
                               onClick={() => setSelectedTemplate(template)}
                             >
                               <CardContent className="p-4">
-                                <h4 className="font-medium text-sm mb-1">
-                                  {template.title}
-                                </h4>
-                                <p className="text-xs text-muted-foreground line-clamp-2">
-                                  {template.description}
-                                </p>
+                                <h4 className="font-medium text-sm mb-1">{template.title}</h4>
+                                <p className="text-xs text-muted-foreground line-clamp-2">{template.description}</p>
                                 <div className="flex gap-1 mt-2 flex-wrap">
                                   {template.bestPlatforms.slice(0, 2).map((p, i) => (
                                     <Badge key={i} variant="outline" className="text-xs">
@@ -646,15 +594,10 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
                 <div className="space-y-6 mt-4">
                   {/* Hook Formulas */}
                   <div>
-                    <h4 className="font-semibold mb-3 flex items-center gap-2">
-                      🎣 Hook Formulas That Work
-                    </h4>
+                    <h4 className="font-semibold mb-3 flex items-center gap-2">🎣 Hook Formulas That Work</h4>
                     <div className="space-y-2">
                       {selectedTemplate.hookFormulas.map((hook, i) => (
-                        <div
-                          key={i}
-                          className="p-3 bg-muted rounded-lg flex items-start justify-between gap-2"
-                        >
+                        <div key={i} className="p-3 bg-muted rounded-lg flex items-start justify-between gap-2">
                           <p className="text-sm italic">{hook}</p>
                           <Button
                             variant="ghost"
@@ -684,9 +627,7 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
                       {selectedTemplate.bestPlatforms.map((platform, i) => (
                         <div key={i} className="flex items-center gap-2">
                           <Badge variant="outline">{platform.platform}</Badge>
-                          <span className="text-sm text-muted-foreground">
-                            {platform.format}
-                          </span>
+                          <span className="text-sm text-muted-foreground">{platform.format}</span>
                         </div>
                       ))}
                     </div>
@@ -760,12 +701,8 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
               <AlertDialogTitle>Start Fresh with Template</AlertDialogTitle>
               <AlertDialogDescription>
                 You're about to create content using:
-                <span className="block mt-2 font-medium text-foreground">
-                  "{pendingTemplateName}"
-                </span>
-                <span className="block mt-3">
-                  This will clear your current work and start fresh in the Studio.
-                </span>
+                <span className="block mt-2 font-medium text-foreground">"{pendingTemplateName}"</span>
+                <span className="block mt-3">This will clear your current work and start fresh in the Studio.</span>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -881,11 +818,7 @@ function MarkAsPostedDialog({
               Cancel
             </Button>
             <Button onClick={handleSubmit} disabled={isSubmitting}>
-              {isSubmitting ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Check className="w-4 h-4 mr-2" />
-              )}
+              {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Check className="w-4 h-4 mr-2" />}
               Record Post
             </Button>
           </div>

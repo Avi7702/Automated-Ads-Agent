@@ -1,14 +1,22 @@
-import { useState, memo, useMemo } from "react";
-import { Link, useLocation } from "wouter";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { LogOut, Menu } from "lucide-react";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { useAuth } from "@/contexts/AuthContext";
+import { useState, memo, useMemo } from 'react';
+import { Link, useLocation } from 'wouter';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { LogOut, Menu } from 'lucide-react';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface HeaderProps {
-  currentPage?: "studio" | "gallery" | "pipeline" | "library" | "settings" | "content-planner" | "social-accounts" | "approval-queue";
+  currentPage?:
+    | 'studio'
+    | 'gallery'
+    | 'pipeline'
+    | 'library'
+    | 'settings'
+    | 'content-planner'
+    | 'social-accounts'
+    | 'approval-queue';
 }
 
 export function Header({ currentPage }: HeaderProps) {
@@ -20,25 +28,30 @@ export function Header({ currentPage }: HeaderProps) {
   // Unified Studio: 4 main routes
   const activePage = useMemo(() => {
     if (currentPage) return currentPage;
-    if (location === "/" || location.startsWith("/?")) return "studio";
-    if (location.startsWith("/gallery")) return "gallery";
-    if (location.startsWith("/pipeline")) return "pipeline";
-    if (location.startsWith("/settings")) return "settings";
+    if (location === '/' || location.startsWith('/?')) return 'studio';
+    if (location.startsWith('/gallery')) return 'gallery';
+    if (location.startsWith('/pipeline')) return 'pipeline';
+    if (location.startsWith('/settings')) return 'settings';
     // Legacy routes map to their consolidated equivalents
-    if (location.startsWith("/content-planner") || location.startsWith("/approval-queue") || location.startsWith("/social-accounts")) return "pipeline";
-    if (location.startsWith("/library")) return "library";
-    if (location.startsWith("/generation/")) return "studio";
-    if (location === "/usage" || location === "/settings/api-keys" || location === "/brand-profile") return "settings";
-    return "studio";
+    if (
+      location.startsWith('/content-planner') ||
+      location.startsWith('/approval-queue') ||
+      location.startsWith('/social-accounts')
+    )
+      return 'pipeline';
+    if (location.startsWith('/library')) return 'library';
+    if (location.startsWith('/generation/')) return 'studio';
+    if (location === '/usage' || location === '/settings/api-keys' || location === '/brand-profile') return 'settings';
+    return 'studio';
   }, [currentPage, location]);
 
   // Unified Studio: 4 focused nav items
   const navItems = [
-    { id: "studio", label: "Studio", href: "/" },
-    { id: "gallery", label: "Gallery", href: "/gallery" },
-    { id: "pipeline", label: "Pipeline", href: "/pipeline" },
-    { id: "library", label: "Library", href: "/library" },
-    { id: "settings", label: "Settings", href: "/settings" },
+    { id: 'studio', label: 'Studio', href: '/' },
+    { id: 'gallery', label: 'Gallery', href: '/gallery' },
+    { id: 'pipeline', label: 'Pipeline', href: '/pipeline' },
+    { id: 'library', label: 'Library', href: '/library' },
+    { id: 'settings', label: 'Settings', href: '/settings' },
   ];
 
   return (
@@ -68,13 +81,13 @@ export function Header({ currentPage }: HeaderProps) {
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-1" aria-label="Main navigation">
           {navItems.map((item) => (
-            <Link key={item.id} href={item.href} aria-current={activePage === item.id ? "page" : undefined}>
+            <Link key={item.id} href={item.href} aria-current={activePage === item.id ? 'page' : undefined}>
               <span
                 className={cn(
-                  "px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer",
+                  'px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer',
                   activePage === item.id
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted',
                 )}
               >
                 {item.label}
@@ -88,9 +101,7 @@ export function Header({ currentPage }: HeaderProps) {
           <ThemeToggle />
           {user && (
             <>
-              <span className="text-sm text-muted-foreground hidden sm:inline">
-                {user.email || "User"}
-              </span>
+              <span className="text-sm text-muted-foreground hidden sm:inline">{user.email || 'User'}</span>
               <Button
                 variant="ghost"
                 size="sm"
@@ -109,20 +120,16 @@ export function Header({ currentPage }: HeaderProps) {
           <SheetContent side="left" className="w-4/5 max-w-sm">
             <SheetHeader>
               <SheetTitle>Navigation</SheetTitle>
-              <SheetDescription>
-                Navigate through the Product Content Studio
-              </SheetDescription>
+              <SheetDescription>Navigate through the Product Content Studio</SheetDescription>
             </SheetHeader>
             <nav className="flex flex-col gap-2 mt-6">
               {navItems.map((item) => (
-                <Link key={item.id} href={item.href}>
+                <Link key={item.id} href={item.href} aria-current={activePage === item.id ? 'page' : undefined}>
                   <span
                     onClick={() => setMobileMenuOpen(false)}
                     className={cn(
-                      "flex items-center min-h-12 px-4 py-3 rounded-md text-base font-medium transition-colors cursor-pointer",
-                      activePage === item.id
-                        ? "bg-primary/10 text-primary"
-                        : "text-foreground hover:bg-muted"
+                      'flex items-center min-h-12 px-4 py-3 rounded-md text-base font-medium transition-colors cursor-pointer',
+                      activePage === item.id ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted',
                     )}
                   >
                     {item.label}

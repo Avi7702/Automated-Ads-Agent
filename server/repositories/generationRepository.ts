@@ -5,19 +5,16 @@ import {
   type InsertGenerationUsage,
   generations,
   generationUsage,
-} from "@shared/schema";
-import { db } from "../db";
-import { and, eq, desc } from "drizzle-orm";
+} from '@shared/schema';
+import { db } from '../db';
+import { and, eq, desc, sql } from 'drizzle-orm';
 
 export async function saveGeneration(insertGeneration: InsertGeneration): Promise<Generation> {
-  const [generation] = await db
-    .insert(generations)
-    .values(insertGeneration)
-    .returning();
+  const [generation] = await db.insert(generations).values(insertGeneration).returning();
   return generation;
 }
 
-export async function getGenerations(limit: number = 50): Promise<Generation[]> {
+export async function getGenerations(limit: number = 50, offset: number = 0): Promise<Generation[]> {
   // Exclude conversationHistory to avoid exceeding Neon's 64MB response limit
   const results = await db
     .select({
@@ -39,17 +36,15 @@ export async function getGenerations(limit: number = 50): Promise<Generation[]> 
     })
     .from(generations)
     .orderBy(desc(generations.createdAt))
-    .limit(limit);
+    .limit(limit)
+    .offset(offset);
 
   // Return with null conversationHistory (not needed for gallery view)
-  return results.map(r => ({ ...r, conversationHistory: null })) as Generation[];
+  return results.map((r) => ({ ...r, conversationHistory: null })) as Generation[];
 }
 
 export async function getGenerationById(id: string): Promise<Generation | undefined> {
-  const [generation] = await db
-    .select()
-    .from(generations)
-    .where(eq(generations.id, id));
+  const [generation] = await db.select().from(generations).where(eq(generations.id, id));
   return generation;
 }
 
@@ -68,25 +63,21 @@ export async function deleteGeneration(id: string): Promise<void> {
 }
 
 export async function getEditHistory(generationId: string): Promise<Generation[]> {
-  const history: Generation[] = [];
-  let currentId: string | null = generationId;
+  const result = await db.execute(sql`
+    WITH RECURSIVE edit_chain AS (
+      SELECT * FROM generations WHERE id = ${generationId}
+      UNION ALL
+      SELECT g.* FROM generations g
+      JOIN edit_chain ec ON g.id = ec.parent_generation_id
+    )
+    SELECT * FROM edit_chain ORDER BY created_at ASC
+  `);
 
-  while (currentId) {
-    const generation = await getGenerationById(currentId);
-    if (!generation) break;
-
-    history.push(generation);
-    currentId = generation.parentGenerationId;
-  }
-
-  return history.reverse(); // Oldest first
+  return (result.rows ?? result) as Generation[];
 }
 
 export async function saveGenerationUsage(insertUsage: InsertGenerationUsage): Promise<GenerationUsage> {
-  const [usage] = await db
-    .insert(generationUsage)
-    .values(insertUsage)
-    .returning();
+  const [usage] = await db.insert(generationUsage).values(insertUsage).returning();
   return usage;
 }
 

@@ -94,10 +94,7 @@ class CopywritingService {
   /**
    * Generate a single copy variation with RAG enhancement
    */
-  private async generateSingleCopy(
-    request: GenerateCopyInput,
-    variationNumber: number
-  ): Promise<GeneratedCopy> {
+  async generateSingleCopy(request: GenerateCopyInput, variationNumber: number): Promise<GeneratedCopy> {
     // STEP 1: Retrieve relevant context from File Search Store (RAG)
     let ragContext = '';
     let citations: any[] = [];
@@ -116,7 +113,10 @@ class CopywritingService {
       if (searchResult) {
         ragContext = searchResult.context;
         citations = searchResult.citations || [];
-        logger.info({ module: 'Copywriting', contextLength: ragContext.length, citationCount: citations.length }, 'Retrieved RAG context');
+        logger.info(
+          { module: 'Copywriting', contextLength: ragContext.length, citationCount: citations.length },
+          'Retrieved RAG context',
+        );
       } else {
         logger.info({ module: 'Copywriting' }, 'No RAG context found for this query');
       }
@@ -147,21 +147,24 @@ class CopywritingService {
     }
 
     // MODEL RECENCY RULE: Before changing any model ID, verify today's date and confirm the model is current within the last 3-4 weeks.
-    const response = await generateContentWithRetry({
-      model: 'gemini-3-pro-preview',
-      contents: [
-        {
-          role: 'user',
-          parts: [{ text: prompt }],
+    const response = await generateContentWithRetry(
+      {
+        model: 'gemini-3-pro-preview',
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: prompt }],
+          },
+        ],
+        config: {
+          responseModalities: ['TEXT'],
+          responseMimeType: 'application/json',
+          responseSchema: this.getResponseSchema(request.platform),
         },
-      ],
-      config: {
-        responseModalities: ['TEXT'],
-        responseMimeType: 'application/json',
-        responseSchema: this.getResponseSchema(request.platform),
+        ...(tools && { tools }),
       },
-      ...(tools && { tools }),
-    }, { operation: 'ad_copy_generation' });
+      { operation: 'ad_copy_generation' },
+    );
     const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const generatedCopy = safeParseLLMResponse(text, generatedCopySchema, 'ad_copy_generation');
 
@@ -194,9 +197,10 @@ class CopywritingService {
     const persona = `You are an expert social media ad copywriter specializing in ${request.platform} advertising. You have 10+ years of experience writing conversion-focused copy for ${request.industry} brands. You understand platform algorithms, user behavior, and what drives engagement.`;
 
     // TASK
-    const framework = request.framework === 'auto' || !request.framework ?
-      'the most effective copywriting framework for this campaign' :
-      request.framework.toUpperCase();
+    const framework =
+      request.framework === 'auto' || !request.framework
+        ? 'the most effective copywriting framework for this campaign'
+        : request.framework.toUpperCase();
 
     const task = `Write compelling ad copy variation #${variationNumber} for a ${request.platform} advertisement using ${framework} framework. This copy must grab attention in 3-8 seconds, resonate with the target audience, and drive them to take action.`;
 
@@ -214,24 +218,36 @@ ${request.uniqueValueProp ? `- Unique Value: ${s(request.uniqueValueProp)}` : ''
 ${request.campaignObjective ? `CAMPAIGN GOAL: ${s(request.campaignObjective).toUpperCase()}` : ''}
 
 TARGET AUDIENCE:
-${request.targetAudience ? `
+${
+  request.targetAudience
+    ? `
 - Demographics: ${s(request.targetAudience.demographics)}
 - Psychographics: ${s(request.targetAudience.psychographics)}
 - Pain Points: ${request.targetAudience.painPoints.map(s).join(', ')}
-` : 'General audience - use broad appeal messaging'}
+`
+    : 'General audience - use broad appeal messaging'
+}
 
 BRAND VOICE & TONE:
-${request.brandVoice ? `
+${
+  request.brandVoice
+    ? `
 - Core Principles: ${request.brandVoice.principles.map(s).join(', ')}
 - Words to USE: ${request.brandVoice.wordsToUse?.map(s).join(', ') || 'N/A'}
 - Words to AVOID: ${request.brandVoice.wordsToAvoid?.map(s).join(', ') || 'N/A'}
-` : `Tone: ${s(request.tone.charAt(0).toUpperCase() + request.tone.slice(1))}`}
+`
+    : `Tone: ${s(request.tone.charAt(0).toUpperCase() + request.tone.slice(1))}`
+}
 
-${request.socialProof ? `
+${
+  request.socialProof
+    ? `
 SOCIAL PROOF (incorporate if relevant):
 ${request.socialProof.testimonial ? s(request.socialProof.testimonial) : ''}
 ${request.socialProof.stats ? s(request.socialProof.stats) : ''}
-` : ''}
+`
+    : ''
+}
 
 PLATFORM REQUIREMENTS (${request.platform.toUpperCase()}):
 ${this.getPlatformRequirements(request.platform)}
@@ -262,30 +278,29 @@ ${variationNumber === 3 ? '- Focus on urgency and scarcity' : ''}
   /**
    * Build PTCF prompt with RAG context (enhanced version)
    */
-  private buildPTCFPromptWithRAG(
-    request: GenerateCopyInput,
-    variationNumber: number,
-    ragContext: string
-  ): string {
+  private buildPTCFPromptWithRAG(request: GenerateCopyInput, variationNumber: number, ragContext: string): string {
     const limits = PLATFORM_LIMITS[request.platform];
 
     // PERSONA
     const persona = `You are an expert social media ad copywriter specializing in ${request.platform} advertising. You have 10+ years of experience writing conversion-focused copy for ${request.industry} brands. You understand platform algorithms, user behavior, and what drives engagement.`;
 
     // TASK
-    const framework = request.framework === 'auto' || !request.framework ?
-      'the most effective copywriting framework for this campaign' :
-      request.framework.toUpperCase();
+    const framework =
+      request.framework === 'auto' || !request.framework
+        ? 'the most effective copywriting framework for this campaign'
+        : request.framework.toUpperCase();
 
     const task = `Write compelling ad copy variation #${variationNumber} for a ${request.platform} advertisement using ${framework} framework. This copy must grab attention in 3-8 seconds, resonate with the target audience, and drive them to take action.`;
 
     // RAG CONTEXT (NEW!)
-    const ragSection = ragContext ? `
+    const ragSection = ragContext
+      ? `
 📚 REFERENCE MATERIALS FROM KNOWLEDGE BASE:
 ${ragContext}
 
 IMPORTANT: Use these reference materials as inspiration and context, but do NOT copy them directly. Adapt the successful patterns, hooks, and approaches to match THIS specific product and audience.
-` : '';
+`
+      : '';
 
     const s = (v: string) => sanitizeForPrompt(v, { maxLength: 500, context: 'copy_ptcf_rag' });
 
@@ -301,24 +316,36 @@ ${request.uniqueValueProp ? `- Unique Value: ${s(request.uniqueValueProp)}` : ''
 ${request.campaignObjective ? `CAMPAIGN GOAL: ${s(request.campaignObjective).toUpperCase()}` : ''}
 
 TARGET AUDIENCE:
-${request.targetAudience ? `
+${
+  request.targetAudience
+    ? `
 - Demographics: ${s(request.targetAudience.demographics)}
 - Psychographics: ${s(request.targetAudience.psychographics)}
 - Pain Points: ${request.targetAudience.painPoints.map(s).join(', ')}
-` : 'General audience - use broad appeal messaging'}
+`
+    : 'General audience - use broad appeal messaging'
+}
 
 BRAND VOICE & TONE:
-${request.brandVoice ? `
+${
+  request.brandVoice
+    ? `
 - Core Principles: ${request.brandVoice.principles.map(s).join(', ')}
 - Words to USE: ${request.brandVoice.wordsToUse?.map(s).join(', ') || 'N/A'}
 - Words to AVOID: ${request.brandVoice.wordsToAvoid?.map(s).join(', ') || 'N/A'}
-` : `Tone: ${s(request.tone.charAt(0).toUpperCase() + request.tone.slice(1))}`}
+`
+    : `Tone: ${s(request.tone.charAt(0).toUpperCase() + request.tone.slice(1))}`
+}
 
-${request.socialProof ? `
+${
+  request.socialProof
+    ? `
 SOCIAL PROOF (incorporate if relevant):
 ${request.socialProof.testimonial ? s(request.socialProof.testimonial) : ''}
 ${request.socialProof.stats ? s(request.socialProof.stats) : ''}
-` : ''}
+`
+    : ''
+}
 
 PLATFORM REQUIREMENTS (${request.platform.toUpperCase()}):
 ${this.getPlatformRequirements(request.platform)}

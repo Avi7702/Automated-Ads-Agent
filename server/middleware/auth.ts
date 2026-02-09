@@ -10,6 +10,7 @@ declare global {
       user?: {
         id: string;
         email: string;
+        role: string;
         failedAttempts: number | null;
         lockedUntil: Date | null;
         createdAt: Date;
@@ -23,17 +24,14 @@ function sanitizeUser(user: User): Express.Request['user'] {
   return {
     id: user.id,
     email: user.email,
+    role: user.role,
     failedAttempts: user.failedAttempts,
     lockedUntil: user.lockedUntil,
     createdAt: user.createdAt,
   };
 }
 
-export async function requireAuth(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
+export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   const userId = req.session?.userId;
 
   if (!userId) {
@@ -61,11 +59,7 @@ export async function requireAuth(
   next();
 }
 
-export async function optionalAuth(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
+export async function optionalAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   const userId = req.session?.userId;
 
   if (userId) {

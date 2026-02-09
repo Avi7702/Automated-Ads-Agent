@@ -30,8 +30,8 @@ const WINDOW_MINUTES = 5;
 const BUCKET_TTL_SECONDS = 300;
 
 /** Thresholds for status classification */
-const DEGRADED_THRESHOLD = 0.10; // 10% failure rate
-const DOWN_THRESHOLD = 0.50; // 50% failure rate
+const DEGRADED_THRESHOLD = 0.1; // 10% failure rate
+const DOWN_THRESHOLD = 0.5; // 50% failure rate
 
 /**
  * Get the current minute bucket key suffix.
@@ -152,9 +152,7 @@ export async function getGeminiHealthStatus(): Promise<GeminiHealth> {
 
     // Parse last_success timestamp
     const lastSuccessResult = results[WINDOW_MINUTES * 2];
-    const lastSuccess = (lastSuccessResult && !lastSuccessResult[0])
-      ? String(lastSuccessResult[1] ?? '')
-      : null;
+    const lastSuccess = lastSuccessResult && !lastSuccessResult[0] ? String(lastSuccessResult[1] ?? '') : null;
 
     const totalCalls = totalFailures + totalSuccesses;
 
@@ -212,7 +210,7 @@ async function checkAndAlertStatusChange(errorType: string): Promise<void> {
       await redis.set('gemini:last_status', 'down', 'EX', BUCKET_TTL_SECONDS);
 
       const alertError = new Error(
-        `Gemini API is DOWN — failure rate ${(health.failureRate * 100).toFixed(1)}% over ${WINDOW_MINUTES} minutes (trigger: ${errorType})`
+        `Gemini API is DOWN — failure rate ${(health.failureRate * 100).toFixed(1)}% over ${WINDOW_MINUTES} minutes (trigger: ${errorType})`,
       );
       alertError.name = 'GeminiServiceDown';
 
@@ -223,17 +221,24 @@ async function checkAndAlertStatusChange(errorType: string): Promise<void> {
         errorType,
       });
 
-      captureMessage(
-        `CRITICAL: Gemini API is DOWN (${(health.failureRate * 100).toFixed(1)}% failure rate)`,
-        'error'
+      captureMessage(`CRITICAL: Gemini API is DOWN (${(health.failureRate * 100).toFixed(1)}% failure rate)`, 'error');
+
+      geminiLogger.error(
+        {
+          status: health.status,
+          failureRate: health.failureRate,
+          lastSuccess: health.lastSuccess,
+          errorType,
+        },
+        'CRITICAL: Gemini API status changed to DOWN',
       );
 
-      geminiLogger.error({
-        status: health.status,
-        failureRate: health.failureRate,
-        lastSuccess: health.lastSuccess,
-        errorType,
-      }, 'CRITICAL: Gemini API status changed to DOWN');
+      // Send Slack/Discord notification
+      import('../services/notificationService')
+        .then(({ notifyHealthTransition }) => {
+          notifyHealthTransition('Gemini API', previousStatus ?? 'unknown', 'down', health.failureRate).catch(() => {});
+        })
+        .catch(() => {});
     }
   } catch {
     // Redis unavailable during alert check — skip alerting

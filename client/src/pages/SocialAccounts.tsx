@@ -104,9 +104,8 @@ export default function SocialAccounts({ embedded = false }: SocialAccountsProps
     }
   };
 
-
   return (
-    <div className={embedded ? "" : "min-h-screen bg-background"}>
+    <div className={embedded ? '' : 'min-h-screen bg-background'}>
       {!embedded && <Header currentPage="settings" />}
 
       <main className="container mx-auto px-4 py-6 max-w-5xl">
@@ -134,7 +133,13 @@ export default function SocialAccounts({ embedded = false }: SocialAccountsProps
 
         {/* Loading state */}
         {loading ? (
-          <div className="space-y-4">
+          <div
+            className="space-y-4"
+            role="status"
+            aria-live="polite"
+            aria-busy="true"
+            aria-label="Loading social accounts"
+          >
             <Skeleton className="h-48 w-full" />
             <Skeleton className="h-48 w-full" />
             <Skeleton className="h-32 w-full" />
@@ -151,11 +156,7 @@ export default function SocialAccounts({ embedded = false }: SocialAccountsProps
 
                 {/* All Connected Accounts */}
                 {accounts.map((account) => (
-                  <ConnectedAccountCard
-                    key={account.id}
-                    account={account}
-                    onDisconnect={handleDisconnect}
-                  />
+                  <ConnectedAccountCard key={account.id} account={account} onDisconnect={handleDisconnect} />
                 ))}
               </div>
             )}
@@ -192,7 +193,8 @@ export default function SocialAccounts({ embedded = false }: SocialAccountsProps
                       <li className="pl-2">
                         <span className="font-medium">Configure OAuth in n8n</span>
                         <p className="ml-6 mt-1 text-muted-foreground">
-                          Go to n8n → Settings → Credentials → Add Credential, then select the platform you want to connect (LinkedIn, Instagram, Facebook, etc.)
+                          Go to n8n → Settings → Credentials → Add Credential, then select the platform you want to
+                          connect (LinkedIn, Instagram, Facebook, etc.)
                         </p>
                       </li>
                       <li className="pl-2">
@@ -221,12 +223,12 @@ export default function SocialAccounts({ embedded = false }: SocialAccountsProps
                       <RefreshCw className="w-4 h-4" />
                       Sync Accounts from n8n
                     </Button>
-                    <Button
-                      variant="outline"
-                      className="gap-2"
-                      asChild
-                    >
-                      <a href="https://docs.n8n.io/integrations/builtin/credentials/" target="_blank" rel="noopener noreferrer">
+                    <Button variant="outline" className="gap-2" asChild>
+                      <a
+                        href="https://docs.n8n.io/integrations/builtin/credentials/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
                         <ExternalLink className="w-4 h-4" />
                         n8n Documentation
                       </a>
@@ -238,9 +240,7 @@ export default function SocialAccounts({ embedded = false }: SocialAccountsProps
                     <div className="flex gap-3">
                       <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
                       <div className="space-y-2 text-sm">
-                        <p className="font-medium text-blue-900 dark:text-blue-100">
-                          Supported Platforms:
-                        </p>
+                        <p className="font-medium text-blue-900 dark:text-blue-100">Supported Platforms:</p>
                         <ul className="list-disc list-inside space-y-1 text-blue-800 dark:text-blue-200">
                           <li>
                             <strong>LinkedIn:</strong> Personal profiles and company pages supported
@@ -265,7 +265,8 @@ export default function SocialAccounts({ embedded = false }: SocialAccountsProps
                           </li>
                         </ul>
                         <p className="mt-3 text-blue-800 dark:text-blue-200">
-                          <strong>Note:</strong> n8n automatically handles token refresh and expiration, so you don't need to worry about re-authorizing.
+                          <strong>Note:</strong> n8n automatically handles token refresh and expiration, so you don't
+                          need to worry about re-authorizing.
                         </p>
                       </div>
                     </div>
