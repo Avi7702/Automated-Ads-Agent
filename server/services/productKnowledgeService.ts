@@ -54,6 +54,7 @@ export interface ProductInfo {
   sku?: string;
   category?: string;
   cloudinaryUrl: string;
+  enrichmentDraft?: Record<string, unknown>;
 }
 
 export interface RelatedProductInfo {
@@ -260,6 +261,7 @@ function mapProductToInfo(product: Product): ProductInfo {
     sku: product.sku || undefined,
     category: product.category || undefined,
     cloudinaryUrl: product.cloudinaryUrl,
+    enrichmentDraft: product.enrichmentDraft as Record<string, unknown> | undefined,
   };
 }
 
@@ -362,6 +364,24 @@ function formatContextForLLM(context: {
   // Tags
   if (product.tags && product.tags.length > 0) {
     parts.push(`\nTags: ${product.tags.join(", ")}`);
+  }
+
+  // Enrichment draft data (scraped from NDS website)
+  const draft = product.enrichmentDraft;
+  if (draft) {
+    if (draft.installationContext) {
+      parts.push(`\n### Installation Context:\n${draft.installationContext}`);
+    }
+    if (Array.isArray(draft.useCases) && draft.useCases.length > 0) {
+      parts.push("\n### Real-World Use Cases:");
+      (draft.useCases as string[]).forEach((uc) => parts.push(`- ${uc}`));
+    }
+    if (Array.isArray(draft.targetAudience) && draft.targetAudience.length > 0) {
+      parts.push(`\nTarget Audience: ${(draft.targetAudience as string[]).join(", ")}`);
+    }
+    if (Array.isArray(draft.relatedCategories) && draft.relatedCategories.length > 0) {
+      parts.push(`\nRelated Categories: ${(draft.relatedCategories as string[]).join(", ")}`);
+    }
   }
 
   // Related products
