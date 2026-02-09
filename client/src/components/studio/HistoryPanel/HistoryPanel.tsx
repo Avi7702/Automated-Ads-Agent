@@ -28,6 +28,7 @@ interface Generation {
   prompt: string;
   createdAt: string;
   platform: string;
+  status?: string;
 }
 
 const tabs = [
@@ -59,7 +60,8 @@ export function HistoryPanel({
     queryFn: async () => {
       const res = await fetch('/api/generations', { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch generations');
-      return res.json();
+      const all: Generation[] = await res.json();
+      return all.filter((g) => !g.status || g.status === 'completed');
     },
   });
 

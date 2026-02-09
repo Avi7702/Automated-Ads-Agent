@@ -6,20 +6,18 @@
  * Ask AI section, copy generation, LinkedIn preview, and history timeline.
  */
 
-import { memo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Link } from "wouter";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { HistoryTimeline } from "@/components/HistoryTimeline";
-import { LinkedInPostPreview } from "@/components/LinkedInPostPreview";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { memo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'wouter';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { HistoryTimeline } from '@/components/HistoryTimeline';
+import { LinkedInPostPreview } from '@/components/LinkedInPostPreview';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import {
   Sparkles,
-  ChevronDown,
-  ChevronUp,
   Check,
   Download,
   RefreshCw,
@@ -31,8 +29,10 @@ import {
   Eye,
   FolderPlus,
   Copy,
-} from "lucide-react";
-import type { StudioOrchestrator } from "@/hooks/useStudioOrchestrator";
+  Wand2,
+} from 'lucide-react';
+import { CanvasEditor } from '@/components/studio/CanvasEditor/CanvasEditor';
+import type { StudioOrchestrator } from '@/hooks/useStudioOrchestrator';
 
 interface ResultViewEnhancedProps {
   orch: StudioOrchestrator;
@@ -42,12 +42,7 @@ export const ResultViewEnhanced = memo(function ResultViewEnhanced({ orch }: Res
   if (!orch.generatedImage) return null;
 
   return (
-    <motion.div
-      id="result"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
-    >
+    <motion.div id="result" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       {/* Result Header */}
       <div className="flex items-center justify-between">
         <Button variant="ghost" onClick={orch.handleReset}>
@@ -55,11 +50,7 @@ export const ResultViewEnhanced = memo(function ResultViewEnhanced({ orch }: Res
           Start New
         </Button>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={orch.handleDownloadWithFeedback}
-            disabled={orch.isDownloading}
-          >
+          <Button variant="outline" onClick={orch.handleDownloadWithFeedback} disabled={orch.isDownloading}>
             {orch.isDownloading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -91,7 +82,7 @@ export const ResultViewEnhanced = memo(function ResultViewEnhanced({ orch }: Res
             scale: orch.imageScale,
             x: orch.imagePosition.x,
             y: orch.imagePosition.y,
-            cursor: orch.imageScale > 1 ? "grab" : "default",
+            cursor: orch.imageScale > 1 ? 'grab' : 'default',
           }}
           onDoubleClick={() => {
             orch.setImageScale(1);
@@ -125,69 +116,63 @@ export const ResultViewEnhanced = memo(function ResultViewEnhanced({ orch }: Res
       </div>
 
       {/* Action Buttons */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
         <Button
-          variant={orch.activeActionButton === "edit" ? "default" : "outline"}
-          className={cn(
-            "h-12 transition-all",
-            orch.activeActionButton === "edit" && "ring-2 ring-primary/30"
-          )}
+          variant={orch.activeActionButton === 'edit' ? 'default' : 'outline'}
+          className={cn('h-12 transition-all', orch.activeActionButton === 'edit' && 'ring-2 ring-primary/30')}
           onClick={() => {
-            orch.haptic("light");
-            orch.setActiveActionButton("edit");
+            orch.haptic('light');
+            orch.setActiveActionButton('edit');
           }}
         >
           <Pencil className="w-4 h-4 mr-2" />
           Edit
         </Button>
         <Button
-          variant={orch.activeActionButton === "copy" ? "default" : "outline"}
-          className={cn(
-            "h-12 transition-all",
-            orch.activeActionButton === "copy" && "ring-2 ring-primary/30"
-          )}
+          variant="outline"
+          className="h-12 transition-all"
           onClick={() => {
-            orch.haptic("light");
-            orch.setActiveActionButton("copy");
+            orch.haptic('light');
+            orch.setShowCanvasEditor(true);
+          }}
+        >
+          <Wand2 className="w-4 h-4 mr-2" />
+          AI Canvas
+        </Button>
+        <Button
+          variant={orch.activeActionButton === 'copy' ? 'default' : 'outline'}
+          className={cn('h-12 transition-all', orch.activeActionButton === 'copy' && 'ring-2 ring-primary/30')}
+          onClick={() => {
+            orch.haptic('light');
+            orch.setActiveActionButton('copy');
           }}
         >
           <MessageCircle className="w-4 h-4 mr-2" />
           Copy
         </Button>
         <Button
-          variant={orch.activeActionButton === "preview" ? "default" : "outline"}
-          className={cn(
-            "h-12 transition-all",
-            orch.activeActionButton === "preview" && "ring-2 ring-primary/30"
-          )}
+          variant={orch.activeActionButton === 'preview' ? 'default' : 'outline'}
+          className={cn('h-12 transition-all', orch.activeActionButton === 'preview' && 'ring-2 ring-primary/30')}
           onClick={() => {
-            orch.haptic("light");
-            orch.setActiveActionButton("preview");
+            orch.haptic('light');
+            orch.setActiveActionButton('preview');
           }}
         >
           <Eye className="w-4 h-4 mr-2" />
           Preview
         </Button>
         <Button
-          variant={orch.activeActionButton === "save" ? "default" : "outline"}
-          className={cn(
-            "h-12 transition-all",
-            orch.activeActionButton === "save" && "ring-2 ring-primary/30"
-          )}
+          variant={orch.activeActionButton === 'save' ? 'default' : 'outline'}
+          className={cn('h-12 transition-all', orch.activeActionButton === 'save' && 'ring-2 ring-primary/30')}
           onClick={() => {
-            orch.haptic("light");
+            orch.haptic('light');
             orch.setShowSaveToCatalog(true);
           }}
         >
           <FolderPlus className="w-4 h-4 mr-2" />
           Save
         </Button>
-        <Button
-          variant="outline"
-          className="h-12"
-          onClick={orch.handleCopyText}
-          disabled={!orch.generatedCopy}
-        >
+        <Button variant="outline" className="h-12" onClick={orch.handleCopyText} disabled={!orch.generatedCopy}>
           {orch.justCopied ? (
             <>
               <Check className="w-4 h-4 mr-2" />
@@ -204,19 +189,16 @@ export const ResultViewEnhanced = memo(function ResultViewEnhanced({ orch }: Res
 
       {/* History Timeline */}
       <ErrorBoundary>
-        <HistoryTimeline
-          currentGenerationId={orch.generationId}
-          onSelect={orch.handleLoadFromHistory}
-        />
+        <HistoryTimeline currentGenerationId={orch.generationId} onSelect={orch.handleLoadFromHistory} />
       </ErrorBoundary>
 
       {/* Edit Section */}
       <AnimatePresence>
-        {orch.activeActionButton === "edit" && (
+        {orch.activeActionButton === 'edit' && (
           <motion.section
             id="refine"
             initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
+            animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             className="rounded-2xl border border-border bg-card/50 p-5 space-y-4 overflow-hidden"
           >
@@ -233,7 +215,7 @@ export const ResultViewEnhanced = memo(function ResultViewEnhanced({ orch }: Res
             />
             {/* Preset edit suggestions */}
             <div className="flex flex-wrap gap-2">
-              {["Warmer lighting", "Cooler tones", "More contrast", "Softer look", "Brighter background"].map(
+              {['Warmer lighting', 'Cooler tones', 'More contrast', 'Softer look', 'Brighter background'].map(
                 (preset) => (
                   <Button
                     key={preset}
@@ -244,7 +226,7 @@ export const ResultViewEnhanced = memo(function ResultViewEnhanced({ orch }: Res
                   >
                     {preset}
                   </Button>
-                )
+                ),
               )}
             </div>
             <Button
@@ -270,11 +252,11 @@ export const ResultViewEnhanced = memo(function ResultViewEnhanced({ orch }: Res
 
       {/* Ask AI Section */}
       <AnimatePresence>
-        {orch.activeActionButton === "copy" && (
+        {orch.activeActionButton === 'copy' && (
           <motion.section
             id="ask-ai"
             initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
+            animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             className="rounded-2xl border border-border bg-card/50 p-5 space-y-4 overflow-hidden"
           >
@@ -288,19 +270,11 @@ export const ResultViewEnhanced = memo(function ResultViewEnhanced({ orch }: Res
                 onChange={(e) => orch.setAskAIQuestion(e.target.value)}
                 placeholder="Ask a question about this generation..."
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") orch.handleAskAI();
+                  if (e.key === 'Enter') orch.handleAskAI();
                 }}
               />
-              <Button
-                onClick={orch.handleAskAI}
-                disabled={!orch.askAIQuestion.trim() || orch.isAskingAI}
-                size="icon"
-              >
-                {orch.isAskingAI ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
+              <Button onClick={orch.handleAskAI} disabled={!orch.askAIQuestion.trim() || orch.isAskingAI} size="icon">
+                {orch.isAskingAI ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               </Button>
             </div>
             {orch.askAIResponse && (
@@ -355,10 +329,10 @@ export const ResultViewEnhanced = memo(function ResultViewEnhanced({ orch }: Res
 
       {/* LinkedIn Preview */}
       <AnimatePresence>
-        {orch.activeActionButton === "preview" && (
+        {orch.activeActionButton === 'preview' && (
           <motion.section
             initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
+            animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             className="rounded-2xl border border-border bg-card/50 p-5 space-y-4 overflow-hidden"
           >
@@ -367,7 +341,7 @@ export const ResultViewEnhanced = memo(function ResultViewEnhanced({ orch }: Res
               LinkedIn Preview
             </h3>
             <LinkedInPostPreview
-              authorName={orch.authUser?.email?.split("@")[0] || "Your Company"}
+              authorName={orch.authUser?.email?.split('@')[0] || 'Your Company'}
               authorHeadline="Building Products | Construction Solutions"
               postText={orch.generatedCopy || null}
               imageUrl={orch.generatedImage}
@@ -378,6 +352,17 @@ export const ResultViewEnhanced = memo(function ResultViewEnhanced({ orch }: Res
               isGeneratingCopy={orch.isGeneratingCopy}
             />
           </motion.section>
+        )}
+      </AnimatePresence>
+      {/* AI Canvas Editor Overlay */}
+      <AnimatePresence>
+        {orch.showCanvasEditor && orch.generatedImage && (
+          <CanvasEditor
+            imageUrl={orch.generatedImage}
+            generationId={orch.generationId}
+            onEditComplete={orch.handleCanvasEditComplete}
+            onClose={() => orch.setShowCanvasEditor(false)}
+          />
         )}
       </AnimatePresence>
     </motion.div>

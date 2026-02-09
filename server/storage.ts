@@ -62,7 +62,10 @@ import {
   type InsertApprovalAuditLog,
   type ApprovalSettings,
   type InsertApprovalSettings,
-} from "@shared/schema";
+  // Style Reference types
+  type StyleReference,
+  type InsertStyleReference,
+} from '@shared/schema';
 
 // Repository imports
 import {
@@ -78,12 +81,13 @@ import {
   approvalRepo,
   apiKeyRepo,
   socialRepo,
-} from "./repositories";
+  styleReferenceRepo,
+} from './repositories';
 
 export interface IStorage {
   // Generation CRUD operations
   saveGeneration(generation: InsertGeneration): Promise<Generation>;
-  getGenerations(limit?: number): Promise<Generation[]>;
+  getGenerations(limit?: number, offset?: number): Promise<Generation[]>;
   getGenerationById(id: string): Promise<Generation | undefined>;
   updateGeneration(id: number | string, updates: Partial<InsertGeneration>): Promise<Generation>;
   deleteGeneration(id: string): Promise<void>;
@@ -91,7 +95,7 @@ export interface IStorage {
 
   // Product CRUD operations
   saveProduct(product: InsertProduct): Promise<Product>;
-  getProducts(): Promise<Product[]>;
+  getProducts(limit?: number, offset?: number): Promise<Product[]>;
   getProductById(id: string): Promise<Product | undefined>;
   deleteProduct(id: string): Promise<void>;
 
@@ -257,7 +261,10 @@ export interface IStorage {
   getApiKeyAuditLog(userId: string, service?: string, limit?: number): Promise<ApiKeyAuditLog[]>;
 
   // Key resolution with fallback
-  resolveApiKey(userId: string, service: string): Promise<{ key: string | null; source: 'user' | 'environment' | 'none' }>;
+  resolveApiKey(
+    userId: string,
+    service: string,
+  ): Promise<{ key: string | null; source: 'user' | 'environment' | 'none' }>;
 
   // ============================================
   // N8N CONFIGURATION VAULT (Phase 8.1)
@@ -286,12 +293,15 @@ export interface IStorage {
 
   // Learned Ad Pattern CRUD operations
   createLearnedPattern(pattern: InsertLearnedAdPattern): Promise<LearnedAdPattern>;
-  getLearnedPatterns(userId: string, filters?: {
-    category?: string;
-    platform?: string;
-    industry?: string;
-    isActive?: boolean;
-  }): Promise<LearnedAdPattern[]>;
+  getLearnedPatterns(
+    userId: string,
+    filters?: {
+      category?: string;
+      platform?: string;
+      industry?: string;
+      isActive?: boolean;
+    },
+  ): Promise<LearnedAdPattern[]>;
   getLearnedPatternById(id: string): Promise<LearnedAdPattern | undefined>;
   getLearnedPatternByHash(userId: string, sourceHash: string): Promise<LearnedAdPattern | undefined>;
   updateLearnedPattern(id: string, updates: Partial<InsertLearnedAdPattern>): Promise<LearnedAdPattern>;
@@ -309,7 +319,12 @@ export interface IStorage {
   // Pattern Application History operations
   createApplicationHistory(history: InsertPatternApplicationHistory): Promise<PatternApplicationHistory>;
   getPatternApplicationHistory(patternId: string): Promise<PatternApplicationHistory[]>;
-  updateApplicationFeedback(id: string, rating: number, wasUsed: boolean, feedback?: string): Promise<PatternApplicationHistory>;
+  updateApplicationFeedback(
+    id: string,
+    rating: number,
+    wasUsed: boolean,
+    feedback?: string,
+  ): Promise<PatternApplicationHistory>;
 
   // ============================================
   // CONTENT PLANNER OPERATIONS
@@ -328,13 +343,16 @@ export interface IStorage {
   // Approval Queue CRUD operations
   createApprovalQueue(data: InsertApprovalQueue): Promise<ApprovalQueue>;
   getApprovalQueue(id: string): Promise<ApprovalQueue | null>;
-  getApprovalQueueForUser(userId: string, filters?: {
-    status?: string;
-    priority?: string;
-    platform?: string;
-    dateFrom?: Date;
-    dateTo?: Date;
-  }): Promise<ApprovalQueue[]>;
+  getApprovalQueueForUser(
+    userId: string,
+    filters?: {
+      status?: string;
+      priority?: string;
+      platform?: string;
+      dateFrom?: Date;
+      dateTo?: Date;
+    },
+  ): Promise<ApprovalQueue[]>;
   updateApprovalQueue(id: string, updates: Partial<ApprovalQueue>): Promise<ApprovalQueue>;
   deleteApprovalQueue(id: string): Promise<void>;
 
@@ -345,6 +363,18 @@ export interface IStorage {
   // Approval Settings operations
   getApprovalSettings(userId: string): Promise<ApprovalSettings | null>;
   updateApprovalSettings(userId: string, settings: Partial<ApprovalSettings>): Promise<ApprovalSettings>;
+
+  // ============================================
+  // STYLE REFERENCE OPERATIONS
+  // ============================================
+  createStyleReference(data: InsertStyleReference): Promise<StyleReference>;
+  getStyleReferencesByUser(userId: string, limit?: number, offset?: number): Promise<StyleReference[]>;
+  getStyleReferenceById(id: string): Promise<StyleReference | undefined>;
+  getStyleReferencesByCategory(userId: string, category: string): Promise<StyleReference[]>;
+  updateStyleReference(id: string, updates: Partial<InsertStyleReference>): Promise<StyleReference>;
+  deleteStyleReference(id: string): Promise<void>;
+  incrementStyleReferenceUsage(id: string): Promise<void>;
+  getStyleReferencesByIds(ids: string[]): Promise<StyleReference[]>;
 }
 
 export class DbStorage implements IStorage {
@@ -354,8 +384,8 @@ export class DbStorage implements IStorage {
   async saveGeneration(generation: InsertGeneration): Promise<Generation> {
     return generationRepo.saveGeneration(generation);
   }
-  async getGenerations(limit?: number): Promise<Generation[]> {
-    return generationRepo.getGenerations(limit);
+  async getGenerations(limit?: number, offset?: number): Promise<Generation[]> {
+    return generationRepo.getGenerations(limit, offset);
   }
   async getGenerationById(id: string): Promise<Generation | undefined> {
     return generationRepo.getGenerationById(id);
@@ -388,8 +418,8 @@ export class DbStorage implements IStorage {
   async saveProduct(product: InsertProduct): Promise<Product> {
     return productRepo.saveProduct(product);
   }
-  async getProducts(): Promise<Product[]> {
-    return productRepo.getProducts();
+  async getProducts(limit?: number, offset?: number): Promise<Product[]> {
+    return productRepo.getProducts(limit, offset);
   }
   async getProductById(id: string): Promise<Product | undefined> {
     return productRepo.getProductById(id);
@@ -508,7 +538,10 @@ export class DbStorage implements IStorage {
   async getTopPerformingAdTemplates(userId: string, limit: number = 10): Promise<PerformingAdTemplate[]> {
     return templateRepo.getTopPerformingAdTemplates(userId, limit);
   }
-  async updatePerformingAdTemplate(id: string, updates: Partial<InsertPerformingAdTemplate>): Promise<PerformingAdTemplate> {
+  async updatePerformingAdTemplate(
+    id: string,
+    updates: Partial<InsertPerformingAdTemplate>,
+  ): Promise<PerformingAdTemplate> {
     return templateRepo.updatePerformingAdTemplate(id, updates);
   }
   async deletePerformingAdTemplate(id: string): Promise<void> {
@@ -524,7 +557,7 @@ export class DbStorage implements IStorage {
       engagementTier?: string;
       industry?: string;
       objective?: string;
-    }
+    },
   ): Promise<PerformingAdTemplate[]> {
     return templateRepo.searchPerformingAdTemplates(userId, filters);
   }
@@ -582,7 +615,10 @@ export class DbStorage implements IStorage {
   async getScenariosByRoomType(roomType: string): Promise<InstallationScenario[]> {
     return knowledgeRepo.getScenariosByRoomType(roomType);
   }
-  async updateInstallationScenario(id: string, updates: Partial<InsertInstallationScenario>): Promise<InstallationScenario> {
+  async updateInstallationScenario(
+    id: string,
+    updates: Partial<InsertInstallationScenario>,
+  ): Promise<InstallationScenario> {
     return knowledgeRepo.updateInstallationScenario(id, updates);
   }
   async deleteInstallationScenario(id: string): Promise<void> {
@@ -611,8 +647,8 @@ export class DbStorage implements IStorage {
   async createBrandImage(image: InsertBrandImage): Promise<BrandImage> {
     return knowledgeRepo.createBrandImage(image);
   }
-  async getBrandImagesByUser(userId: string): Promise<BrandImage[]> {
-    return knowledgeRepo.getBrandImagesByUser(userId);
+  async getBrandImagesByUser(userId: string, limit?: number, offset?: number): Promise<BrandImage[]> {
+    return knowledgeRepo.getBrandImagesByUser(userId, limit, offset);
   }
   async getBrandImagesForProducts(productIds: string[], userId: string): Promise<BrandImage[]> {
     return knowledgeRepo.getBrandImagesForProducts(productIds, userId);
@@ -680,7 +716,10 @@ export class DbStorage implements IStorage {
   async createSyncHistoryEntry(entry: InsertGoogleQuotaSyncHistory): Promise<GoogleQuotaSyncHistory> {
     return quotaRepo.createSyncHistoryEntry(entry);
   }
-  async updateSyncHistoryEntry(id: string, updates: Partial<InsertGoogleQuotaSyncHistory>): Promise<GoogleQuotaSyncHistory> {
+  async updateSyncHistoryEntry(
+    id: string,
+    updates: Partial<InsertGoogleQuotaSyncHistory>,
+  ): Promise<GoogleQuotaSyncHistory> {
     return quotaRepo.updateSyncHistoryEntry(id, updates);
   }
   async getRecentSyncHistory(limit?: number): Promise<GoogleQuotaSyncHistory[]> {
@@ -727,7 +766,10 @@ export class DbStorage implements IStorage {
   async getApiKeyAuditLog(userId: string, service?: string, limit?: number): Promise<ApiKeyAuditLog[]> {
     return apiKeyRepo.getApiKeyAuditLog(userId, service, limit);
   }
-  async resolveApiKey(userId: string, service: string): Promise<{ key: string | null; source: 'user' | 'environment' | 'none' }> {
+  async resolveApiKey(
+    userId: string,
+    service: string,
+  ): Promise<{ key: string | null; source: 'user' | 'environment' | 'none' }> {
     return apiKeyRepo.resolveApiKey(userId, service);
   }
 
@@ -772,12 +814,15 @@ export class DbStorage implements IStorage {
   async createLearnedPattern(pattern: InsertLearnedAdPattern): Promise<LearnedAdPattern> {
     return patternRepo.createLearnedPattern(pattern);
   }
-  async getLearnedPatterns(userId: string, filters?: {
-    category?: string;
-    platform?: string;
-    industry?: string;
-    isActive?: boolean;
-  }): Promise<LearnedAdPattern[]> {
+  async getLearnedPatterns(
+    userId: string,
+    filters?: {
+      category?: string;
+      platform?: string;
+      industry?: string;
+      isActive?: boolean;
+    },
+  ): Promise<LearnedAdPattern[]> {
     return patternRepo.getLearnedPatterns(userId, filters);
   }
   async getLearnedPatternById(id: string): Promise<LearnedAdPattern | undefined> {
@@ -804,7 +849,11 @@ export class DbStorage implements IStorage {
   async updateUploadStatus(id: string, status: string, errorMessage?: string): Promise<AdAnalysisUpload> {
     return patternRepo.updateUploadStatus(id, status, errorMessage);
   }
-  async updateUploadWithPattern(id: string, patternId: string, processingDurationMs: number): Promise<AdAnalysisUpload> {
+  async updateUploadWithPattern(
+    id: string,
+    patternId: string,
+    processingDurationMs: number,
+  ): Promise<AdAnalysisUpload> {
     return patternRepo.updateUploadWithPattern(id, patternId, processingDurationMs);
   }
   async getExpiredUploads(): Promise<AdAnalysisUpload[]> {
@@ -819,7 +868,12 @@ export class DbStorage implements IStorage {
   async getPatternApplicationHistory(patternId: string): Promise<PatternApplicationHistory[]> {
     return patternRepo.getPatternApplicationHistory(patternId);
   }
-  async updateApplicationFeedback(id: string, rating: number, wasUsed: boolean, feedback?: string): Promise<PatternApplicationHistory> {
+  async updateApplicationFeedback(
+    id: string,
+    rating: number,
+    wasUsed: boolean,
+    feedback?: string,
+  ): Promise<PatternApplicationHistory> {
     return patternRepo.updateApplicationFeedback(id, rating, wasUsed, feedback);
   }
 
@@ -848,13 +902,16 @@ export class DbStorage implements IStorage {
   async getApprovalQueue(id: string): Promise<ApprovalQueue | null> {
     return approvalRepo.getApprovalQueue(id);
   }
-  async getApprovalQueueForUser(userId: string, filters?: {
-    status?: string;
-    priority?: string;
-    platform?: string;
-    dateFrom?: Date;
-    dateTo?: Date;
-  }): Promise<ApprovalQueue[]> {
+  async getApprovalQueueForUser(
+    userId: string,
+    filters?: {
+      status?: string;
+      priority?: string;
+      platform?: string;
+      dateFrom?: Date;
+      dateTo?: Date;
+    },
+  ): Promise<ApprovalQueue[]> {
     return approvalRepo.getApprovalQueueForUser(userId, filters);
   }
   async updateApprovalQueue(id: string, updates: Partial<ApprovalQueue>): Promise<ApprovalQueue> {
@@ -874,6 +931,34 @@ export class DbStorage implements IStorage {
   }
   async updateApprovalSettings(userId: string, settings: Partial<ApprovalSettings>): Promise<ApprovalSettings> {
     return approvalRepo.updateApprovalSettings(userId, settings);
+  }
+
+  // ============================================
+  // STYLE REFERENCE OPERATIONS
+  // ============================================
+  async createStyleReference(data: InsertStyleReference): Promise<StyleReference> {
+    return styleReferenceRepo.createStyleReference(data);
+  }
+  async getStyleReferencesByUser(userId: string, limit?: number, offset?: number): Promise<StyleReference[]> {
+    return styleReferenceRepo.getStyleReferencesByUser(userId, limit, offset);
+  }
+  async getStyleReferenceById(id: string): Promise<StyleReference | undefined> {
+    return styleReferenceRepo.getStyleReferenceById(id);
+  }
+  async getStyleReferencesByCategory(userId: string, category: string): Promise<StyleReference[]> {
+    return styleReferenceRepo.getStyleReferencesByCategory(userId, category);
+  }
+  async updateStyleReference(id: string, updates: Partial<InsertStyleReference>): Promise<StyleReference> {
+    return styleReferenceRepo.updateStyleReference(id, updates);
+  }
+  async deleteStyleReference(id: string): Promise<void> {
+    return styleReferenceRepo.deleteStyleReference(id);
+  }
+  async incrementStyleReferenceUsage(id: string): Promise<void> {
+    return styleReferenceRepo.incrementUsageCount(id);
+  }
+  async getStyleReferencesByIds(ids: string[]): Promise<StyleReference[]> {
+    return styleReferenceRepo.getStyleReferencesByIds(ids);
   }
 }
 

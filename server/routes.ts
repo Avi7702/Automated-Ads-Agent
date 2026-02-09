@@ -1065,6 +1065,7 @@ Consider these product relationships and usage contexts when generating the imag
 
       // Create a new generation record for the edit (status: pending)
       const newGeneration = await storage.saveGeneration({
+        userId: userId || undefined,
         prompt: parentGeneration.prompt,
         editPrompt: editPrompt.trim(),
         generatedImagePath: parentGeneration.generatedImagePath, // Placeholder, will be updated by worker
@@ -1081,7 +1082,7 @@ Consider these product relationships and usage contexts when generating the imag
       const job = await generationQueue.add('edit-generation', {
         jobType: JobType.EDIT,
         userId: userId || 'anonymous',
-        generationId: parseInt(newGeneration.id, 10),
+        generationId: newGeneration.id,
         editPrompt: editPrompt.trim(),
         originalImageUrl: parentGeneration.generatedImagePath,
         createdAt: new Date().toISOString(),

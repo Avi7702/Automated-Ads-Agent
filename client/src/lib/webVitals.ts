@@ -12,8 +12,19 @@ function sendToAnalytics(metric: Metric) {
     return;
   }
 
-  // In production, you could send to an analytics endpoint:
-  // navigator.sendBeacon('/api/analytics/vitals', JSON.stringify(metric));
+  // Send to analytics endpoint in production
+  const payload = JSON.stringify({
+    name: metric.name,
+    value: metric.value,
+    rating: metric.rating,
+    delta: metric.delta,
+    id: metric.id,
+    navigationType: metric.navigationType,
+  });
+
+  if (typeof navigator.sendBeacon === 'function') {
+    navigator.sendBeacon('/api/analytics/vitals', payload);
+  }
 }
 
 /**

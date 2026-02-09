@@ -110,7 +110,9 @@ export function createRateLimiter(options: RateLimiterOptions = {}) {
       return next();
     }
 
-    const key = req.ip ?? req.socket.remoteAddress ?? 'unknown';
+    // Use user ID for authenticated requests (per-user limiting), fall back to IP
+    const userId = (req.session as any)?.userId;
+    const key = userId ? `user:${userId}` : (req.ip ?? req.socket.remoteAddress ?? 'unknown');
 
     if (redisEnabled) {
       // Attempt Redis-backed rate limiting
@@ -118,16 +120,8 @@ export function createRateLimiter(options: RateLimiterOptions = {}) {
         .then((result) => {
           if (result === null) {
             // Redis unavailable — fall back to in-memory
-            rateLimitLogger.warn(
-              { storeName, key },
-              'Redis rate limit unavailable, using in-memory fallback',
-            );
-            const memResult = checkInMemoryRateLimit(
-              stores[storeName] as RateLimitStore,
-              key,
-              windowMs,
-              maxRequests,
-            );
+            rateLimitLogger.warn({ storeName, key }, 'Redis rate limit unavailable, using in-memory fallback');
+            const memResult = checkInMemoryRateLimit(stores[storeName] as RateLimitStore, key, windowMs, maxRequests);
             if (!memResult.allowed) {
               return res.status(429).json({
                 error: 'Too many requests',
@@ -157,12 +151,7 @@ export function createRateLimiter(options: RateLimiterOptions = {}) {
             { storeName, key, err },
             'Unexpected error in Redis rate limit, using in-memory fallback',
           );
-          const memResult = checkInMemoryRateLimit(
-            stores[storeName] as RateLimitStore,
-            key,
-            windowMs,
-            maxRequests,
-          );
+          const memResult = checkInMemoryRateLimit(stores[storeName] as RateLimitStore, key, windowMs, maxRequests);
           if (!memResult.allowed) {
             return res.status(429).json({
               error: 'Too many requests',

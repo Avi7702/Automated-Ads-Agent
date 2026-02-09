@@ -2,6 +2,24 @@
 
 ---
 
+## CRITICAL: Multi-Agent Branching Protocol
+
+**Multiple AI agents (Claude Code, Codex, etc.) may work on this repo simultaneously.**
+
+### Rules for ALL agents:
+1. **NEVER push directly to `main`** — always create a feature branch
+2. **Branch naming**: `claude/<short-description>` or `codex/<short-description>`
+3. **Open a PR** for every change — even small fixes
+4. **Rebase before PR**: `git fetch origin && git rebase origin/main` to avoid conflicts
+5. **PR description** must list all files changed and why
+6. **Do NOT merge your own PR** unless the user explicitly says to
+
+### Why:
+When two agents push to `main` independently, the second push overwrites the first.
+Feature branches + PRs let the user review and merge in the correct order.
+
+---
+
 ## Core Principle: VERIFY, DON'T ASSUME
 
 You must verify information before responding. Never make assumptions about code, APIs, dates, versions, or any factual claims.

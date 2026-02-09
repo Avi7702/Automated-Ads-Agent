@@ -16,8 +16,6 @@
     "security-guidance@anthropics/claude-code"
   ],
   "permissions": {
-    "allow": [
-      "Bash(NODE_TLS_REJECT_UNAUTHORIZED=0 node -e:*)"
-    ]
+    "allow": ["Bash(NODE_TLS_REJECT_UNAUTHORIZED=0 node -e:*)", "Bash(cd:*)"]
   }
 }

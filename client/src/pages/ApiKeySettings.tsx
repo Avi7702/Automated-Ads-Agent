@@ -1,17 +1,17 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link } from "wouter";
-import { ArrowLeft, KeyRound, ShieldCheck, Info, Webhook } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Header } from "@/components/layout/Header";
-import { ApiKeyCard, type ApiKeyInfo } from "@/components/settings/ApiKeyCard";
-import { ApiKeyForm } from "@/components/settings/ApiKeyForm";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
-import { SUPPORTED_SERVICES } from "@/lib/apiKeyConfig";
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'wouter';
+import { ArrowLeft, KeyRound, ShieldCheck, Info, Webhook } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Header } from '@/components/layout/Header';
+import { ApiKeyCard, type ApiKeyInfo } from '@/components/settings/ApiKeyCard';
+import { ApiKeyForm } from '@/components/settings/ApiKeyForm';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
+import { SUPPORTED_SERVICES } from '@/lib/apiKeyConfig';
 
 interface ApiKeysResponse {
   keys: ApiKeyInfo[];
@@ -42,13 +42,13 @@ export default function ApiKeySettings({ embedded = false }: ApiKeySettingsProps
     isLoading,
     error,
   } = useQuery<ApiKeysResponse>({
-    queryKey: ["/api/settings/api-keys"],
+    queryKey: ['/api/settings/api-keys'],
     refetchOnWindowFocus: true,
   });
 
   // Fetch n8n configuration (Phase 8.1)
   const { data: n8nData } = useQuery({
-    queryKey: ["/api/settings/n8n"],
+    queryKey: ['/api/settings/n8n'],
     refetchOnWindowFocus: true,
     onSuccess: (data: any) => {
       if (data?.configured) {
@@ -62,26 +62,16 @@ export default function ApiKeySettings({ embedded = false }: ApiKeySettingsProps
 
   // Save API key mutation
   const saveMutation = useMutation({
-    mutationFn: async ({
-      service,
-      data,
-    }: {
-      service: string;
-      data: Record<string, string>;
-    }) => {
-      const response = await apiRequest(
-        "POST",
-        `/api/settings/api-keys/${service}`,
-        data
-      );
+    mutationFn: async ({ service, data }: { service: string; data: Record<string, string> }) => {
+      const response = await apiRequest('POST', `/api/settings/api-keys/${service}`, data);
       return response.json();
     },
     onSuccess: (data, variables) => {
       setFormSuccess(true);
       setFormError(null);
-      queryClient.invalidateQueries({ queryKey: ["/api/settings/api-keys"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/api-keys'] });
       toast({
-        title: "API Key Saved",
+        title: 'API Key Saved',
         description: `Your ${variables.service} API key has been saved and validated.`,
       });
       // Close dialog after a brief delay to show success
@@ -100,35 +90,31 @@ export default function ApiKeySettings({ embedded = false }: ApiKeySettingsProps
   const validateMutation = useMutation({
     mutationFn: async (service: string) => {
       setValidatingService(service);
-      const response = await apiRequest(
-        "POST",
-        `/api/settings/api-keys/${service}/validate`,
-        {}
-      );
+      const response = await apiRequest('POST', `/api/settings/api-keys/${service}/validate`, {});
       return response.json();
     },
     onSuccess: (data, service) => {
       setValidatingService(null);
-      queryClient.invalidateQueries({ queryKey: ["/api/settings/api-keys"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/api-keys'] });
       if (data.isValid) {
         toast({
-          title: "Key Valid",
+          title: 'Key Valid',
           description: `Your ${service} API key is working correctly.`,
         });
       } else {
         toast({
-          title: "Key Invalid",
+          title: 'Key Invalid',
           description: data.error || `Your ${service} API key is no longer valid.`,
-          variant: "destructive",
+          variant: 'destructive',
         });
       }
     },
     onError: (error: Error, service) => {
       setValidatingService(null);
       toast({
-        title: "Validation Failed",
+        title: 'Validation Failed',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
     },
   });
@@ -137,26 +123,23 @@ export default function ApiKeySettings({ embedded = false }: ApiKeySettingsProps
   const deleteMutation = useMutation({
     mutationFn: async (service: string) => {
       setDeletingService(service);
-      const response = await apiRequest(
-        "DELETE",
-        `/api/settings/api-keys/${service}`
-      );
+      const response = await apiRequest('DELETE', `/api/settings/api-keys/${service}`);
       return response.json();
     },
     onSuccess: (data, service) => {
       setDeletingService(null);
-      queryClient.invalidateQueries({ queryKey: ["/api/settings/api-keys"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/api-keys'] });
       toast({
-        title: "Key Removed",
+        title: 'Key Removed',
         description: `Your custom ${service} API key has been removed.`,
       });
     },
     onError: (error: Error, service) => {
       setDeletingService(null);
       toast({
-        title: "Deletion Failed",
+        title: 'Deletion Failed',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
     },
   });
@@ -183,33 +166,33 @@ export default function ApiKeySettings({ embedded = false }: ApiKeySettingsProps
   const saveN8nConfig = async () => {
     if (!n8nConfig.baseUrl) {
       toast({
-        title: "Validation Error",
-        description: "n8n instance URL is required",
-        variant: "destructive",
+        title: 'Validation Error',
+        description: 'n8n instance URL is required',
+        variant: 'destructive',
       });
       return;
     }
 
     setSavingN8n(true);
     try {
-      const response = await apiRequest("POST", "/api/settings/n8n", n8nConfig);
+      const response = await apiRequest('POST', '/api/settings/n8n', n8nConfig);
       const data = await response.json();
 
       if (data.success) {
         toast({
-          title: "n8n Configuration Saved",
-          description: "Your n8n configuration has been saved securely",
+          title: 'n8n Configuration Saved',
+          description: 'Your n8n configuration has been saved securely',
         });
-        queryClient.invalidateQueries({ queryKey: ["/api/settings/n8n"] });
+        queryClient.invalidateQueries({ queryKey: ['/api/settings/n8n'] });
         setN8nConfig({ ...n8nConfig, apiKey: '' }); // Clear API key field after save
       } else {
-        throw new Error(data.error || "Failed to save n8n configuration");
+        throw new Error(data.error || 'Failed to save n8n configuration');
       }
     } catch (error: any) {
       toast({
-        title: "Save Failed",
-        description: error.message || "Failed to save n8n configuration",
-        variant: "destructive",
+        title: 'Save Failed',
+        description: error.message || 'Failed to save n8n configuration',
+        variant: 'destructive',
       });
     } finally {
       setSavingN8n(false);
@@ -244,58 +227,62 @@ export default function ApiKeySettings({ embedded = false }: ApiKeySettingsProps
         <ShieldCheck className="h-4 w-4" />
         <AlertTitle>Security</AlertTitle>
         <AlertDescription>
-          Your API keys are encrypted with AES-256-GCM before storage. Keys
-          are never logged or exposed in API responses after saving.
+          Your API keys are encrypted with AES-256-GCM before storage. Keys are never logged or exposed in API responses
+          after saving.
         </AlertDescription>
       </Alert>
 
-        {/* Error State */}
-        {error && (
-          <Alert variant="destructive" className="mb-6">
-            <Info className="h-4 w-4" />
-            <AlertTitle>Error Loading Keys</AlertTitle>
-            <AlertDescription>
-              {error instanceof Error
-                ? error.message
-                : "Failed to load API keys. Please try again."}
-            </AlertDescription>
-          </Alert>
-        )}
+      {/* Error State */}
+      {error && (
+        <Alert variant="destructive" className="mb-6">
+          <Info className="h-4 w-4" />
+          <AlertTitle>Error Loading Keys</AlertTitle>
+          <AlertDescription>
+            {error instanceof Error ? error.message : 'Failed to load API keys. Please try again.'}
+          </AlertDescription>
+        </Alert>
+      )}
 
-        {/* Loading State */}
-        {isLoading && (
-          <div className="grid gap-4 md:grid-cols-2">
-            {SUPPORTED_SERVICES.map((service) => (
-              <div key={service} className="rounded-xl border bg-card p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <Skeleton className="h-10 w-10 rounded-lg" />
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-3 w-48" />
-                  </div>
+      {/* Loading State */}
+      {isLoading && (
+        <div
+          className="grid gap-4 md:grid-cols-2"
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
+          aria-label="Loading API keys"
+        >
+          {SUPPORTED_SERVICES.map((service) => (
+            <div key={service} className="rounded-xl border bg-card p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <Skeleton className="h-10 w-10 rounded-lg" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-48" />
                 </div>
-                <Skeleton className="h-9 w-full" />
               </div>
-            ))}
-          </div>
-        )}
+              <Skeleton className="h-9 w-full" />
+            </div>
+          ))}
+        </div>
+      )}
 
-        {/* API Key Cards */}
-        {!isLoading && !error && (
-          <div className="grid gap-4 lg:grid-cols-2">
-            {SUPPORTED_SERVICES.map((service) => (
-              <ApiKeyCard
-                key={service}
-                keyInfo={getKeyInfo(service)}
-                onEdit={() => handleEdit(service)}
-                onDelete={() => deleteMutation.mutate(service)}
-                onValidate={() => validateMutation.mutate(service)}
-                isValidating={validatingService === service}
-                isDeleting={deletingService === service}
-              />
-            ))}
-          </div>
-        )}
+      {/* API Key Cards */}
+      {!isLoading && !error && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {SUPPORTED_SERVICES.map((service) => (
+            <ApiKeyCard
+              key={service}
+              keyInfo={getKeyInfo(service)}
+              onEdit={() => handleEdit(service)}
+              onDelete={() => deleteMutation.mutate(service)}
+              onValidate={() => validateMutation.mutate(service)}
+              isValidating={validatingService === service}
+              isDeleting={deletingService === service}
+            />
+          ))}
+        </div>
+      )}
 
       {/* n8n Configuration - Phase 8.1 */}
       <div className="mt-8 p-6 rounded-xl border bg-card">
@@ -305,8 +292,7 @@ export default function ApiKeySettings({ embedded = false }: ApiKeySettingsProps
         </div>
 
         <p className="text-sm text-muted-foreground mb-4">
-          Configure your n8n instance for multi-platform social media posting.
-          OAuth credentials are managed within n8n.
+          Configure your n8n instance for multi-platform social media posting. OAuth credentials are managed within n8n.
         </p>
 
         <div className="space-y-4">
@@ -318,9 +304,7 @@ export default function ApiKeySettings({ embedded = false }: ApiKeySettingsProps
               value={n8nConfig.baseUrl}
               onChange={(e) => setN8nConfig({ ...n8nConfig, baseUrl: e.target.value })}
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              Your n8n cloud or self-hosted instance URL
-            </p>
+            <p className="text-xs text-muted-foreground mt-1">Your n8n cloud or self-hosted instance URL</p>
           </div>
 
           <div>
@@ -334,15 +318,10 @@ export default function ApiKeySettings({ embedded = false }: ApiKeySettingsProps
               value={n8nConfig.apiKey}
               onChange={(e) => setN8nConfig({ ...n8nConfig, apiKey: e.target.value })}
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              Optional: For authenticated webhook calls
-            </p>
+            <p className="text-xs text-muted-foreground mt-1">Optional: For authenticated webhook calls</p>
           </div>
 
-          <Button
-            onClick={saveN8nConfig}
-            disabled={!n8nConfig.baseUrl || savingN8n}
-          >
+          <Button onClick={saveN8nConfig} disabled={!n8nConfig.baseUrl || savingN8n}>
             {savingN8n ? 'Saving...' : 'Save n8n Configuration'}
           </Button>
 
@@ -360,8 +339,8 @@ export default function ApiKeySettings({ embedded = false }: ApiKeySettingsProps
         <Alert className="mt-4">
           <ShieldCheck className="w-4 h-4" />
           <AlertDescription>
-            <strong>Security:</strong> Your n8n API key is encrypted with AES-256-GCM
-            and stored securely in the vault. It's never exposed in API responses.
+            <strong>Security:</strong> Your n8n API key is encrypted with AES-256-GCM and stored securely in the vault.
+            It's never exposed in API responses.
           </AlertDescription>
         </Alert>
       </div>
@@ -373,22 +352,20 @@ export default function ApiKeySettings({ embedded = false }: ApiKeySettingsProps
           <li className="flex items-start gap-2">
             <span className="text-primary mt-0.5">1.</span>
             <span>
-              <strong className="text-foreground">Default keys</strong> are
-              shared across all users with rate limits.
+              <strong className="text-foreground">Default keys</strong> are shared across all users with rate limits.
             </span>
           </li>
           <li className="flex items-start gap-2">
             <span className="text-primary mt-0.5">2.</span>
             <span>
-              <strong className="text-foreground">Custom keys</strong> give
-              you dedicated quota and are billed to your account.
+              <strong className="text-foreground">Custom keys</strong> give you dedicated quota and are billed to your
+              account.
             </span>
           </li>
           <li className="flex items-start gap-2">
             <span className="text-primary mt-0.5">3.</span>
             <span>
-              <strong className="text-foreground">Remove</strong> a custom
-              key anytime to revert to the default.
+              <strong className="text-foreground">Remove</strong> a custom key anytime to revert to the default.
             </span>
           </li>
         </ul>
@@ -443,8 +420,7 @@ export default function ApiKeySettings({ embedded = false }: ApiKeySettingsProps
           <h1 className="text-2xl font-semibold text-foreground">API Key Settings</h1>
         </div>
         <p className="text-muted-foreground mb-8">
-          Manage your API keys for external services. Custom keys use your own
-          quota and billing.
+          Manage your API keys for external services. Custom keys use your own quota and billing.
         </p>
 
         {content}

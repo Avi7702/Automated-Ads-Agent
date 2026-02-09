@@ -1,8 +1,13 @@
 // @ts-nocheck
-import { motion } from "framer-motion";
-import { Loader2 } from "lucide-react";
+import { motion } from 'framer-motion';
+import { Loader2, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
-export function GeneratingView() {
+interface GeneratingViewProps {
+  onCancel?: () => void;
+}
+
+export function GeneratingView({ onCancel }: GeneratingViewProps) {
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -18,17 +23,17 @@ export function GeneratingView() {
         <motion.div
           className="absolute inset-0 rounded-full border-2 border-primary/30"
           animate={{ rotate: 360 }}
-          transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+          transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
         />
         <motion.div
           className="absolute inset-2 rounded-full border-2 border-t-primary border-r-transparent border-b-transparent border-l-transparent"
           animate={{ rotate: -360 }}
-          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+          transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
         />
         <motion.div
           className="absolute inset-4 rounded-full border-2 border-t-transparent border-r-primary border-b-transparent border-l-transparent"
           animate={{ rotate: 360 }}
-          transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+          transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
         />
         <div className="absolute inset-0 flex items-center justify-center">
           <Loader2 className="w-8 h-8 text-primary animate-spin" />
@@ -44,9 +49,7 @@ export function GeneratingView() {
         >
           Generating your image...
         </motion.p>
-        <p className="text-sm text-muted-foreground">
-          This usually takes 15-30 seconds
-        </p>
+        <p className="text-sm text-muted-foreground">This usually takes 15-30 seconds</p>
       </div>
 
       {/* Pulse dots */}
@@ -64,6 +67,22 @@ export function GeneratingView() {
           />
         ))}
       </div>
+
+      {/* Cancel button */}
+      {onCancel && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 2 }}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onCancel}
+            className="text-muted-foreground hover:text-destructive"
+            aria-label="Cancel generation"
+          >
+            <X className="w-4 h-4 mr-1.5" />
+            Stop Generating
+          </Button>
+        </motion.div>
+      )}
     </motion.div>
   );
 }

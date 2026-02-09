@@ -147,6 +147,7 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
 
       // Create a new generation record for the edit (status: pending)
       const newGeneration = await storage.saveGeneration({
+        userId: userId || undefined,
         prompt: parentGeneration.prompt,
         editPrompt: editPrompt.trim(),
         generatedImagePath: parentGeneration.generatedImagePath, // Placeholder, will be updated by worker
@@ -163,7 +164,7 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
       const job = await generationQueue.add('edit-generation', {
         jobType: JobType.EDIT,
         userId: userId || 'anonymous',
-        generationId: parseInt(newGeneration.id, 10),
+        generationId: newGeneration.id,
         editPrompt: editPrompt.trim(),
         originalImageUrl: parentGeneration.generatedImagePath,
         createdAt: new Date().toISOString(),

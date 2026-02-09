@@ -6,28 +6,23 @@
  * prompt/IdeaBank, output settings, price estimate, and generate button.
  */
 
-import { memo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { cn, getProductImageUrl } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { IdeaBankPanel } from "@/components/IdeaBankPanel";
-import { TemplateLibrary } from "@/components/TemplateLibrary";
-import { UploadZone } from "@/components/UploadZone";
-import { ContentPlannerGuidance } from "@/components/ContentPlannerGuidance";
-import { CarouselBuilder } from "@/components/CarouselBuilder";
-import { BeforeAfterBuilder } from "@/components/BeforeAfterBuilder";
-import { TextOnlyMode } from "@/components/TextOnlyMode";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { memo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn, getProductImageUrl } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { IdeaBankPanel } from '@/components/IdeaBankPanel';
+import { TemplateLibrary } from '@/components/TemplateLibrary';
+import { UploadZone } from '@/components/UploadZone';
+import { ContentPlannerGuidance } from '@/components/ContentPlannerGuidance';
+import { CarouselBuilder } from '@/components/CarouselBuilder';
+import { BeforeAfterBuilder } from '@/components/BeforeAfterBuilder';
+import { TextOnlyMode } from '@/components/TextOnlyMode';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { StyleReferenceSelector } from '@/components/studio/StyleReferenceSelector';
 import {
   Sparkles,
   ChevronDown,
@@ -40,9 +35,10 @@ import {
   TrendingUp,
   Wand2,
   FileImage,
-} from "lucide-react";
-import { useRipple } from "@/hooks/useRipple";
-import type { StudioOrchestrator } from "@/hooks/useStudioOrchestrator";
+  Palette,
+} from 'lucide-react';
+import { useRipple } from '@/hooks/useRipple';
+import type { StudioOrchestrator } from '@/hooks/useStudioOrchestrator';
 
 /** Collapsible section wrapper */
 function Section({
@@ -117,16 +113,14 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
             placeholder="Describe what you want to create..."
             className="flex-1 min-h-[100px] resize-none text-base"
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
+              if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 if (orch.quickStartPrompt.trim()) orch.handleGenerate();
               }
             }}
           />
           <div className="flex justify-between items-center">
-            <span className="text-xs text-muted-foreground">
-              Press Enter to generate, Shift+Enter for new line
-            </span>
+            <span className="text-xs text-muted-foreground">Press Enter to generate, Shift+Enter for new line</span>
             <Button onClick={orch.handleGenerate} disabled={!orch.quickStartPrompt.trim()}>
               <Sparkles className="w-4 h-4 mr-2" />
               Generate Now
@@ -145,12 +139,12 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
         <h3 className="text-sm font-medium text-muted-foreground">Choose Your Path</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <button
-            onClick={() => orch.setIdeaBankMode("freestyle")}
+            onClick={() => orch.setIdeaBankMode('freestyle')}
             className={cn(
-              "p-4 rounded-xl border-2 text-left transition-all",
-              orch.ideaBankMode === "freestyle"
-                ? "border-primary bg-primary/5"
-                : "border-border hover:border-primary/50"
+              'p-4 rounded-xl border-2 text-left transition-all',
+              orch.ideaBankMode === 'freestyle'
+                ? 'border-primary bg-primary/5'
+                : 'border-border hover:border-primary/50',
             )}
           >
             <Wand2 className="w-5 h-5 text-primary mb-2" />
@@ -158,12 +152,12 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
             <p className="text-xs text-muted-foreground mt-1">Describe freely, AI interprets</p>
           </button>
           <button
-            onClick={() => orch.setIdeaBankMode("template")}
+            onClick={() => orch.setIdeaBankMode('template')}
             className={cn(
-              "p-4 rounded-xl border-2 text-left transition-all",
-              orch.ideaBankMode === "template"
-                ? "border-primary bg-primary/5"
-                : "border-border hover:border-primary/50"
+              'p-4 rounded-xl border-2 text-left transition-all',
+              orch.ideaBankMode === 'template'
+                ? 'border-primary bg-primary/5'
+                : 'border-border hover:border-primary/50',
             )}
           >
             <FileImage className="w-5 h-5 text-primary mb-2" />
@@ -172,15 +166,13 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
           </button>
         </div>
 
-        {orch.ideaBankMode === "template" && (
+        {orch.ideaBankMode === 'template' && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
+            animate={{ opacity: 1, height: 'auto' }}
             className="p-4 rounded-xl border border-border"
           >
-            <TemplateLibrary
-              onSelectTemplate={(template) => orch.setSelectedTemplateForMode(template)}
-            />
+            <TemplateLibrary onSelectTemplate={(template) => orch.setSelectedTemplateForMode(template)} />
           </motion.div>
         )}
       </motion.div>
@@ -191,8 +183,12 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
         title="Upload Images"
         icon={Package}
         isOpen={!orch.collapsedSections.upload}
-        onToggle={() => orch.toggleSection("upload")}
-        badge={orch.tempUploads.length > 0 ? `${orch.tempUploads.length} file${orch.tempUploads.length > 1 ? "s" : ""}` : undefined}
+        onToggle={() => orch.toggleSection('upload')}
+        badge={
+          orch.tempUploads.length > 0
+            ? `${orch.tempUploads.length} file${orch.tempUploads.length > 1 ? 's' : ''}`
+            : undefined
+        }
       >
         <UploadZone
           uploads={orch.tempUploads}
@@ -207,7 +203,7 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
         title="Your Products"
         icon={Package}
         isOpen={!orch.collapsedSections.products}
-        onToggle={() => orch.toggleSection("products")}
+        onToggle={() => orch.toggleSection('products')}
         badge={orch.selectedProducts.length > 0 ? `${orch.selectedProducts.length} selected` : undefined}
       >
         <div className="space-y-4">
@@ -215,12 +211,11 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
           {orch.selectedProducts.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {orch.selectedProducts.map((p) => (
-                <div key={p.id} className="w-16 h-16 relative group rounded-lg overflow-hidden border border-primary/30">
-                  <img
-                    src={getProductImageUrl(p.cloudinaryUrl)}
-                    alt={p.name}
-                    className="w-full h-full object-cover"
-                  />
+                <div
+                  key={p.id}
+                  className="w-16 h-16 relative group rounded-lg overflow-hidden border border-primary/30"
+                >
+                  <img src={getProductImageUrl(p.cloudinaryUrl)} alt={p.name} className="w-full h-full object-cover" />
                   <button
                     onClick={() => orch.toggleProductSelection(p)}
                     className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
@@ -256,7 +251,7 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
               <SelectContent>
                 {orch.categories.map((cat) => (
                   <SelectItem key={cat} value={cat}>
-                    {cat === "all" ? "All Categories" : cat}
+                    {cat === 'all' ? 'All Categories' : cat}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -276,10 +271,10 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
                       orch.toggleProductSelection(product);
                     }}
                     className={cn(
-                      "relative rounded-xl overflow-hidden border-2 aspect-square transition-all",
+                      'relative rounded-xl overflow-hidden border-2 aspect-square transition-all',
                       isSelected
-                        ? "border-primary ring-2 ring-primary/20 scale-105"
-                        : "border-border hover:border-primary/50"
+                        ? 'border-primary ring-2 ring-primary/20 scale-105'
+                        : 'border-border hover:border-primary/50',
                     )}
                   >
                     <img
@@ -309,20 +304,20 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
         id="templates"
         title="Style & Template"
         isOpen={!orch.collapsedSections.templates}
-        onToggle={() => orch.toggleSection("templates")}
-        badge={orch.selectedTemplate ? "1 selected" : undefined}
+        onToggle={() => orch.toggleSection('templates')}
+        badge={orch.selectedTemplate ? '1 selected' : undefined}
       >
         <div className="space-y-4">
           {/* Category Filter */}
           <div className="flex flex-wrap gap-2">
-            {["all", ...Array.from(new Set(orch.templates.map((t) => t.category).filter(Boolean)))].map((cat) => (
+            {['all', ...Array.from(new Set(orch.templates.map((t) => t.category).filter(Boolean)))].map((cat) => (
               <Button
                 key={cat}
-                variant={orch.templateCategory === cat ? "default" : "outline"}
+                variant={orch.templateCategory === cat ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => orch.setTemplateCategory(cat)}
               >
-                {cat === "all" ? "All" : cat}
+                {cat === 'all' ? 'All' : cat}
               </Button>
             ))}
           </div>
@@ -330,7 +325,7 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
           {/* Template Scroll */}
           <div className="flex gap-4 overflow-x-auto pb-2">
             {orch.templates
-              .filter((t) => orch.templateCategory === "all" || t.category === orch.templateCategory)
+              .filter((t) => orch.templateCategory === 'all' || t.category === orch.templateCategory)
               .map((template) => (
                 <button
                   key={template.id}
@@ -343,10 +338,10 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
                     }
                   }}
                   className={cn(
-                    "flex-shrink-0 p-4 rounded-xl border-2 min-w-[200px] text-left transition-all",
+                    'flex-shrink-0 p-4 rounded-xl border-2 min-w-[200px] text-left transition-all',
                     orch.selectedTemplate?.id === template.id
-                      ? "border-primary bg-primary/10"
-                      : "border-border hover:border-primary/50"
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border hover:border-primary/50',
                   )}
                 >
                   <div className="flex items-center justify-between mb-2">
@@ -380,7 +375,9 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
               <TrendingUp className="w-4 h-4" />
               Template Inspiration
               {orch.featuredAdTemplates.length > 0 && (
-                <Badge variant="secondary" className="text-xs">{orch.featuredAdTemplates.length} featured</Badge>
+                <Badge variant="secondary" className="text-xs">
+                  {orch.featuredAdTemplates.length} featured
+                </Badge>
               )}
             </button>
           </div>
@@ -416,7 +413,7 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
                 <button
                   onClick={() => {
                     orch.setSelectedSuggestion(null);
-                    orch.setPrompt("");
+                    orch.setPrompt('');
                   }}
                   className="text-muted-foreground hover:text-foreground"
                 >
@@ -481,13 +478,11 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
             placeholder="Describe your ideal ad creative... What mood? What style? What should the image convey?"
             rows={5}
             className={cn(
-              "resize-none text-base",
-              orch.selectedSuggestion && "border-primary/50 ring-2 ring-primary/20"
+              'resize-none text-base',
+              orch.selectedSuggestion && 'border-primary/50 ring-2 ring-primary/20',
             )}
           />
-          {orch.prompt && (
-            <p className="text-xs text-muted-foreground text-right">{orch.prompt.length} characters</p>
-          )}
+          {orch.prompt && <p className="text-xs text-muted-foreground text-right">{orch.prompt.length} characters</p>}
         </div>
 
         {/* Idea Bank */}
@@ -504,7 +499,7 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
               setTimeout(orch.handleGenerate, 100);
             }}
             selectedPromptId={orch.selectedSuggestion?.id}
-            isGenerating={orch.state === "generating"}
+            isGenerating={orch.state === 'generating'}
             mode={orch.ideaBankMode}
             templateId={orch.selectedTemplateForMode?.id}
           />
@@ -519,8 +514,10 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {["LinkedIn", "Instagram", "Facebook", "Twitter", "TikTok"].map((p) => (
-                  <SelectItem key={p} value={p}>{p}</SelectItem>
+                {['LinkedIn', 'Instagram', 'Facebook', 'Twitter', 'TikTok'].map((p) => (
+                  <SelectItem key={p} value={p}>
+                    {p}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -532,8 +529,10 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {["1200x627", "1200x1200", "1080x1350", "1920x1080", "1080x1920"].map((s) => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                {['1200x627', '1200x1200', '1080x1350', '1920x1080', '1080x1920'].map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -545,14 +544,31 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {["1K", "2K", "4K"].map((q) => (
-                  <SelectItem key={q} value={q}>{q}</SelectItem>
+                {['1K', '2K', '4K'].map((q) => (
+                  <SelectItem key={q} value={q}>
+                    {q}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
         </div>
       </motion.section>
+
+      {/* Style References */}
+      <Section
+        id="style-refs"
+        title="Style Reference"
+        icon={Palette}
+        isOpen={!orch.collapsedSections.includes('style-refs')}
+        onToggle={() => orch.toggleSection('style-refs')}
+        badge={orch.selectedStyleRefIds.length > 0 ? `${orch.selectedStyleRefIds.length}` : undefined}
+      >
+        <StyleReferenceSelector
+          selectedIds={orch.selectedStyleRefIds}
+          onSelectionChange={orch.setSelectedStyleRefIds}
+        />
+      </Section>
 
       {/* Price Estimate */}
       {orch.priceEstimate && (
@@ -565,14 +581,14 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
             <span className="text-xl">💲</span>
             <div>
               <p className="text-sm font-medium">
-                Estimated cost:{" "}
+                Estimated cost:{' '}
                 <span className="text-green-600 dark:text-green-400">
                   ${orch.priceEstimate.estimatedCost.toFixed(3)}
                 </span>
               </p>
               <p className="text-xs text-muted-foreground">
                 {orch.priceEstimate.usedFallback
-                  ? "Based on default rates"
+                  ? 'Based on default rates'
                   : `Based on ${orch.priceEstimate.sampleCount} similar generations`}
               </p>
             </div>
@@ -582,19 +598,14 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
 
       {/* Generate Button */}
       <motion.div ref={orch.generateButtonRef} id="generate" className="py-4">
-        <Button
-          size="lg"
-          onClick={orch.handleGenerate}
-          disabled={!orch.canGenerate}
-          className="w-full h-16 text-lg"
-        >
+        <Button size="lg" onClick={orch.handleGenerate} disabled={!orch.canGenerate} className="w-full h-16 text-lg">
           <Sparkles className="w-5 h-5 mr-2" />
           Generate Image
         </Button>
         <p className="text-center text-sm text-muted-foreground mt-3">
           {orch.selectedProducts.length + orch.tempUploads.length} image
-          {orch.selectedProducts.length + orch.tempUploads.length !== 1 ? "s" : ""} •{" "}
-          {orch.platform} • {orch.resolution}
+          {orch.selectedProducts.length + orch.tempUploads.length !== 1 ? 's' : ''} • {orch.platform} •{' '}
+          {orch.resolution}
         </p>
       </motion.div>
     </div>

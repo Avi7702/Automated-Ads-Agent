@@ -1,31 +1,47 @@
-import { type Server } from "node:http";
-import { randomBytes } from "node:crypto";
+import { type Server } from 'node:http';
+import { randomBytes } from 'node:crypto';
 
-import express, { type Express, type Request, Response, NextFunction } from "express";
-import helmet from "helmet";
-import session from "express-session";
-import { doubleCsrf } from "csrf-csrf";
-import { registerRoutes } from "./routes";
-import { logger, apiLogger } from "./lib/logger";
-import { requestIdMiddleware } from "./middleware/requestId";
-import { performanceMetricsMiddleware } from "./middleware/performanceMetrics";
-import { defaultTimeout, haltOnTimeout } from "./middleware/timeout";
-import { initGracefulShutdown, onShutdown } from "./utils/gracefulShutdown";
-import { validateEnvOrExit } from "./lib/validateEnv";
-import { initSentry, sentryRequestHandler, sentryErrorHandler, captureException } from "./lib/sentry";
-import { trackError } from "./services/errorTrackingService";
-import compression from "compression";
-import cookieParser from "cookie-parser";
-import { startGenerationWorker, closeGenerationWorker } from "./workers/generationWorkerInstance";
-import { closeQueues } from "./lib/queue";
-import { apiVersioningMiddleware } from "./middleware/apiVersioning";
+import express, { type Express, type Request, Response, NextFunction } from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import session from 'express-session';
+import { doubleCsrf } from 'csrf-csrf';
+import { registerRoutes } from './routes';
+import { logger, apiLogger } from './lib/logger';
+import { requestIdMiddleware } from './middleware/requestId';
+import { performanceMetricsMiddleware } from './middleware/performanceMetrics';
+import { defaultTimeout, haltOnTimeout } from './middleware/timeout';
+import { initGracefulShutdown, onShutdown } from './utils/gracefulShutdown';
+import { validateEnvOrExit } from './lib/validateEnv';
+import { initSentry, sentryRequestHandler, sentryErrorHandler, captureException } from './lib/sentry';
+import { trackError } from './services/errorTrackingService';
+import compression from 'compression';
+import cookieParser from 'cookie-parser';
+import { startGenerationWorker, closeGenerationWorker } from './workers/generationWorkerInstance';
+import { closeQueues } from './lib/queue';
+import { apiVersioningMiddleware } from './middleware/apiVersioning';
+import { registerAllPrompts } from './lib/prompts';
 
-export function log(message: string, source = "express") {
+export function log(message: string, source = 'express') {
   // Use structured logger in production, formatted console in development
   apiLogger.info({ source }, message);
 }
 
 export const app = express();
+
+// CORS - allow cross-origin requests from configured origins
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
+  : [`http://localhost:${process.env.PORT || '5000'}`];
+
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'x-csrf-token', 'x-e2e-test'],
+  }),
+);
 
 // Response compression (gzip/brotli) - reduces bundle size by ~65%
 app.use(compression());
@@ -34,24 +50,53 @@ app.use(compression());
 app.set('trust proxy', 1);
 
 // Security headers
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: process.env.NODE_ENV === 'production'
-        ? ["'self'", "'sha256-lDUBeBfpPQ4BeVVZpSDsSj8T+WdMfPRFeirOKsgrNAM='", "'sha256-D8ENm9m//g0OfHmuDwTU4MaB7wzJNZ5g9g/pqhRH9uQ='"]
-        : ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Vite dev needs these
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://*.cloudinary.com", "https://images.unsplash.com", "https://nextdaysteel.co.uk", "https://placehold.co"],
-      connectSrc: ["'self'", "https://generativelanguage.googleapis.com", "https://nextdaysteel.co.uk", "https://*.nextdaysteel.co.uk", "https://res.cloudinary.com", "https://*.cloudinary.com", "https://fonts.googleapis.com", "https://fonts.gstatic.com", "https://placehold.co", "https://images.unsplash.com", "wss:", "ws:"],
-      fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'none'"],
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc:
+          process.env.NODE_ENV === 'production'
+            ? [
+                "'self'",
+                "'sha256-lDUBeBfpPQ4BeVVZpSDsSj8T+WdMfPRFeirOKsgrNAM='",
+                "'sha256-D8ENm9m//g0OfHmuDwTU4MaB7wzJNZ5g9g/pqhRH9uQ='",
+              ]
+            : ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Vite dev needs these
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        imgSrc: [
+          "'self'",
+          'data:',
+          'blob:',
+          'https://res.cloudinary.com',
+          'https://*.cloudinary.com',
+          'https://images.unsplash.com',
+          'https://nextdaysteel.co.uk',
+          'https://placehold.co',
+        ],
+        connectSrc: [
+          "'self'",
+          'https://generativelanguage.googleapis.com',
+          'https://nextdaysteel.co.uk',
+          'https://*.nextdaysteel.co.uk',
+          'https://res.cloudinary.com',
+          'https://*.cloudinary.com',
+          'https://fonts.googleapis.com',
+          'https://fonts.gstatic.com',
+          'https://placehold.co',
+          'https://images.unsplash.com',
+          'wss:',
+          'ws:',
+        ],
+        fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],
+        objectSrc: ["'none'"],
+        mediaSrc: ["'self'"],
+        frameSrc: ["'none'"],
+      },
     },
-  },
-  crossOriginEmbedderPolicy: false, // Allow Cloudinary images
-}));
+    crossOriginEmbedderPolicy: false, // Allow Cloudinary images
+  }),
+);
 
 // Request ID for tracing
 app.use(requestIdMiddleware);
@@ -67,15 +112,17 @@ app.use(haltOnTimeout);
 
 declare module 'http' {
   interface IncomingMessage {
-    rawBody: unknown
+    rawBody: unknown;
   }
 }
-app.use(express.json({
-  limit: '10mb',
-  verify: (req, _res, buf) => {
-    req.rawBody = buf;
-  }
-}));
+app.use(
+  express.json({
+    limit: '10mb',
+    verify: (req, _res, buf) => {
+      req.rawBody = buf;
+    },
+  }),
+);
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
 // Cookie parser - required for CSRF and session handling
@@ -84,6 +131,15 @@ app.use(cookieParser());
 // API Versioning (Task 5.2)
 // Rewrites /api/v1/* → /api/* and adds version/deprecation headers
 app.use(apiVersioningMiddleware);
+
+// Cache-Control headers for API GET responses
+app.use('/api/', (req, res, next) => {
+  if (req.method === 'GET') {
+    // Default: private, short cache for user-specific data
+    res.setHeader('Cache-Control', 'private, no-cache');
+  }
+  next();
+});
 
 // Session middleware - uses Redis if available, falls back to memory store
 let sessionStore: session.Store | undefined;
@@ -99,47 +155,76 @@ if (process.env.REDIS_URL) {
     logger.info({ store: 'redis' }, 'Using Redis session store');
   } catch (error) {
     if (process.env.NODE_ENV === 'production') {
-      logger.warn({ store: 'memory', error }, 'Redis session store failed in production — falling back to memory store (single-instance only)');
+      logger.warn(
+        { store: 'memory', error },
+        'Redis session store failed in production — falling back to memory store (single-instance only)',
+      );
     }
     logger.warn({ store: 'memory', reason: 'redis_unavailable' }, 'Redis not available, using memory session store');
   }
 } else {
   if (process.env.NODE_ENV === 'production') {
-    logger.warn({ store: 'memory', reason: 'no_redis_url' }, 'REDIS_URL not set in production — using memory session store (single-instance only)');
+    logger.warn(
+      { store: 'memory', reason: 'no_redis_url' },
+      'REDIS_URL not set in production — using memory session store (single-instance only)',
+    );
   } else {
-    logger.warn({ store: 'memory', reason: 'no_redis_url' }, 'REDIS_URL not set, using memory session store (dev only)');
+    logger.warn(
+      { store: 'memory', reason: 'no_redis_url' },
+      'REDIS_URL not set, using memory session store (dev only)',
+    );
   }
 }
 
 // Validate session secret in production
+// Supports comma-separated secrets for key rotation (first = current, rest = legacy)
 const sessionSecret = process.env.SESSION_SECRET;
 if (process.env.NODE_ENV === 'production' && !sessionSecret) {
-  logger.warn({ security: true }, 'SESSION_SECRET not set in production - using random secret, sessions will not persist');
+  logger.warn(
+    { security: true },
+    'SESSION_SECRET not set in production - using random secret, sessions will not persist',
+  );
 }
-// Generate a random secret if not provided (for development or fallback)
-const effectiveSessionSecret = sessionSecret || randomBytes(32).toString('hex');
+// Parse comma-separated secrets for rotation support (express-session supports arrays)
+const sessionSecrets = sessionSecret
+  ? sessionSecret
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+  : [randomBytes(32).toString('hex')];
 
-app.use(session({
-  store: sessionStore, // undefined = default memory store
-  secret: effectiveSessionSecret,
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days (industry standard for SaaS)
-    sameSite: 'lax',
-  },
-}));
+app.use(
+  session({
+    store: sessionStore, // undefined = default memory store
+    secret: sessionSecrets,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days (industry standard for SaaS)
+      sameSite: 'lax',
+    },
+  }),
+);
 
 // CSRF Protection - protects all state-changing operations (POST/PUT/DELETE)
-// Validate CSRF secret in production - MUST be set for multi-instance deployments
+// Supports comma-separated secrets for key rotation
 const csrfSecret = process.env.CSRF_SECRET;
 if (process.env.NODE_ENV === 'production' && !csrfSecret) {
-  logger.warn({ security: true }, 'CSRF_SECRET not set in production — using random secret (sessions will not persist across restarts)');
+  logger.warn(
+    { security: true },
+    'CSRF_SECRET not set in production — using random secret (sessions will not persist across restarts)',
+  );
 }
-// Generate a random secret if not provided (for development only)
-const effectiveCsrfSecret = csrfSecret || randomBytes(32).toString('hex');
+// Parse comma-separated secrets for rotation (first = current)
+const csrfSecrets = csrfSecret
+  ? csrfSecret
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+  : [randomBytes(32).toString('hex')];
+const effectiveCsrfSecret = csrfSecrets[0] ?? randomBytes(32).toString('hex');
 
 const { generateToken, doubleCsrfProtection } = doubleCsrf({
   getSecret: () => effectiveCsrfSecret,
@@ -173,16 +258,16 @@ app.use((req, res, next) => {
     return originalResJson.apply(res, [bodyJson, ...args]);
   };
 
-  res.on("finish", () => {
+  res.on('finish', () => {
     const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
+    if (path.startsWith('/api')) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
 
       if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
+        logLine = logLine.slice(0, 79) + '…';
       }
 
       log(logLine);
@@ -195,14 +280,15 @@ app.use((req, res, next) => {
 // Sentry request handler - must be before routes
 app.use(sentryRequestHandler);
 
-export default async function runApp(
-  setup: (app: Express, server: Server) => Promise<void>,
-) {
+export default async function runApp(setup: (app: Express, server: Server) => Promise<void>) {
   // Initialize Sentry error monitoring
   initSentry();
 
   // Validate environment variables before starting
   await validateEnvOrExit();
+
+  // Register all AI prompts in the prompt registry
+  registerAllPrompts();
 
   // Start the generation worker for async job processing
   startGenerationWorker();
@@ -214,7 +300,7 @@ export default async function runApp(
 
   app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    const message = err.message || 'Internal Server Error';
 
     // Log error with structured logger
     logger.error({ err, status, module: 'ErrorHandler' }, message);
@@ -248,7 +334,7 @@ export default async function runApp(
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen(port, "0.0.0.0", () => {
+  server.listen(port, '0.0.0.0', () => {
     log(`serving on port ${port}`);
   });
 
@@ -273,6 +359,15 @@ export default async function runApp(
       logger.info({ module: 'shutdown' }, 'Queue connections closed');
     } catch (err) {
       logger.error({ module: 'shutdown', err }, 'Error closing queue connections');
+    }
+
+    // Flush analytics events
+    try {
+      const { flushAnalytics } = await import('./lib/analytics');
+      await flushAnalytics();
+      logger.info({ module: 'shutdown' }, 'Analytics flushed');
+    } catch {
+      // Analytics may not be initialized
     }
 
     // Close Redis (sessions depend on Redis)
@@ -304,7 +399,7 @@ export default async function runApp(
       const { pool } = require('./db');
       const poolClosePromise = pool.end();
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Pool close timeout')), 10000)
+        setTimeout(() => reject(new Error('Pool close timeout')), 10000),
       );
 
       await Promise.race([poolClosePromise, timeoutPromise]);

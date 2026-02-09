@@ -26,11 +26,12 @@ export interface GenerateResult {
 export interface GenerateOptions {
   referenceImages?: string[];
   aspectRatio?: '1:1' | '16:9' | '9:16' | '4:3' | '3:4';
+  /** Style directive string built from style references (prepended to prompt) */
+  styleDirective?: string;
 }
 
 export class GeminiService {
   private readonly modelName = process.env.GEMINI_MODEL || 'gemini-3-pro-image-preview';
-
 
   async generateImage(prompt: string, options?: GenerateOptions, userId?: string): Promise<GenerateResult> {
     const startTime = Date.now();
@@ -41,10 +42,13 @@ export class GeminiService {
       // Build the content parts
       const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [];
 
-      // Add aspect ratio to prompt if specified
+      // Build enhanced prompt with style directive and aspect ratio
       let enhancedPrompt = prompt;
+      if (options?.styleDirective) {
+        enhancedPrompt = `${options.styleDirective}\n\n${enhancedPrompt}`;
+      }
       if (options?.aspectRatio) {
-        enhancedPrompt = `${prompt} [Aspect ratio: ${options.aspectRatio}]`;
+        enhancedPrompt = `${enhancedPrompt} [Aspect ratio: ${options.aspectRatio}]`;
       }
       parts.push({ text: enhancedPrompt });
 
@@ -54,8 +58,8 @@ export class GeminiService {
           parts.push({
             inlineData: {
               mimeType: 'image/png',
-              data: refImage
-            }
+              data: refImage,
+            },
           });
         }
       }
@@ -64,18 +68,21 @@ export class GeminiService {
       const conversationHistory: ConversationMessage[] = [
         {
           role: 'user',
-          parts: parts as ConversationMessage['parts']
-        }
+          parts: parts as ConversationMessage['parts'],
+        },
       ];
 
       // Generate content using the new SDK pattern
-      const response = await generateContentWithRetry({
-        model: this.modelName,
-        contents: parts,
-        config: {
-          responseModalities: ['TEXT', 'IMAGE']
-        }
-      }, { operation: 'image_generation' });
+      const response = await generateContentWithRetry(
+        {
+          model: this.modelName,
+          contents: parts,
+          config: {
+            responseModalities: ['TEXT', 'IMAGE'],
+          },
+        },
+        { operation: 'image_generation' },
+      );
 
       // Extract image data from response
       const candidate = response.candidates?.[0];
@@ -103,12 +110,14 @@ export class GeminiService {
       // Add model response to conversation history
       conversationHistory.push({
         role: 'model',
-        parts: [{
-          inlineData: {
-            mimeType,
-            data: imageData
-          }
-        }]
+        parts: [
+          {
+            inlineData: {
+              mimeType,
+              data: imageData,
+            },
+          },
+        ],
       });
 
       success = true;
@@ -117,7 +126,7 @@ export class GeminiService {
         imageBase64: imageData,
         conversationHistory,
         model: this.modelName,
-        usageMetadata: response.usageMetadata
+        usageMetadata: response.usageMetadata,
       };
     } catch (error) {
       errorType = errorType || (error instanceof Error ? error.name : 'unknown');
@@ -141,7 +150,7 @@ export class GeminiService {
   async continueConversation(
     history: ConversationMessage[],
     editPrompt: string,
-    userId?: string
+    userId?: string,
   ): Promise<GenerateResult> {
     const startTime = Date.now();
     let success = false;
@@ -153,24 +162,27 @@ export class GeminiService {
         ...history,
         {
           role: 'user',
-          parts: [{ text: editPrompt }]
-        }
+          parts: [{ text: editPrompt }],
+        },
       ];
 
       // Build contents array from history for the API
-      const contents = newHistory.map(msg => ({
+      const contents = newHistory.map((msg) => ({
         role: msg.role,
-        parts: msg.parts
+        parts: msg.parts,
       }));
 
       // Generate content using the new SDK pattern
-      const response = await generateContentWithRetry({
-        model: this.modelName,
-        contents,
-        config: {
-          responseModalities: ['TEXT', 'IMAGE']
-        }
-      }, { operation: 'image_editing' });
+      const response = await generateContentWithRetry(
+        {
+          model: this.modelName,
+          contents,
+          config: {
+            responseModalities: ['TEXT', 'IMAGE'],
+          },
+        },
+        { operation: 'image_editing' },
+      );
 
       // Extract image data from response
       const candidate = response.candidates?.[0];
@@ -198,12 +210,14 @@ export class GeminiService {
       // Add model response to conversation history
       newHistory.push({
         role: 'model',
-        parts: [{
-          inlineData: {
-            mimeType,
-            data: imageData
-          }
-        }]
+        parts: [
+          {
+            inlineData: {
+              mimeType,
+              data: imageData,
+            },
+          },
+        ],
       });
 
       success = true;
@@ -212,7 +226,7 @@ export class GeminiService {
         imageBase64: imageData,
         conversationHistory: newHistory,
         model: this.modelName,
-        usageMetadata: response.usageMetadata
+        usageMetadata: response.usageMetadata,
       };
     } catch (error) {
       errorType = errorType || (error instanceof Error ? error.name : 'unknown');

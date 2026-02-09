@@ -34,8 +34,8 @@ jobs:
       - name: Type check
         run: npm run check
 
-      - name: Lint (if configured)
-        run: npm run lint --if-present
+      - name: Lint
+        run: npm run lint
 
   # ============================================
   # JOB 2: Backend Tests

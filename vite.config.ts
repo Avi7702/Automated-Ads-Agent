@@ -1,10 +1,11 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import tailwindcss from "@tailwindcss/vite";
-import path from "path";
-import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
-import { metaImagesPlugin } from "./vite-plugin-meta-images";
-import { VitePWA } from "vite-plugin-pwa";
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
+import path from 'path';
+import runtimeErrorOverlay from '@replit/vite-plugin-runtime-error-modal';
+import { metaImagesPlugin } from './vite-plugin-meta-images';
+import { VitePWA } from 'vite-plugin-pwa';
+import { visualizer } from 'rollup-plugin-visualizer';
 
 export default defineConfig({
   plugins: [
@@ -45,6 +46,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        navigateFallback: '/offline.html',
+        navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -76,38 +79,72 @@ export default defineConfig({
           {
             urlPattern: /\/api\//i,
             handler: 'NetworkOnly',
+            method: 'GET',
+          },
+          {
+            // Background sync for failed POST/PUT/DELETE requests to API
+            urlPattern: /\/api\//i,
+            handler: 'NetworkOnly',
+            method: 'POST',
+            options: {
+              backgroundSync: {
+                name: 'api-mutations-queue',
+                options: {
+                  maxRetentionTime: 24 * 60, // Retry for up to 24 hours (in minutes)
+                },
+              },
+            },
+          },
+          {
+            urlPattern: /\/api\//i,
+            handler: 'NetworkOnly',
+            method: 'PUT',
+            options: {
+              backgroundSync: {
+                name: 'api-mutations-queue',
+                options: {
+                  maxRetentionTime: 24 * 60,
+                },
+              },
+            },
           },
         ],
       },
     }),
-    ...(process.env.NODE_ENV !== "production" &&
-    process.env.REPL_ID !== undefined
+    ...(process.env.NODE_ENV !== 'production' && process.env.REPL_ID !== undefined
       ? [
-          await import("@replit/vite-plugin-cartographer").then((m) =>
-            m.cartographer(),
-          ),
-          await import("@replit/vite-plugin-dev-banner").then((m) =>
-            m.devBanner(),
-          ),
+          await import('@replit/vite-plugin-cartographer').then((m) => m.cartographer()),
+          await import('@replit/vite-plugin-dev-banner').then((m) => m.devBanner()),
+        ]
+      : []),
+    ...(process.env.ANALYZE
+      ? [
+          visualizer({
+            filename: 'dist/bundle-analysis.html',
+            open: false,
+            gzipSize: true,
+            brotliSize: true,
+            template: 'treemap',
+          }),
         ]
       : []),
   ],
   resolve: {
     alias: {
-      "@": path.resolve(import.meta.dirname, "client", "src"),
-      "@shared": path.resolve(import.meta.dirname, "shared"),
-      "@assets": path.resolve(import.meta.dirname, "attached_assets"),
+      '@': path.resolve(import.meta.dirname, 'client', 'src'),
+      '@shared': path.resolve(import.meta.dirname, 'shared'),
+      '@assets': path.resolve(import.meta.dirname, 'attached_assets'),
     },
-    dedupe: ["react", "react-dom"],
+    dedupe: ['react', 'react-dom'],
   },
   css: {
     postcss: {
       plugins: [],
     },
   },
-  root: path.resolve(import.meta.dirname, "client"),
+  root: path.resolve(import.meta.dirname, 'client'),
   build: {
-    outDir: path.resolve(import.meta.dirname, "dist/public"),
+    outDir: path.resolve(import.meta.dirname, 'dist/public'),
     emptyOutDir: true,
     rollupOptions: {
       output: {
@@ -147,14 +184,14 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000,
   },
   server: {
-    host: "127.0.0.1",
+    host: '127.0.0.1',
     allowedHosts: true,
     fs: {
       strict: true,
-      deny: ["**/.*"],
+      deny: ['**/.*'],
     },
   },
   optimizeDeps: {
-    include: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
+    include: ['react', 'react-dom', 'react/jsx-runtime', 'react/jsx-dev-runtime'],
   },
 });

@@ -56,6 +56,17 @@ export function initSentry(): void {
         return null;
       }
 
+      // Send Slack/Discord alert for server errors
+      if (hint.originalException instanceof Error) {
+        import('../services/notificationService')
+          .then(({ notifyError }) => {
+            notifyError(hint.originalException as Error, {
+              eventId: event.event_id ?? 'unknown',
+            }).catch(() => {});
+          })
+          .catch(() => {});
+      }
+
       return event;
     },
   });
@@ -111,14 +122,16 @@ export function addBreadcrumb(breadcrumb: {
  * Add this AFTER all routes but BEFORE your custom error handler
  */
 // @ts-expect-error - Sentry Handlers API varies by version, fallback provided
-export const sentryErrorHandler = Sentry.Handlers?.errorHandler?.() ?? ((err: any, _req: any, _res: any, next: any) => next(err));
+export const sentryErrorHandler =
+  Sentry.Handlers?.errorHandler?.() ?? ((err: any, _req: any, _res: any, next: any) => next(err));
 
 /**
  * Express request handler middleware
  * Add this BEFORE all routes
  */
 // @ts-expect-error - Sentry Handlers API varies by version, fallback provided
-export const sentryRequestHandler = Sentry.Handlers?.requestHandler?.() ?? ((_req: any, _res: any, next: any) => next());
+export const sentryRequestHandler =
+  Sentry.Handlers?.requestHandler?.() ?? ((_req: any, _res: any, next: any) => next());
 
 // Re-export Sentry for advanced usage
 export { Sentry };
