@@ -218,6 +218,52 @@ export async function claimDuePosts(limit: number = 10) {
 }
 
 /**
+ * Schedule a retry for a failed post using exponential backoff.
+ * Sets the post back to 'scheduled' with a future scheduledFor.
+ * The posting job will pick it up again when the time arrives.
+ *
+ * Backoff: 1min × 2^retryCount (max 1 hour), plus random jitter.
+ * Max 3 retries — after that, the post stays as 'failed'.
+ */
+export async function scheduleRetry(postId: string): Promise<boolean> {
+  const MAX_RETRIES = 3;
+  const BASE_DELAY_MS = 60_000; // 1 minute
+  const MAX_DELAY_MS = 3_600_000; // 1 hour
+
+  const rows = await db
+    .select({ retryCount: scheduledPosts.retryCount })
+    .from(scheduledPosts)
+    .where(eq(scheduledPosts.id, postId))
+    .limit(1);
+
+  const post = rows[0];
+  if (!post) return false;
+
+  const retryCount = post.retryCount ?? 0;
+  if (retryCount >= MAX_RETRIES) {
+    logger.info({ postId, retryCount }, 'Max retries reached, not scheduling another retry');
+    return false;
+  }
+
+  const delay = Math.min(BASE_DELAY_MS * Math.pow(2, retryCount), MAX_DELAY_MS);
+  const jitter = Math.floor(Math.random() * 10_000);
+  const nextRetryAt = new Date(Date.now() + delay + jitter);
+
+  await db
+    .update(scheduledPosts)
+    .set({
+      status: 'scheduled',
+      scheduledFor: nextRetryAt,
+      nextRetryAt,
+      updatedAt: new Date(),
+    })
+    .where(eq(scheduledPosts.id, postId));
+
+  logger.info({ postId, retryCount: retryCount + 1, nextRetryAt: nextRetryAt.toISOString() }, 'Retry scheduled');
+  return true;
+}
+
+/**
  * Update a post after n8n callback (success or failure).
  */
 export async function updatePostAfterCallback(

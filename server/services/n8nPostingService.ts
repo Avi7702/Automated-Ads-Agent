@@ -11,6 +11,7 @@
 
 import { logger } from '../lib/logger';
 import type { FormattedContent } from './contentFormatterService';
+import { updatePostAfterCallback, scheduleRetry } from './schedulingRepository';
 
 /**
  * n8n webhook configuration
@@ -123,7 +124,7 @@ export async function postToN8n(
     templateId?: string;
     scheduledFor?: Date;
     callbackUrl?: string;
-  }
+  },
 ): Promise<N8nPostResult> {
   const startTime = Date.now();
 
@@ -162,14 +163,17 @@ export async function postToN8n(
     };
 
     // Log outgoing request
-    logger.info({
-      platform,
-      userId,
-      scheduledPostId,
-      webhookUrl,
-      hasImage: !!imageUrl,
-      hasVideo: !!options?.videoUrl,
-    }, 'Posting to n8n webhook');
+    logger.info(
+      {
+        platform,
+        userId,
+        scheduledPostId,
+        webhookUrl,
+        hasImage: !!imageUrl,
+        hasVideo: !!options?.videoUrl,
+      },
+      'Posting to n8n webhook',
+    );
 
     // Send POST request to n8n webhook
     const response = await fetch(webhookUrl, {
@@ -184,13 +188,16 @@ export async function postToN8n(
     // Check response
     if (!response.ok) {
       const errorText = await response.text();
-      logger.error({
-        platform,
-        webhookUrl,
-        status: response.status,
-        statusText: response.statusText,
-        error: errorText,
-      }, 'n8n webhook request failed');
+      logger.error(
+        {
+          platform,
+          webhookUrl,
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText,
+        },
+        'n8n webhook request failed',
+      );
 
       return {
         success: false,
@@ -203,28 +210,33 @@ export async function postToN8n(
     const responseData = await response.json();
     const workflowExecutionId = responseData.executionId || responseData.id;
 
-    logger.info({
-      platform,
-      userId,
-      scheduledPostId,
-      workflowExecutionId,
-      duration: Date.now() - startTime,
-    }, 'Successfully posted to n8n');
+    logger.info(
+      {
+        platform,
+        userId,
+        scheduledPostId,
+        workflowExecutionId,
+        duration: Date.now() - startTime,
+      },
+      'Successfully posted to n8n',
+    );
 
     return {
       success: true,
       workflowExecutionId,
       webhookUrl,
     };
-
   } catch (error) {
-    logger.error({
-      error,
-      platform,
-      userId,
-      scheduledPostId,
-      duration: Date.now() - startTime,
-    }, 'Failed to post to n8n');
+    logger.error(
+      {
+        error,
+        platform,
+        userId,
+        scheduledPostId,
+        duration: Date.now() - startTime,
+      },
+      'Failed to post to n8n',
+    );
 
     return {
       success: false,
@@ -242,39 +254,65 @@ export async function postToN8n(
  *
  * @param data - Callback data from n8n
  */
+/** Errors that should NOT be retried */
+const NON_RETRYABLE_ERRORS = new Set([
+  'content_policy_violation',
+  'account_disconnected',
+  'invalid_credentials',
+  'insufficient_permissions',
+]);
+
+function isRetryableError(errorCode?: string): boolean {
+  if (!errorCode) return true; // unknown errors are retryable
+  return !NON_RETRYABLE_ERRORS.has(errorCode);
+}
+
 export async function handleN8nCallback(data: N8nCallbackData): Promise<void> {
   const startTime = Date.now();
 
   try {
-    logger.info({
-      scheduledPostId: data.scheduledPostId,
-      success: data.success,
+    logger.info(
+      {
+        scheduledPostId: data.scheduledPostId,
+        success: data.success,
+        platformPostId: data.platformPostId,
+        platformPostUrl: data.platformPostUrl,
+      },
+      'Received n8n callback',
+    );
+
+    // Update the scheduled post in the database
+    await updatePostAfterCallback(data.scheduledPostId, data.success, {
       platformPostId: data.platformPostId,
       platformPostUrl: data.platformPostUrl,
-    }, 'Received n8n callback');
+      errorMessage: data.error,
+      failureReason: data.errorCode,
+    });
 
-    // TODO: Update scheduled post record in database
-    // This would typically call a storage method like:
-    // await storage.updateScheduledPost(data.scheduledPostId, {
-    //   status: data.success ? 'posted' : 'failed',
-    //   platformPostId: data.platformPostId,
-    //   platformPostUrl: data.platformPostUrl,
-    //   postedAt: data.postedAt ? new Date(data.postedAt) : undefined,
-    //   error: data.error,
-    //   errorCode: data.errorCode,
-    //   metadata: data.metadata,
-    // });
+    // If failed and the error is retryable, schedule a retry
+    if (!data.success && isRetryableError(data.errorCode)) {
+      await scheduleRetry(data.scheduledPostId);
+      logger.info(
+        { scheduledPostId: data.scheduledPostId, errorCode: data.errorCode },
+        'Retry scheduled for failed post',
+      );
+    }
 
-    logger.info({
-      scheduledPostId: data.scheduledPostId,
-      duration: Date.now() - startTime,
-    }, 'n8n callback processed successfully');
-
+    logger.info(
+      {
+        scheduledPostId: data.scheduledPostId,
+        duration: Date.now() - startTime,
+      },
+      'n8n callback processed successfully',
+    );
   } catch (error) {
-    logger.error({
-      error,
-      scheduledPostId: data.scheduledPostId,
-    }, 'Failed to process n8n callback');
+    logger.error(
+      {
+        error,
+        scheduledPostId: data.scheduledPostId,
+      },
+      'Failed to process n8n callback',
+    );
     throw error;
   }
 }
@@ -302,18 +340,21 @@ export async function postToMultiplePlatforms(
     templateId?: string;
     scheduledFor?: Date;
     callbackUrl?: string;
-  }
+  },
 ): Promise<Record<string, N8nPostResult>> {
   const startTime = Date.now();
   const results: Record<string, N8nPostResult> = {};
 
   try {
-    logger.info({
-      platforms,
-      userId,
-      baseScheduledPostId,
-      scheduledFor: options?.scheduledFor,
-    }, 'Starting multi-platform post');
+    logger.info(
+      {
+        platforms,
+        userId,
+        baseScheduledPostId,
+        scheduledFor: options?.scheduledFor,
+      },
+      'Starting multi-platform post',
+    );
 
     // Post to all platforms in parallel
     const postPromises = platforms.map(async (platform) => {
@@ -335,20 +376,13 @@ export async function postToMultiplePlatforms(
 
       const scheduledPostId = `${baseScheduledPostId}_${platform}`;
 
-      const result = await postToN8n(
-        platform,
-        content,
-        imageUrl,
-        userId,
-        scheduledPostId,
-        {
-          videoUrl,
-          generationId: options?.generationId,
-          templateId: options?.templateId,
-          scheduledFor: options?.scheduledFor,
-          callbackUrl: options?.callbackUrl,
-        }
-      );
+      const result = await postToN8n(platform, content, imageUrl, userId, scheduledPostId, {
+        videoUrl,
+        generationId: options?.generationId,
+        templateId: options?.templateId,
+        scheduledFor: options?.scheduledFor,
+        callbackUrl: options?.callbackUrl,
+      });
 
       return { platform, result };
     });
@@ -360,24 +394,29 @@ export async function postToMultiplePlatforms(
       results[platform] = result;
     });
 
-    const successCount = Object.values(results).filter(r => r.success).length;
+    const successCount = Object.values(results).filter((r) => r.success).length;
 
-    logger.info({
-      platforms,
-      totalPosts: platforms.length,
-      successCount,
-      failedCount: platforms.length - successCount,
-      duration: Date.now() - startTime,
-    }, 'Multi-platform post completed');
+    logger.info(
+      {
+        platforms,
+        totalPosts: platforms.length,
+        successCount,
+        failedCount: platforms.length - successCount,
+        duration: Date.now() - startTime,
+      },
+      'Multi-platform post completed',
+    );
 
     return results;
-
   } catch (error) {
-    logger.error({
-      error,
-      platforms,
-      userId,
-    }, 'Multi-platform post failed');
+    logger.error(
+      {
+        error,
+        platforms,
+        userId,
+      },
+      'Multi-platform post failed',
+    );
     throw error;
   }
 }
@@ -393,21 +432,30 @@ export async function postToMultiplePlatforms(
 export async function retryFailedPost(
   platform: string,
   scheduledPostId: string,
-  retryCount: number
+  retryCount: number,
 ): Promise<N8nPostResult> {
-  logger.info({
-    platform,
-    scheduledPostId,
-    retryCount,
-  }, 'Retrying failed post');
+  const MAX_RETRIES = 3;
 
-  // TODO: Fetch original post data from database and retry
-  // This would require:
-  // 1. Retrieving the original content and metadata
-  // 2. Calling postToN8n with the same parameters
-  // 3. Updating retry count and status
+  logger.info(
+    {
+      platform,
+      scheduledPostId,
+      retryCount,
+    },
+    'Retrying failed post',
+  );
 
-  throw new Error('Retry functionality not yet implemented. Requires database integration.');
+  if (retryCount >= MAX_RETRIES) {
+    logger.warn({ scheduledPostId, retryCount }, 'Max retries exceeded');
+    return { success: false, error: `Max retries (${MAX_RETRIES}) exceeded`, webhookUrl: 'N/A' };
+  }
+
+  // Retry is handled automatically: scheduleRetry() sets the post back to
+  // status='scheduled' with a future scheduledFor. The posting job picks it
+  // up again when the time arrives. This function exists for manual retries.
+  await scheduleRetry(scheduledPostId);
+
+  return { success: true, webhookUrl: 'retry-scheduled' };
 }
 
 /**
@@ -430,17 +478,20 @@ export async function getPostStatus(workflowExecutionId: string): Promise<{
     const response = await fetch(apiUrl, {
       method: 'GET',
       headers: {
-        'Accept': 'application/json',
+        Accept: 'application/json',
         // Note: May require API key authentication
         // 'X-N8N-API-KEY': process.env.N8N_API_KEY,
       },
     });
 
     if (!response.ok) {
-      logger.warn({
-        workflowExecutionId,
-        status: response.status,
-      }, 'Failed to get post status from n8n');
+      logger.warn(
+        {
+          workflowExecutionId,
+          status: response.status,
+        },
+        'Failed to get post status from n8n',
+      );
 
       return { status: 'unknown' };
     }
@@ -452,7 +503,6 @@ export async function getPostStatus(workflowExecutionId: string): Promise<{
       error: data.error,
       finishedAt: data.stoppedAt || data.finishedAt,
     };
-
   } catch (error) {
     logger.error({ error, workflowExecutionId }, 'Failed to query n8n API');
     return { status: 'unknown' };
@@ -499,8 +549,4 @@ export function validateN8nConfig(): {
 /**
  * Export types
  */
-export type {
-  N8nPostPayload,
-  N8nCallbackData,
-  N8nPostResult,
-};
+export type { N8nPostPayload, N8nCallbackData, N8nPostResult };

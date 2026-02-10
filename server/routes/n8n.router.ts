@@ -10,7 +10,8 @@
 import type { Router, Request, Response } from 'express';
 import type { RouterContext, RouterFactory, RouterModule } from '../types/router';
 import { createRouter, asyncHandler } from './utils/createRouter';
-import { claimDuePosts, updatePostAfterCallback } from '../services/schedulingRepository';
+import { claimDuePosts } from '../services/schedulingRepository';
+import { handleN8nCallback } from '../services/n8nPostingService';
 
 export const n8nRouter: RouterFactory = (ctx: RouterContext): Router => {
   const router = createRouter();
@@ -76,10 +77,14 @@ export const n8nRouter: RouterFactory = (ctx: RouterContext): Router => {
           'n8n callback received',
         );
 
-        await updatePostAfterCallback(scheduledPostId, success, {
+        await handleN8nCallback({
+          scheduledPostId,
+          success,
           platformPostId,
           platformPostUrl,
-          errorMessage: errorMsg,
+          error: errorMsg,
+          errorCode: req.body.errorCode,
+          postedAt: req.body.postedAt,
         });
 
         res.json({

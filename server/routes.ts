@@ -90,6 +90,7 @@ import {
   formatPatternsForPrompt,
 } from './services/patternExtractionService';
 import { startPatternCleanupScheduler } from './jobs/patternCleanupJob';
+import { startPostingJobScheduler } from './jobs/postingJob';
 import { generationQueue, generationQueueEvents } from './lib/queue';
 import { JobType, JobProgress } from './jobs/types';
 import { visionAnalysisService } from './services/visionAnalysisService';
@@ -5663,6 +5664,9 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
 
   // Start pattern cleanup scheduler (Learn from Winners 24-hour TTL)
   startPatternCleanupScheduler();
+
+  // Start n8n posting job (claims due posts and dispatches to n8n webhooks)
+  startPostingJobScheduler();
 
   // Load any saved Gemini API key on startup (single-tenant: find any valid key)
   (async () => {
