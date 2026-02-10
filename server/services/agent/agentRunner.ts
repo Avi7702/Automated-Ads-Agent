@@ -78,7 +78,7 @@ export async function* streamAgentResponse(
   // A single turn can emit multiple events (text chunks, function calls, etc.)
   // so we use a generous limit to avoid cutting off mid-conversation.
   let eventCount = 0;
-  const MAX_EVENTS = 60;
+  const MAX_EVENTS = 200;
 
   try {
     for await (const event of r.runAsync({

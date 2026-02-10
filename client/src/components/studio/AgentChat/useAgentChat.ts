@@ -6,7 +6,7 @@
  * Dispatches ui_action events to the orchestrator.
  */
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { getCsrfToken } from '@/lib/queryClient';
 
 export interface ChatMessage {
@@ -30,6 +30,11 @@ export function useAgentChat(options: UseAgentChatOptions = {}) {
   // Store onUiAction in a ref to avoid recreating sendMessage when callback changes
   const onUiActionRef = useRef(options.onUiAction);
   onUiActionRef.current = options.onUiAction;
+
+  // Pre-fetch CSRF token on mount to avoid latency on first message
+  useEffect(() => {
+    getCsrfToken().catch(() => {});
+  }, []);
 
   const sendMessage = useCallback(
     async (text: string) => {

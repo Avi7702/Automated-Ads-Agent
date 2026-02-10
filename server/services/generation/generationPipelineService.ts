@@ -140,7 +140,9 @@ export async function executeGenerationPipeline(input: GenerationInput): Promise
         promptLength: ctx.assembled?.finalPrompt?.length ?? 0,
         imageCount: input.images.length,
       },
-    }).catch(() => {});
+    }).catch((notifyErr) => {
+      logger.debug({ module: 'GenerationPipeline', err: notifyErr }, 'Notification delivery failed');
+    });
     throw err; // Re-throw — caller handles the error response
   }
   ctx.result = genResult;
@@ -220,8 +222,10 @@ async function runStage(name: string, stagesCompleted: string[], fn: () => Promi
  * Fetch product data and enhanced context (relationships, scenarios, brand images).
  */
 async function stageProductContext(ctx: GenerationContext) {
-  // Extract product IDs from recipe
-  const productIds = ctx.input.recipe?.products?.map((p) => p.id) || [];
+  // Extract product IDs from recipe (validate structure defensively)
+  const productIds = Array.isArray(ctx.input.recipe?.products)
+    ? ctx.input.recipe.products.map((p) => (typeof p?.id === 'string' ? p.id : '')).filter(Boolean)
+    : [];
   if (productIds.length === 0) return undefined;
 
   const primaryId = productIds[0];
@@ -311,7 +315,7 @@ async function stageVisionAnalysis(ctx: GenerationContext) {
   if (!product || !product.cloudinaryUrl) return undefined;
 
   const result = await analyzeProductImage(product, ctx.input.userId);
-  if (!result.success) return undefined;
+  if (!result.success || !result.analysis) return undefined;
 
   const analysis = result.analysis;
   return {
