@@ -21,10 +21,10 @@ export const agentRouter: RouterFactory = (ctx: RouterContext): Router => {
   const { storage, logger } = ctx.services;
   const { requireAuth, createRateLimiter } = ctx.middleware;
 
-  // Rate limit: 30 requests per 15 minutes per user
+  // Rate limit: 60 requests per 15 minutes per user
   const agentLimiter = createRateLimiter({
     windowMs: 15 * 60 * 1000,
-    maxRequests: 30,
+    maxRequests: 60,
   });
 
   /**

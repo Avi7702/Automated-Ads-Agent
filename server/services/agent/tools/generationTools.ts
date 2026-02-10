@@ -75,12 +75,30 @@ export function createGenerationTools(storage: IStorage) {
         return { status: 'error', message: 'Authentication required. Please refresh the page and try again.' };
       }
 
-      // Collect product images
+      // Collect product images and metadata for the generation recipe
       const images: Array<{ buffer: Buffer; mimetype: string; originalname: string }> = [];
+      const recipeProducts: Array<{
+        id: string;
+        name: string;
+        category?: string;
+        description?: string;
+        imageUrls: string[];
+      }> = [];
       for (const id of input.productIds) {
         try {
           const product = await storage.getProductById(id);
-          if (product?.cloudinaryUrl) {
+          if (!product) continue;
+
+          // Track product metadata for the generation recipe
+          recipeProducts.push({
+            id: String(product.id),
+            name: product.name ?? id,
+            category: product.category ?? undefined,
+            description: product.description?.slice(0, 500) ?? undefined,
+            imageUrls: product.cloudinaryUrl ? [product.cloudinaryUrl] : [],
+          });
+
+          if (product.cloudinaryUrl) {
             // SSRF protection: only allow Cloudinary URLs
             let urlObj: URL;
             try {
@@ -133,6 +151,12 @@ export function createGenerationTools(storage: IStorage) {
           images,
           mode: input.mode ?? 'standard',
           resolution: input.resolution ?? '1K',
+          recipe: {
+            version: '1.0',
+            products: recipeProducts,
+            relationships: [],
+            scenarios: [],
+          },
         });
 
         return {

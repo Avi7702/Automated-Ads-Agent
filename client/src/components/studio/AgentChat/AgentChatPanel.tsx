@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Bot, ChevronUp, ChevronDown, Send, Square, Trash2, Mic, MicOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import { ChatMessage } from './ChatMessage';
 import { useAgentChat } from './useAgentChat';
 
@@ -19,6 +20,7 @@ interface AgentChatPanelProps {
 }
 
 export function AgentChatPanel({ orch }: AgentChatPanelProps) {
+  const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(() => {
     try {
       return localStorage.getItem('agent-chat-open') === 'true';
@@ -41,6 +43,10 @@ export function AgentChatPanel({ orch }: AgentChatPanelProps) {
             const products = payload.products as any[];
             if (products && orch.setSelectedProducts) {
               orch.setSelectedProducts(products);
+              toast({
+                title: 'Products selected',
+                description: `${products.length} product(s) selected by the assistant.`,
+              });
             }
             break;
           }
@@ -48,6 +54,7 @@ export function AgentChatPanel({ orch }: AgentChatPanelProps) {
             const prompt = payload.prompt as string;
             if (prompt && orch.setPrompt) {
               orch.setPrompt(prompt);
+              toast({ title: 'Prompt updated', description: 'The assistant set your generation prompt.' });
             }
             break;
           }
@@ -55,6 +62,7 @@ export function AgentChatPanel({ orch }: AgentChatPanelProps) {
             const platform = payload.platform as string;
             if (platform && orch.setPlatform) {
               orch.setPlatform(platform);
+              toast({ title: 'Platform set', description: `Target platform: ${platform}` });
             }
             break;
           }
@@ -77,13 +85,24 @@ export function AgentChatPanel({ orch }: AgentChatPanelProps) {
             if (imageUrl && orch.setGeneratedImage) {
               orch.setGeneratedImage(imageUrl);
               if (orch.setState) orch.setState('result');
+              toast({ title: 'Image generated!', description: 'Check the result in the canvas.' });
             }
             break;
           }
           case 'copy_generated': {
             const copies = payload.copies as any[];
-            if (copies && orch.setGeneratedCopy) {
-              orch.setGeneratedCopy(copies);
+            if (copies?.length > 0) {
+              // setGeneratedCopy expects a string — use the first copy's caption
+              const firstCopy = copies[0];
+              if (orch.setGeneratedCopyFull) {
+                orch.setGeneratedCopyFull(firstCopy);
+              } else if (orch.setGeneratedCopy) {
+                orch.setGeneratedCopy(firstCopy?.caption ?? firstCopy?.bodyText ?? '');
+              }
+              toast({
+                title: 'Ad copy generated',
+                description: `${copies.length} variation(s) ready in the Inspector.`,
+              });
             }
             break;
           }
