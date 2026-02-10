@@ -52,6 +52,9 @@ import { socialRouterModule } from './social.router';
 // N8N webhooks
 import { n8nRouterModule } from './n8n.router';
 
+// Content calendar
+import { calendarRouterModule } from './calendar.router';
+
 // Content planning
 import { planningRouterModule } from './planning.router';
 
@@ -115,6 +118,9 @@ export const routerModules: RouterModule[] = [
   // N8N webhooks
   n8nRouterModule,
 
+  // Content calendar
+  calendarRouterModule,
+
   // Content planning
   planningRouterModule,
 
@@ -169,6 +175,7 @@ export { patternsRouterModule } from './patterns.router';
 export { copywritingRouterModule } from './copywriting.router';
 export { socialRouterModule } from './social.router';
 export { n8nRouterModule } from './n8n.router';
+export { calendarRouterModule } from './calendar.router';
 export { planningRouterModule } from './planning.router';
 export { approvalQueueRouterModule } from './approvalQueue.router';
 export { styleReferencesRouterModule } from './styleReferences.router';
