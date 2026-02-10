@@ -82,13 +82,13 @@ export default defineConfig({
             method: 'GET',
           },
           {
-            // Background sync for failed POST/PUT/DELETE requests to API
+            // Background sync for failed POST requests to API
             urlPattern: /\/api\//i,
             handler: 'NetworkOnly',
             method: 'POST',
             options: {
               backgroundSync: {
-                name: 'api-mutations-queue',
+                name: 'api-post-queue',
                 options: {
                   maxRetentionTime: 24 * 60, // Retry for up to 24 hours (in minutes)
                 },
@@ -96,12 +96,13 @@ export default defineConfig({
             },
           },
           {
+            // Background sync for failed PUT requests to API
             urlPattern: /\/api\//i,
             handler: 'NetworkOnly',
             method: 'PUT',
             options: {
               backgroundSync: {
-                name: 'api-mutations-queue',
+                name: 'api-put-queue',
                 options: {
                   maxRetentionTime: 24 * 60,
                 },

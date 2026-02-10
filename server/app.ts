@@ -240,7 +240,13 @@ const { generateToken, doubleCsrfProtection } = doubleCsrf({
 });
 
 // Apply CSRF protection middleware
-app.use(doubleCsrfProtection);
+// Skip CSRF for analytics/vitals — sendBeacon() cannot set custom headers
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.path === '/api/analytics/vitals' && req.method === 'POST') {
+    return next();
+  }
+  return doubleCsrfProtection(req, res, next);
+});
 
 // CSRF token endpoint - clients must fetch this before making state-changing requests
 app.get('/api/csrf-token', (req: Request, res: Response) => {
