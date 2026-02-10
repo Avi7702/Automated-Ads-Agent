@@ -1,14 +1,16 @@
 /**
  * N8N Router
- * N8N webhook callback endpoint for social posting results
+ * N8N webhook endpoints for social posting automation
  *
  * Endpoints:
- * - POST /api/n8n/callback - Webhook handler for n8n posting results
+ * - GET  /api/n8n/due-posts  — n8n polls for posts ready to publish
+ * - POST /api/n8n/callback   — n8n reports publish result
  */
 
 import type { Router, Request, Response } from 'express';
 import type { RouterContext, RouterFactory, RouterModule } from '../types/router';
 import { createRouter, asyncHandler } from './utils/createRouter';
+import { claimDuePosts, updatePostAfterCallback } from '../services/schedulingRepository';
 
 export const n8nRouter: RouterFactory = (ctx: RouterContext): Router => {
   const router = createRouter();
@@ -17,48 +19,79 @@ export const n8nRouter: RouterFactory = (ctx: RouterContext): Router => {
   const { n8nCallback } = ctx.schemas;
 
   /**
-   * POST /callback - Webhook handler for n8n posting results
-   * Called by n8n workflows after posting to social platforms
+   * GET /due-posts — n8n polls this every few minutes
+   * Returns posts that are due for publishing (atomically claimed).
+   * Protected by webhook HMAC signature.
    */
-  router.post('/callback', validateN8nWebhook, validate(n8nCallback), asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const {
-        scheduledPostId,
-        platform,
-        success,
-        platformPostId,
-        platformPostUrl,
-        error,
-        executionId,
-        postedAt,
-      } = req.body;
+  router.get(
+    '/due-posts',
+    validateN8nWebhook,
+    asyncHandler(async (_req: Request, res: Response) => {
+      try {
+        const limit = 10;
+        const posts = await claimDuePosts(limit);
 
-      logger.info({
-        scheduledPostId,
-        platform,
-        success,
-        executionId,
-      }, 'n8n callback received');
+        logger.info({ count: posts.length }, 'n8n polled for due posts');
 
-      // TODO: Update scheduledPosts table (Phase 8.2 - Approval Queue)
-      // For now, just log and acknowledge
+        res.json({
+          success: true,
+          posts,
+          claimedAt: new Date().toISOString(),
+        });
+      } catch (error) {
+        logger.error({ module: 'n8nDuePosts', err: error }, 'Failed to claim due posts');
+        res.status(500).json({ success: false, error: 'Failed to fetch due posts' });
+      }
+    }),
+  );
 
-      res.json({
-        success: true,
-        message: 'Callback received and processed'
-      });
-    } catch (error) {
-      logger.error({
-        module: 'n8nCallback',
-        err: error
-      }, 'Failed to process n8n callback');
+  /**
+   * POST /callback — n8n calls back after publishing
+   * Updates the scheduled post status (published or failed).
+   * Protected by webhook HMAC signature.
+   */
+  router.post(
+    '/callback',
+    validateN8nWebhook,
+    validate(n8nCallback),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const {
+          scheduledPostId,
+          platform,
+          success,
+          platformPostId,
+          platformPostUrl,
+          error: errorMsg,
+          executionId,
+        } = req.body;
 
-      res.status(500).json({
-        success: false,
-        error: 'Failed to process callback'
-      });
-    }
-  }));
+        logger.info(
+          {
+            scheduledPostId,
+            platform,
+            success,
+            executionId,
+          },
+          'n8n callback received',
+        );
+
+        await updatePostAfterCallback(scheduledPostId, success, {
+          platformPostId,
+          platformPostUrl,
+          errorMessage: errorMsg,
+        });
+
+        res.json({
+          success: true,
+          message: 'Callback processed — post status updated',
+        });
+      } catch (error) {
+        logger.error({ module: 'n8nCallback', err: error }, 'Failed to process n8n callback');
+        res.status(500).json({ success: false, error: 'Failed to process callback' });
+      }
+    }),
+  );
 
   return router;
 };
@@ -66,8 +99,8 @@ export const n8nRouter: RouterFactory = (ctx: RouterContext): Router => {
 export const n8nRouterModule: RouterModule = {
   prefix: '/api/n8n',
   factory: n8nRouter,
-  description: 'N8N webhook callbacks',
-  endpointCount: 1,
+  description: 'N8N webhook callbacks and due-post polling',
+  endpointCount: 2,
   requiresAuth: false, // Uses webhook signature validation instead
-  tags: ['n8n', 'webhooks', 'social']
+  tags: ['n8n', 'webhooks', 'social', 'calendar'],
 };
