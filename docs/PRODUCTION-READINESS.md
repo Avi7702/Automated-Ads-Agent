@@ -357,14 +357,14 @@ Billing, Terms of Service, Privacy Policy, cookie consent, and public landing pa
 
 ### Not Yet Implemented (Feature Roadmap)
 
-- [ ] Video generation
-- [ ] Voice prompts
+- [x] Video generation (Veo via Gemini API, BullMQ async, Cloudinary storage)
+- [x] Voice prompts (Web Speech API voice-to-text + text-to-speech read-aloud)
 - [x] Character/style references (consistency)
 - [x] Canvas editor (inpainting, outpainting)
-- [ ] Real-time collaboration
-- [ ] Custom model training
+- [x] Real-time collaboration (Socket.io presence, cursors, typing indicators)
+- [x] Custom model training (Gemini tuning API, dataset CRUD, training examples, tuned model management)
 
-**Score: 10/14 = 71%**
+**Score: 14/14 = 100%**
 
 ---
 
@@ -382,9 +382,9 @@ Billing, Terms of Service, Privacy Policy, cookie consent, and public landing pa
 | 8   | AI/LLM Operations        | 87%      | **100%** | Production Ready |
 | 9   | DevOps & Deployment      | 80%      | **100%** | Production Ready |
 | 10  | SEO & Legal              | N/A      | **N/A**  | Private tool     |
-| 11  | Competitive Table Stakes | 50%      | **71%**  | MVP Possible     |
+| 11  | Competitive Table Stakes | 50%      | **100%** | Production Ready |
 
-**Overall: 88% -> 97% (+9 points) — 8/9 sections at 100%**
+**Overall: 88% -> 100% (+12 points) — 9/9 sections at 100%**
 
 ---
 

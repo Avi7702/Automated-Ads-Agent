@@ -36,8 +36,13 @@ import {
   Wand2,
   FileImage,
   Palette,
+  Video,
+  Image,
+  Mic,
+  MicOff,
 } from 'lucide-react';
 import { useRipple } from '@/hooks/useRipple';
+import { useVoiceInput } from '@/hooks/useVoiceInput';
 import type { StudioOrchestrator } from '@/hooks/useStudioOrchestrator';
 
 /** Collapsible section wrapper */
@@ -92,6 +97,24 @@ interface ComposerViewProps {
 export const ComposerView = memo(function ComposerView({ orch }: ComposerViewProps) {
   const { createRipple } = useRipple();
 
+  // Voice input for Quick Start prompt
+  const quickStartVoice = useVoiceInput({
+    onTranscript: (text, isFinal) => {
+      if (isFinal) {
+        orch.setQuickStartPrompt((prev) => (prev ? prev + ' ' + text : text));
+      }
+    },
+  });
+
+  // Voice input for main prompt
+  const mainPromptVoice = useVoiceInput({
+    onTranscript: (text, isFinal) => {
+      if (isFinal) {
+        orch.handlePromptChange(orch.prompt ? orch.prompt + ' ' + text : text);
+      }
+    },
+  });
+
   return (
     <div className="space-y-6">
       {/* Quick Start */}
@@ -120,7 +143,23 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
             }}
           />
           <div className="flex justify-between items-center">
-            <span className="text-xs text-muted-foreground">Press Enter to generate, Shift+Enter for new line</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Press Enter to generate, Shift+Enter for new line</span>
+              {quickStartVoice.isSupported && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={quickStartVoice.toggleListening}
+                  className={cn(
+                    'h-8 w-8 p-0 rounded-full',
+                    quickStartVoice.isListening && 'bg-red-500/20 text-red-500 animate-pulse',
+                  )}
+                  aria-label={quickStartVoice.isListening ? 'Stop listening' : 'Voice input'}
+                >
+                  {quickStartVoice.isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                </Button>
+              )}
+            </div>
             <Button onClick={orch.handleGenerate} disabled={!orch.quickStartPrompt.trim()}>
               <Sparkles className="w-4 h-4 mr-2" />
               Generate Now
@@ -471,18 +510,43 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
 
         {/* Main Prompt Textarea */}
         <div className="space-y-2">
-          <Textarea
-            id="prompt-textarea"
-            value={orch.prompt}
-            onChange={(e) => orch.handlePromptChange(e.target.value)}
-            placeholder="Describe your ideal ad creative... What mood? What style? What should the image convey?"
-            rows={5}
-            className={cn(
-              'resize-none text-base',
-              orch.selectedSuggestion && 'border-primary/50 ring-2 ring-primary/20',
+          <div className="relative">
+            <Textarea
+              id="prompt-textarea"
+              value={orch.prompt}
+              onChange={(e) => orch.handlePromptChange(e.target.value)}
+              placeholder="Describe your ideal ad creative... What mood? What style? What should the image convey?"
+              rows={5}
+              className={cn(
+                'resize-none text-base pr-12',
+                orch.selectedSuggestion && 'border-primary/50 ring-2 ring-primary/20',
+                mainPromptVoice.isListening && 'border-red-500/50 ring-2 ring-red-500/20',
+              )}
+            />
+            {mainPromptVoice.isSupported && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={mainPromptVoice.toggleListening}
+                className={cn(
+                  'absolute right-2 top-2 h-8 w-8 p-0 rounded-full',
+                  mainPromptVoice.isListening && 'bg-red-500/20 text-red-500 animate-pulse',
+                )}
+                aria-label={mainPromptVoice.isListening ? 'Stop listening' : 'Voice input'}
+              >
+                {mainPromptVoice.isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              </Button>
             )}
-          />
-          {orch.prompt && <p className="text-xs text-muted-foreground text-right">{orch.prompt.length} characters</p>}
+          </div>
+          <div className="flex items-center justify-between">
+            {mainPromptVoice.isListening && (
+              <span className="text-xs text-red-500 animate-pulse">Listening... speak your prompt</span>
+            )}
+            {orch.prompt && !mainPromptVoice.isListening && (
+              <span className="text-xs text-muted-foreground">{orch.prompt.length} characters</span>
+            )}
+            <span />
+          </div>
         </div>
 
         {/* Idea Bank */}
@@ -504,6 +568,50 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
             templateId={orch.selectedTemplateForMode?.id}
           />
         </ErrorBoundary>
+
+        {/* Output Type: Image vs Video */}
+        <div className="flex items-center gap-3 pb-2 border-b border-border/50">
+          <span className="text-sm text-muted-foreground">Output:</span>
+          <div className="flex rounded-lg border border-border overflow-hidden">
+            <button
+              onClick={() => orch.setMediaMode('image')}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors',
+                orch.mediaMode === 'image' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted',
+              )}
+            >
+              <Image className="w-3.5 h-3.5" />
+              Image
+            </button>
+            <button
+              onClick={() => orch.setMediaMode('video')}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors',
+                orch.mediaMode === 'video' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted',
+              )}
+            >
+              <Video className="w-3.5 h-3.5" />
+              Video
+            </button>
+          </div>
+          {orch.mediaMode === 'video' && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Duration:</span>
+              <Select value={orch.videoDuration} onValueChange={orch.setVideoDuration}>
+                <SelectTrigger className="w-20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {['4', '6', '8'].map((d) => (
+                    <SelectItem key={d} value={d}>
+                      {d}s
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
 
         {/* Platform, Size, Quality */}
         <div className="flex flex-col sm:flex-row flex-wrap gap-4">
@@ -598,14 +706,36 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
 
       {/* Generate Button */}
       <motion.div ref={orch.generateButtonRef} id="generate" className="py-4">
-        <Button size="lg" onClick={orch.handleGenerate} disabled={!orch.canGenerate} className="w-full h-16 text-lg">
-          <Sparkles className="w-5 h-5 mr-2" />
-          Generate Image
+        <Button
+          size="lg"
+          onClick={orch.mediaMode === 'video' ? orch.handleGenerateVideo : orch.handleGenerate}
+          disabled={!orch.canGenerate}
+          className="w-full h-16 text-lg"
+        >
+          {orch.mediaMode === 'video' ? (
+            <>
+              <Video className="w-5 h-5 mr-2" />
+              Generate Video ({orch.videoDuration}s)
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-5 h-5 mr-2" />
+              Generate Image
+            </>
+          )}
         </Button>
         <p className="text-center text-sm text-muted-foreground mt-3">
-          {orch.selectedProducts.length + orch.tempUploads.length} image
-          {orch.selectedProducts.length + orch.tempUploads.length !== 1 ? 's' : ''} • {orch.platform} •{' '}
-          {orch.resolution}
+          {orch.mediaMode === 'video' ? (
+            <>
+              Video • {orch.videoDuration}s • {orch.platform} • ~2-10 min
+            </>
+          ) : (
+            <>
+              {orch.selectedProducts.length + orch.tempUploads.length} image
+              {orch.selectedProducts.length + orch.tempUploads.length !== 1 ? 's' : ''} • {orch.platform} •{' '}
+              {orch.resolution}
+            </>
+          )}
         </p>
       </motion.div>
     </div>

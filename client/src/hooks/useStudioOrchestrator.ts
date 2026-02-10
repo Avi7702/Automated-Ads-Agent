@@ -144,6 +144,12 @@ export function useStudioOrchestrator() {
   const [textOnlyTopic, setTextOnlyTopic] = useState('');
   const [showCanvasEditor, setShowCanvasEditor] = useState(false);
 
+  // ── Video Mode ──────────────────────────────────────
+  const [mediaMode, setMediaMode] = useState<'image' | 'video'>('image');
+  const [videoDuration, setVideoDuration] = useState<'4' | '6' | '8'>('8');
+  const [videoJobId, setVideoJobId] = useState<string | null>(null);
+  const [generatedMediaType, setGeneratedMediaType] = useState<'image' | 'video'>('image');
+
   // ── History Panel ─────────────────────────────────────
   const { isHistoryOpen, selectedGenerationId, openHistory, closeHistory, selectGeneration } = useHistoryPanelUrl();
   const [historyPanelOpen, setHistoryPanelOpen] = useState(isHistoryOpen);
@@ -541,6 +547,78 @@ export function useStudioOrchestrator() {
     setState('idle');
   }, []);
 
+  /** Generate a video via Veo — enqueues a BullMQ job then polls for completion */
+  const handleGenerateVideo = useCallback(async () => {
+    const finalPrompt = quickStartPrompt.trim() || prompt.trim();
+    if (!finalPrompt) return;
+
+    setState('generating');
+    setGeneratedMediaType('video');
+
+    try {
+      const token = await getCsrfToken().catch(() => '');
+      const response = await fetch('/api/generations/video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-csrf-token': token },
+        credentials: 'include',
+        body: JSON.stringify({
+          prompt: finalPrompt,
+          duration: videoDuration,
+          aspectRatio: aspectRatio === '1080x1920' || aspectRatio === '1080x1350' ? '9:16' : '16:9',
+          videoResolution: resolution === '4K' ? '4k' : resolution === '1K' ? '720p' : '1080p',
+        }),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Failed to start video generation');
+      }
+
+      const data = await response.json();
+      setGenerationId(data.generationId);
+      setVideoJobId(data.jobId);
+
+      // Poll for completion
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusRes = await fetch(`/api/jobs/${data.jobId}`, { credentials: 'include' });
+          if (!statusRes.ok) return;
+
+          const statusData = await statusRes.json();
+
+          if (statusData.state === 'completed' && statusData.generation?.generatedImagePath) {
+            clearInterval(pollInterval);
+            setGeneratedImage(statusData.generation.generatedImagePath);
+            setState('result');
+            setVideoJobId(null);
+            toast.success('Video generated!');
+          } else if (statusData.state === 'failed') {
+            clearInterval(pollInterval);
+            toast.error(`Video generation failed: ${statusData.failedReason || 'Unknown error'}`);
+            setState('idle');
+            setVideoJobId(null);
+          }
+        } catch {
+          // silently retry on network blips
+        }
+      }, 5000);
+
+      // Safety timeout — stop polling after 12 minutes
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        if (videoJobId) {
+          toast.error('Video generation timed out. Check Gallery for results.');
+          setState('idle');
+          setVideoJobId(null);
+        }
+      }, 720_000);
+    } catch (error: any) {
+      toast.error(`Video generation failed: ${error.message}`);
+      setState('idle');
+      setGeneratedMediaType('image');
+    }
+  }, [quickStartPrompt, prompt, videoDuration, aspectRatio, resolution, videoJobId]);
+
   const handleDownload = useCallback(() => {
     if (!generatedImage) return;
     const link = document.createElement('a');
@@ -576,6 +654,8 @@ export function useStudioOrchestrator() {
     setQuickStartPrompt('');
     setTempUploads([]);
     setGeneratedCopy('');
+    setGeneratedMediaType('image');
+    setVideoJobId(null);
   }, []);
 
   const handleApplyEdit = useCallback(async () => {
@@ -858,6 +938,10 @@ export function useStudioOrchestrator() {
     showTextOnlyMode,
     textOnlyTopic,
     showCanvasEditor,
+    mediaMode,
+    videoDuration,
+    videoJobId,
+    generatedMediaType,
     historyPanelOpen,
     justCopied,
     isDownloading,
@@ -920,6 +1004,10 @@ export function useStudioOrchestrator() {
     setShowTextOnlyMode,
     setTextOnlyTopic,
     setShowCanvasEditor,
+    setMediaMode,
+    setVideoDuration,
+    setVideoJobId,
+    setGeneratedMediaType,
     setHistoryPanelOpen,
     setShowKeyboardShortcuts,
     setImageScale,
@@ -932,6 +1020,7 @@ export function useStudioOrchestrator() {
     toggleSection,
     navigateToSection,
     handleGenerate,
+    handleGenerateVideo,
     handleCancelGeneration,
     handleDownload,
     handleDownloadWithFeedback,

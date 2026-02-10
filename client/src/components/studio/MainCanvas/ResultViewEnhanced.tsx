@@ -30,7 +30,9 @@ import {
   FolderPlus,
   Copy,
   Wand2,
+  Volume2,
 } from 'lucide-react';
+import { speakText } from '@/hooks/useVoiceInput';
 import { CanvasEditor } from '@/components/studio/CanvasEditor/CanvasEditor';
 import type { StudioOrchestrator } from '@/hooks/useStudioOrchestrator';
 
@@ -72,48 +74,63 @@ export const ResultViewEnhanced = memo(function ResultViewEnhanced({ orch }: Res
         </div>
       </div>
 
-      {/* Generated Image with Zoom */}
-      <div
-        ref={orch.zoomContainerRef}
-        className="rounded-2xl overflow-hidden border border-border bg-black relative touch-none select-none"
-      >
-        <motion.div
-          style={{
-            scale: orch.imageScale,
-            x: orch.imagePosition.x,
-            y: orch.imagePosition.y,
-            cursor: orch.imageScale > 1 ? 'grab' : 'default',
-          }}
-          onDoubleClick={() => {
-            orch.setImageScale(1);
-            orch.setImagePosition({ x: 0, y: 0 });
-          }}
-          className="transition-none"
-        >
-          <img
+      {/* Generated Media — Video or Image with Zoom */}
+      {orch.generatedMediaType === 'video' ? (
+        <div className="rounded-2xl overflow-hidden border border-border bg-black">
+          <video
             src={orch.generatedImage}
-            alt="Generated"
-            className="w-full aspect-square object-cover pointer-events-none"
-            draggable={false}
-          />
-        </motion.div>
-
-        {orch.imageScale === 1 && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs text-white/80">
-            Scroll to zoom • Double-click to reset
-          </div>
-        )}
-
-        {orch.imageScale !== 1 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="absolute top-4 right-4 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs text-white font-mono"
+            controls
+            autoPlay
+            loop
+            className="w-full aspect-video"
+            style={{ maxHeight: '70vh' }}
           >
-            {Math.round(orch.imageScale * 100)}%
+            Your browser does not support video playback.
+          </video>
+        </div>
+      ) : (
+        <div
+          ref={orch.zoomContainerRef}
+          className="rounded-2xl overflow-hidden border border-border bg-black relative touch-none select-none"
+        >
+          <motion.div
+            style={{
+              scale: orch.imageScale,
+              x: orch.imagePosition.x,
+              y: orch.imagePosition.y,
+              cursor: orch.imageScale > 1 ? 'grab' : 'default',
+            }}
+            onDoubleClick={() => {
+              orch.setImageScale(1);
+              orch.setImagePosition({ x: 0, y: 0 });
+            }}
+            className="transition-none"
+          >
+            <img
+              src={orch.generatedImage}
+              alt="Generated"
+              className="w-full aspect-square object-cover pointer-events-none"
+              draggable={false}
+            />
           </motion.div>
-        )}
-      </div>
+
+          {orch.imageScale === 1 && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs text-white/80">
+              Scroll to zoom • Double-click to reset
+            </div>
+          )}
+
+          {orch.imageScale !== 1 && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="absolute top-4 right-4 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs text-white font-mono"
+            >
+              {Math.round(orch.imageScale * 100)}%
+            </motion.div>
+          )}
+        </div>
+      )}
 
       {/* Action Buttons */}
       <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
@@ -320,6 +337,17 @@ export const ResultViewEnhanced = memo(function ResultViewEnhanced({ orch }: Res
                     rows={4}
                     className="resize-none"
                   />
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => speakText(orch.generatedCopy)}
+                      aria-label="Read copy aloud"
+                    >
+                      <Volume2 className="w-4 h-4 mr-1.5" />
+                      Read Aloud
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>

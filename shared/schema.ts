@@ -64,6 +64,8 @@ export const generations = pgTable(
     parentGenerationId: varchar('parent_generation_id'),
     editPrompt: text('edit_prompt'),
     editCount: integer('edit_count').default(0),
+    mediaType: varchar('media_type', { length: 10 }).default('image'), // 'image' | 'video'
+    videoDurationSec: integer('video_duration_sec'), // Video duration in seconds (4, 6, 8)
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },
@@ -1983,3 +1985,75 @@ export const insertStyleReferenceSchema = createInsertSchema(styleReferences).om
 
 export type StyleReference = typeof styleReferences.$inferSelect;
 export type InsertStyleReference = z.infer<typeof insertStyleReferenceSchema>;
+
+// ─── Custom Model Training ────────────────────────────────────
+
+export const trainingDatasets = pgTable(
+  'training_datasets',
+  {
+    id: varchar('id')
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: varchar('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 255 }).notNull(),
+    description: text('description'),
+    baseModel: varchar('base_model', { length: 100 }).default('gemini-2.5-flash'),
+    status: varchar('status', { length: 30 }).default('draft'), // draft, ready, training, completed, failed
+    exampleCount: integer('example_count').default(0),
+    tunedModelName: text('tuned_model_name'), // Returned after tuning completes
+    tunedModelEndpoint: text('tuned_model_endpoint'),
+    trainingConfig: jsonb('training_config'), // { epochs, learningRate, batchSize }
+    trainingMetrics: jsonb('training_metrics'), // { loss, accuracy, epochs_completed }
+    startedAt: timestamp('started_at'),
+    completedAt: timestamp('completed_at'),
+    errorMessage: text('error_message'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index('training_datasets_user_id_idx').on(table.userId),
+    statusIdx: index('training_datasets_status_idx').on(table.status),
+  }),
+);
+
+export const trainingExamples = pgTable(
+  'training_examples',
+  {
+    id: varchar('id')
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    datasetId: varchar('dataset_id')
+      .notNull()
+      .references(() => trainingDatasets.id, { onDelete: 'cascade' }),
+    inputText: text('input_text').notNull(),
+    outputText: text('output_text').notNull(),
+    category: varchar('category', { length: 50 }), // e.g., 'copywriting', 'prompt_engineering', 'style'
+    quality: real('quality'), // 0-1 quality score for filtering
+    sourceGenerationId: varchar('source_generation_id'), // If derived from an approved generation
+    isValidated: boolean('is_validated').default(false),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    datasetIdIdx: index('training_examples_dataset_id_idx').on(table.datasetId),
+    categoryIdx: index('training_examples_category_idx').on(table.category),
+  }),
+);
+
+export const insertTrainingDatasetSchema = createInsertSchema(trainingDatasets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  exampleCount: true,
+});
+
+export const insertTrainingExampleSchema = createInsertSchema(trainingExamples).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type TrainingDataset = typeof trainingDatasets.$inferSelect;
+export type InsertTrainingDataset = z.infer<typeof insertTrainingDatasetSchema>;
+export type TrainingExample = typeof trainingExamples.$inferSelect;
+export type InsertTrainingExample = z.infer<typeof insertTrainingExampleSchema>;

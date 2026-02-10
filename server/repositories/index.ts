@@ -11,3 +11,4 @@ export * as approvalRepo from './approvalRepository';
 export * as apiKeyRepo from './apiKeyRepository';
 export * as socialRepo from './socialRepository';
 export * as styleReferenceRepo from './styleReferenceRepository';
+export * as trainingRepo from './trainingRepository';

@@ -65,6 +65,11 @@ import {
   // Style Reference types
   type StyleReference,
   type InsertStyleReference,
+  // Training types
+  type TrainingDataset,
+  type InsertTrainingDataset,
+  type TrainingExample,
+  type InsertTrainingExample,
 } from '@shared/schema';
 
 // Repository imports
@@ -82,6 +87,7 @@ import {
   apiKeyRepo,
   socialRepo,
   styleReferenceRepo,
+  trainingRepo,
 } from './repositories';
 
 export interface IStorage {
@@ -375,6 +381,18 @@ export interface IStorage {
   deleteStyleReference(id: string): Promise<void>;
   incrementStyleReferenceUsage(id: string): Promise<void>;
   getStyleReferencesByIds(ids: string[]): Promise<StyleReference[]>;
+
+  // ============================================
+  // CUSTOM MODEL TRAINING OPERATIONS
+  // ============================================
+  createTrainingDataset(data: InsertTrainingDataset): Promise<TrainingDataset>;
+  getTrainingDatasetById(id: string): Promise<TrainingDataset | undefined>;
+  getTrainingDatasetsByUser(userId: string): Promise<TrainingDataset[]>;
+  updateTrainingDataset(id: string, updates: Partial<InsertTrainingDataset>): Promise<TrainingDataset>;
+  deleteTrainingDataset(id: string): Promise<void>;
+  createTrainingExample(data: InsertTrainingExample): Promise<TrainingExample>;
+  getTrainingExamples(datasetId: string): Promise<TrainingExample[]>;
+  deleteTrainingExample(id: string): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -959,6 +977,34 @@ export class DbStorage implements IStorage {
   }
   async getStyleReferencesByIds(ids: string[]): Promise<StyleReference[]> {
     return styleReferenceRepo.getStyleReferencesByIds(ids);
+  }
+
+  // ============================================
+  // CUSTOM MODEL TRAINING OPERATIONS
+  // ============================================
+  async createTrainingDataset(data: InsertTrainingDataset): Promise<TrainingDataset> {
+    return trainingRepo.createTrainingDataset(data);
+  }
+  async getTrainingDatasetById(id: string): Promise<TrainingDataset | undefined> {
+    return trainingRepo.getTrainingDatasetById(id);
+  }
+  async getTrainingDatasetsByUser(userId: string): Promise<TrainingDataset[]> {
+    return trainingRepo.getTrainingDatasetsByUser(userId);
+  }
+  async updateTrainingDataset(id: string, updates: Partial<InsertTrainingDataset>): Promise<TrainingDataset> {
+    return trainingRepo.updateTrainingDataset(id, updates);
+  }
+  async deleteTrainingDataset(id: string): Promise<void> {
+    return trainingRepo.deleteTrainingDataset(id);
+  }
+  async createTrainingExample(data: InsertTrainingExample): Promise<TrainingExample> {
+    return trainingRepo.createTrainingExample(data);
+  }
+  async getTrainingExamples(datasetId: string): Promise<TrainingExample[]> {
+    return trainingRepo.getTrainingExamples(datasetId);
+  }
+  async deleteTrainingExample(id: string): Promise<void> {
+    return trainingRepo.deleteTrainingExample(id);
   }
 }
 

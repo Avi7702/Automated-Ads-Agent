@@ -16,6 +16,7 @@ import { Job } from 'bullmq';
 import { v2 as cloudinary } from 'cloudinary';
 import { storage } from '../storage';
 import { geminiService } from '../services/geminiService';
+import { generateVideo } from '../services/geminiVideoService';
 import { logger } from '../lib/logger';
 import {
   GenerationJobData,
@@ -26,10 +27,12 @@ import {
   isGenerateJob,
   isEditJob,
   isVariationJob,
+  isVideoGenerateJob,
 } from './types';
 
-// Cloudinary folder for generated images
+// Cloudinary folders
 const CLOUDINARY_FOLDER = 'automated-ads/generations';
+const CLOUDINARY_VIDEO_FOLDER = 'automated-ads/videos';
 
 /**
  * Report progress during job processing
@@ -38,14 +41,11 @@ async function reportProgress(
   job: Job<GenerationJobData, GenerationJobResult>,
   stage: JobProgress['stage'],
   percentage: number,
-  message: string
+  message: string,
 ): Promise<void> {
   const progress: JobProgress = { stage, percentage, message };
   await job.updateProgress(progress);
-  logger.debug(
-    { jobId: job.id, ...progress },
-    `Job progress: ${message}`
-  );
+  logger.debug({ jobId: job.id, ...progress }, `Job progress: ${message}`);
 }
 
 /**
@@ -53,7 +53,7 @@ async function reportProgress(
  */
 async function uploadToCloudinary(
   base64Data: string,
-  generationId: string
+  generationId: string,
 ): Promise<{ secure_url: string; public_id: string }> {
   const dataUri = `data:image/png;base64,${base64Data}`;
 
@@ -74,7 +74,7 @@ async function uploadToCloudinary(
  */
 async function processGenerateJob(
   job: Job<GenerationJobData, GenerationJobResult>,
-  data: GenerationJobData & { jobType: JobType.GENERATE }
+  data: GenerationJobData & { jobType: JobType.GENERATE },
 ): Promise<{ imageBase64: string; conversationHistory: any[] }> {
   await reportProgress(job, 'processing', 30, 'Generating image with AI...');
 
@@ -84,7 +84,7 @@ async function processGenerateJob(
       aspectRatio: data.aspectRatio,
       referenceImages: undefined,
     },
-    data.userId
+    data.userId,
   );
 
   return {
@@ -99,7 +99,7 @@ async function processGenerateJob(
 async function processEditJob(
   job: Job<GenerationJobData, GenerationJobResult>,
   data: GenerationJobData & { jobType: JobType.EDIT },
-  existingGeneration: { conversationHistory: any[] | null; editCount?: number }
+  existingGeneration: { conversationHistory: any[] | null; editCount?: number },
 ): Promise<{ imageBase64: string; conversationHistory: any[]; editCount: number }> {
   await reportProgress(job, 'processing', 30, 'Editing image with AI...');
 
@@ -110,7 +110,7 @@ async function processEditJob(
   const result = await geminiService.continueConversation(
     existingGeneration.conversationHistory,
     data.editPrompt,
-    data.userId
+    data.userId,
   );
 
   return {
@@ -126,7 +126,7 @@ async function processEditJob(
 async function processVariationJob(
   job: Job<GenerationJobData, GenerationJobResult>,
   data: GenerationJobData & { jobType: JobType.VARIATION },
-  existingGeneration: { conversationHistory: any[] | null; prompt?: string }
+  existingGeneration: { conversationHistory: any[] | null; prompt?: string },
 ): Promise<{ imageBase64: string; conversationHistory: any[] }> {
   await reportProgress(job, 'processing', 30, 'Creating image variation...');
 
@@ -146,7 +146,8 @@ async function processVariationJob(
   }
 
   // Create variation prompt
-  const variationPrompt = data.prompt ||
+  const variationPrompt =
+    data.prompt ||
     `Create a variation of the original image. Variation strength: ${data.variationStrength || 0.5}. Keep the same subject but vary the style, composition, or details.`;
 
   const result = await geminiService.generateImage(
@@ -155,7 +156,7 @@ async function processVariationJob(
       referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
       aspectRatio: undefined,
     },
-    data.userId
+    data.userId,
   );
 
   return {
@@ -165,22 +166,69 @@ async function processVariationJob(
 }
 
 /**
+ * Upload base64 video to Cloudinary
+ */
+async function uploadVideoToCloudinary(
+  base64Data: string,
+  mimeType: string,
+  generationId: string,
+): Promise<{ secure_url: string; public_id: string }> {
+  const dataUri = `data:${mimeType};base64,${base64Data}`;
+
+  const result = await cloudinary.uploader.upload(dataUri, {
+    folder: CLOUDINARY_VIDEO_FOLDER,
+    public_id: `video-${generationId}-${Date.now()}`,
+    resource_type: 'video',
+  });
+
+  return {
+    secure_url: result.secure_url,
+    public_id: result.public_id,
+  };
+}
+
+/**
+ * Process a video generation job
+ */
+async function processVideoGenerateJob(
+  job: Job<GenerationJobData, GenerationJobResult>,
+  data: GenerationJobData & { jobType: JobType.GENERATE_VIDEO },
+): Promise<{ videoBase64: string; mimeType: string; durationSec: number }> {
+  const result = await generateVideo(
+    data.prompt,
+    {
+      duration: data.duration,
+      aspectRatio: data.aspectRatio,
+      resolution: data.videoResolution,
+      sourceImageBase64: data.sourceImageUrl ? undefined : undefined,
+    },
+    async (pct, message) => {
+      await reportProgress(job, 'processing', Math.min(pct, 85), message);
+    },
+    data.userId,
+  );
+
+  return {
+    videoBase64: result.videoBase64,
+    mimeType: result.mimeType,
+    durationSec: result.durationSec,
+  };
+}
+
+/**
  * Main job processor function
  *
  * Processes generation jobs from the BullMQ queue.
- * Handles generate, edit, and variation job types.
+ * Handles generate, edit, variation, and video job types.
  */
 export async function processGenerationJob(
-  job: Job<GenerationJobData, GenerationJobResult>
+  job: Job<GenerationJobData, GenerationJobResult>,
 ): Promise<GenerationJobResult> {
   const startTime = Date.now();
   const { data } = job;
   const { generationId, jobType, userId } = data;
 
-  logger.info(
-    { jobId: job.id, generationId, jobType, userId },
-    'Starting generation job processing'
-  );
+  logger.info({ jobId: job.id, generationId, jobType, userId }, 'Starting generation job processing');
 
   try {
     // Stage 1: Starting - verify generation exists
@@ -196,6 +244,45 @@ export async function processGenerationJob(
     await storage.updateGeneration(generationId, { status: 'processing' });
 
     // Stage 3: Process based on job type
+    if (isVideoGenerateJob(data)) {
+      // ──── VIDEO GENERATION PATH ────
+      const videoResult = await processVideoGenerateJob(job, data);
+
+      await reportProgress(job, 'uploading', 85, 'Uploading video...');
+      const cloudinaryResult = await uploadVideoToCloudinary(
+        videoResult.videoBase64,
+        videoResult.mimeType,
+        generationId,
+      );
+
+      await reportProgress(job, 'finalizing', 95, 'Saving video...');
+      await storage.updateGeneration(generationId, {
+        status: 'completed',
+        generatedImagePath: cloudinaryResult.secure_url,
+        mediaType: 'video',
+        videoDurationSec: videoResult.durationSec,
+      });
+
+      await reportProgress(job, 'finalizing', 100, 'Video generation complete');
+      const processingTimeMs = Date.now() - startTime;
+
+      logger.info(
+        { jobId: job.id, generationId, processingTimeMs, mediaType: 'video' },
+        'Video generation job completed successfully',
+      );
+
+      return {
+        generationId,
+        status: JobStatus.COMPLETED,
+        imageUrl: cloudinaryResult.secure_url,
+        cloudinaryPublicId: cloudinaryResult.public_id,
+        mediaType: 'video',
+        processingTimeMs,
+        completedAt: new Date().toISOString(),
+      };
+    }
+
+    // ──── IMAGE GENERATION PATH ────
     let processResult: {
       imageBase64: string;
       conversationHistory: any[];
@@ -214,10 +301,7 @@ export async function processGenerationJob(
 
     // Stage 4: Upload to Cloudinary
     await reportProgress(job, 'uploading', 70, 'Uploading image...');
-    const cloudinaryResult = await uploadToCloudinary(
-      processResult.imageBase64,
-      generationId
-    );
+    const cloudinaryResult = await uploadToCloudinary(processResult.imageBase64, generationId);
 
     // Stage 5: Update generation record
     await reportProgress(job, 'finalizing', 90, 'Saving results...');
@@ -239,10 +323,7 @@ export async function processGenerationJob(
 
     const processingTimeMs = Date.now() - startTime;
 
-    logger.info(
-      { jobId: job.id, generationId, processingTimeMs },
-      'Generation job completed successfully'
-    );
+    logger.info({ jobId: job.id, generationId, processingTimeMs }, 'Generation job completed successfully');
 
     return {
       generationId,
@@ -256,10 +337,7 @@ export async function processGenerationJob(
     const processingTimeMs = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : String(error);
 
-    logger.error(
-      { jobId: job.id, generationId, error: errorMessage, processingTimeMs },
-      'Generation job failed'
-    );
+    logger.error({ jobId: job.id, generationId, error: errorMessage, processingTimeMs }, 'Generation job failed');
 
     // Update generation status to failed
     try {
@@ -267,10 +345,7 @@ export async function processGenerationJob(
         status: 'failed',
       });
     } catch (updateError) {
-      logger.error(
-        { jobId: job.id, generationId, error: updateError },
-        'Failed to update generation status to failed'
-      );
+      logger.error({ jobId: job.id, generationId, error: updateError }, 'Failed to update generation status to failed');
     }
 
     return {
