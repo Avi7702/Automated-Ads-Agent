@@ -24,6 +24,7 @@ import { ComposerView, ResultViewEnhanced, GeneratingView } from '@/components/s
 import { InspectorPanel } from '@/components/studio/InspectorPanel';
 import { IdeaBankBar } from '@/components/studio/IdeaBankBar';
 import { HistoryPanel } from '@/components/studio/HistoryPanel';
+import { AgentChatPanel } from '@/components/studio/AgentChat';
 import { SaveToCatalogDialog } from '@/components/SaveToCatalogDialog';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Button } from '@/components/ui/button';
@@ -168,6 +169,9 @@ export default function Studio() {
             orch.historyPanelOpen ? 'max-w-[1600px]' : 'max-w-7xl',
           )}
         >
+          {/* Agent Chat Panel */}
+          <AgentChatPanel orch={orch} />
+
           {/* Hero */}
           <motion.div
             ref={orch.heroRef}

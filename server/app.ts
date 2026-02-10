@@ -15,6 +15,7 @@ import { initGracefulShutdown, onShutdown } from './utils/gracefulShutdown';
 import { validateEnvOrExit } from './lib/validateEnv';
 import { initSentry, sentryRequestHandler, sentryErrorHandler, captureException } from './lib/sentry';
 import { trackError } from './services/errorTrackingService';
+import { notify } from './services/notificationService';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import { startGenerationWorker, closeGenerationWorker } from './workers/generationWorkerInstance';
@@ -40,6 +41,7 @@ app.use(
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'x-csrf-token', 'x-e2e-test'],
+    exposedHeaders: ['X-Session-Id'],
   }),
 );
 
@@ -326,6 +328,18 @@ export default async function runApp(setup: (app: Express, server: Server) => Pr
     // Capture in Sentry if it's a server error
     if (status >= 500) {
       captureException(err, { status, message });
+
+      // Direct notification — works even without Sentry DSN
+      notify({
+        severity: 'error',
+        title: `${req.method} ${req.path} → ${status}`,
+        message,
+        context: {
+          endpoint: req.path,
+          method: req.method,
+          stack: err.stack?.split('\n')[1]?.trim() ?? 'N/A',
+        },
+      }).catch(() => {}); // Fire and forget
     }
 
     res.status(status).json({ message });
@@ -431,6 +445,12 @@ export default async function runApp(setup: (app: Express, server: Server) => Pr
         method: 'N/A',
         stack: reason?.stack,
       });
+      notify({
+        severity: 'critical',
+        title: 'Unhandled Promise Rejection',
+        message: reason?.message || 'Unknown rejection',
+        context: { stack: reason?.stack?.split('\n')[1]?.trim() ?? 'N/A' },
+      }).catch(() => {});
     });
 
     process.on('uncaughtException', (error: Error) => {
@@ -442,6 +462,12 @@ export default async function runApp(setup: (app: Express, server: Server) => Pr
         method: 'N/A',
         stack: error.stack,
       });
+      notify({
+        severity: 'critical',
+        title: 'Uncaught Exception',
+        message: error.message,
+        context: { stack: error.stack?.split('\n')[1]?.trim() ?? 'N/A' },
+      }).catch(() => {});
     });
   }
 }
