@@ -668,8 +668,8 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
         id="style-refs"
         title="Style Reference"
         icon={Palette}
-        isOpen={!orch.collapsedSections.includes('style-refs')}
-        onToggle={() => orch.toggleSection('style-refs')}
+        isOpen={!orch.collapsedSections.styleRefs}
+        onToggle={() => orch.toggleSection('styleRefs')}
         badge={orch.selectedStyleRefIds.length > 0 ? `${orch.selectedStyleRefIds.length}` : undefined}
       >
         <StyleReferenceSelector

@@ -42,6 +42,7 @@ interface CollapsedSections {
   refine: boolean;
   copy: boolean;
   preview: boolean;
+  styleRefs: boolean;
 }
 
 const COLLAPSED_SECTIONS_KEY = 'studio-collapsed-sections';
@@ -51,7 +52,15 @@ function getStoredCollapsedSections(): CollapsedSections {
     const stored = localStorage.getItem(COLLAPSED_SECTIONS_KEY);
     if (stored) return JSON.parse(stored);
   } catch {}
-  return { upload: false, products: false, templates: false, refine: false, copy: true, preview: true };
+  return {
+    upload: false,
+    products: false,
+    templates: false,
+    refine: false,
+    copy: true,
+    preview: true,
+    styleRefs: false,
+  };
 }
 
 function storeCollapsedSections(sections: CollapsedSections) {
