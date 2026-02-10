@@ -17,6 +17,8 @@ export enum JobType {
   VARIATION = 'variation',
   /** Generate ad copy text */
   COPY = 'copy',
+  /** Generate a video from a text prompt (Veo) */
+  GENERATE_VIDEO = 'generate_video',
 }
 
 /**
@@ -101,13 +103,26 @@ export interface CopyJobData extends BaseJobData {
 }
 
 /**
+ * Job data for generating videos via Veo
+ */
+export interface VideoGenerateJobData extends BaseJobData {
+  jobType: JobType.GENERATE_VIDEO;
+  /** Text prompt for video generation */
+  prompt: string;
+  /** Video duration in seconds */
+  duration?: '4' | '6' | '8';
+  /** Aspect ratio */
+  aspectRatio?: '16:9' | '9:16';
+  /** Video resolution */
+  videoResolution?: '720p' | '1080p' | '4k';
+  /** Optional source image URL for image-to-video */
+  sourceImageUrl?: string;
+}
+
+/**
  * Union type of all possible job data types
  */
-export type GenerationJobData =
-  | GenerateJobData
-  | EditJobData
-  | VariationJobData
-  | CopyJobData;
+export type GenerationJobData = GenerateJobData | EditJobData | VariationJobData | CopyJobData | VideoGenerateJobData;
 
 /**
  * Result returned when a job completes successfully
@@ -117,12 +132,14 @@ export interface GenerationJobResult {
   generationId: string;
   /** Final status of the job */
   status: JobStatus.COMPLETED | JobStatus.FAILED;
-  /** URL of the generated/edited image (if successful) */
+  /** URL of the generated/edited image or video (if successful) */
   imageUrl?: string;
-  /** Cloudinary public ID for the stored image */
+  /** Cloudinary public ID for the stored asset */
   cloudinaryPublicId?: string;
   /** Generated ad copy text (for copy jobs) */
   copyText?: string;
+  /** Media type of the result */
+  mediaType?: 'image' | 'video';
   /** Error message (if failed) */
   error?: string;
   /** Processing time in milliseconds */
@@ -236,3 +253,25 @@ export function isVariationJob(data: GenerationJobData): data is VariationJobDat
 export function isCopyJob(data: GenerationJobData): data is CopyJobData {
   return data.jobType === JobType.COPY;
 }
+
+/**
+ * Type guard to check if job data is a VideoGenerateJobData
+ */
+export function isVideoGenerateJob(data: GenerationJobData): data is VideoGenerateJobData {
+  return data.jobType === JobType.GENERATE_VIDEO;
+}
+
+/**
+ * Video job options — longer timeout for video generation (10 minutes)
+ */
+export const VIDEO_JOB_OPTIONS: JobOptions = {
+  priority: 10,
+  attempts: 2,
+  backoff: {
+    type: 'exponential',
+    delay: 10000,
+  },
+  timeout: 600000, // 10 minutes
+  removeOnComplete: { count: 50 },
+  removeOnFail: { count: 25 },
+};

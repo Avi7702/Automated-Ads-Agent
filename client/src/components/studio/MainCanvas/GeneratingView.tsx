@@ -1,13 +1,16 @@
 // @ts-nocheck
 import { motion } from 'framer-motion';
-import { Loader2, X } from 'lucide-react';
+import { Loader2, X, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface GeneratingViewProps {
   onCancel?: () => void;
+  mediaType?: 'image' | 'video';
 }
 
-export function GeneratingView({ onCancel }: GeneratingViewProps) {
+export function GeneratingView({ onCancel, mediaType = 'image' }: GeneratingViewProps) {
+  const isVideo = mediaType === 'video';
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -16,7 +19,7 @@ export function GeneratingView({ onCancel }: GeneratingViewProps) {
       className="flex flex-col items-center justify-center min-h-[400px] space-y-8"
       role="status"
       aria-live="polite"
-      aria-label="Generating image"
+      aria-label={isVideo ? 'Generating video' : 'Generating image'}
     >
       {/* Orbital loader */}
       <div className="relative w-28 h-28">
@@ -36,7 +39,11 @@ export function GeneratingView({ onCancel }: GeneratingViewProps) {
           transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
         />
         <div className="absolute inset-0 flex items-center justify-center">
-          <Loader2 className="w-8 h-8 text-primary animate-spin" />
+          {isVideo ? (
+            <Video className="w-8 h-8 text-primary animate-pulse" />
+          ) : (
+            <Loader2 className="w-8 h-8 text-primary animate-spin" />
+          )}
         </div>
       </div>
 
@@ -47,9 +54,13 @@ export function GeneratingView({ onCancel }: GeneratingViewProps) {
           animate={{ opacity: [1, 0.5, 1] }}
           transition={{ duration: 2, repeat: Infinity }}
         >
-          Generating your image...
+          {isVideo ? 'Generating your video...' : 'Generating your image...'}
         </motion.p>
-        <p className="text-sm text-muted-foreground">This usually takes 15-30 seconds</p>
+        <p className="text-sm text-muted-foreground">
+          {isVideo
+            ? 'Video generation typically takes 2-10 minutes. You can wait here or check back later.'
+            : 'This usually takes 15-30 seconds'}
+        </p>
       </div>
 
       {/* Pulse dots */}
@@ -70,7 +81,11 @@ export function GeneratingView({ onCancel }: GeneratingViewProps) {
 
       {/* Cancel button */}
       {onCancel && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 2 }}>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: isVideo ? 5 : 2 }}
+        >
           <Button
             variant="outline"
             size="sm"

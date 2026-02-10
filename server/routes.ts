@@ -1,55 +1,107 @@
-import type { Express } from "express";
-import { createServer, type Server } from "http";
-import { storage } from "./storage";
-import { db, pool } from "./db";
-import { seedBrandProfile } from "./seeds/seedBrandProfile";
-import multer from "multer";
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+import type { Express } from 'express';
+import { createServer, type Server } from 'http';
+import { storage } from './storage';
+import { db, pool } from './db';
+import { seedBrandProfile } from './seeds/seedBrandProfile';
+import multer from 'multer';
 
 // Modular Router System (Sprint 2)
-import { routerModules } from "./routes/index";
-import { registerRouters } from "./routes/utils/registerRouters";
-import { buildRouterContext } from "./routes/utils/buildContext";
+import { routerModules } from './routes/index';
+import { registerRouters } from './routes/utils/registerRouters';
+import { buildRouterContext } from './routes/utils/buildContext';
 
-import { saveOriginalFile, saveGeneratedImage, deleteFile } from "./fileStorage";
-import { insertGenerationSchema, insertProductSchema, insertPromptTemplateSchema, insertInstallationScenarioSchema, insertProductRelationshipSchema } from "@shared/schema";
-import { validate } from "./middleware/validate";
-import express from "express";
-import path from "path";
-import { v2 as cloudinary } from "cloudinary";
-import { authService } from "./services/authService";
-import { requireAuth, optionalAuth } from "./middleware/auth";
-import { validateN8nWebhook } from "./middleware/webhookAuth";
-import { extendedTimeout, haltOnTimeout } from "./middleware/timeout";
-import { isServerShuttingDown } from "./utils/gracefulShutdown";
-import { createRateLimiter } from "./middleware/rateLimit";
-import { telemetry } from "./instrumentation";
-import { computeAdaptiveEstimate, estimateGenerationCostMicros, normalizeResolution } from "./services/pricingEstimator";
-import { quotaMonitoringService, parseRetryDelay, parseLimitType } from "./services/quotaMonitoringService";
-import { installationScenarioRAG, getRoomInstallationContext, ROOM_TYPES, type RoomType } from "./services/installationScenarioRAG";
-import { suggestRelationships, findSimilarProducts, analyzeRelationshipType, batchSuggestRelationships, autoCreateRelationships } from "./services/relationshipDiscoveryRAG";
-import { brandImageRecommendationRAG } from "./services/brandImageRecommendationRAG";
-import { matchTemplateForContext, analyzeTemplatePatterns, suggestTemplateCustomizations } from "./services/templatePatternRAG";
-import { encryptApiKey, generateKeyPreview, validateMasterKeyConfigured, EncryptionConfigError } from "./services/encryptionService";
-import { validateApiKey, isValidService, getSupportedServices, type ServiceName } from "./services/apiKeyValidationService";
-import { saveApiKeySchema, uploadPatternSchema, updatePatternSchema, applyPatternSchema, ratePatternSchema, listPatternsQuerySchema, generateCompletePostSchema, saveN8nConfigSchema, n8nCallbackSchema, syncAccountSchema } from "./validation/schemas";
-import { logger } from "./lib/logger";
-import { validateFileType, uploadPatternLimiter, checkPatternQuota } from "./middleware/uploadValidation";
-import { promptInjectionGuard } from "./middleware/promptInjectionGuard";
-import { toGenerationDTO, toGenerationDTOArray } from "./dto/generationDTO";
-import { extractPatterns, processUploadForPatterns, getRelevantPatterns, formatPatternsForPrompt } from "./services/patternExtractionService";
-import { startPatternCleanupScheduler } from "./jobs/patternCleanupJob";
-import { generationQueue, generationQueueEvents } from "./lib/queue";
-import { JobType, JobProgress } from "./jobs/types";
-import { visionAnalysisService } from "./services/visionAnalysisService";
-import { ideaBankService } from "./services/ideaBankService";
-import { productKnowledgeService } from "./services/productKnowledgeService";
+import { saveOriginalFile, saveGeneratedImage, deleteFile } from './fileStorage';
+import {
+  insertGenerationSchema,
+  insertProductSchema,
+  insertPromptTemplateSchema,
+  insertInstallationScenarioSchema,
+  insertProductRelationshipSchema,
+} from '@shared/schema';
+import { validate } from './middleware/validate';
+import express from 'express';
+import path from 'path';
+import { v2 as cloudinary } from 'cloudinary';
+import { authService } from './services/authService';
+import { requireAuth, optionalAuth } from './middleware/auth';
+import { validateN8nWebhook } from './middleware/webhookAuth';
+import { extendedTimeout, haltOnTimeout } from './middleware/timeout';
+import { isServerShuttingDown } from './utils/gracefulShutdown';
+import { createRateLimiter } from './middleware/rateLimit';
+import { telemetry } from './instrumentation';
+import {
+  computeAdaptiveEstimate,
+  estimateGenerationCostMicros,
+  normalizeResolution,
+} from './services/pricingEstimator';
+import { quotaMonitoringService, parseRetryDelay, parseLimitType } from './services/quotaMonitoringService';
+import {
+  installationScenarioRAG,
+  getRoomInstallationContext,
+  ROOM_TYPES,
+  type RoomType,
+} from './services/installationScenarioRAG';
+import {
+  suggestRelationships,
+  findSimilarProducts,
+  analyzeRelationshipType,
+  batchSuggestRelationships,
+  autoCreateRelationships,
+} from './services/relationshipDiscoveryRAG';
+import { brandImageRecommendationRAG } from './services/brandImageRecommendationRAG';
+import {
+  matchTemplateForContext,
+  analyzeTemplatePatterns,
+  suggestTemplateCustomizations,
+} from './services/templatePatternRAG';
+import {
+  encryptApiKey,
+  generateKeyPreview,
+  validateMasterKeyConfigured,
+  EncryptionConfigError,
+} from './services/encryptionService';
+import {
+  validateApiKey,
+  isValidService,
+  getSupportedServices,
+  type ServiceName,
+} from './services/apiKeyValidationService';
+import {
+  saveApiKeySchema,
+  uploadPatternSchema,
+  updatePatternSchema,
+  applyPatternSchema,
+  ratePatternSchema,
+  listPatternsQuerySchema,
+  generateCompletePostSchema,
+  saveN8nConfigSchema,
+  n8nCallbackSchema,
+  syncAccountSchema,
+} from './validation/schemas';
+import { logger } from './lib/logger';
+import { validateFileType, uploadPatternLimiter, checkPatternQuota } from './middleware/uploadValidation';
+import { promptInjectionGuard } from './middleware/promptInjectionGuard';
+import { toGenerationDTO, toGenerationDTOArray } from './dto/generationDTO';
+import {
+  extractPatterns,
+  processUploadForPatterns,
+  getRelevantPatterns,
+  formatPatternsForPrompt,
+} from './services/patternExtractionService';
+import { startPatternCleanupScheduler } from './jobs/patternCleanupJob';
+import { generationQueue, generationQueueEvents } from './lib/queue';
+import { JobType, JobProgress } from './jobs/types';
+import { visionAnalysisService } from './services/visionAnalysisService';
+import { ideaBankService } from './services/ideaBankService';
+import { productKnowledgeService } from './services/productKnowledgeService';
 
 // Lazy-load Google Cloud Monitoring to prevent any import-time errors
 let googleCloudMonitoringService: any = null;
 async function getGoogleCloudService() {
   if (!googleCloudMonitoringService) {
     try {
-      const module = await import("./services/googleCloudMonitoringService");
+      const module = await import('./services/googleCloudMonitoringService');
       googleCloudMonitoringService = module.googleCloudMonitoringService;
     } catch (error) {
       logger.error({ module: 'GoogleCloudMonitoring', err: error }, 'Failed to load module');
@@ -62,8 +114,8 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB per file
-    files: 6 // Max 6 files
-  }
+    files: 6, // Max 6 files
+  },
 });
 
 // Validate and initialize Cloudinary
@@ -89,7 +141,7 @@ if (isCloudinaryConfigured) {
 // 1. genaiText - for text operations (uses Replit AI Integrations for better quotas)
 // 2. genaiImage - for image generation (uses direct Google API as Replit doesn't support image models)
 
-import { genAI, createGeminiClient } from "./lib/gemini";
+import { genAI, createGeminiClient } from './lib/gemini';
 
 // Resolve user's Gemini API key (database first, then env var fallback)
 // Returns a GoogleGenAI client configured with the best available key
@@ -114,10 +166,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================
   const routerContext = buildRouterContext();
   registerRouters(app, routerModules, routerContext);
-  logger.info({
-    routerCount: routerModules.length,
-    endpoints: routerModules.reduce((sum, m) => sum + m.endpointCount, 0)
-  }, 'Modular routers registered');
+  logger.info(
+    {
+      routerCount: routerModules.length,
+      endpoints: routerModules.reduce((sum, m) => sum + m.endpointCount, 0),
+    },
+    'Modular routers registered',
+  );
 
   // ============================================
   // LEGACY ENDPOINTS (Being Migrated)
@@ -141,51 +196,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // LEGACY: Liveness probe - keeping for backwards compatibility during migration
   // Will be removed once migration is complete and verified
-  app.get("/api/health/live", (req, res) => {
-    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  app.get('/api/health/live', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
   // Readiness probe - can we handle traffic?
-  app.get("/api/health/ready", async (req, res) => {
+  app.get('/api/health/ready', async (req, res) => {
     if (isServerShuttingDown()) {
       return res.status(503).json({
-        status: "shutting_down",
-        timestamp: new Date().toISOString()
+        status: 'shutting_down',
+        timestamp: new Date().toISOString(),
       });
     }
 
     try {
       // Check database connectivity with a simple query
-      await pool.query("SELECT 1");
+      await pool.query('SELECT 1');
 
       res.json({
-        status: "ready",
+        status: 'ready',
         timestamp: new Date().toISOString(),
         checks: {
-          database: "ok"
-        }
+          database: 'ok',
+        },
       });
     } catch (err) {
       res.status(503).json({
-        status: "not_ready",
+        status: 'not_ready',
         timestamp: new Date().toISOString(),
         checks: {
-          database: "failed"
-        }
+          database: 'failed',
+        },
       });
     }
   });
 
   // Legacy health endpoint for backwards compatibility
-  app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
   // Web Vitals analytics endpoint — logs metrics via Pino
-  app.post("/api/analytics/vitals", express.text({ type: '*/*', limit: '1kb' }), (req, res) => {
+  app.post('/api/analytics/vitals', express.text({ type: '*/*', limit: '1kb' }), (req, res) => {
     try {
       const metric = JSON.parse(req.body as string);
-      logger.info({ module: 'WebVitals', metric: metric.name, value: metric.value, rating: metric.rating }, 'Web Vital reported');
+      logger.info(
+        { module: 'WebVitals', metric: metric.name, value: metric.value, rating: metric.rating },
+        'Web Vital reported',
+      );
       res.status(204).end();
     } catch {
       res.status(400).end();
@@ -193,36 +251,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Serve static files from attached_assets directory
-  app.use("/attached_assets", express.static(path.join(process.cwd(), "attached_assets")));
+  app.use('/attached_assets', express.static(path.join(process.cwd(), 'attached_assets')));
 
   // Serve uploaded images (generations)
-  app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
   // Apply rate limiting to API routes
   const rateLimiter = createRateLimiter({
     windowMs: 15 * 60 * 1000, // 15 minutes
     maxRequests: 100,
   });
-  app.use("/api/", rateLimiter);
+  app.use('/api/', rateLimiter);
 
   // ===== AUTH ROUTES =====
 
   // POST /api/auth/register
-  app.post("/api/auth/register", async (req, res) => {
+  app.post('/api/auth/register', async (req, res) => {
     try {
       const { email, password } = req.body;
 
       if (!email || !password) {
-        return res.status(400).json({ error: "Email and password required" });
+        return res.status(400).json({ error: 'Email and password required' });
       }
 
       if (password.length < 8) {
-        return res.status(400).json({ error: "Password must be at least 8 characters" });
+        return res.status(400).json({ error: 'Password must be at least 8 characters' });
       }
 
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
-        return res.status(409).json({ error: "User already exists" });
+        return res.status(409).json({ error: 'User already exists' });
       }
 
       const hashedPassword = await authService.hashPassword(password);
@@ -246,25 +304,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         reason: error.message,
       });
 
-      res.status(500).json({ error: "Registration failed" });
+      res.status(500).json({ error: 'Registration failed' });
     }
   });
 
   // POST /api/auth/login
-  app.post("/api/auth/login", async (req, res) => {
+  app.post('/api/auth/login', async (req, res) => {
     try {
       const { email, password } = req.body;
 
       if (!email || !password) {
-        return res.status(400).json({ error: "Email and password required" });
+        return res.status(400).json({ error: 'Email and password required' });
       }
 
       // Check lockout
       if (await authService.isLockedOut(email)) {
         const remaining = await authService.getLockoutTimeRemaining(email);
         return res.status(429).json({
-          error: "Too many failed attempts. Try again later.",
-          retryAfter: remaining
+          error: 'Too many failed attempts. Try again later.',
+          retryAfter: remaining,
         });
       }
 
@@ -276,7 +334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           success: false,
           reason: 'user_not_found',
         });
-        return res.status(401).json({ error: "Invalid credentials" });
+        return res.status(401).json({ error: 'Invalid credentials' });
       }
 
       const valid = await authService.comparePassword(password, user.passwordHash || user.password);
@@ -287,7 +345,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           success: false,
           reason: 'invalid_password',
         });
-        return res.status(401).json({ error: "Invalid credentials" });
+        return res.status(401).json({ error: 'Invalid credentials' });
       }
 
       await authService.clearFailedLogins(email);
@@ -309,44 +367,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         reason: error.message,
       });
 
-      res.status(500).json({ error: "Login failed" });
+      res.status(500).json({ error: 'Login failed' });
     }
   });
 
   // POST /api/auth/logout
-  app.post("/api/auth/logout", (req, res) => {
+  app.post('/api/auth/logout', (req, res) => {
     (req as any).session.destroy((err: any) => {
       if (err) {
-        return res.status(500).json({ error: "Logout failed" });
+        return res.status(500).json({ error: 'Logout failed' });
       }
       res.json({ success: true });
     });
   });
 
   // GET /api/auth/me
-  app.get("/api/auth/me", requireAuth, async (req, res) => {
+  app.get('/api/auth/me', requireAuth, async (req, res) => {
     try {
       const userId = (req as any).session.userId;
       const user = await storage.getUserById(userId);
       if (!user) {
-        return res.status(404).json({ error: "User not found" });
+        return res.status(404).json({ error: 'User not found' });
       }
       res.json({ id: user.id, email: user.email });
     } catch (error: any) {
       logger.error({ module: 'Auth', action: 'me', err: error }, 'Get user error');
-      res.status(500).json({ error: "Failed to get user" });
+      res.status(500).json({ error: 'Failed to get user' });
     }
   });
 
   // GET /api/auth/demo - Auto-login as demo user for single-tenant mode
-  app.get("/api/auth/demo", async (req, res) => {
+  app.get('/api/auth/demo', async (req, res) => {
     try {
-      const demoEmail = "demo@company.com";
+      const demoEmail = 'demo@company.com';
       let user = await storage.getUserByEmail(demoEmail);
 
       if (!user) {
         // Create demo user if doesn't exist
-        const hashedPassword = await authService.hashPassword("demo123");
+        const hashedPassword = await authService.hashPassword('demo123');
         user = await storage.createUser(demoEmail, hashedPassword);
       }
 
@@ -354,76 +412,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ id: user.id, email: user.email, isDemo: true });
     } catch (error: any) {
       logger.error({ module: 'Auth', action: 'demo', err: error }, 'Demo login error');
-      res.status(500).json({ error: "Demo login failed" });
+      res.status(500).json({ error: 'Demo login failed' });
     }
   });
 
   // POST /api/auth/forgot-password — Request password reset
-  app.post("/api/auth/forgot-password", async (req, res) => {
+  app.post('/api/auth/forgot-password', async (req, res) => {
     try {
       const { email } = req.body;
       if (!email) {
-        return res.status(400).json({ error: "Email is required" });
+        return res.status(400).json({ error: 'Email is required' });
       }
       // Always return success to avoid email enumeration
       logger.info({ module: 'Auth', action: 'forgot-password', email }, 'Password reset requested');
-      res.json({ message: "If an account exists with that email, a reset link has been sent." });
+      res.json({ message: 'If an account exists with that email, a reset link has been sent.' });
     } catch (error: any) {
       logger.error({ module: 'Auth', action: 'forgot-password', err: error }, 'Password reset error');
-      res.status(500).json({ error: "Failed to process request" });
+      res.status(500).json({ error: 'Failed to process request' });
     }
   });
 
   // POST /api/auth/reset-password — Reset password with token
-  app.post("/api/auth/reset-password", async (req, res) => {
+  app.post('/api/auth/reset-password', async (req, res) => {
     try {
       const { token, newPassword } = req.body;
       if (!token || !newPassword) {
-        return res.status(400).json({ error: "Token and new password are required" });
+        return res.status(400).json({ error: 'Token and new password are required' });
       }
       if (newPassword.length < 8) {
-        return res.status(400).json({ error: "Password must be at least 8 characters" });
+        return res.status(400).json({ error: 'Password must be at least 8 characters' });
       }
       // Token validation will be implemented when email service is added
       logger.info({ module: 'Auth', action: 'reset-password' }, 'Password reset attempted');
-      res.status(501).json({ error: "Email service not configured. Contact administrator." });
+      res.status(501).json({ error: 'Email service not configured. Contact administrator.' });
     } catch (error: any) {
       logger.error({ module: 'Auth', action: 'reset-password', err: error }, 'Password reset error');
-      res.status(500).json({ error: "Failed to reset password" });
+      res.status(500).json({ error: 'Failed to reset password' });
     }
   });
 
   // POST /api/auth/verify-email — Verify email with token
-  app.post("/api/auth/verify-email", async (req, res) => {
+  app.post('/api/auth/verify-email', async (req, res) => {
     try {
       const { token } = req.body;
       if (!token) {
-        return res.status(400).json({ error: "Verification token is required" });
+        return res.status(400).json({ error: 'Verification token is required' });
       }
       logger.info({ module: 'Auth', action: 'verify-email' }, 'Email verification attempted');
-      res.status(501).json({ error: "Email service not configured. Contact administrator." });
+      res.status(501).json({ error: 'Email service not configured. Contact administrator.' });
     } catch (error: any) {
       logger.error({ module: 'Auth', action: 'verify-email', err: error }, 'Email verification error');
-      res.status(500).json({ error: "Failed to verify email" });
+      res.status(500).json({ error: 'Failed to verify email' });
     }
   });
 
   // DELETE /api/auth/account — Delete user account
-  app.delete("/api/auth/account", requireAuth, async (req, res) => {
+  app.delete('/api/auth/account', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       await storage.deleteUser(userId);
       req.session.destroy(() => {
-        res.json({ message: "Account deleted successfully" });
+        res.json({ message: 'Account deleted successfully' });
       });
     } catch (error: any) {
       logger.error({ module: 'Auth', action: 'delete-account', err: error }, 'Account deletion error');
-      res.status(500).json({ error: "Failed to delete account" });
+      res.status(500).json({ error: 'Failed to delete account' });
     }
   });
 
   // GET /api/auth/export — Export all user data (data portability)
-  app.get("/api/auth/export", requireAuth, async (req, res) => {
+  app.get('/api/auth/export', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const user = await storage.getUserById(userId);
@@ -433,18 +491,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         exportedAt: new Date().toISOString(),
         user: user ? { id: user.id, email: user.email, createdAt: user.createdAt } : null,
-        generations: generations.filter(g => g.userId === userId),
+        generations: generations.filter((g) => g.userId === userId),
         products,
       });
     } catch (error: any) {
       logger.error({ module: 'Auth', action: 'export', err: error }, 'Data export error');
-      res.status(500).json({ error: "Failed to export data" });
+      res.status(500).json({ error: 'Failed to export data' });
     }
   });
 
   // ===== END AUTH ROUTES =====
   // Price estimator (adaptive, based on generation history)
-  app.get("/api/pricing/estimate", async (req, res) => {
+  app.get('/api/pricing/estimate', async (req, res) => {
     try {
       const brandId = (req as any).session?.userId || 'anonymous';
 
@@ -494,68 +552,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Image transformation endpoint (supports both image transformation and text-only generation)
   // Extended timeout (120s) for image generation which can take 30-90+ seconds
-  app.post("/api/transform", extendedTimeout, haltOnTimeout, requireAuth, promptInjectionGuard, upload.array("images", 6), async (req, res) => {
-    const startTime = Date.now();
-    const userId = req.user?.id;
-    let success = false;
-    let errorType: string | undefined;
+  app.post(
+    '/api/transform',
+    extendedTimeout,
+    haltOnTimeout,
+    requireAuth,
+    promptInjectionGuard,
+    upload.array('images', 6),
+    async (req, res) => {
+      const startTime = Date.now();
+      const userId = req.user?.id;
+      let success = false;
+      let errorType: string | undefined;
 
-    try {
-      // Safely handle files - could be undefined, null, or empty
-      const files = Array.isArray(req.files) ? req.files as Express.Multer.File[] : [];
-      const { prompt, resolution, mode, templateId, templateReferenceUrls, recipe: recipeJson } = req.body;
+      try {
+        // Safely handle files - could be undefined, null, or empty
+        const files = Array.isArray(req.files) ? (req.files as Express.Multer.File[]) : [];
+        const { prompt, resolution, mode, templateId, templateReferenceUrls, recipe: recipeJson } = req.body;
 
-      if (!prompt) {
-        return res.status(400).json({ error: "No prompt provided" });
-      }
-
-      // Parse GenerationRecipe if provided (from IdeaBank)
-      let recipe: {
-        relationships?: Array<{ targetProductName: string; relationshipType: string; description?: string }>;
-        scenarios?: Array<{ title: string; description: string; steps?: string[] }>;
-        brandVoice?: { brandName?: string; industry?: string; values?: string[] };
-      } | undefined;
-      if (recipeJson) {
-        try {
-          recipe = typeof recipeJson === 'string' ? JSON.parse(recipeJson) : recipeJson;
-        } catch (e) {
-          logger.warn({ module: 'Transform', err: e }, 'Failed to parse recipe JSON');
+        if (!prompt) {
+          return res.status(400).json({ error: 'No prompt provided' });
         }
-      }
 
-      const hasFiles = files.length > 0;
-
-      // Parse and validate generation mode
-      const generationMode = mode || 'standard';
-      const validModes = ['standard', 'exact_insert', 'inspiration'];
-      if (!validModes.includes(generationMode)) {
-        return res.status(400).json({ error: `Invalid mode. Must be one of: ${validModes.join(', ')}` });
-      }
-
-      // Validate template-related parameters
-      if ((generationMode === 'exact_insert' || generationMode === 'inspiration') && !templateId) {
-        return res.status(400).json({ error: `templateId is required for ${generationMode} mode` });
-      }
-
-      const selectedResolution = normalizeResolution(resolution) || '2K';
-      logger.info({ module: 'Transform', imageCount: hasFiles ? files.length : 0, promptPreview: prompt.substring(0, 100), mode: generationMode }, 'Processing request');
-
-      // Fetch template if using template-based mode
-      let template = null;
-      if (templateId) {
-        template = await storage.getAdSceneTemplateById(templateId);
-        if (!template) {
-          return res.status(404).json({ error: "Template not found" });
+        // Parse GenerationRecipe if provided (from IdeaBank)
+        let recipe:
+          | {
+              relationships?: Array<{ targetProductName: string; relationshipType: string; description?: string }>;
+              scenarios?: Array<{ title: string; description: string; steps?: string[] }>;
+              brandVoice?: { brandName?: string; industry?: string; values?: string[] };
+            }
+          | undefined;
+        if (recipeJson) {
+          try {
+            recipe = typeof recipeJson === 'string' ? JSON.parse(recipeJson) : recipeJson;
+          } catch (e) {
+            logger.warn({ module: 'Transform', err: e }, 'Failed to parse recipe JSON');
+          }
         }
-      }
 
-      // Build the prompt for transformation or generation based on mode
-      let enhancedPrompt = prompt;
+        const hasFiles = files.length > 0;
 
-      if (generationMode === 'exact_insert' && template) {
-        // EXACT_INSERT MODE: Product must be inserted into template scene with quality constraints
-        if (hasFiles) {
-          enhancedPrompt = `Insert this product into the following scene template while maintaining exact quality standards.
+        // Parse and validate generation mode
+        const generationMode = mode || 'standard';
+        const validModes = ['standard', 'exact_insert', 'inspiration'];
+        if (!validModes.includes(generationMode)) {
+          return res.status(400).json({ error: `Invalid mode. Must be one of: ${validModes.join(', ')}` });
+        }
+
+        // Validate template-related parameters
+        if ((generationMode === 'exact_insert' || generationMode === 'inspiration') && !templateId) {
+          return res.status(400).json({ error: `templateId is required for ${generationMode} mode` });
+        }
+
+        const selectedResolution = normalizeResolution(resolution) || '2K';
+        logger.info(
+          {
+            module: 'Transform',
+            imageCount: hasFiles ? files.length : 0,
+            promptPreview: prompt.substring(0, 100),
+            mode: generationMode,
+          },
+          'Processing request',
+        );
+
+        // Fetch template if using template-based mode
+        let template = null;
+        if (templateId) {
+          template = await storage.getAdSceneTemplateById(templateId);
+          if (!template) {
+            return res.status(404).json({ error: 'Template not found' });
+          }
+        }
+
+        // Build the prompt for transformation or generation based on mode
+        let enhancedPrompt = prompt;
+
+        if (generationMode === 'exact_insert' && template) {
+          // EXACT_INSERT MODE: Product must be inserted into template scene with quality constraints
+          if (hasFiles) {
+            enhancedPrompt = `Insert this product into the following scene template while maintaining exact quality standards.
 
 Template Scene: ${template.promptBlueprint}
 
@@ -572,8 +647,8 @@ CRITICAL QUALITY CONSTRAINTS:
 - Product must look natural and integrated into the scene, not pasted on
 
 If multiple products provided, arrange them according to the template's composition while maintaining all quality constraints.`;
-        } else {
-          enhancedPrompt = `Generate an image following this scene template exactly.
+          } else {
+            enhancedPrompt = `Generate an image following this scene template exactly.
 
 Template Scene: ${template.promptBlueprint}
 
@@ -586,11 +661,11 @@ QUALITY CONSTRAINTS:
 - Match mood: ${template.mood || 'as described'}
 - Professional photography quality
 - Do not add text or watermarks`;
-        }
-      } else if (generationMode === 'inspiration' && template) {
-        // INSPIRATION MODE: Use template as style guide, but create new scene
-        if (hasFiles) {
-          enhancedPrompt = `Transform this product photo inspired by the following template style, but create a unique scene.
+          }
+        } else if (generationMode === 'inspiration' && template) {
+          // INSPIRATION MODE: Use template as style guide, but create new scene
+          if (hasFiles) {
+            enhancedPrompt = `Transform this product photo inspired by the following template style, but create a unique scene.
 
 Template Inspiration:
 - Category: ${template.category}
@@ -608,8 +683,8 @@ Guidelines:
 - Ensure the product is clearly visible and recognizable
 - Do not copy the template scene exactly - be creative while maintaining the aesthetic
 - Do not add text or watermarks`;
-        } else {
-          enhancedPrompt = `Generate an image inspired by this template style, creating a unique scene.
+          } else {
+            enhancedPrompt = `Generate an image inspired by this template style, creating a unique scene.
 
 Template Inspiration:
 - Category: ${template.category}
@@ -624,12 +699,12 @@ Guidelines:
 - Create a unique scene, don't copy the template exactly
 - Professional photography quality
 - Do not add text or watermarks`;
-        }
-      } else {
-        // STANDARD MODE: Original behavior
-        if (hasFiles) {
-          if (files.length === 1) {
-            enhancedPrompt = `Transform this product photo based on the following instructions: ${prompt}
+          }
+        } else {
+          // STANDARD MODE: Original behavior
+          if (hasFiles) {
+            if (files.length === 1) {
+              enhancedPrompt = `Transform this product photo based on the following instructions: ${prompt}
 
 Guidelines:
 - Keep the product as the hero/focus
@@ -637,8 +712,8 @@ Guidelines:
 - Ensure the product is clearly visible and recognizable
 - Apply the requested scene, lighting, and style changes
 - Do not add text or watermarks`;
-          } else {
-            enhancedPrompt = `Transform these ${files.length} product photos based on the following instructions: ${prompt}
+            } else {
+              enhancedPrompt = `Transform these ${files.length} product photos based on the following instructions: ${prompt}
 
 Guidelines:
 - Combine/arrange all products in a cohesive scene
@@ -647,313 +722,332 @@ Guidelines:
 - Apply the requested scene, lighting, and style changes
 - Show how the products work together or as a collection
 - Do not add text or watermarks`;
+            }
           }
+          // If no files in standard mode, use prompt as-is for text-only generation
         }
-        // If no files in standard mode, use prompt as-is for text-only generation
-      }
 
-      // INJECT BRAND PROFILE (if available)
-      const brandProfile = userId ? await storage.getBrandProfileByUserId(userId) : null;
-      if (brandProfile) {
-        logger.info({ module: 'Transform', brandName: brandProfile.brandName }, 'Applying Brand Profile');
-        const brandContext = `
+        // INJECT BRAND PROFILE (if available)
+        const brandProfile = userId ? await storage.getBrandProfileByUserId(userId) : null;
+        if (brandProfile) {
+          logger.info({ module: 'Transform', brandName: brandProfile.brandName }, 'Applying Brand Profile');
+          const brandContext = `
 
 BRAND GUIDELINES (${brandProfile.brandName}):
-- Visual Style: ${brandProfile.preferredStyles?.join(", ") || "Professional"}
-- Brand Values: ${brandProfile.brandValues?.join(", ") || "Reliability"}
-- Brand Colors: ${brandProfile.colorPreferences?.join(", ") || "Standard"}
-- Voice Principles: ${(brandProfile.voice as { principles?: string[] })?.principles?.join(", ") || "Professional"}
+- Visual Style: ${brandProfile.preferredStyles?.join(', ') || 'Professional'}
+- Brand Values: ${brandProfile.brandValues?.join(', ') || 'Reliability'}
+- Brand Colors: ${brandProfile.colorPreferences?.join(', ') || 'Standard'}
+- Voice Principles: ${(brandProfile.voice as { principles?: string[] })?.principles?.join(', ') || 'Professional'}
 
 Ensure the generated image aligns with these brand guidelines where possible.`;
-        enhancedPrompt += brandContext;
-      }
+          enhancedPrompt += brandContext;
+        }
 
-      // INJECT RECIPE CONTEXT (if provided from IdeaBank)
-      if (recipe) {
-        let recipeContext = `
+        // INJECT RECIPE CONTEXT (if provided from IdeaBank)
+        if (recipe) {
+          let recipeContext = `
 
 PRODUCT CONTEXT (from IdeaBank):`;
 
-        // Add related products context
-        if (recipe.relationships && recipe.relationships.length > 0) {
-          recipeContext += `
+          // Add related products context
+          if (recipe.relationships && recipe.relationships.length > 0) {
+            recipeContext += `
 Related Products:`;
-          for (const rel of recipe.relationships.slice(0, 5)) {
-            recipeContext += `
-- ${rel.targetProductName} (${rel.relationshipType})${rel.description ? `: ${rel.description}` : ''}`;
-          }
-        }
-
-        // Add installation scenario context (only include active scenarios)
-        if (recipe.scenarios && recipe.scenarios.length > 0) {
-          const activeScenarios = recipe.scenarios.filter((s: { title: string; description: string; isActive?: boolean }) => s.isActive !== false);
-          if (activeScenarios.length > 0) {
-            recipeContext += `
-Installation Context:`;
-            for (const scenario of activeScenarios.slice(0, 2)) {
+            for (const rel of recipe.relationships.slice(0, 5)) {
               recipeContext += `
-- ${scenario.title}: ${scenario.description.slice(0, 200)}`;
+- ${rel.targetProductName} (${rel.relationshipType})${rel.description ? `: ${rel.description}` : ''}`;
             }
           }
-        }
 
-        // Add brand voice if not already from profile
-        if (recipe.brandVoice && !brandProfile) {
-          recipeContext += `
+          // Add installation scenario context (only include active scenarios)
+          if (recipe.scenarios && recipe.scenarios.length > 0) {
+            const activeScenarios = recipe.scenarios.filter(
+              (s: { title: string; description: string; isActive?: boolean }) => s.isActive !== false,
+            );
+            if (activeScenarios.length > 0) {
+              recipeContext += `
+Installation Context:`;
+              for (const scenario of activeScenarios.slice(0, 2)) {
+                recipeContext += `
+- ${scenario.title}: ${scenario.description.slice(0, 200)}`;
+              }
+            }
+          }
+
+          // Add brand voice if not already from profile
+          if (recipe.brandVoice && !brandProfile) {
+            recipeContext += `
 Brand Context:
 - Brand: ${recipe.brandVoice.brandName || 'Not specified'}
 - Industry: ${recipe.brandVoice.industry || 'Not specified'}
 - Values: ${recipe.brandVoice.values?.join(', ') || 'Not specified'}`;
-        }
+          }
 
-        recipeContext += `
+          recipeContext += `
 
 Consider these product relationships and usage contexts when generating the image.`;
-        enhancedPrompt += recipeContext;
-        logger.info({ module: 'Transform', relationshipsCount: recipe.relationships?.length || 0, scenariosCount: recipe.scenarios?.length || 0 }, 'Recipe context applied');
-      }
-
-      // Build user message parts
-      const userParts: any[] = [];
-
-      // Add template reference images first (for exact_insert mode)
-      if (generationMode === 'exact_insert' && templateReferenceUrls && Array.isArray(templateReferenceUrls)) {
-        // Helper to validate URL is safe (SSRF protection)
-        const isAllowedUrl = (url: string): boolean => {
-          try {
-            const parsed = new URL(url);
-            // Only allow HTTPS from known CDN domains
-            const allowedHosts = ['res.cloudinary.com', 'images.unsplash.com', 'cdn.pixabay.com'];
-            return parsed.protocol === 'https:' && allowedHosts.some(h => parsed.hostname.endsWith(h));
-          } catch {
-            return false;
-          }
-        };
-
-        for (const refUrl of templateReferenceUrls.slice(0, 3)) { // Max 3 reference images
-          // Skip invalid or potentially malicious URLs
-          if (!isAllowedUrl(refUrl)) {
-            logger.warn({ module: 'Transform', url: refUrl }, 'Skipping disallowed URL');
-            continue;
-          }
-
-          try {
-            // Add timeout with AbortController
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
-
-            const response = await fetch(refUrl, { signal: controller.signal });
-            clearTimeout(timeoutId);
-
-            if (response.ok) {
-              const buffer = await response.arrayBuffer();
-              userParts.push({
-                inlineData: {
-                  mimeType: 'image/jpeg',
-                  data: Buffer.from(buffer).toString('base64'),
-                },
-              });
-            }
-          } catch (err) {
-            logger.warn({ module: 'Transform', url: refUrl, err }, 'Failed to fetch template reference image');
-          }
-        }
-      }
-
-      // Add product images (if provided)
-      if (hasFiles) {
-        files.forEach((file, index) => {
-          userParts.push({
-            inlineData: {
-              mimeType: file.mimetype,
-              data: file.buffer.toString("base64"),
+          enhancedPrompt += recipeContext;
+          logger.info(
+            {
+              module: 'Transform',
+              relationshipsCount: recipe.relationships?.length || 0,
+              scenariosCount: recipe.scenarios?.length || 0,
             },
-          });
-        });
-      }
+            'Recipe context applied',
+          );
+        }
 
-      // Then add the prompt
-      userParts.push({ text: enhancedPrompt });
+        // Build user message parts
+        const userParts: any[] = [];
 
-      // Build the contents array for the API call
-      const contents = [
-        { role: "user", parts: userParts }
-      ];
+        // Add template reference images first (for exact_insert mode)
+        if (generationMode === 'exact_insert' && templateReferenceUrls && Array.isArray(templateReferenceUrls)) {
+          // Helper to validate URL is safe (SSRF protection)
+          const isAllowedUrl = (url: string): boolean => {
+            try {
+              const parsed = new URL(url);
+              // Only allow HTTPS from known CDN domains
+              const allowedHosts = ['res.cloudinary.com', 'images.unsplash.com', 'cdn.pixabay.com'];
+              return parsed.protocol === 'https:' && allowedHosts.some((h) => parsed.hostname.endsWith(h));
+            } catch {
+              return false;
+            }
+          };
 
-      // Generate content with image input using Gemini image generation model
-      // Resolves user-saved API key from database, falls back to env var
-      const geminiClient = await getGeminiClientForUser(userId);
+          for (const refUrl of templateReferenceUrls.slice(0, 3)) {
+            // Max 3 reference images
+            // Skip invalid or potentially malicious URLs
+            if (!isAllowedUrl(refUrl)) {
+              logger.warn({ module: 'Transform', url: refUrl }, 'Skipping disallowed URL');
+              continue;
+            }
 
-      const modelName = "gemini-3-pro-image-preview";
-      const validResolutions = ["1K", "2K", "4K"];
-      const requestedResolution = validResolutions.includes(req.body.resolution)
-        ? req.body.resolution
-        : "2K";
-      logger.info({ module: 'Transform', model: modelName, resolution: requestedResolution }, 'Using model (direct Google API)');
+            try {
+              // Add timeout with AbortController
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
 
-      const result = await geminiClient.models.generateContent({
-        model: modelName,
-        contents,
-        config: {
-          imageConfig: {
-            imageSize: requestedResolution, // "1K", "2K", or "4K"
+              const response = await fetch(refUrl, { signal: controller.signal });
+              clearTimeout(timeoutId);
+
+              if (response.ok) {
+                const buffer = await response.arrayBuffer();
+                userParts.push({
+                  inlineData: {
+                    mimeType: 'image/jpeg',
+                    data: Buffer.from(buffer).toString('base64'),
+                  },
+                });
+              }
+            } catch (err) {
+              logger.warn({ module: 'Transform', url: refUrl, err }, 'Failed to fetch template reference image');
+            }
           }
         }
-      });
 
-      logger.info({ module: 'Transform', modelVersion: result.modelVersion, candidates: result.candidates?.length }, 'Model response received');
-      const usageMetadata = (result as any).usageMetadata;
-      if (usageMetadata) {
-        logger.info({ module: 'Transform', usageMetadata }, 'Captured usageMetadata');
-      }
-
-      // Check if we got an image back
-      if (!result.candidates?.[0]?.content?.parts?.[0]) {
-        throw new Error("No image generated");
-      }
-
-      const modelResponse = result.candidates[0].content;
-      const imagePart = modelResponse.parts?.find((p: any) => p.inlineData);
-
-      if (imagePart && imagePart.inlineData && imagePart.inlineData.data) {
-        // Save uploaded files to disk (if any were provided)
-        const originalImagePaths: string[] = [];
+        // Add product images (if provided)
         if (hasFiles) {
-          for (const file of files) {
-            const savedPath = await saveOriginalFile(file.buffer, file.originalname);
-            originalImagePaths.push(savedPath);
+          files.forEach((file, index) => {
+            userParts.push({
+              inlineData: {
+                mimeType: file.mimetype,
+                data: file.buffer.toString('base64'),
+              },
+            });
+          });
+        }
+
+        // Then add the prompt
+        userParts.push({ text: enhancedPrompt });
+
+        // Build the contents array for the API call
+        const contents = [{ role: 'user', parts: userParts }];
+
+        // Generate content with image input using Gemini image generation model
+        // Resolves user-saved API key from database, falls back to env var
+        const geminiClient = await getGeminiClientForUser(userId);
+
+        const modelName = 'gemini-3-pro-image-preview';
+        const validResolutions = ['1K', '2K', '4K'];
+        const requestedResolution = validResolutions.includes(req.body.resolution) ? req.body.resolution : '2K';
+        logger.info(
+          { module: 'Transform', model: modelName, resolution: requestedResolution },
+          'Using model (direct Google API)',
+        );
+
+        const result = await geminiClient.models.generateContent({
+          model: modelName,
+          contents,
+          config: {
+            imageConfig: {
+              imageSize: requestedResolution, // "1K", "2K", or "4K"
+            },
+          },
+        });
+
+        logger.info(
+          { module: 'Transform', modelVersion: result.modelVersion, candidates: result.candidates?.length },
+          'Model response received',
+        );
+        const usageMetadata = (result as any).usageMetadata;
+        if (usageMetadata) {
+          logger.info({ module: 'Transform', usageMetadata }, 'Captured usageMetadata');
+        }
+
+        // Check if we got an image back
+        if (!result.candidates?.[0]?.content?.parts?.[0]) {
+          throw new Error('No image generated');
+        }
+
+        const modelResponse = result.candidates[0].content;
+        const imagePart = modelResponse.parts?.find((p: any) => p.inlineData);
+
+        if (imagePart && imagePart.inlineData && imagePart.inlineData.data) {
+          // Save uploaded files to disk (if any were provided)
+          const originalImagePaths: string[] = [];
+          if (hasFiles) {
+            for (const file of files) {
+              const savedPath = await saveOriginalFile(file.buffer, file.originalname);
+              originalImagePaths.push(savedPath);
+            }
           }
-        }
 
-        // Save generated image to disk
-        const generatedImageData = imagePart.inlineData.data;
-        const mimeType = imagePart.inlineData.mimeType || "image/png";
-        const format = mimeType.split("/")[1] || "png";
-        const generatedImagePath = await saveGeneratedImage(generatedImageData, format);
+          // Save generated image to disk
+          const generatedImageData = imagePart.inlineData.data;
+          const mimeType = imagePart.inlineData.mimeType || 'image/png';
+          const format = mimeType.split('/')[1] || 'png';
+          const generatedImagePath = await saveGeneratedImage(generatedImageData, format);
 
-        // CRITICAL: Build and store conversation history for future edits
-        // This includes the thought signatures that Gemini needs to "remember" the image
-        // Store as raw object - Drizzle will handle JSONB serialization
-        const conversationHistory = [
-          { role: "user", parts: userParts },
-          modelResponse  // This contains thoughtSignature fields - DO NOT MODIFY
-        ];
+          // CRITICAL: Build and store conversation history for future edits
+          // This includes the thought signatures that Gemini needs to "remember" the image
+          // Store as raw object - Drizzle will handle JSONB serialization
+          const conversationHistory = [
+            { role: 'user', parts: userParts },
+            modelResponse, // This contains thoughtSignature fields - DO NOT MODIFY
+          ];
 
-        // Save generation record to database with conversation history
-        const generation = await storage.saveGeneration({
-          userId,  // Now properly set from authenticated session
-          prompt,
-          originalImagePaths,
-          generatedImagePath,
-          resolution: selectedResolution,
-          conversationHistory,  // Pass as object, Drizzle handles JSONB
-          parentGenerationId: null,
-          editPrompt: null,
-        });
-
-        logger.info({ module: 'Transform', generationId: generation.id }, 'Saved generation with conversation history');
-        // Persist usage/cost estimate for adaptive pricing
-        try {
-          const durationMsForUsage = Date.now() - startTime;
-          const cost = estimateGenerationCostMicros({
+          // Save generation record to database with conversation history
+          const generation = await storage.saveGeneration({
+            userId, // Now properly set from authenticated session
+            prompt,
+            originalImagePaths,
+            generatedImagePath,
             resolution: selectedResolution,
-            inputImagesCount: hasFiles ? files.length : 0,
-            promptChars: String(prompt).length,
-            usageMetadata: (typeof usageMetadata === "object" ? usageMetadata : null),
+            conversationHistory, // Pass as object, Drizzle handles JSONB
+            parentGenerationId: null,
+            editPrompt: null,
           });
 
-          await storage.saveGenerationUsage({
+          logger.info(
+            { module: 'Transform', generationId: generation.id },
+            'Saved generation with conversation history',
+          );
+          // Persist usage/cost estimate for adaptive pricing
+          try {
+            const durationMsForUsage = Date.now() - startTime;
+            const cost = estimateGenerationCostMicros({
+              resolution: selectedResolution,
+              inputImagesCount: hasFiles ? files.length : 0,
+              promptChars: String(prompt).length,
+              usageMetadata: typeof usageMetadata === 'object' ? usageMetadata : null,
+            });
+
+            await storage.saveGenerationUsage({
+              generationId: generation.id,
+              brandId: userId || 'anonymous',
+              model: modelName,
+              operation: 'generate',
+              resolution: selectedResolution,
+              inputImagesCount: hasFiles ? files.length : 0,
+              promptChars: String(prompt).length,
+              durationMs: durationMsForUsage,
+              inputTokens: cost.inputTokens,
+              outputTokens: cost.outputTokens,
+              estimatedCostMicros: cost.estimatedCostMicros,
+              estimationSource: cost.estimationSource,
+            });
+          } catch (e) {
+            logger.warn({ module: 'Transform', err: e }, 'Failed to persist generation usage (run db:push?)');
+          }
+
+          success = true;
+
+          // Return the file path or Cloudinary URL for the frontend to use
+          res.json({
+            success: true,
+            imageUrl: generatedImagePath.startsWith('http')
+              ? generatedImagePath
+              : `/${generatedImagePath.replace(/\\/g, '/')}`,
             generationId: generation.id,
-            brandId: userId || "anonymous",
-            model: modelName,
-            operation: "generate",
-            resolution: selectedResolution,
-            inputImagesCount: hasFiles ? files.length : 0,
-            promptChars: String(prompt).length,
-            durationMs: durationMsForUsage,
-            inputTokens: cost.inputTokens,
-            outputTokens: cost.outputTokens,
-            estimatedCostMicros: cost.estimatedCostMicros,
-            estimationSource: cost.estimationSource,
+            prompt: prompt,
+            canEdit: true,
+            mode: generationMode,
+            templateId: templateId || null,
           });
-        } catch (e) {
-          logger.warn({ module: 'Transform', err: e }, 'Failed to persist generation usage (run db:push?)');
+        } else {
+          errorType = 'no_image_content';
+          throw new Error('Generated content was not an image');
         }
+      } catch (error: any) {
+        logger.error({ module: 'Transform', err: error }, 'Transform error');
+        errorType = errorType || error.name || 'unknown';
 
-        success = true;
-
-        // Return the file path or Cloudinary URL for the frontend to use
-        res.json({
-          success: true,
-          imageUrl: generatedImagePath.startsWith("http") ? generatedImagePath : `/${generatedImagePath.replace(/\\/g, '/')}`,
-          generationId: generation.id,
-          prompt: prompt,
-          canEdit: true,
-          mode: generationMode,
-          templateId: templateId || null
+        telemetry.trackError({
+          endpoint: '/api/transform',
+          errorType: errorType || 'unknown',
+          statusCode: 500,
+          userId,
         });
-      } else {
-        errorType = 'no_image_content';
-        throw new Error("Generated content was not an image");
-      }
 
-    } catch (error: any) {
-      logger.error({ module: 'Transform', err: error }, 'Transform error');
-      errorType = errorType || (error.name || 'unknown');
+        res.status(500).json({
+          error: 'Failed to transform image',
+          details: error.message,
+        });
+      } finally {
+        // Track Gemini API usage and cost
+        const durationMs = Date.now() - startTime;
+        const inputTokensEstimate = Math.ceil((req.body.prompt?.length || 0) * 0.25);
 
-      telemetry.trackError({
-        endpoint: '/api/transform',
-        errorType: errorType || 'unknown',
-        statusCode: 500,
-        userId,
-      });
-
-      res.status(500).json({
-        error: "Failed to transform image",
-        details: error.message
-      });
-    } finally {
-      // Track Gemini API usage and cost
-      const durationMs = Date.now() - startTime;
-      const inputTokensEstimate = Math.ceil((req.body.prompt?.length || 0) * 0.25);
-
-      telemetry.trackGeminiUsage({
-        model: 'gemini-3-pro-image-preview',
-        operation: 'generate',
-        inputTokens: inputTokensEstimate,
-        outputTokens: 0,
-        durationMs,
-        userId,
-        success,
-        errorType,
-      });
-
-      // Track for quota monitoring dashboard
-      try {
-        await quotaMonitoringService.trackApiCall({
-          brandId: userId || 'anonymous',
-          operation: 'generate',
+        telemetry.trackGeminiUsage({
           model: 'gemini-3-pro-image-preview',
-          success,
-          durationMs,
+          operation: 'generate',
           inputTokens: inputTokensEstimate,
           outputTokens: 0,
-          costMicros: success ? estimateGenerationCostMicros({
-            resolution: req.body.resolution || '2K',
-            inputImagesCount: Array.isArray(req.files) ? req.files.length : 0,
-            promptChars: String(req.body.prompt || '').length,
-          }).estimatedCostMicros : 0,
+          durationMs,
+          userId,
+          success,
           errorType,
-          isRateLimited: errorType === 'RESOURCE_EXHAUSTED' || errorType === 'rate_limit',
         });
-      } catch (trackError) {
-        logger.warn({ module: 'Transform', err: trackError }, 'Failed to track quota');
+
+        // Track for quota monitoring dashboard
+        try {
+          await quotaMonitoringService.trackApiCall({
+            brandId: userId || 'anonymous',
+            operation: 'generate',
+            model: 'gemini-3-pro-image-preview',
+            success,
+            durationMs,
+            inputTokens: inputTokensEstimate,
+            outputTokens: 0,
+            costMicros: success
+              ? estimateGenerationCostMicros({
+                  resolution: req.body.resolution || '2K',
+                  inputImagesCount: Array.isArray(req.files) ? req.files.length : 0,
+                  promptChars: String(req.body.prompt || '').length,
+                }).estimatedCostMicros
+              : 0,
+            errorType,
+            isRateLimited: errorType === 'RESOURCE_EXHAUSTED' || errorType === 'rate_limit',
+          });
+        } catch (trackError) {
+          logger.warn({ module: 'Transform', err: trackError }, 'Failed to track quota');
+        }
       }
-    }
-  });
+    },
+  );
 
   // Get all generations (gallery)
-  app.get("/api/generations", async (req, res) => {
+  app.get('/api/generations', async (req, res) => {
     try {
       const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
       const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
@@ -961,32 +1055,32 @@ Consider these product relationships and usage contexts when generating the imag
       res.json(toGenerationDTOArray(allGenerations));
     } catch (error: any) {
       logger.error({ module: 'Generations', err: error }, 'Error fetching generations');
-      res.status(500).json({ error: "Failed to fetch generations" });
+      res.status(500).json({ error: 'Failed to fetch generations' });
     }
   });
 
   // Get single generation by ID
-  app.get("/api/generations/:id", async (req, res) => {
+  app.get('/api/generations/:id', async (req, res) => {
     try {
       const generation = await storage.getGenerationById(req.params.id);
       if (!generation) {
-        return res.status(404).json({ error: "Generation not found" });
+        return res.status(404).json({ error: 'Generation not found' });
       }
       res.json(toGenerationDTO(generation));
     } catch (error: any) {
       logger.error({ module: 'Generation', err: error }, 'Error fetching generation');
-      res.status(500).json({ error: "Failed to fetch generation" });
+      res.status(500).json({ error: 'Failed to fetch generation' });
     }
   });
 
   // Get edit history for a generation
-  app.get("/api/generations/:id/history", async (req, res) => {
+  app.get('/api/generations/:id/history', async (req, res) => {
     try {
       const { id } = req.params;
 
       const generation = await storage.getGenerationById(id);
       if (!generation) {
-        return res.status(404).json({ error: "Generation not found" });
+        return res.status(404).json({ error: 'Generation not found' });
       }
 
       // Get full edit chain
@@ -995,20 +1089,20 @@ Consider these product relationships and usage contexts when generating the imag
       res.json({
         current: generation,
         history: history,
-        totalEdits: history.length - 1 // Subtract 1 because the original is included
+        totalEdits: history.length - 1, // Subtract 1 because the original is included
       });
     } catch (error: any) {
       logger.error({ module: 'GenerationHistory', err: error }, 'Error fetching generation history');
-      res.status(500).json({ error: "Failed to fetch generation history" });
+      res.status(500).json({ error: 'Failed to fetch generation history' });
     }
   });
 
   // Delete generation
-  app.delete("/api/generations/:id", async (req, res) => {
+  app.delete('/api/generations/:id', async (req, res) => {
     try {
       const generation = await storage.getGenerationById(req.params.id);
       if (!generation) {
-        return res.status(404).json({ error: "Generation not found" });
+        return res.status(404).json({ error: 'Generation not found' });
       }
 
       // Delete files from disk
@@ -1023,13 +1117,13 @@ Consider these product relationships and usage contexts when generating the imag
       res.json({ success: true });
     } catch (error: any) {
       logger.error({ module: 'DeleteGeneration', err: error }, 'Error deleting generation');
-      res.status(500).json({ error: "Failed to delete generation" });
+      res.status(500).json({ error: 'Failed to delete generation' });
     }
   });
 
   // Edit generation - Async version using BullMQ job queue
   // Returns immediately with jobId, client polls /api/jobs/:jobId for status
-  app.post("/api/generations/:id/edit", promptInjectionGuard, async (req, res) => {
+  app.post('/api/generations/:id/edit', promptInjectionGuard, async (req, res) => {
     const userId = (req as any).session?.userId;
 
     try {
@@ -1041,7 +1135,7 @@ Consider these product relationships and usage contexts when generating the imag
       if (!editPrompt || editPrompt.trim().length === 0) {
         return res.status(400).json({
           success: false,
-          error: "Edit prompt is required"
+          error: 'Edit prompt is required',
         });
       }
 
@@ -1051,7 +1145,7 @@ Consider these product relationships and usage contexts when generating the imag
       if (!parentGeneration) {
         return res.status(404).json({
           success: false,
-          error: "Generation not found"
+          error: 'Generation not found',
         });
       }
 
@@ -1059,7 +1153,7 @@ Consider these product relationships and usage contexts when generating the imag
       if (!parentGeneration.conversationHistory) {
         return res.status(400).json({
           success: false,
-          error: "This generation does not support editing. It was created before the edit feature was available."
+          error: 'This generation does not support editing. It was created before the edit feature was available.',
         });
       }
 
@@ -1072,11 +1166,14 @@ Consider these product relationships and usage contexts when generating the imag
         conversationHistory: parentGeneration.conversationHistory,
         parentGenerationId: parentGeneration.id,
         originalImagePaths: parentGeneration.originalImagePaths,
-        resolution: parentGeneration.resolution || "2K",
+        resolution: parentGeneration.resolution || '2K',
         status: 'pending',
       });
 
-      logger.info({ module: 'Edit', generationId: newGeneration.id, parentId: id }, 'Created pending generation for async edit');
+      logger.info(
+        { module: 'Edit', generationId: newGeneration.id, parentId: id },
+        'Created pending generation for async edit',
+      );
 
       // Enqueue job for background processing
       const job = await generationQueue.add('edit-generation', {
@@ -1099,7 +1196,6 @@ Consider these product relationships and usage contexts when generating the imag
         message: 'Edit job started. Poll /api/jobs/:jobId for status.',
         parentId: parentGeneration.id,
       });
-
     } catch (error: any) {
       logger.error({ module: 'Edit', err: error }, 'Edit enqueue error');
 
@@ -1112,13 +1208,13 @@ Consider these product relationships and usage contexts when generating the imag
 
       return res.status(500).json({
         success: false,
-        error: error.message || "Failed to start edit job"
+        error: error.message || 'Failed to start edit job',
       });
     }
   });
 
   // Job status endpoint - Poll this to check job progress
-  app.get("/api/jobs/:jobId", async (req, res) => {
+  app.get('/api/jobs/:jobId', async (req, res) => {
     try {
       const { jobId } = req.params;
 
@@ -1127,7 +1223,7 @@ Consider these product relationships and usage contexts when generating the imag
       if (!job) {
         return res.status(404).json({
           success: false,
-          error: 'Job not found'
+          error: 'Job not found',
         });
       }
 
@@ -1153,35 +1249,38 @@ Consider these product relationships and usage contexts when generating the imag
         returnvalue: job.returnvalue, // Result when completed
         failedReason: job.failedReason, // Error when failed
         // Include generation data if available and completed
-        generation: generation ? {
-          id: generation.id,
-          status: generation.status,
-          generatedImagePath: generation.generatedImagePath,
-          imageUrl: generation.generatedImagePath?.startsWith("http")
-            ? generation.generatedImagePath
-            : generation.generatedImagePath ? `/${generation.generatedImagePath.replace(/\\/g, '/')}` : null,
-        } : null,
+        generation: generation
+          ? {
+              id: generation.id,
+              status: generation.status,
+              generatedImagePath: generation.generatedImagePath,
+              imageUrl: generation.generatedImagePath?.startsWith('http')
+                ? generation.generatedImagePath
+                : generation.generatedImagePath
+                  ? `/${generation.generatedImagePath.replace(/\\/g, '/')}`
+                  : null,
+            }
+          : null,
       });
-
     } catch (error: any) {
       logger.error({ module: 'JobStatus', err: error }, 'Error getting job status');
       return res.status(500).json({
         success: false,
-        error: error.message || "Failed to get job status"
+        error: error.message || 'Failed to get job status',
       });
     }
   });
 
   // SSE endpoint for real-time job status updates
   // Clients connect once and receive push updates instead of polling
-  app.get("/api/jobs/:jobId/stream", requireAuth, async (req, res) => {
+  app.get('/api/jobs/:jobId/stream', requireAuth, async (req, res) => {
     const jobId = req.params.jobId;
 
     // Set SSE headers
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no');  // Disable nginx buffering
+    res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
 
     // Send initial status
     const job = await generationQueue.getJob(jobId);
@@ -1192,26 +1291,32 @@ Consider these product relationships and usage contexts when generating the imag
 
     const state = await job.getState();
     const progress = job.progress as JobProgress | undefined;
-    res.write(`data: ${JSON.stringify({
-      type: 'status',
-      state,
-      progress: progress || { percentage: 0 }
-    })}\n\n`);
+    res.write(
+      `data: ${JSON.stringify({
+        type: 'status',
+        state,
+        progress: progress || { percentage: 0 },
+      })}\n\n`,
+    );
 
     // If job is already completed or failed, send final state and close
     if (state === 'completed') {
-      res.write(`data: ${JSON.stringify({
-        type: 'completed',
-        result: job.returnvalue
-      })}\n\n`);
+      res.write(
+        `data: ${JSON.stringify({
+          type: 'completed',
+          result: job.returnvalue,
+        })}\n\n`,
+      );
       return res.end();
     }
 
     if (state === 'failed') {
-      res.write(`data: ${JSON.stringify({
-        type: 'failed',
-        error: job.failedReason || 'Unknown error'
-      })}\n\n`);
+      res.write(
+        `data: ${JSON.stringify({
+          type: 'failed',
+          error: job.failedReason || 'Unknown error',
+        })}\n\n`,
+      );
       return res.end();
     }
 
@@ -1224,10 +1329,12 @@ Consider these product relationships and usage contexts when generating the imag
 
     const completedListener = async ({ jobId: eventJobId, returnvalue }: { jobId: string; returnvalue: any }) => {
       if (eventJobId === jobId) {
-        res.write(`data: ${JSON.stringify({
-          type: 'completed',
-          result: returnvalue
-        })}\n\n`);
+        res.write(
+          `data: ${JSON.stringify({
+            type: 'completed',
+            result: returnvalue,
+          })}\n\n`,
+        );
         cleanup();
         res.end();
       }
@@ -1235,10 +1342,12 @@ Consider these product relationships and usage contexts when generating the imag
 
     const failedListener = async ({ jobId: eventJobId, failedReason }: { jobId: string; failedReason: string }) => {
       if (eventJobId === jobId) {
-        res.write(`data: ${JSON.stringify({
-          type: 'failed',
-          error: failedReason
-        })}\n\n`);
+        res.write(
+          `data: ${JSON.stringify({
+            type: 'failed',
+            error: failedReason,
+          })}\n\n`,
+        );
         cleanup();
         res.end();
       }
@@ -1263,7 +1372,7 @@ Consider these product relationships and usage contexts when generating the imag
   });
 
   // Analyze generation - Ask AI about the transformation
-  app.post("/api/generations/:id/analyze", async (req, res) => {
+  app.post('/api/generations/:id/analyze', async (req, res) => {
     try {
       const { id } = req.params;
       const { question } = req.body;
@@ -1271,7 +1380,7 @@ Consider these product relationships and usage contexts when generating the imag
       if (!question || question.trim().length === 0) {
         return res.status(400).json({
           success: false,
-          error: "Question is required"
+          error: 'Question is required',
         });
       }
 
@@ -1279,7 +1388,7 @@ Consider these product relationships and usage contexts when generating the imag
       if (!generation) {
         return res.status(404).json({
           success: false,
-          error: "Generation not found"
+          error: 'Generation not found',
         });
       }
 
@@ -1289,11 +1398,11 @@ Consider these product relationships and usage contexts when generating the imag
       const getMimeType = (filePath: string): string => {
         const ext = filePath.toLowerCase().split('.').pop();
         const mimeTypes: Record<string, string> = {
-          'jpg': 'image/jpeg',
-          'jpeg': 'image/jpeg',
-          'png': 'image/png',
-          'gif': 'image/gif',
-          'webp': 'image/webp',
+          jpg: 'image/jpeg',
+          jpeg: 'image/jpeg',
+          png: 'image/png',
+          gif: 'image/gif',
+          webp: 'image/webp',
         };
         return mimeTypes[ext || ''] || 'image/png';
       };
@@ -1309,7 +1418,7 @@ Consider these product relationships and usage contexts when generating the imag
           const imageBuffer = await fs.readFile(fullPath);
           originalImages.push({
             data: imageBuffer.toString('base64'),
-            mimeType: getMimeType(imagePath)
+            mimeType: getMimeType(imagePath),
           });
         } catch (e) {
           logger.warn({ module: 'Analyze', imagePath }, 'Could not load original image');
@@ -1334,7 +1443,7 @@ User question: ${question}
 
 Provide a helpful, specific answer. If suggesting prompt improvements, give concrete examples. Keep your response concise but informative.`;
 
-      const modelName = "gemini-3-flash-preview";
+      const modelName = 'gemini-3-flash-preview';
 
       // Build multipart content with images
       const parts: any[] = [{ text: analysisPrompt }];
@@ -1344,8 +1453,8 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         parts.push({
           inlineData: {
             mimeType: img.mimeType,
-            data: img.data
-          }
+            data: img.data,
+          },
         });
       }
 
@@ -1353,8 +1462,8 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       parts.push({
         inlineData: {
           mimeType: generatedMimeType,
-          data: generatedImageBase64
-        }
+          data: generatedImageBase64,
+        },
       });
 
       // Resolve user's Gemini key (database first, env fallback)
@@ -1371,7 +1480,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       if (!responseText) {
         return res.status(500).json({
           success: false,
-          error: "AI did not return a response"
+          error: 'AI did not return a response',
         });
       }
 
@@ -1379,45 +1488,44 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
 
       return res.json({
         success: true,
-        answer: responseText
+        answer: responseText,
       });
-
     } catch (error: any) {
       logger.error({ module: 'Analyze', err: error }, 'Analyze error');
       return res.status(500).json({
         success: false,
-        error: error.message || "Failed to analyze image"
+        error: error.message || 'Failed to analyze image',
       });
     }
   });
 
   // Product routes - Upload product to Cloudinary and save to DB
-  app.post("/api/products", upload.single("image"), async (req, res) => {
+  app.post('/api/products', upload.single('image'), async (req, res) => {
     try {
       if (!isCloudinaryConfigured) {
-        return res.status(503).json({ error: "Product library is not configured" });
+        return res.status(503).json({ error: 'Product library is not configured' });
       }
 
       const file = req.file;
       if (!file) {
-        return res.status(400).json({ error: "No image file provided" });
+        return res.status(400).json({ error: 'No image file provided' });
       }
 
       // Validate file is an image
-      const allowedMimeTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
+      const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
       if (!allowedMimeTypes.includes(file.mimetype)) {
-        return res.status(400).json({ error: "Only image files are allowed (JPEG, PNG, GIF, WebP)" });
+        return res.status(400).json({ error: 'Only image files are allowed (JPEG, PNG, GIF, WebP)' });
       }
 
       // Validate file size (10MB max)
       const maxSize = 10 * 1024 * 1024;
       if (file.size > maxSize) {
-        return res.status(400).json({ error: "File size must be less than 10MB" });
+        return res.status(400).json({ error: 'File size must be less than 10MB' });
       }
 
       const { name, category } = req.body;
       if (!name) {
-        return res.status(400).json({ error: "Product name is required" });
+        return res.status(400).json({ error: 'Product name is required' });
       }
 
       logger.info({ module: 'ProductUpload', productName: name }, 'Uploading to Cloudinary');
@@ -1426,13 +1534,13 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       const uploadResult = await new Promise<any>((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
           {
-            folder: "product-library",
-            resource_type: "image",
+            folder: 'product-library',
+            resource_type: 'image',
           },
           (error, result) => {
             if (error) reject(error);
             else resolve(result);
-          }
+          },
         );
         uploadStream.end(file.buffer);
       });
@@ -1449,12 +1557,12 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json(product);
     } catch (error: any) {
       logger.error({ module: 'ProductUpload', err: error }, 'Upload error');
-      res.status(500).json({ error: "Failed to upload product", details: error.message });
+      res.status(500).json({ error: 'Failed to upload product', details: error.message });
     }
   });
 
   // Get all products
-  app.get("/api/products", async (req, res) => {
+  app.get('/api/products', async (req, res) => {
     try {
       const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
       const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
@@ -1462,30 +1570,30 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json(products);
     } catch (error: any) {
       logger.error({ module: 'Products', err: error }, 'Error fetching products');
-      res.status(500).json({ error: "Failed to fetch products" });
+      res.status(500).json({ error: 'Failed to fetch products' });
     }
   });
 
   // Get single product by ID
-  app.get("/api/products/:id", async (req, res) => {
+  app.get('/api/products/:id', async (req, res) => {
     try {
       const product = await storage.getProductById(req.params.id);
       if (!product) {
-        return res.status(404).json({ error: "Product not found" });
+        return res.status(404).json({ error: 'Product not found' });
       }
       res.json(product);
     } catch (error: any) {
       logger.error({ module: 'Product', err: error }, 'Error fetching product');
-      res.status(500).json({ error: "Failed to fetch product" });
+      res.status(500).json({ error: 'Failed to fetch product' });
     }
   });
 
   // Delete product
-  app.delete("/api/products/:id", async (req, res) => {
+  app.delete('/api/products/:id', async (req, res) => {
     try {
       const product = await storage.getProductById(req.params.id);
       if (!product) {
-        return res.status(404).json({ error: "Product not found" });
+        return res.status(404).json({ error: 'Product not found' });
       }
 
       const productId = req.params.id;
@@ -1506,20 +1614,20 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json({ success: true });
     } catch (error: any) {
       logger.error({ module: 'DeleteProduct', err: error }, 'Error deleting product');
-      res.status(500).json({ error: "Failed to delete product" });
+      res.status(500).json({ error: 'Failed to delete product' });
     }
   });
 
   // Clear all products from database
-  app.delete("/api/products", async (req, res) => {
+  app.delete('/api/products', async (req, res) => {
     try {
       const products = await storage.getProducts();
-      const productIds = products.map(p => p.id);
+      const productIds = products.map((p) => p.id);
 
       // Invalidate all caches for products being deleted
       if (productIds.length > 0) {
         await Promise.all([
-          ...productIds.map(id => visionAnalysisService.invalidateAnalysisCache(id)),
+          ...productIds.map((id) => visionAnalysisService.invalidateAnalysisCache(id)),
           productKnowledgeService.invalidateMultiProductKnowledgeCache(productIds),
         ]);
         logger.info({ module: 'ClearProducts', productCount: productIds.length }, 'Product caches invalidated');
@@ -1533,15 +1641,15 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json({ success: true, deleted: products.length });
     } catch (error: any) {
       logger.error({ module: 'ClearProducts', err: error }, 'Error clearing products');
-      res.status(500).json({ error: "Failed to clear products" });
+      res.status(500).json({ error: 'Failed to clear products' });
     }
   });
 
   // Sync products from Cloudinary
-  app.post("/api/products/sync", async (req, res) => {
+  app.post('/api/products/sync', async (req, res) => {
     try {
       if (!isCloudinaryConfigured) {
-        return res.status(503).json({ error: "Cloudinary is not configured" });
+        return res.status(503).json({ error: 'Cloudinary is not configured' });
       }
 
       logger.info({ module: 'CloudinarySync' }, 'Starting sync');
@@ -1558,7 +1666,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
 
       // Get existing products to avoid duplicates
       const existingProducts = await storage.getProducts();
-      const existingPublicIds = new Set(existingProducts.map(p => p.cloudinaryPublicId));
+      const existingPublicIds = new Set(existingProducts.map((p) => p.cloudinaryPublicId));
 
       let imported = 0;
       let skipped = 0;
@@ -1596,16 +1704,16 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       });
     } catch (error: any) {
       logger.error({ module: 'CloudinarySync', err: error }, 'Sync error');
-      res.status(500).json({ error: "Failed to sync from Cloudinary", details: error.message });
+      res.status(500).json({ error: 'Failed to sync from Cloudinary', details: error.message });
     }
   });
 
   // Prompt template routes
-  app.post("/api/prompt-templates", async (req, res) => {
+  app.post('/api/prompt-templates', async (req, res) => {
     try {
       const { title, prompt, category, tags } = req.body;
       if (!title || !prompt) {
-        return res.status(400).json({ error: "Title and prompt are required" });
+        return res.status(400).json({ error: 'Title and prompt are required' });
       }
 
       const template = await storage.savePromptTemplate({
@@ -1618,67 +1726,67 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json(template);
     } catch (error: any) {
       logger.error({ module: 'PromptTemplate', err: error }, 'Error creating template');
-      res.status(500).json({ error: "Failed to create prompt template" });
+      res.status(500).json({ error: 'Failed to create prompt template' });
     }
   });
 
   // Get prompt templates (optionally filtered by category)
-  app.get("/api/prompt-templates", async (req, res) => {
+  app.get('/api/prompt-templates', async (req, res) => {
     try {
       const category = req.query.category as string | undefined;
       const templates = await storage.getPromptTemplates(category);
       res.json(templates);
     } catch (error: any) {
       logger.error({ module: 'PromptTemplates', err: error }, 'Error fetching templates');
-      res.status(500).json({ error: "Failed to fetch prompt templates" });
+      res.status(500).json({ error: 'Failed to fetch prompt templates' });
     }
   });
 
   // Delete prompt template
-  app.delete("/api/prompt-templates/:id", async (req, res) => {
+  app.delete('/api/prompt-templates/:id', async (req, res) => {
     try {
       await storage.deletePromptTemplate(req.params.id);
       res.json({ success: true });
     } catch (error: any) {
       logger.error({ module: 'DeletePromptTemplate', err: error }, 'Error deleting template');
-      res.status(500).json({ error: "Failed to delete prompt template" });
+      res.status(500).json({ error: 'Failed to delete prompt template' });
     }
   });
 
   // ===== AD SCENE TEMPLATE ROUTES =====
 
   // GET /api/ad-templates/categories - Get available categories (must be before :id route)
-  app.get("/api/ad-templates/categories", async (_req, res) => {
+  app.get('/api/ad-templates/categories', async (_req, res) => {
     try {
       // Return construction-focused categories for NDS
       const categories = [
-        { id: "product_showcase", label: "Product Showcase", description: "Rebar, mesh, and materials display" },
-        { id: "installation", label: "Installation", description: "On-site installation and usage" },
-        { id: "worksite", label: "Worksite", description: "Construction site environments" },
-        { id: "professional", label: "Professional", description: "Studio and professional shots" },
-        { id: "outdoor", label: "Outdoor", description: "Outdoor construction contexts" },
+        { id: 'product_showcase', label: 'Product Showcase', description: 'Rebar, mesh, and materials display' },
+        { id: 'installation', label: 'Installation', description: 'On-site installation and usage' },
+        { id: 'worksite', label: 'Worksite', description: 'Construction site environments' },
+        { id: 'professional', label: 'Professional', description: 'Studio and professional shots' },
+        { id: 'outdoor', label: 'Outdoor', description: 'Outdoor construction contexts' },
       ];
       res.json(categories);
     } catch (error: any) {
       logger.error({ module: 'GetTemplateCategories', err: error }, 'Error fetching categories');
-      res.status(500).json({ error: "Failed to fetch categories" });
+      res.status(500).json({ error: 'Failed to fetch categories' });
     }
   });
 
   // GET /api/ad-templates - List templates with filters
-  app.get("/api/ad-templates", async (req, res) => {
+  app.get('/api/ad-templates', async (req, res) => {
     try {
       const { category, search, platform, aspectRatio } = req.query;
 
       // If search query provided, use search function
-      if (search && typeof search === "string") {
+      if (search && typeof search === 'string') {
         const templates = await storage.searchAdSceneTemplates(search);
         return res.json(templates);
       }
 
       // Otherwise use filters
       const filters: { category?: string; isGlobal?: boolean } = {};
-      if (category && typeof category === "string") {
+      if (category && typeof category === 'string') {
         filters.category = category;
       }
       filters.isGlobal = true; // Only return global templates by default
@@ -1686,42 +1794,38 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       let templates = await storage.getAdSceneTemplates(filters);
 
       // Additional filtering for platform and aspect ratio
-      if (platform && typeof platform === "string") {
-        templates = templates.filter(t =>
-          t.platformHints?.includes(platform)
-        );
+      if (platform && typeof platform === 'string') {
+        templates = templates.filter((t) => t.platformHints?.includes(platform));
       }
-      if (aspectRatio && typeof aspectRatio === "string") {
-        templates = templates.filter(t =>
-          t.aspectRatioHints?.includes(aspectRatio)
-        );
+      if (aspectRatio && typeof aspectRatio === 'string') {
+        templates = templates.filter((t) => t.aspectRatioHints?.includes(aspectRatio));
       }
 
       res.json(templates);
     } catch (error: any) {
       logger.error({ module: 'GetAdTemplates', err: error }, 'Error fetching ad templates');
-      res.status(500).json({ error: "Failed to fetch ad templates" });
+      res.status(500).json({ error: 'Failed to fetch ad templates' });
     }
   });
 
   // GET /api/ad-templates/:id - Get single template
-  app.get("/api/ad-templates/:id", async (req, res) => {
+  app.get('/api/ad-templates/:id', async (req, res) => {
     try {
       const template = await storage.getAdSceneTemplateById(req.params.id);
       if (!template) {
-        return res.status(404).json({ error: "Template not found" });
+        return res.status(404).json({ error: 'Template not found' });
       }
       res.json(template);
     } catch (error: any) {
       logger.error({ module: 'GetAdTemplate', err: error }, 'Error fetching ad template');
-      res.status(500).json({ error: "Failed to fetch ad template" });
+      res.status(500).json({ error: 'Failed to fetch ad template' });
     }
   });
 
   // POST /api/ad-templates - Create template (admin)
-  app.post("/api/ad-templates", requireAuth, async (req, res) => {
+  app.post('/api/ad-templates', requireAuth, async (req, res) => {
     try {
-      const { insertAdSceneTemplateSchema } = await import("@shared/schema");
+      const { insertAdSceneTemplateSchema } = await import('@shared/schema');
       const validatedData = insertAdSceneTemplateSchema.parse(req.body);
 
       // Set createdBy to current user
@@ -1733,51 +1837,51 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
 
       res.status(201).json(template);
     } catch (error: any) {
-      if (error.name === "ZodError") {
-        return res.status(400).json({ error: "Invalid template data", details: error.issues });
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: 'Invalid template data', details: error.issues });
       }
       logger.error({ module: 'CreateAdTemplate', err: error }, 'Error creating ad template');
-      res.status(500).json({ error: "Failed to create ad template" });
+      res.status(500).json({ error: 'Failed to create ad template' });
     }
   });
 
   // PUT /api/ad-templates/:id - Update template
-  app.put("/api/ad-templates/:id", requireAuth, async (req, res) => {
+  app.put('/api/ad-templates/:id', requireAuth, async (req, res) => {
     try {
       const existing = await storage.getAdSceneTemplateById(req.params.id);
       if (!existing) {
-        return res.status(404).json({ error: "Template not found" });
+        return res.status(404).json({ error: 'Template not found' });
       }
 
       // Validate using partial schema (all fields optional for updates)
-      const { insertAdSceneTemplateSchema } = await import("@shared/schema");
+      const { insertAdSceneTemplateSchema } = await import('@shared/schema');
       const updateSchema = insertAdSceneTemplateSchema.partial();
       const validatedData = updateSchema.parse(req.body);
 
       const template = await storage.updateAdSceneTemplate(req.params.id, validatedData);
       res.json(template);
     } catch (error: any) {
-      if (error.name === "ZodError") {
-        return res.status(400).json({ error: "Invalid template data", details: error.issues });
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: 'Invalid template data', details: error.issues });
       }
       logger.error({ module: 'UpdateAdTemplate', err: error }, 'Error updating ad template');
-      res.status(500).json({ error: "Failed to update ad template" });
+      res.status(500).json({ error: 'Failed to update ad template' });
     }
   });
 
   // DELETE /api/ad-templates/:id - Delete template (admin)
-  app.delete("/api/ad-templates/:id", requireAuth, async (req, res) => {
+  app.delete('/api/ad-templates/:id', requireAuth, async (req, res) => {
     try {
       const existing = await storage.getAdSceneTemplateById(req.params.id);
       if (!existing) {
-        return res.status(404).json({ error: "Template not found" });
+        return res.status(404).json({ error: 'Template not found' });
       }
 
       await storage.deleteAdSceneTemplate(req.params.id);
       res.json({ success: true });
     } catch (error: any) {
       logger.error({ module: 'DeleteAdTemplate', err: error }, 'Error deleting ad template');
-      res.status(500).json({ error: "Failed to delete ad template" });
+      res.status(500).json({ error: 'Failed to delete ad template' });
     }
   });
 
@@ -1786,19 +1890,19 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // COPYWRITING ENDPOINTS
 
   // Generate ad copy with multiple variations
-  app.post("/api/copy/generate", promptInjectionGuard, async (req, res) => {
+  app.post('/api/copy/generate', promptInjectionGuard, async (req, res) => {
     try {
       // Use session userId if available, otherwise use a default for demo
-      const userId = req.session?.userId || "demo-user";
+      const userId = req.session?.userId || 'demo-user';
 
       // Validate request
-      const { generateCopySchema } = await import("./validation/schemas");
+      const { generateCopySchema } = await import('./validation/schemas');
       const validatedData = generateCopySchema.parse(req.body);
 
       // Verify generation exists
       const generation = await storage.getGenerationById(validatedData.generationId);
       if (!generation) {
-        return res.status(404).json({ error: "Generation not found" });
+        return res.status(404).json({ error: 'Generation not found' });
       }
 
       // Get user's brand voice if not provided
@@ -1811,7 +1915,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       }
 
       // Generate copy variations
-      const { copywritingService } = await import("./services/copywritingService");
+      const { copywritingService } = await import('./services/copywritingService');
       const variations = await copywritingService.generateCopy({
         ...validatedData,
         brandVoice,
@@ -1845,22 +1949,25 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
             characterCounts: variation.characterCounts,
             variationNumber: index + 1,
             parentCopyId: null,
-          })
-        )
+          }),
+        ),
       );
 
       // Extract successful saves and log any failures
       const savedCopies = saveResults
         .filter((result): result is PromiseFulfilledResult<any> => result.status === 'fulfilled')
-        .map(result => result.value);
+        .map((result) => result.value);
 
-      const failedCount = saveResults.filter(r => r.status === 'rejected').length;
+      const failedCount = saveResults.filter((r) => r.status === 'rejected').length;
       if (failedCount > 0) {
-        logger.warn({ module: 'GenerateCopy', failedCount, totalCount: variations.length }, 'Some variations failed to save');
+        logger.warn(
+          { module: 'GenerateCopy', failedCount, totalCount: variations.length },
+          'Some variations failed to save',
+        );
       }
 
       if (savedCopies.length === 0) {
-        return res.status(500).json({ error: "Failed to save any copy variations" });
+        return res.status(500).json({ error: 'Failed to save any copy variations' });
       }
 
       res.json({
@@ -1870,52 +1977,52 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       });
     } catch (error: any) {
       logger.error({ module: 'GenerateCopy', err: error }, 'Error generating copy');
-      if (error.name === "ZodError") {
-        return res.status(400).json({ error: "Validation failed", details: error.issues });
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: 'Validation failed', details: error.issues });
       }
-      res.status(500).json({ error: "Failed to generate copy", details: error.message });
+      res.status(500).json({ error: 'Failed to generate copy', details: error.message });
     }
   });
 
   // Get copy by generation ID
-  app.get("/api/copy/generation/:generationId", async (req, res) => {
+  app.get('/api/copy/generation/:generationId', async (req, res) => {
     try {
       const copies = await storage.getAdCopyByGenerationId(req.params.generationId);
       res.json({ copies });
     } catch (error: any) {
       logger.error({ module: 'GetCopyByGeneration', err: error }, 'Error fetching copy');
-      res.status(500).json({ error: "Failed to fetch copy" });
+      res.status(500).json({ error: 'Failed to fetch copy' });
     }
   });
 
   // Get specific copy by ID
-  app.get("/api/copy/:id", async (req, res) => {
+  app.get('/api/copy/:id', async (req, res) => {
     try {
       const copy = await storage.getAdCopyById(req.params.id);
       if (!copy) {
-        return res.status(404).json({ error: "Copy not found" });
+        return res.status(404).json({ error: 'Copy not found' });
       }
       res.json({ copy });
     } catch (error: any) {
       logger.error({ module: 'GetCopy', err: error }, 'Error fetching copy');
-      res.status(500).json({ error: "Failed to fetch copy" });
+      res.status(500).json({ error: 'Failed to fetch copy' });
     }
   });
 
   // Delete copy
-  app.delete("/api/copy/:id", async (req, res) => {
+  app.delete('/api/copy/:id', async (req, res) => {
     try {
       await storage.deleteAdCopy(req.params.id);
       res.json({ success: true });
     } catch (error: any) {
       logger.error({ module: 'DeleteCopy', err: error }, 'Error deleting copy');
-      res.status(500).json({ error: "Failed to delete copy" });
+      res.status(500).json({ error: 'Failed to delete copy' });
     }
   });
 
   // Standalone copy generation (no generationId required)
   // Used by BeforeAfterBuilder and TextOnlyMode components
-  app.post("/api/copywriting/standalone", async (req, res) => {
+  app.post('/api/copywriting/standalone', async (req, res) => {
     try {
       const {
         platform = 'linkedin',
@@ -1931,8 +2038,8 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       // Validate required fields
       if (!productName || !productDescription) {
         return res.status(400).json({
-          error: "Missing required fields",
-          details: "productName and productDescription are required"
+          error: 'Missing required fields',
+          details: 'productName and productDescription are required',
         });
       }
 
@@ -1940,7 +2047,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       const variationCount = Math.min(Math.max(parseInt(variations) || 3, 1), 5);
 
       // Call copywriting service
-      const { copywritingService } = await import("./services/copywritingService");
+      const { copywritingService } = await import('./services/copywritingService');
       const generatedVariations = await copywritingService.generateCopy({
         platform,
         tone,
@@ -1972,136 +2079,136 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
     } catch (error: any) {
       logger.error({ module: 'StandaloneCopy', err: error }, 'Error generating standalone copy');
       res.status(500).json({
-        error: "Failed to generate copy",
-        details: error.message
+        error: 'Failed to generate copy',
+        details: error.message,
       });
     }
   });
 
   // Update user's brand voice
-  app.put("/api/user/brand-voice", requireAuth, async (req, res) => {
+  app.put('/api/user/brand-voice', requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId;
       if (!userId) {
-        return res.status(401).json({ error: "Unauthorized" });
+        return res.status(401).json({ error: 'Unauthorized' });
       }
 
       const { brandVoice } = req.body;
       if (!brandVoice || !brandVoice.principles || !Array.isArray(brandVoice.principles)) {
-        return res.status(400).json({ error: "Invalid brand voice data" });
+        return res.status(400).json({ error: 'Invalid brand voice data' });
       }
 
       const updatedUser = await storage.updateUserBrandVoice(userId, brandVoice);
       res.json({ success: true, brandVoice: updatedUser.brandVoice });
     } catch (error: any) {
       logger.error({ module: 'UpdateBrandVoice', err: error }, 'Error updating brand voice');
-      res.status(500).json({ error: "Failed to update brand voice" });
+      res.status(500).json({ error: 'Failed to update brand voice' });
     }
   });
 
   // Admin: Force verification of Brand Profile Seed
-  app.post("/api/admin/seed-brand", requireAuth, async (req, res) => {
+  app.post('/api/admin/seed-brand', requireAuth, async (req, res) => {
     try {
       logger.info({ module: 'Admin' }, 'Force seeding brand profile');
       await seedBrandProfile();
-      res.json({ success: true, message: "Brand Profile seeded successfully" });
+      res.json({ success: true, message: 'Brand Profile seeded successfully' });
     } catch (error: any) {
       logger.error({ module: 'Admin', err: error }, 'Seed failed');
-      res.status(500).json({ error: "Seed failed", details: error.message });
+      res.status(500).json({ error: 'Seed failed', details: error.message });
     }
   });
 
   // Admin: Seed Products
-  app.post("/api/admin/seed-products", requireAuth, async (req, res) => {
+  app.post('/api/admin/seed-products', requireAuth, async (req, res) => {
     try {
       logger.info({ module: 'Admin' }, 'Seeding products');
-      const { seedProducts } = await import("./seeds/seedProducts");
+      const { seedProducts } = await import('./seeds/seedProducts');
       const { sampleOnly, cloudinaryOnly, cloudinaryFolder } = req.body || {};
       const results = await seedProducts({ sampleOnly, cloudinaryOnly, cloudinaryFolder });
-      res.json({ success: true, message: "Products seeded successfully", results });
+      res.json({ success: true, message: 'Products seeded successfully', results });
     } catch (error: any) {
       logger.error({ module: 'Admin', err: error }, 'Product seed failed');
-      res.status(500).json({ error: "Seed failed", details: error.message });
+      res.status(500).json({ error: 'Seed failed', details: error.message });
     }
   });
 
   // Admin: Seed Installation Scenarios
-  app.post("/api/admin/seed-installation-scenarios", requireAuth, async (req, res) => {
+  app.post('/api/admin/seed-installation-scenarios', requireAuth, async (req, res) => {
     try {
       logger.info({ module: 'Admin' }, 'Seeding installation scenarios');
-      const { seedInstallationScenarios } = await import("./seeds/seedInstallationScenarios");
+      const { seedInstallationScenarios } = await import('./seeds/seedInstallationScenarios');
       const results = await seedInstallationScenarios();
-      res.json({ success: true, message: "Installation scenarios seeded successfully", results });
+      res.json({ success: true, message: 'Installation scenarios seeded successfully', results });
     } catch (error: any) {
       logger.error({ module: 'Admin', err: error }, 'Installation scenarios seed failed');
-      res.status(500).json({ error: "Seed failed", details: error.message });
+      res.status(500).json({ error: 'Seed failed', details: error.message });
     }
   });
 
   // Admin: Seed Product Relationships
-  app.post("/api/admin/seed-relationships", requireAuth, async (req, res) => {
+  app.post('/api/admin/seed-relationships', requireAuth, async (req, res) => {
     try {
       logger.info({ module: 'Admin' }, 'Seeding product relationships');
-      const { seedProductRelationships } = await import("./seeds/seedRelationships");
+      const { seedProductRelationships } = await import('./seeds/seedRelationships');
       const results = await seedProductRelationships();
-      res.json({ success: true, message: "Product relationships seeded successfully", results });
+      res.json({ success: true, message: 'Product relationships seeded successfully', results });
     } catch (error: any) {
       logger.error({ module: 'Admin', err: error }, 'Relationships seed failed');
-      res.status(500).json({ error: "Seed failed", details: error.message });
+      res.status(500).json({ error: 'Seed failed', details: error.message });
     }
   });
 
   // Admin: Seed Brand Images
-  app.post("/api/admin/seed-brand-images", requireAuth, async (req, res) => {
+  app.post('/api/admin/seed-brand-images', requireAuth, async (req, res) => {
     try {
       logger.info({ module: 'Admin' }, 'Seeding brand images');
-      const { seedBrandImages } = await import("./seeds/seedBrandImages");
+      const { seedBrandImages } = await import('./seeds/seedBrandImages');
       const { sampleOnly, cloudinaryOnly, cloudinaryFolder } = req.body || {};
       const results = await seedBrandImages({ sampleOnly, cloudinaryOnly, cloudinaryFolder });
-      res.json({ success: true, message: "Brand images seeded successfully", results });
+      res.json({ success: true, message: 'Brand images seeded successfully', results });
     } catch (error: any) {
       logger.error({ module: 'Admin', err: error }, 'Brand images seed failed');
-      res.status(500).json({ error: "Seed failed", details: error.message });
+      res.status(500).json({ error: 'Seed failed', details: error.message });
     }
   });
 
   // Admin: Seed Performing Templates
-  app.post("/api/admin/seed-templates", requireAuth, async (req, res) => {
+  app.post('/api/admin/seed-templates', requireAuth, async (req, res) => {
     try {
       logger.info({ module: 'Admin' }, 'Seeding performing templates');
-      const { seedPerformingTemplates } = await import("./seeds/seedTemplates");
+      const { seedPerformingTemplates } = await import('./seeds/seedTemplates');
       const results = await seedPerformingTemplates();
-      res.json({ success: true, message: "Performing templates seeded successfully", results });
+      res.json({ success: true, message: 'Performing templates seeded successfully', results });
     } catch (error: any) {
       logger.error({ module: 'Admin', err: error }, 'Templates seed failed');
-      res.status(500).json({ error: "Seed failed", details: error.message });
+      res.status(500).json({ error: 'Seed failed', details: error.message });
     }
   });
 
   // Admin: Seed Ad Scene Templates
-  app.post("/api/admin/seed-ad-scene-templates", requireAuth, async (req, res) => {
+  app.post('/api/admin/seed-ad-scene-templates', requireAuth, async (req, res) => {
     try {
       logger.info({ module: 'Admin' }, 'Seeding ad scene templates');
-      const { seedAdSceneTemplates } = await import("./seeds/seedAdSceneTemplates");
+      const { seedAdSceneTemplates } = await import('./seeds/seedAdSceneTemplates');
       const results = await seedAdSceneTemplates();
-      res.json({ success: true, message: "Ad scene templates seeded successfully", results });
+      res.json({ success: true, message: 'Ad scene templates seeded successfully', results });
     } catch (error: any) {
       logger.error({ module: 'Admin', err: error }, 'Ad scene templates seed failed');
-      res.status(500).json({ error: "Seed failed", details: error.message });
+      res.status(500).json({ error: 'Seed failed', details: error.message });
     }
   });
 
   // Admin: Run All Seeds
-  app.post("/api/admin/seed-all", requireAuth, async (req, res) => {
+  app.post('/api/admin/seed-all', requireAuth, async (req, res) => {
     try {
       logger.info({ module: 'Admin' }, 'Running all seeds');
-      const { runAllSeeds } = await import("./seeds/runAllSeeds");
+      const { runAllSeeds } = await import('./seeds/runAllSeeds');
       const options = req.body || {};
       const results = await runAllSeeds(options);
-      res.json({ success: true, message: "All seeds completed", results });
+      res.json({ success: true, message: 'All seeds completed', results });
     } catch (error: any) {
       logger.error({ module: 'Admin', err: error }, 'Seed all failed');
-      res.status(500).json({ error: "Seed failed", details: error.message });
+      res.status(500).json({ error: 'Seed failed', details: error.message });
     }
   });
 
@@ -2110,42 +2217,42 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // =============================================================================
 
   // Get available categories for scraping
-  app.get("/api/admin/scraper/categories", requireAuth, async (req, res) => {
+  app.get('/api/admin/scraper/categories', requireAuth, async (req, res) => {
     try {
-      const { getAvailableCategories } = await import("./services/ndsWebsiteScraper");
+      const { getAvailableCategories } = await import('./services/ndsWebsiteScraper');
       const categories = getAvailableCategories();
       res.json({ success: true, categories });
     } catch (error: any) {
       logger.error({ module: 'Scraper', err: error }, 'Failed to get categories');
-      res.status(500).json({ error: "Failed to get categories", details: error.message });
+      res.status(500).json({ error: 'Failed to get categories', details: error.message });
     }
   });
 
   // Scrape all products from NDS website
-  app.post("/api/admin/scraper/scrape-all", requireAuth, async (req, res) => {
+  app.post('/api/admin/scraper/scrape-all', requireAuth, async (req, res) => {
     try {
       logger.info({ module: 'Scraper' }, 'Starting full website scrape');
-      const { scrapeNDSWebsite } = await import("./services/ndsWebsiteScraper");
+      const { scrapeNDSWebsite } = await import('./services/ndsWebsiteScraper');
       const { categories, dryRun, limit } = req.body || {};
       const results = await scrapeNDSWebsite({ categories, dryRun, limit });
-      res.json({ success: true, message: "Scraping completed", results });
+      res.json({ success: true, message: 'Scraping completed', results });
     } catch (error: any) {
       logger.error({ module: 'Scraper', err: error }, 'Full scrape failed');
-      res.status(500).json({ error: "Scraping failed", details: error.message });
+      res.status(500).json({ error: 'Scraping failed', details: error.message });
     }
   });
 
   // Scrape a single category
-  app.post("/api/admin/scraper/scrape-category/:category", requireAuth, async (req, res) => {
+  app.post('/api/admin/scraper/scrape-category/:category', requireAuth, async (req, res) => {
     try {
       const { category } = req.params;
       logger.info({ module: 'Scraper', category }, 'Scraping category');
-      const { scrapeSingleCategory } = await import("./services/ndsWebsiteScraper");
+      const { scrapeSingleCategory } = await import('./services/ndsWebsiteScraper');
       const results = await scrapeSingleCategory(category);
       res.json({ success: true, message: `Category ${category} scraped`, results });
     } catch (error: any) {
       logger.error({ module: 'Scraper', err: error }, 'Category scrape failed');
-      res.status(500).json({ error: "Scraping failed", details: error.message });
+      res.status(500).json({ error: 'Scraping failed', details: error.message });
     }
   });
 
@@ -2154,27 +2261,27 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // =============================================================================
 
   // Initialize File Search Store
-  app.post("/api/file-search/initialize", requireAuth, async (req, res) => {
+  app.post('/api/file-search/initialize', requireAuth, async (req, res) => {
     try {
       const { initializeFileSearchStore } = await import('./services/fileSearchService');
       const store = await initializeFileSearchStore();
       res.json({ success: true, store: { name: store.name, displayName: store.config?.displayName } });
     } catch (error: any) {
       logger.error({ module: 'InitializeFileSearch', err: error }, 'Error initializing file search');
-      res.status(500).json({ error: "Failed to initialize File Search Store" });
+      res.status(500).json({ error: 'Failed to initialize File Search Store' });
     }
   });
 
   // Upload reference file
-  app.post("/api/file-search/upload", upload.single("file"), requireAuth, async (req, res) => {
+  app.post('/api/file-search/upload', upload.single('file'), requireAuth, async (req, res) => {
     try {
       if (!req.file) {
-        return res.status(400).json({ error: "No file uploaded" });
+        return res.status(400).json({ error: 'No file uploaded' });
       }
 
       const { category, description, metadata } = req.body;
       if (!category) {
-        return res.status(400).json({ error: "Category is required" });
+        return res.status(400).json({ error: 'Category is required' });
       }
 
       // Safely parse metadata JSON
@@ -2183,7 +2290,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         try {
           parsedMetadata = JSON.parse(metadata);
         } catch {
-          return res.status(400).json({ error: "Invalid metadata JSON format" });
+          return res.status(400).json({ error: 'Invalid metadata JSON format' });
         }
       }
 
@@ -2198,16 +2305,16 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json({ success: true, file: result });
     } catch (error: any) {
       logger.error({ module: 'UploadReferenceFile', err: error }, 'Error uploading reference file');
-      res.status(500).json({ error: "Failed to upload file" });
+      res.status(500).json({ error: 'Failed to upload file' });
     }
   });
 
   // Upload directory of reference files
-  app.post("/api/file-search/upload-directory", requireAuth, async (req, res) => {
+  app.post('/api/file-search/upload-directory', requireAuth, async (req, res) => {
     try {
       const { directoryPath, category, description } = req.body;
       if (!directoryPath || !category) {
-        return res.status(400).json({ error: "Directory path and category are required" });
+        return res.status(400).json({ error: 'Directory path and category are required' });
       }
 
       const { uploadDirectoryToFileSearch } = await import('./services/fileSearchService');
@@ -2220,12 +2327,12 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json({ success: true, files: results, count: results.length });
     } catch (error: any) {
       logger.error({ module: 'UploadDirectory', err: error }, 'Error uploading directory');
-      res.status(500).json({ error: "Failed to upload directory" });
+      res.status(500).json({ error: 'Failed to upload directory' });
     }
   });
 
   // List reference files
-  app.get("/api/file-search/files", requireAuth, async (req, res) => {
+  app.get('/api/file-search/files', requireAuth, async (req, res) => {
     try {
       const { category } = req.query;
       const { listReferenceFiles, FileCategory } = await import('./services/fileSearchService');
@@ -2234,12 +2341,12 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json({ success: true, files, count: files.length });
     } catch (error: any) {
       logger.error({ module: 'ListReferenceFiles', err: error }, 'Error listing reference files');
-      res.status(500).json({ error: "Failed to list files" });
+      res.status(500).json({ error: 'Failed to list files' });
     }
   });
 
   // Delete reference file
-  app.delete("/api/file-search/files/:fileId", requireAuth, async (req, res) => {
+  app.delete('/api/file-search/files/:fileId', requireAuth, async (req, res) => {
     try {
       const { fileId } = req.params;
       const { deleteReferenceFile } = await import('./services/fileSearchService');
@@ -2248,19 +2355,19 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json({ success: true });
     } catch (error: any) {
       logger.error({ module: 'DeleteReferenceFile', err: error }, 'Error deleting reference file');
-      res.status(500).json({ error: "Failed to delete file" });
+      res.status(500).json({ error: 'Failed to delete file' });
     }
   });
 
   // Seed File Search Store with initial structure
-  app.post("/api/file-search/seed", requireAuth, async (req, res) => {
+  app.post('/api/file-search/seed', requireAuth, async (req, res) => {
     try {
       const { seedFileSearchStore } = await import('./services/fileSearchService');
       const result = await seedFileSearchStore();
       res.json(result);
     } catch (error: any) {
       logger.error({ module: 'SeedFileSearch', err: error }, 'Error seeding file search');
-      res.status(500).json({ error: "Failed to seed File Search Store" });
+      res.status(500).json({ error: 'Failed to seed File Search Store' });
     }
   });
 
@@ -2269,7 +2376,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // ============================================
 
   // Analyze a product image (vision analysis)
-  app.post("/api/products/:productId/analyze", requireAuth, async (req, res) => {
+  app.post('/api/products/:productId/analyze', requireAuth, async (req, res) => {
     try {
       const { productId } = req.params;
       const userId = (req.session as any).userId;
@@ -2279,13 +2386,13 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       const product = await storage.getProductById(productId);
 
       if (!product) {
-        return res.status(404).json({ error: "Product not found" });
+        return res.status(404).json({ error: 'Product not found' });
       }
 
       const result = await visionAnalysisService.analyzeProductImage(product, userId, forceRefresh);
 
       if (!result.success) {
-        const statusCode = result.error.code === "RATE_LIMITED" ? 429 : 500;
+        const statusCode = result.error.code === 'RATE_LIMITED' ? 429 : 500;
         return res.status(statusCode).json({ error: result.error.message, code: result.error.code });
       }
 
@@ -2295,12 +2402,12 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       });
     } catch (error: any) {
       logger.error({ module: 'ProductAnalyze', err: error }, 'Error analyzing product');
-      res.status(500).json({ error: "Failed to analyze product" });
+      res.status(500).json({ error: 'Failed to analyze product' });
     }
   });
 
   // Get cached analysis for a product
-  app.get("/api/products/:productId/analysis", requireAuth, async (req, res) => {
+  app.get('/api/products/:productId/analysis', requireAuth, async (req, res) => {
     try {
       const { productId } = req.params;
       const { visionAnalysisService } = await import('./services/visionAnalysisService');
@@ -2308,42 +2415,38 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       const analysis = await visionAnalysisService.getCachedAnalysis(productId);
 
       if (!analysis) {
-        return res.status(404).json({ error: "No analysis found for this product" });
+        return res.status(404).json({ error: 'No analysis found for this product' });
       }
 
       res.json({ analysis });
     } catch (error: any) {
       logger.error({ module: 'ProductAnalysisGet', err: error }, 'Error getting product analysis');
-      res.status(500).json({ error: "Failed to get product analysis" });
+      res.status(500).json({ error: 'Failed to get product analysis' });
     }
   });
 
   // ===== ARBITRARY IMAGE ANALYSIS =====
   // Analyze a temporary upload image (not a product) for IdeaBank context
 
-  app.post("/api/analyze-image", upload.single("image"), async (req, res) => {
+  app.post('/api/analyze-image', upload.single('image'), async (req, res) => {
     try {
-      const userId = (req.session as any)?.userId || "system-user";
+      const userId = (req.session as any)?.userId || 'system-user';
       const file = req.file;
 
       if (!file) {
-        return res.status(400).json({ error: "No image file provided" });
+        return res.status(400).json({ error: 'No image file provided' });
       }
 
       // Validate file type
-      if (!file.mimetype.startsWith("image/")) {
-        return res.status(400).json({ error: "File must be an image" });
+      if (!file.mimetype.startsWith('image/')) {
+        return res.status(400).json({ error: 'File must be an image' });
       }
 
       const { visionAnalysisService } = await import('./services/visionAnalysisService');
-      const result = await visionAnalysisService.analyzeArbitraryImage(
-        file.buffer,
-        file.mimetype,
-        userId
-      );
+      const result = await visionAnalysisService.analyzeArbitraryImage(file.buffer, file.mimetype, userId);
 
       if (!result.success) {
-        if (result.error.code === "RATE_LIMITED") {
+        if (result.error.code === 'RATE_LIMITED') {
           return res.status(429).json({ error: result.error.message });
         }
         return res.status(500).json({ error: result.error.message });
@@ -2355,7 +2458,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       });
     } catch (error: any) {
       logger.error({ module: 'AnalyzeImage', err: error }, 'Error analyzing image');
-      res.status(500).json({ error: "Failed to analyze image" });
+      res.status(500).json({ error: 'Failed to analyze image' });
     }
   });
 
@@ -2363,7 +2466,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // Phase 0.5: Human-in-the-loop product data collection
 
   // Generate enrichment draft for a product (AI analyzes image + searches web)
-  app.post("/api/products/:productId/enrich", requireAuth, async (req, res) => {
+  app.post('/api/products/:productId/enrich', requireAuth, async (req, res) => {
     try {
       const { productId } = req.params;
       const userId = (req.session as any)?.userId;
@@ -2382,32 +2485,32 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       });
     } catch (error: any) {
       logger.error({ module: 'ProductEnrichment', err: error }, 'Error enriching product');
-      res.status(500).json({ error: "Failed to generate enrichment draft" });
+      res.status(500).json({ error: 'Failed to generate enrichment draft' });
     }
   });
 
   // Enrich product from a user-provided URL
-  app.post("/api/products/:productId/enrich-from-url", requireAuth, async (req, res) => {
+  app.post('/api/products/:productId/enrich-from-url', requireAuth, async (req, res) => {
     try {
       const { productId } = req.params;
       const { productUrl } = req.body;
 
-      if (!productUrl || typeof productUrl !== "string") {
-        return res.status(400).json({ error: "Product URL is required" });
+      if (!productUrl || typeof productUrl !== 'string') {
+        return res.status(400).json({ error: 'Product URL is required' });
       }
 
       // Validate URL format
       try {
         new URL(productUrl);
       } catch {
-        return res.status(400).json({ error: "Invalid URL format" });
+        return res.status(400).json({ error: 'Invalid URL format' });
       }
 
       const { enrichFromUrl, saveEnrichmentDraft } = await import('./services/enrichmentServiceWithUrl');
       const result = await enrichFromUrl({ productId, productUrl });
 
       if (!result.success || !result.enrichmentDraft) {
-        return res.status(400).json({ error: result.error || "Failed to enrich from URL" });
+        return res.status(400).json({ error: result.error || 'Failed to enrich from URL' });
       }
 
       // Save the draft to the product
@@ -2420,18 +2523,18 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       });
     } catch (error: any) {
       logger.error({ module: 'URLEnrichment', err: error }, 'Error enriching from URL');
-      res.status(500).json({ error: "Failed to enrich product from URL" });
+      res.status(500).json({ error: 'Failed to enrich product from URL' });
     }
   });
 
   // Get enrichment draft for a product
-  app.get("/api/products/:productId/enrichment", requireAuth, async (req, res) => {
+  app.get('/api/products/:productId/enrichment', requireAuth, async (req, res) => {
     try {
       const { productId } = req.params;
       const product = await storage.getProductById(productId);
 
       if (!product) {
-        return res.status(404).json({ error: "Product not found" });
+        return res.status(404).json({ error: 'Product not found' });
       }
 
       const { productEnrichmentService } = await import('./services/productEnrichmentService');
@@ -2439,7 +2542,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
 
       res.json({
         productId,
-        status: product.enrichmentStatus || "pending",
+        status: product.enrichmentStatus || 'pending',
         draft: product.enrichmentDraft,
         verifiedAt: product.enrichmentVerifiedAt,
         source: product.enrichmentSource,
@@ -2448,12 +2551,12 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       });
     } catch (error: any) {
       logger.error({ module: 'ProductEnrichmentGet', err: error }, 'Error getting product enrichment');
-      res.status(500).json({ error: "Failed to get enrichment data" });
+      res.status(500).json({ error: 'Failed to get enrichment data' });
     }
   });
 
   // Verify/approve enrichment data (human-in-the-loop)
-  app.post("/api/products/:productId/enrichment/verify", requireAuth, async (req, res) => {
+  app.post('/api/products/:productId/enrichment/verify', requireAuth, async (req, res) => {
     try {
       const { productId } = req.params;
       const userId = (req.session as any)?.userId;
@@ -2462,32 +2565,30 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       const { productEnrichmentService } = await import('./services/productEnrichmentService');
       const result = await productEnrichmentService.verifyEnrichment(
         { productId, description, features, benefits, specifications, tags, sku, approvedAsIs },
-        userId
+        userId,
       );
 
       if (!result.success) {
         return res.status(400).json({ error: result.error });
       }
 
-      res.json({ success: true, message: "Product enrichment verified" });
+      res.json({ success: true, message: 'Product enrichment verified' });
     } catch (error: any) {
       logger.error({ module: 'ProductEnrichmentVerify', err: error }, 'Error verifying product enrichment');
-      res.status(500).json({ error: "Failed to verify enrichment" });
+      res.status(500).json({ error: 'Failed to verify enrichment' });
     }
   });
 
   // Get all products needing enrichment
-  app.get("/api/products/enrichment/pending", async (req, res) => {
+  app.get('/api/products/enrichment/pending', async (req, res) => {
     try {
       const { status } = req.query;
 
       const { productEnrichmentService } = await import('./services/productEnrichmentService');
-      const products = await productEnrichmentService.getProductsNeedingEnrichment(
-        status as any
-      );
+      const products = await productEnrichmentService.getProductsNeedingEnrichment(status as any);
 
       // Return with completeness info
-      const productsWithInfo = products.map(product => ({
+      const productsWithInfo = products.map((product) => ({
         ...product,
         completeness: productEnrichmentService.getEnrichmentCompleteness(product),
         isReady: productEnrichmentService.isProductReady(product),
@@ -2496,7 +2597,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json({ products: productsWithInfo });
     } catch (error: any) {
       logger.error({ module: 'ProductsPendingEnrichment', err: error }, 'Error fetching products pending enrichment');
-      res.status(500).json({ error: "Failed to get products needing enrichment" });
+      res.status(500).json({ error: 'Failed to get products needing enrichment' });
     }
   });
 
@@ -2505,7 +2606,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // ============================================
 
   // Create installation scenario (with validation)
-  app.post("/api/installation-scenarios", requireAuth, validate(insertInstallationScenarioSchema), async (req, res) => {
+  app.post('/api/installation-scenarios', requireAuth, validate(insertInstallationScenarioSchema), async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const scenario = await storage.createInstallationScenario({
@@ -2515,97 +2616,97 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.status(201).json(scenario);
     } catch (error: any) {
       logger.error({ module: 'InstallationScenarios', err: error }, 'Create error');
-      res.status(500).json({ error: "Failed to create installation scenario" });
+      res.status(500).json({ error: 'Failed to create installation scenario' });
     }
   });
 
   // Get all installation scenarios for user
-  app.get("/api/installation-scenarios", requireAuth, async (req, res) => {
+  app.get('/api/installation-scenarios', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const scenarios = await storage.getInstallationScenariosByUser(userId);
       res.json(scenarios);
     } catch (error: any) {
       logger.error({ module: 'InstallationScenarios', err: error }, 'List error');
-      res.status(500).json({ error: "Failed to get installation scenarios" });
+      res.status(500).json({ error: 'Failed to get installation scenarios' });
     }
   });
 
   // Get scenarios by room type (MUST be before :id catch-all)
-  app.get("/api/installation-scenarios/room-type/:roomType", requireAuth, async (req, res) => {
+  app.get('/api/installation-scenarios/room-type/:roomType', requireAuth, async (req, res) => {
     try {
       const scenarios = await storage.getScenariosByRoomType(req.params.roomType);
       res.json(scenarios);
     } catch (error: any) {
       logger.error({ module: 'InstallationScenarios', err: error }, 'Room type query error');
-      res.status(500).json({ error: "Failed to get scenarios by room type" });
+      res.status(500).json({ error: 'Failed to get scenarios by room type' });
     }
   });
 
   // Get scenarios for products (MUST be before :id catch-all)
-  app.post("/api/installation-scenarios/for-products", requireAuth, async (req, res) => {
+  app.post('/api/installation-scenarios/for-products', requireAuth, async (req, res) => {
     try {
       const { productIds } = req.body;
       if (!productIds || !Array.isArray(productIds)) {
-        return res.status(400).json({ error: "productIds array is required" });
+        return res.status(400).json({ error: 'productIds array is required' });
       }
       const scenarios = await storage.getInstallationScenariosForProducts(productIds);
       res.json(scenarios);
     } catch (error: any) {
       logger.error({ module: 'InstallationScenarios', err: error }, 'Products query error');
-      res.status(500).json({ error: "Failed to get scenarios for products" });
+      res.status(500).json({ error: 'Failed to get scenarios for products' });
     }
   });
 
   // Get single installation scenario (catch-all - must be after specific routes)
-  app.get("/api/installation-scenarios/:id", requireAuth, async (req, res) => {
+  app.get('/api/installation-scenarios/:id', requireAuth, async (req, res) => {
     try {
       const scenario = await storage.getInstallationScenarioById(req.params.id);
       if (!scenario) {
-        return res.status(404).json({ error: "Installation scenario not found" });
+        return res.status(404).json({ error: 'Installation scenario not found' });
       }
       res.json(scenario);
     } catch (error: any) {
       logger.error({ module: 'InstallationScenarios', err: error }, 'Get error');
-      res.status(500).json({ error: "Failed to get installation scenario" });
+      res.status(500).json({ error: 'Failed to get installation scenario' });
     }
   });
 
   // Update installation scenario (with ownership check)
-  app.put("/api/installation-scenarios/:id", requireAuth, async (req, res) => {
+  app.put('/api/installation-scenarios/:id', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const existing = await storage.getInstallationScenarioById(req.params.id);
       if (!existing) {
-        return res.status(404).json({ error: "Installation scenario not found" });
+        return res.status(404).json({ error: 'Installation scenario not found' });
       }
       if (existing.userId !== userId) {
-        return res.status(403).json({ error: "Not authorized to update this scenario" });
+        return res.status(403).json({ error: 'Not authorized to update this scenario' });
       }
       const scenario = await storage.updateInstallationScenario(req.params.id, req.body);
       res.json(scenario);
     } catch (error: any) {
       logger.error({ module: 'InstallationScenarios', err: error }, 'Update error');
-      res.status(500).json({ error: "Failed to update installation scenario" });
+      res.status(500).json({ error: 'Failed to update installation scenario' });
     }
   });
 
   // Delete installation scenario (with ownership check)
-  app.delete("/api/installation-scenarios/:id", requireAuth, async (req, res) => {
+  app.delete('/api/installation-scenarios/:id', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const existing = await storage.getInstallationScenarioById(req.params.id);
       if (!existing) {
-        return res.status(404).json({ error: "Installation scenario not found" });
+        return res.status(404).json({ error: 'Installation scenario not found' });
       }
       if (existing.userId !== userId) {
-        return res.status(403).json({ error: "Not authorized to delete this scenario" });
+        return res.status(403).json({ error: 'Not authorized to delete this scenario' });
       }
       await storage.deleteInstallationScenario(req.params.id);
       res.json({ success: true });
     } catch (error: any) {
       logger.error({ module: 'InstallationScenarios', err: error }, 'Delete error');
-      res.status(500).json({ error: "Failed to delete installation scenario" });
+      res.status(500).json({ error: 'Failed to delete installation scenario' });
     }
   });
 
@@ -2614,14 +2715,14 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // ============================================
 
   // Create product relationship (with validation and self-relationship check)
-  app.post("/api/product-relationships", requireAuth, validate(insertProductRelationshipSchema), async (req, res) => {
+  app.post('/api/product-relationships', requireAuth, validate(insertProductRelationshipSchema), async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const { sourceProductId, targetProductId } = req.body;
 
       // Prevent self-relationships
       if (sourceProductId === targetProductId) {
-        return res.status(400).json({ error: "Cannot create a relationship between a product and itself" });
+        return res.status(400).json({ error: 'Cannot create a relationship between a product and itself' });
       }
 
       const relationship = await storage.createProductRelationship({
@@ -2631,61 +2732,62 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.status(201).json(relationship);
     } catch (error: any) {
       logger.error({ module: 'ProductRelationships', err: error }, 'Create error');
-      if (error.code === "23505") { // Unique constraint violation
-        return res.status(409).json({ error: "This relationship already exists" });
+      if (error.code === '23505') {
+        // Unique constraint violation
+        return res.status(409).json({ error: 'This relationship already exists' });
       }
-      res.status(500).json({ error: "Failed to create product relationship" });
+      res.status(500).json({ error: 'Failed to create product relationship' });
     }
   });
 
   // Get relationships for a product
-  app.get("/api/products/:productId/relationships", requireAuth, async (req, res) => {
+  app.get('/api/products/:productId/relationships', requireAuth, async (req, res) => {
     try {
       const relationships = await storage.getProductRelationships([req.params.productId]);
       res.json(relationships);
     } catch (error: any) {
       logger.error({ module: 'ProductRelationships', err: error }, 'Get error');
-      res.status(500).json({ error: "Failed to get product relationships" });
+      res.status(500).json({ error: 'Failed to get product relationships' });
     }
   });
 
   // Get relationships by type for a product
-  app.get("/api/products/:productId/relationships/:relationshipType", requireAuth, async (req, res) => {
+  app.get('/api/products/:productId/relationships/:relationshipType', requireAuth, async (req, res) => {
     try {
       const relationships = await storage.getProductRelationshipsByType(
         req.params.productId,
-        req.params.relationshipType
+        req.params.relationshipType,
       );
       res.json(relationships);
     } catch (error: any) {
       logger.error({ module: 'ProductRelationships', err: error }, 'Get by type error');
-      res.status(500).json({ error: "Failed to get product relationships" });
+      res.status(500).json({ error: 'Failed to get product relationships' });
     }
   });
 
   // Delete product relationship
-  app.delete("/api/product-relationships/:id", requireAuth, async (req, res) => {
+  app.delete('/api/product-relationships/:id', requireAuth, async (req, res) => {
     try {
       await storage.deleteProductRelationship(req.params.id);
       res.json({ success: true });
     } catch (error: any) {
       logger.error({ module: 'ProductRelationships', err: error }, 'Delete error');
-      res.status(500).json({ error: "Failed to delete product relationship" });
+      res.status(500).json({ error: 'Failed to delete product relationship' });
     }
   });
 
   // Bulk get relationships for multiple products
-  app.post("/api/product-relationships/bulk", requireAuth, async (req, res) => {
+  app.post('/api/product-relationships/bulk', requireAuth, async (req, res) => {
     try {
       const { productIds } = req.body;
       if (!productIds || !Array.isArray(productIds)) {
-        return res.status(400).json({ error: "productIds array is required" });
+        return res.status(400).json({ error: 'productIds array is required' });
       }
       const relationships = await storage.getProductRelationships(productIds);
       res.json(relationships);
     } catch (error: any) {
       logger.error({ module: 'ProductRelationships', err: error }, 'Bulk get error');
-      res.status(500).json({ error: "Failed to get product relationships" });
+      res.status(500).json({ error: 'Failed to get product relationships' });
     }
   });
 
@@ -2694,17 +2796,17 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // ============================================
 
   // Upload brand image
-  app.post("/api/brand-images", upload.single("image"), requireAuth, async (req, res) => {
+  app.post('/api/brand-images', upload.single('image'), requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const file = req.file;
 
       if (!file) {
-        return res.status(400).json({ error: "Image file is required" });
+        return res.status(400).json({ error: 'Image file is required' });
       }
 
       // Upload to Cloudinary
-      const cloudinary = (await import("cloudinary")).v2;
+      const cloudinary = (await import('cloudinary')).v2;
       cloudinary.config({
         cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
         api_key: process.env.CLOUDINARY_API_KEY,
@@ -2712,22 +2814,24 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       });
 
       const uploadResult = await new Promise<any>((resolve, reject) => {
-        cloudinary.uploader.upload_stream(
-          {
-            folder: "brand-images",
-            resource_type: "image",
-          },
-          (error, result) => {
-            if (error) reject(error);
-            else resolve(result);
-          }
-        ).end(file.buffer);
+        cloudinary.uploader
+          .upload_stream(
+            {
+              folder: 'brand-images',
+              resource_type: 'image',
+            },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            },
+          )
+          .end(file.buffer);
       });
 
       // Parse metadata from body
       // Valid categories: historical_ad, product_hero, installation, detail, lifestyle, comparison
       const validCategories = ['historical_ad', 'product_hero', 'installation', 'detail', 'lifestyle', 'comparison'];
-      const category = validCategories.includes(req.body.category) ? req.body.category : "product_hero";
+      const category = validCategories.includes(req.body.category) ? req.body.category : 'product_hero';
       const tags = req.body.tags ? JSON.parse(req.body.tags) : [];
       const productIds = req.body.productIds ? JSON.parse(req.body.productIds) : [];
       const suggestedUse = req.body.suggestedUse ? JSON.parse(req.body.suggestedUse) : [];
@@ -2749,12 +2853,12 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.status(201).json(brandImage);
     } catch (error: any) {
       logger.error({ module: 'BrandImages', err: error }, 'Upload error');
-      res.status(500).json({ error: "Failed to upload brand image" });
+      res.status(500).json({ error: 'Failed to upload brand image' });
     }
   });
 
   // Get all brand images for user
-  app.get("/api/brand-images", requireAuth, async (req, res) => {
+  app.get('/api/brand-images', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
@@ -2763,59 +2867,59 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json(images);
     } catch (error: any) {
       logger.error({ module: 'BrandImages', err: error }, 'List error');
-      res.status(500).json({ error: "Failed to get brand images" });
+      res.status(500).json({ error: 'Failed to get brand images' });
     }
   });
 
   // Get brand images by category
-  app.get("/api/brand-images/category/:category", requireAuth, async (req, res) => {
+  app.get('/api/brand-images/category/:category', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const images = await storage.getBrandImagesByCategory(userId, req.params.category);
       res.json(images);
     } catch (error: any) {
       logger.error({ module: 'BrandImages', err: error }, 'Category query error');
-      res.status(500).json({ error: "Failed to get brand images by category" });
+      res.status(500).json({ error: 'Failed to get brand images by category' });
     }
   });
 
   // Get brand images for products
-  app.post("/api/brand-images/for-products", requireAuth, async (req, res) => {
+  app.post('/api/brand-images/for-products', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const { productIds } = req.body;
       if (!productIds || !Array.isArray(productIds)) {
-        return res.status(400).json({ error: "productIds array is required" });
+        return res.status(400).json({ error: 'productIds array is required' });
       }
       const images = await storage.getBrandImagesForProducts(productIds, userId);
       res.json(images);
     } catch (error: any) {
       logger.error({ module: 'BrandImages', err: error }, 'Products query error');
-      res.status(500).json({ error: "Failed to get brand images for products" });
+      res.status(500).json({ error: 'Failed to get brand images for products' });
     }
   });
 
   // Update brand image
-  app.put("/api/brand-images/:id", requireAuth, async (req, res) => {
+  app.put('/api/brand-images/:id', requireAuth, async (req, res) => {
     try {
       const image = await storage.updateBrandImage(req.params.id, req.body);
       res.json(image);
     } catch (error: any) {
       logger.error({ module: 'BrandImages', err: error }, 'Update error');
-      res.status(500).json({ error: "Failed to update brand image" });
+      res.status(500).json({ error: 'Failed to update brand image' });
     }
   });
 
   // Delete brand image
-  app.delete("/api/brand-images/:id", requireAuth, async (req, res) => {
+  app.delete('/api/brand-images/:id', requireAuth, async (req, res) => {
     try {
       // Get the image to delete from Cloudinary
       const images = await storage.getBrandImagesByUser((req.session as any).userId);
-      const imageToDelete = images.find(img => img.id === req.params.id);
+      const imageToDelete = images.find((img) => img.id === req.params.id);
 
       if (imageToDelete) {
         // Delete from Cloudinary
-        const cloudinary = (await import("cloudinary")).v2;
+        const cloudinary = (await import('cloudinary')).v2;
         cloudinary.config({
           cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
           api_key: process.env.CLOUDINARY_API_KEY,
@@ -2834,7 +2938,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json({ success: true });
     } catch (error: any) {
       logger.error({ module: 'BrandImages', err: error }, 'Delete error');
-      res.status(500).json({ error: "Failed to delete brand image" });
+      res.status(500).json({ error: 'Failed to delete brand image' });
     }
   });
 
@@ -2843,7 +2947,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // ============================================
 
   // Create performing ad template
-  app.post("/api/performing-ad-templates", upload.single("preview"), requireAuth, async (req, res) => {
+  app.post('/api/performing-ad-templates', upload.single('preview'), requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       let previewImageUrl: string | undefined;
@@ -2851,7 +2955,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
 
       // Upload preview image to Cloudinary if provided
       if (req.file) {
-        const cloudinary = (await import("cloudinary")).v2;
+        const cloudinary = (await import('cloudinary')).v2;
         cloudinary.config({
           cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
           api_key: process.env.CLOUDINARY_API_KEY,
@@ -2861,13 +2965,13 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         const result = await new Promise<any>((resolve, reject) => {
           const uploadStream = cloudinary.uploader.upload_stream(
             {
-              folder: "performing-ad-templates",
-              resource_type: "image",
+              folder: 'performing-ad-templates',
+              resource_type: 'image',
             },
             (error, result) => {
               if (error) reject(error);
               else resolve(result);
-            }
+            },
           );
           uploadStream.end(req.file!.buffer);
         });
@@ -2886,7 +2990,9 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         sourcePlatform: req.body.sourcePlatform,
         advertiserName: req.body.advertiserName,
         engagementTier: req.body.engagementTier,
-        estimatedEngagementRate: req.body.estimatedEngagementRate ? parseInt(req.body.estimatedEngagementRate) : undefined,
+        estimatedEngagementRate: req.body.estimatedEngagementRate
+          ? parseInt(req.body.estimatedEngagementRate)
+          : undefined,
         runningDays: req.body.runningDays ? parseInt(req.body.runningDays) : undefined,
         estimatedBudget: req.body.estimatedBudget,
         platformMetrics: req.body.platformMetrics ? JSON.parse(req.body.platformMetrics) : undefined,
@@ -2907,44 +3013,44 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         targetAspectRatios: req.body.targetAspectRatios ? JSON.parse(req.body.targetAspectRatios) : undefined,
         bestForIndustries: req.body.bestForIndustries ? JSON.parse(req.body.bestForIndustries) : undefined,
         bestForObjectives: req.body.bestForObjectives ? JSON.parse(req.body.bestForObjectives) : undefined,
-        isActive: req.body.isActive !== "false",
-        isFeatured: req.body.isFeatured === "true",
+        isActive: req.body.isActive !== 'false',
+        isFeatured: req.body.isFeatured === 'true',
       };
 
       const template = await storage.createPerformingAdTemplate(templateData);
       res.json(template);
     } catch (error: any) {
       logger.error({ module: 'PerformingTemplates', err: error }, 'Create error');
-      res.status(500).json({ error: "Failed to create performing ad template" });
+      res.status(500).json({ error: 'Failed to create performing ad template' });
     }
   });
 
   // Get all performing ad templates for user
-  app.get("/api/performing-ad-templates", requireAuth, async (req, res) => {
+  app.get('/api/performing-ad-templates', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const templates = await storage.getPerformingAdTemplates(userId);
       res.json(templates);
     } catch (error: any) {
       logger.error({ module: 'PerformingTemplates', err: error }, 'List error');
-      res.status(500).json({ error: "Failed to fetch performing ad templates" });
+      res.status(500).json({ error: 'Failed to fetch performing ad templates' });
     }
   });
 
   // Get featured templates (MUST be before :id catch-all)
-  app.get("/api/performing-ad-templates/featured", requireAuth, async (req, res) => {
+  app.get('/api/performing-ad-templates/featured', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const templates = await storage.getFeaturedPerformingAdTemplates(userId);
       res.json(templates);
     } catch (error: any) {
       logger.error({ module: 'PerformingTemplates', err: error }, 'Get featured error');
-      res.status(500).json({ error: "Failed to fetch featured templates" });
+      res.status(500).json({ error: 'Failed to fetch featured templates' });
     }
   });
 
   // Get top performing templates (MUST be before :id catch-all)
-  app.get("/api/performing-ad-templates/top", requireAuth, async (req, res) => {
+  app.get('/api/performing-ad-templates/top', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const limit = parseInt(req.query.limit as string) || 10;
@@ -2952,12 +3058,12 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json(templates);
     } catch (error: any) {
       logger.error({ module: 'PerformingTemplates', err: error }, 'Get top error');
-      res.status(500).json({ error: "Failed to fetch top templates" });
+      res.status(500).json({ error: 'Failed to fetch top templates' });
     }
   });
 
   // Search templates with filters (MUST be before :id catch-all)
-  app.post("/api/performing-ad-templates/search", requireAuth, async (req, res) => {
+  app.post('/api/performing-ad-templates/search', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const filters = req.body;
@@ -2965,67 +3071,67 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json(templates);
     } catch (error: any) {
       logger.error({ module: 'PerformingTemplates', err: error }, 'Search error');
-      res.status(500).json({ error: "Failed to search templates" });
+      res.status(500).json({ error: 'Failed to search templates' });
     }
   });
 
   // Get templates by category (MUST be before :id catch-all)
-  app.get("/api/performing-ad-templates/category/:category", requireAuth, async (req, res) => {
+  app.get('/api/performing-ad-templates/category/:category', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const templates = await storage.getPerformingAdTemplatesByCategory(userId, req.params.category);
       res.json(templates);
     } catch (error: any) {
       logger.error({ module: 'PerformingTemplates', err: error }, 'Get by category error');
-      res.status(500).json({ error: "Failed to fetch templates by category" });
+      res.status(500).json({ error: 'Failed to fetch templates by category' });
     }
   });
 
   // Get templates by platform (MUST be before :id catch-all)
-  app.get("/api/performing-ad-templates/platform/:platform", requireAuth, async (req, res) => {
+  app.get('/api/performing-ad-templates/platform/:platform', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const templates = await storage.getPerformingAdTemplatesByPlatform(userId, req.params.platform);
       res.json(templates);
     } catch (error: any) {
       logger.error({ module: 'PerformingTemplates', err: error }, 'Get by platform error');
-      res.status(500).json({ error: "Failed to fetch templates by platform" });
+      res.status(500).json({ error: 'Failed to fetch templates by platform' });
     }
   });
 
   // Get single performing ad template (catch-all - must be after specific routes)
-  app.get("/api/performing-ad-templates/:id", requireAuth, async (req, res) => {
+  app.get('/api/performing-ad-templates/:id', requireAuth, async (req, res) => {
     try {
       const template = await storage.getPerformingAdTemplate(req.params.id);
       if (!template) {
-        return res.status(404).json({ error: "Template not found" });
+        return res.status(404).json({ error: 'Template not found' });
       }
       res.json(template);
     } catch (error: any) {
       logger.error({ module: 'PerformingTemplates', err: error }, 'Get error');
-      res.status(500).json({ error: "Failed to fetch performing ad template" });
+      res.status(500).json({ error: 'Failed to fetch performing ad template' });
     }
   });
 
   // Update performing ad template
-  app.put("/api/performing-ad-templates/:id", requireAuth, async (req, res) => {
+  app.put('/api/performing-ad-templates/:id', requireAuth, async (req, res) => {
     try {
       const template = await storage.updatePerformingAdTemplate(req.params.id, req.body);
       res.json(template);
     } catch (error: any) {
       logger.error({ module: 'PerformingTemplates', err: error }, 'Update error');
-      res.status(500).json({ error: "Failed to update performing ad template" });
+      res.status(500).json({ error: 'Failed to update performing ad template' });
     }
   });
 
   // Delete performing ad template
-  app.delete("/api/performing-ad-templates/:id", requireAuth, async (req, res) => {
+  app.delete('/api/performing-ad-templates/:id', requireAuth, async (req, res) => {
     try {
       // Get the template to delete preview from Cloudinary
       const template = await storage.getPerformingAdTemplate(req.params.id);
 
       if (template?.previewPublicId) {
-        const cloudinary = (await import("cloudinary")).v2;
+        const cloudinary = (await import('cloudinary')).v2;
         cloudinary.config({
           cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
           api_key: process.env.CLOUDINARY_API_KEY,
@@ -3043,26 +3149,30 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json({ success: true });
     } catch (error: any) {
       logger.error({ module: 'PerformingTemplates', err: error }, 'Delete error');
-      res.status(500).json({ error: "Failed to delete performing ad template" });
+      res.status(500).json({ error: 'Failed to delete performing ad template' });
     }
   });
 
   // Generate idea bank suggestions (optional auth for single-tenant mode)
-  app.post("/api/idea-bank/suggest", promptInjectionGuard, async (req, res) => {
+  app.post('/api/idea-bank/suggest', promptInjectionGuard, async (req, res) => {
     try {
       // Use authenticated userId or default system user for single-tenant mode
-      const userId = (req.session as any)?.userId || "system-user";
+      const userId = (req.session as any)?.userId || 'system-user';
       const {
-        productId, productIds, uploadDescriptions, userGoal,
-        enableWebSearch, maxSuggestions,
-        mode = 'freestyle',  // NEW: default to freestyle for backward compatibility
-        templateId           // NEW: required when mode = 'template'
+        productId,
+        productIds,
+        uploadDescriptions,
+        userGoal,
+        enableWebSearch,
+        maxSuggestions,
+        mode = 'freestyle', // NEW: default to freestyle for backward compatibility
+        templateId, // NEW: required when mode = 'template'
       } = req.body;
 
       // Validate template mode requirements
       if (mode === 'template' && !templateId) {
         return res.status(400).json({
-          error: 'templateId is required when mode is "template"'
+          error: 'templateId is required when mode is "template"',
         });
       }
 
@@ -3071,12 +3181,12 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
 
       // Validate upload descriptions if provided
       const validUploadDescriptions: string[] = Array.isArray(uploadDescriptions)
-        ? uploadDescriptions.filter((d: any) => typeof d === "string" && d.trim().length > 0).slice(0, 6)
+        ? uploadDescriptions.filter((d: any) => typeof d === 'string' && d.trim().length > 0).slice(0, 6)
         : [];
 
       // Require at least products or upload descriptions
       if (ids.length === 0 && validUploadDescriptions.length === 0) {
-        return res.status(400).json({ error: "productId, productIds, or uploadDescriptions is required" });
+        return res.status(400).json({ error: 'productId, productIds, or uploadDescriptions is required' });
       }
 
       const { ideaBankService } = await import('./services/ideaBankService');
@@ -3084,24 +3194,27 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       // For multiple products, aggregate suggestions from each
       if (ids.length > 1) {
         const results = await Promise.all(
-          ids.slice(0, 6).map((id: string) => // Limit to 6 products max
-            ideaBankService.generateSuggestions({
-              productId: id,
-              userId,
-              userGoal,
-              uploadDescriptions: validUploadDescriptions,
-              enableWebSearch: enableWebSearch || false,
-              maxSuggestions: 2, // Fewer per product when multiple
-              mode,
-              templateId,
-            })
-          )
+          ids.slice(0, 6).map(
+            (
+              id: string, // Limit to 6 products max
+            ) =>
+              ideaBankService.generateSuggestions({
+                productId: id,
+                userId,
+                userGoal,
+                uploadDescriptions: validUploadDescriptions,
+                enableWebSearch: enableWebSearch || false,
+                maxSuggestions: 2, // Fewer per product when multiple
+                mode,
+                templateId,
+              }),
+          ),
         );
 
         // Filter successful results and aggregate
-        const successfulResults = results.filter(r => r.success);
+        const successfulResults = results.filter((r) => r.success);
         if (successfulResults.length === 0) {
-          return res.status(500).json({ error: "Failed to generate suggestions for all products" });
+          return res.status(500).json({ error: 'Failed to generate suggestions for all products' });
         }
 
         // Merge suggestions and aggregate analysis status
@@ -3117,10 +3230,12 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         for (const result of successfulResults) {
           if (result.success) {
             allSuggestions.push(...result.response.suggestions);
-            aggregateStatus.visionComplete = aggregateStatus.visionComplete || result.response.analysisStatus.visionComplete;
+            aggregateStatus.visionComplete =
+              aggregateStatus.visionComplete || result.response.analysisStatus.visionComplete;
             aggregateStatus.kbQueried = aggregateStatus.kbQueried || result.response.analysisStatus.kbQueried;
             aggregateStatus.templatesMatched += result.response.analysisStatus.templatesMatched;
-            aggregateStatus.webSearchUsed = aggregateStatus.webSearchUsed || result.response.analysisStatus.webSearchUsed;
+            aggregateStatus.webSearchUsed =
+              aggregateStatus.webSearchUsed || result.response.analysisStatus.webSearchUsed;
           }
         }
 
@@ -3148,8 +3263,8 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       });
 
       if (!result.success) {
-        const statusCode = result.error.code === "RATE_LIMITED" ? 429 :
-          result.error.code === "PRODUCT_NOT_FOUND" ? 404 : 500;
+        const statusCode =
+          result.error.code === 'RATE_LIMITED' ? 429 : result.error.code === 'PRODUCT_NOT_FOUND' ? 404 : 500;
         return res.status(statusCode).json({ error: result.error.message, code: result.error.code });
       }
 
@@ -3162,7 +3277,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
           template: templateResponse.template,
           mergedPrompt: templateResponse.mergedPrompt,
           analysisStatus: templateResponse.analysisStatus,
-          recipe: templateResponse.recipe
+          recipe: templateResponse.recipe,
         });
       }
 
@@ -3176,9 +3291,9 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
           suggestions: [],
           analysisStatus: {
             ...response.analysisStatus,
-            message: "No suggestions generated. Try adding products or images.",
-            details: "AI analysis completed but no viable prompts found."
-          }
+            message: 'No suggestions generated. Try adding products or images.',
+            details: 'AI analysis completed but no viable prompts found.',
+          },
         });
       }
 
@@ -3188,15 +3303,15 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
 
       // Return structured error with retry signal
       res.status(500).json({
-        error: "Failed to generate suggestions",
-        message: "Please try again or contact support",
-        fallback: true // Signal to client this is retryable
+        error: 'Failed to generate suggestions',
+        message: 'Please try again or contact support',
+        fallback: true, // Signal to client this is retryable
       });
     }
   });
 
   // Get matched templates for a product
-  app.get("/api/idea-bank/templates/:productId", requireAuth, async (req, res) => {
+  app.get('/api/idea-bank/templates/:productId', requireAuth, async (req, res) => {
     try {
       const { productId } = req.params;
       const userId = (req.session as any).userId;
@@ -3206,7 +3321,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       const result = await ideaBankService.getMatchedTemplates(productId, userId);
 
       if (!result) {
-        return res.status(404).json({ error: "Product not found or analysis failed" });
+        return res.status(404).json({ error: 'Product not found or analysis failed' });
       }
 
       res.json({
@@ -3215,7 +3330,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       });
     } catch (error: any) {
       logger.error({ module: 'IdeaBankTemplates', err: error }, 'Error fetching templates');
-      res.status(500).json({ error: "Failed to get matched templates" });
+      res.status(500).json({ error: 'Failed to get matched templates' });
     }
   });
 
@@ -3224,7 +3339,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // ============================================
 
   // List all templates (with optional filters) - Public endpoint
-  app.get("/api/templates", async (req, res) => {
+  app.get('/api/templates', async (req, res) => {
     try {
       const { category, isGlobal } = req.query;
 
@@ -3232,7 +3347,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
       const templates = await storage.getAdSceneTemplates({
         category: category as string | undefined,
-        isGlobal: isGlobal === "true" ? true : isGlobal === "false" ? false : undefined,
+        isGlobal: isGlobal === 'true' ? true : isGlobal === 'false' ? false : undefined,
         limit,
         offset,
       });
@@ -3240,32 +3355,32 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json({ templates, total: templates.length });
     } catch (error: any) {
       logger.error({ module: 'TemplatesList', err: error }, 'Error listing templates');
-      res.status(500).json({ error: "Failed to list templates" });
+      res.status(500).json({ error: 'Failed to list templates' });
     }
   });
 
   // Get a single template - Public endpoint
-  app.get("/api/templates/:id", async (req, res) => {
+  app.get('/api/templates/:id', async (req, res) => {
     try {
       const template = await storage.getAdSceneTemplateById(req.params.id);
 
       if (!template) {
-        return res.status(404).json({ error: "Template not found" });
+        return res.status(404).json({ error: 'Template not found' });
       }
 
       res.json(template);
     } catch (error: any) {
       logger.error({ module: 'TemplateGet', err: error }, 'Error getting template');
-      res.status(500).json({ error: "Failed to get template" });
+      res.status(500).json({ error: 'Failed to get template' });
     }
   });
 
   // Search templates - Public endpoint
-  app.get("/api/templates/search", async (req, res) => {
+  app.get('/api/templates/search', async (req, res) => {
     try {
       const { q } = req.query;
 
-      if (!q || typeof q !== "string") {
+      if (!q || typeof q !== 'string') {
         return res.status(400).json({ error: "Query parameter 'q' is required" });
       }
 
@@ -3273,12 +3388,12 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json({ templates, total: templates.length });
     } catch (error: any) {
       logger.error({ module: 'TemplatesSearch', err: error }, 'Error searching templates');
-      res.status(500).json({ error: "Failed to search templates" });
+      res.status(500).json({ error: 'Failed to search templates' });
     }
   });
 
   // Create a new template (admin only for now - TODO: add admin check)
-  app.post("/api/templates", requireAuth, async (req, res) => {
+  app.post('/api/templates', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
 
@@ -3297,55 +3412,55 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.status(201).json(template);
     } catch (error: any) {
       logger.error({ module: 'TemplateCreate', err: error }, 'Error creating template');
-      res.status(500).json({ error: "Failed to create template" });
+      res.status(500).json({ error: 'Failed to create template' });
     }
   });
 
   // Update a template
-  app.patch("/api/templates/:id", requireAuth, async (req, res) => {
+  app.patch('/api/templates/:id', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const template = await storage.getAdSceneTemplateById(req.params.id);
 
       if (!template) {
-        return res.status(404).json({ error: "Template not found" });
+        return res.status(404).json({ error: 'Template not found' });
       }
 
       // Only creator or admin can update
       // TODO: Add admin check
       if (template.createdBy !== userId) {
-        return res.status(403).json({ error: "Not authorized to update this template" });
+        return res.status(403).json({ error: 'Not authorized to update this template' });
       }
 
       const updated = await storage.updateAdSceneTemplate(req.params.id, req.body);
       res.json(updated);
     } catch (error: any) {
       logger.error({ module: 'TemplateUpdate', err: error }, 'Error updating template');
-      res.status(500).json({ error: "Failed to update template" });
+      res.status(500).json({ error: 'Failed to update template' });
     }
   });
 
   // Delete a template
-  app.delete("/api/templates/:id", requireAuth, async (req, res) => {
+  app.delete('/api/templates/:id', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const template = await storage.getAdSceneTemplateById(req.params.id);
 
       if (!template) {
-        return res.status(404).json({ error: "Template not found" });
+        return res.status(404).json({ error: 'Template not found' });
       }
 
       // Only creator or admin can delete
       // TODO: Add admin check
       if (template.createdBy !== userId) {
-        return res.status(403).json({ error: "Not authorized to delete this template" });
+        return res.status(403).json({ error: 'Not authorized to delete this template' });
       }
 
       await storage.deleteAdSceneTemplate(req.params.id);
       res.json({ success: true });
     } catch (error: any) {
       logger.error({ module: 'TemplateDelete', err: error }, 'Error deleting template');
-      res.status(500).json({ error: "Failed to delete template" });
+      res.status(500).json({ error: 'Failed to delete template' });
     }
   });
 
@@ -3354,24 +3469,24 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // ============================================
 
   // Get current user's brand profile
-  app.get("/api/brand-profile", requireAuth, async (req, res) => {
+  app.get('/api/brand-profile', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const profile = await storage.getBrandProfileByUserId(userId);
 
       if (!profile) {
-        return res.status(404).json({ error: "Brand profile not found" });
+        return res.status(404).json({ error: 'Brand profile not found' });
       }
 
       res.json(profile);
     } catch (error: any) {
       logger.error({ module: 'BrandProfileGet', err: error }, 'Error getting brand profile');
-      res.status(500).json({ error: "Failed to get brand profile" });
+      res.status(500).json({ error: 'Failed to get brand profile' });
     }
   });
 
   // Create or update brand profile
-  app.put("/api/brand-profile", requireAuth, async (req, res) => {
+  app.put('/api/brand-profile', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
 
@@ -3389,19 +3504,19 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       }
     } catch (error: any) {
       logger.error({ module: 'BrandProfileUpdate', err: error }, 'Error updating brand profile');
-      res.status(500).json({ error: "Failed to update brand profile" });
+      res.status(500).json({ error: 'Failed to update brand profile' });
     }
   });
 
   // Delete brand profile
-  app.delete("/api/brand-profile", requireAuth, async (req, res) => {
+  app.delete('/api/brand-profile', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       await storage.deleteBrandProfile(userId);
       res.json({ success: true });
     } catch (error: any) {
       logger.error({ module: 'BrandProfileDelete', err: error }, 'Error deleting brand profile');
-      res.status(500).json({ error: "Failed to delete brand profile" });
+      res.status(500).json({ error: 'Failed to delete brand profile' });
     }
   });
 
@@ -3410,21 +3525,21 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // ============================================
 
   // GET /api/quota/status - Real-time quota status
-  app.get("/api/quota/status", async (req, res) => {
+  app.get('/api/quota/status', async (req, res) => {
     try {
-      const brandId = (req.session as any)?.userId || "anonymous";
+      const brandId = (req.session as any)?.userId || 'anonymous';
       const status = await quotaMonitoringService.getQuotaStatus(brandId);
       res.json(status);
     } catch (error: any) {
       logger.error({ module: 'QuotaStatus', err: error }, 'Error fetching quota status');
-      res.status(500).json({ error: "Failed to get quota status" });
+      res.status(500).json({ error: 'Failed to get quota status' });
     }
   });
 
   // GET /api/quota/history - Historical usage data
-  app.get("/api/quota/history", async (req, res) => {
+  app.get('/api/quota/history', async (req, res) => {
     try {
-      const brandId = (req.session as any)?.userId || "anonymous";
+      const brandId = (req.session as any)?.userId || 'anonymous';
       const { windowType, startDate, endDate } = req.query;
 
       const history = await quotaMonitoringService.getUsageHistory({
@@ -3437,14 +3552,14 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json({ history });
     } catch (error: any) {
       logger.error({ module: 'QuotaHistory', err: error }, 'Error fetching quota history');
-      res.status(500).json({ error: "Failed to get quota history" });
+      res.status(500).json({ error: 'Failed to get quota history' });
     }
   });
 
   // GET /api/quota/breakdown - Usage breakdown by category
-  app.get("/api/quota/breakdown", async (req, res) => {
+  app.get('/api/quota/breakdown', async (req, res) => {
     try {
-      const brandId = (req.session as any)?.userId || "anonymous";
+      const brandId = (req.session as any)?.userId || 'anonymous';
       const { period } = req.query;
 
       const breakdown = await quotaMonitoringService.getUsageBreakdown({
@@ -3455,42 +3570,42 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json(breakdown);
     } catch (error: any) {
       logger.error({ module: 'QuotaBreakdown', err: error }, 'Error fetching quota breakdown');
-      res.status(500).json({ error: "Failed to get quota breakdown" });
+      res.status(500).json({ error: 'Failed to get quota breakdown' });
     }
   });
 
   // GET /api/quota/rate-limit-status - Check if currently rate limited
-  app.get("/api/quota/rate-limit-status", async (req, res) => {
+  app.get('/api/quota/rate-limit-status', async (req, res) => {
     try {
-      const brandId = (req.session as any)?.userId || "anonymous";
+      const brandId = (req.session as any)?.userId || 'anonymous';
       const status = await quotaMonitoringService.getRateLimitStatus(brandId);
       res.json(status);
     } catch (error: any) {
       logger.error({ module: 'RateLimitStatus', err: error }, 'Error fetching rate limit status');
-      res.status(500).json({ error: "Failed to get rate limit status" });
+      res.status(500).json({ error: 'Failed to get rate limit status' });
     }
   });
 
   // GET /api/quota/alerts - Get alert configurations
-  app.get("/api/quota/alerts", requireAuth, async (req, res) => {
+  app.get('/api/quota/alerts', requireAuth, async (req, res) => {
     try {
       const brandId = (req.session as any).userId;
       const alerts = await quotaMonitoringService.getAlerts(brandId);
       res.json({ alerts });
     } catch (error: any) {
       logger.error({ module: 'QuotaAlertsGet', err: error }, 'Error getting quota alerts');
-      res.status(500).json({ error: "Failed to get quota alerts" });
+      res.status(500).json({ error: 'Failed to get quota alerts' });
     }
   });
 
   // PUT /api/quota/alerts - Update or create alert configuration
-  app.put("/api/quota/alerts", requireAuth, async (req, res) => {
+  app.put('/api/quota/alerts', requireAuth, async (req, res) => {
     try {
       const brandId = (req.session as any).userId;
       const { alertType, thresholdValue, isEnabled } = req.body;
 
       if (!alertType || thresholdValue === undefined) {
-        return res.status(400).json({ error: "alertType and thresholdValue are required" });
+        return res.status(400).json({ error: 'alertType and thresholdValue are required' });
       }
 
       const alert = await quotaMonitoringService.setAlert({
@@ -3503,19 +3618,19 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json(alert);
     } catch (error: any) {
       logger.error({ module: 'QuotaAlertsUpdate', err: error }, 'Error updating quota alerts');
-      res.status(500).json({ error: "Failed to update quota alert" });
+      res.status(500).json({ error: 'Failed to update quota alert' });
     }
   });
 
   // GET /api/quota/check-alerts - Check triggered alerts
-  app.get("/api/quota/check-alerts", async (req, res) => {
+  app.get('/api/quota/check-alerts', async (req, res) => {
     try {
-      const brandId = (req.session as any)?.userId || "anonymous";
+      const brandId = (req.session as any)?.userId || 'anonymous';
       const triggered = await quotaMonitoringService.checkAlerts(brandId);
       res.json({ triggered });
     } catch (error: any) {
       logger.error({ module: 'CheckAlerts', err: error }, 'Error checking alerts');
-      res.status(500).json({ error: "Failed to check alerts" });
+      res.status(500).json({ error: 'Failed to check alerts' });
     }
   });
 
@@ -3524,31 +3639,33 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // ============================================
 
   // GET /api/quota/google/status - Get Google Cloud sync status
-  app.get("/api/quota/google/status", async (req, res) => {
+  app.get('/api/quota/google/status', async (req, res) => {
     try {
       const service = await getGoogleCloudService();
       if (!service) {
-        return res.status(503).json({ error: "Google Cloud Monitoring not available" });
+        return res.status(503).json({ error: 'Google Cloud Monitoring not available' });
       }
       const syncStatus = service.getSyncStatus();
       const lastSnapshot = service.getLastSync();
 
       res.json({
         ...syncStatus,
-        lastSnapshot: lastSnapshot ? {
-          quotas: lastSnapshot.quotas,
-          projectId: lastSnapshot.projectId,
-          service: lastSnapshot.service,
-        } : null,
+        lastSnapshot: lastSnapshot
+          ? {
+              quotas: lastSnapshot.quotas,
+              projectId: lastSnapshot.projectId,
+              service: lastSnapshot.service,
+            }
+          : null,
       });
     } catch (error: any) {
       logger.error({ module: 'GoogleQuotaStatus', err: error }, 'Error fetching Google quota status');
-      res.status(500).json({ error: "Failed to get Google quota status" });
+      res.status(500).json({ error: 'Failed to get Google quota status' });
     }
   });
 
   // GET /api/quota/google/snapshot - Get latest Google quota snapshot
-  app.get("/api/quota/google/snapshot", async (req, res) => {
+  app.get('/api/quota/google/snapshot', async (req, res) => {
     try {
       const service = await getGoogleCloudService();
       const snapshot = service?.getLastSync();
@@ -3560,27 +3677,28 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
           res.json(dbSnapshot);
           return;
         }
-        return res.status(404).json({ error: "No quota snapshot available" });
+        return res.status(404).json({ error: 'No quota snapshot available' });
       }
 
       res.json(snapshot);
     } catch (error: any) {
       logger.error({ module: 'GoogleQuotaSnapshot', err: error }, 'Error fetching Google quota snapshot');
-      res.status(500).json({ error: "Failed to get Google quota snapshot" });
+      res.status(500).json({ error: 'Failed to get Google quota snapshot' });
     }
   });
 
   // POST /api/quota/google/sync - Trigger manual sync
-  app.post("/api/quota/google/sync", async (req, res) => {
+  app.post('/api/quota/google/sync', async (req, res) => {
     try {
       const service = await getGoogleCloudService();
       if (!service) {
-        return res.status(503).json({ error: "Google Cloud Monitoring not available" });
+        return res.status(503).json({ error: 'Google Cloud Monitoring not available' });
       }
       if (!service.isConfigured()) {
         return res.status(400).json({
-          error: "Google Cloud Monitoring not configured",
-          details: "Set GOOGLE_CLOUD_PROJECT and GOOGLE_APPLICATION_CREDENTIALS or GOOGLE_CLOUD_CREDENTIALS_JSON environment variables",
+          error: 'Google Cloud Monitoring not configured',
+          details:
+            'Set GOOGLE_CLOUD_PROJECT and GOOGLE_APPLICATION_CREDENTIALS or GOOGLE_CLOUD_CREDENTIALS_JSON environment variables',
         });
       }
 
@@ -3612,28 +3730,28 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       });
     } catch (error: any) {
       logger.error({ module: 'GoogleQuotaManualSync', err: error }, 'Error syncing Google quota');
-      res.status(500).json({ error: "Failed to sync Google quota data" });
+      res.status(500).json({ error: 'Failed to sync Google quota data' });
     }
   });
 
   // GET /api/quota/google/history - Get sync history
-  app.get("/api/quota/google/history", async (req, res) => {
+  app.get('/api/quota/google/history', async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 20;
       const history = await storage.getRecentSyncHistory(limit);
       res.json({ history });
     } catch (error: any) {
       logger.error({ module: 'GoogleQuotaSyncHistory', err: error }, 'Error fetching sync history');
-      res.status(500).json({ error: "Failed to get sync history" });
+      res.status(500).json({ error: 'Failed to get sync history' });
     }
   });
 
   // GET /api/quota/google/snapshots - Get historical snapshots
-  app.get("/api/quota/google/snapshots", async (req, res) => {
+  app.get('/api/quota/google/snapshots', async (req, res) => {
     try {
       const brandId = req.query.brandId as string | undefined;
-      const startDate = new Date(req.query.startDate as string || Date.now() - 7 * 24 * 60 * 60 * 1000);
-      const endDate = new Date(req.query.endDate as string || Date.now());
+      const startDate = new Date((req.query.startDate as string) || Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const endDate = new Date((req.query.endDate as string) || Date.now());
       const limit = parseInt(req.query.limit as string) || 100;
 
       const snapshots = await storage.getGoogleQuotaSnapshotHistory({
@@ -3646,38 +3764,38 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json({ snapshots });
     } catch (error: any) {
       logger.error({ module: 'GoogleQuotaSnapshotsHistory', err: error }, 'Error fetching snapshots history');
-      res.status(500).json({ error: "Failed to get snapshot history" });
+      res.status(500).json({ error: 'Failed to get snapshot history' });
     }
   });
 
   // ===== MONITORING API ENDPOINTS =====
 
   // GET /api/monitoring/health - System health status
-  app.get("/api/monitoring/health", requireAuth, async (_req, res) => {
+  app.get('/api/monitoring/health', requireAuth, async (_req, res) => {
     try {
       const { getSystemHealth } = await import('./services/systemHealthService');
       const health = await getSystemHealth();
       res.json(health);
     } catch (error: any) {
       logger.error({ module: 'monitoring', error }, 'Failed to fetch system health');
-      res.status(500).json({ error: "Failed to fetch system health" });
+      res.status(500).json({ error: 'Failed to fetch system health' });
     }
   });
 
   // GET /api/monitoring/performance - Performance metrics
-  app.get("/api/monitoring/performance", requireAuth, async (_req, res) => {
+  app.get('/api/monitoring/performance', requireAuth, async (_req, res) => {
     try {
       const { getPerformanceMetrics } = await import('./middleware/performanceMetrics');
       const metrics = getPerformanceMetrics();
       res.json(metrics);
     } catch (error: any) {
       logger.error({ module: 'monitoring', error }, 'Failed to fetch performance metrics');
-      res.status(500).json({ error: "Failed to fetch performance metrics" });
+      res.status(500).json({ error: 'Failed to fetch performance metrics' });
     }
   });
 
   // GET /api/monitoring/errors - Error tracking
-  app.get("/api/monitoring/errors", requireAuth, async (req, res) => {
+  app.get('/api/monitoring/errors', requireAuth, async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 50;
       const { getRecentErrors, getErrorStats } = await import('./services/errorTrackingService');
@@ -3687,12 +3805,12 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json({ errors, stats });
     } catch (error: any) {
       logger.error({ module: 'monitoring', error }, 'Failed to fetch errors');
-      res.status(500).json({ error: "Failed to fetch errors" });
+      res.status(500).json({ error: 'Failed to fetch errors' });
     }
   });
 
   // GET /api/monitoring/system - Full system health aggregation
-  app.get("/api/monitoring/system", requireAuth, async (_req, res) => {
+  app.get('/api/monitoring/system', requireAuth, async (_req, res) => {
     try {
       const { getSystemHealth } = await import('./services/systemHealthService');
       const { getPerformanceMetrics } = await import('./middleware/performanceMetrics');
@@ -3705,15 +3823,14 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       // Aggregate performance metrics
       const totalRequests = perfMetrics.reduce((sum, m) => sum + m.requests, 0);
       const totalErrors = perfMetrics.reduce((sum, m) => sum + m.errors, 0);
-      const avgResponseTime = perfMetrics.length > 0
-        ? perfMetrics.reduce((sum, m) => sum + m.avgLatency, 0) / perfMetrics.length
-        : 0;
+      const avgResponseTime =
+        perfMetrics.length > 0 ? perfMetrics.reduce((sum, m) => sum + m.avgLatency, 0) / perfMetrics.length : 0;
 
       // Top 5 endpoints by request count
       const topEndpoints = perfMetrics
         .sort((a, b) => b.requests - a.requests)
         .slice(0, 5)
-        .map(m => ({
+        .map((m) => ({
           endpoint: m.endpoint,
           method: m.method,
           requests: m.requests,
@@ -3737,18 +3854,18 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       });
     } catch (error: any) {
       logger.error({ module: 'monitoring', error }, 'Failed to fetch system health');
-      res.status(500).json({ error: "Failed to fetch system health" });
+      res.status(500).json({ error: 'Failed to fetch system health' });
     }
   });
 
   // GET /api/monitoring/endpoints - API endpoints summary
-  app.get("/api/monitoring/endpoints", requireAuth, async (_req, res) => {
+  app.get('/api/monitoring/endpoints', requireAuth, async (_req, res) => {
     try {
       const { getPerformanceMetrics } = await import('./middleware/performanceMetrics');
       const metrics = getPerformanceMetrics();
 
       // Aggregate by endpoint pattern (group similar paths)
-      const summary = metrics.map(m => ({
+      const summary = metrics.map((m) => ({
         endpoint: m.endpoint,
         method: m.method,
         requests: m.requests,
@@ -3760,7 +3877,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json(summary);
     } catch (error: any) {
       logger.error({ module: 'monitoring', error }, 'Failed to fetch endpoint summary');
-      res.status(500).json({ error: "Failed to fetch endpoint summary" });
+      res.status(500).json({ error: 'Failed to fetch endpoint summary' });
     }
   });
 
@@ -3770,13 +3887,13 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // ----- Installation Scenario RAG -----
 
   // POST /api/installation/suggest-steps - AI-powered installation step suggestions
-  app.post("/api/installation/suggest-steps", requireAuth, async (req, res) => {
+  app.post('/api/installation/suggest-steps', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const { productId, roomType, includeRelatedProducts, maxSteps } = req.body;
 
       if (!productId) {
-        return res.status(400).json({ error: "productId is required" });
+        return res.status(400).json({ error: 'productId is required' });
       }
 
       const result = await installationScenarioRAG.suggestInstallationSteps({
@@ -3790,18 +3907,18 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json(result);
     } catch (error: any) {
       logger.error({ module: 'InstallationRAG', err: error }, 'Error suggesting steps');
-      res.status(500).json({ error: "Failed to suggest installation steps" });
+      res.status(500).json({ error: 'Failed to suggest installation steps' });
     }
   });
 
   // GET /api/installation/room-context/:roomType - Get room-specific installation context
-  app.get("/api/installation/room-context/:roomType", requireAuth, async (req, res) => {
+  app.get('/api/installation/room-context/:roomType', requireAuth, async (req, res) => {
     try {
       const roomType = req.params.roomType as RoomType;
 
       if (!ROOM_TYPES.includes(roomType)) {
         return res.status(400).json({
-          error: `Invalid roomType. Must be one of: ${ROOM_TYPES.join(", ")}`,
+          error: `Invalid roomType. Must be one of: ${ROOM_TYPES.join(', ')}`,
         });
       }
 
@@ -3809,60 +3926,52 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json(context);
     } catch (error: any) {
       logger.error({ module: 'InstallationRAG', err: error }, 'Error getting room context');
-      res.status(500).json({ error: "Failed to get room context" });
+      res.status(500).json({ error: 'Failed to get room context' });
     }
   });
 
   // POST /api/installation/suggest-accessories - Suggest accessories for installation
-  app.post("/api/installation/suggest-accessories", requireAuth, async (req, res) => {
+  app.post('/api/installation/suggest-accessories', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const { productId, roomType } = req.body;
 
       if (!productId) {
-        return res.status(400).json({ error: "productId is required" });
+        return res.status(400).json({ error: 'productId is required' });
       }
 
-      const accessories = await installationScenarioRAG.suggestAccessories(
-        productId,
-        roomType,
-        userId
-      );
+      const accessories = await installationScenarioRAG.suggestAccessories(productId, roomType, userId);
 
       res.json(accessories);
     } catch (error: any) {
       logger.error({ module: 'InstallationRAG', err: error }, 'Error suggesting accessories');
-      res.status(500).json({ error: "Failed to suggest accessories" });
+      res.status(500).json({ error: 'Failed to suggest accessories' });
     }
   });
 
   // POST /api/installation/tips - Get installation tips
-  app.post("/api/installation/tips", requireAuth, async (req, res) => {
+  app.post('/api/installation/tips', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const { productId, roomType } = req.body;
 
       if (!productId) {
-        return res.status(400).json({ error: "productId is required" });
+        return res.status(400).json({ error: 'productId is required' });
       }
 
-      const tips = await installationScenarioRAG.getInstallationTips(
-        productId,
-        roomType,
-        userId
-      );
+      const tips = await installationScenarioRAG.getInstallationTips(productId, roomType, userId);
 
       res.json(tips);
     } catch (error: any) {
       logger.error({ module: 'InstallationRAG', err: error }, 'Error getting tips');
-      res.status(500).json({ error: "Failed to get installation tips" });
+      res.status(500).json({ error: 'Failed to get installation tips' });
     }
   });
 
   // ----- Relationship Discovery RAG -----
 
   // POST /api/products/:productId/suggest-relationships - AI-powered relationship suggestions
-  app.post("/api/products/:productId/suggest-relationships", requireAuth, async (req, res) => {
+  app.post('/api/products/:productId/suggest-relationships', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const { productId } = req.params;
@@ -3877,23 +3986,23 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json(suggestions);
     } catch (error: any) {
       logger.error({ module: 'RelationshipRAG', err: error }, 'Error suggesting relationships');
-      res.status(500).json({ error: "Failed to suggest relationships" });
+      res.status(500).json({ error: 'Failed to suggest relationships' });
     }
   });
 
   // POST /api/products/find-similar - Find similar products
-  app.post("/api/products/find-similar", requireAuth, async (req, res) => {
+  app.post('/api/products/find-similar', requireAuth, async (req, res) => {
     try {
       const { productId, maxResults, minSimilarity } = req.body;
 
       if (!productId) {
-        return res.status(400).json({ error: "productId is required" });
+        return res.status(400).json({ error: 'productId is required' });
       }
 
       // Get the product first
       const product = await storage.getProductById(productId);
       if (!product) {
-        return res.status(404).json({ error: "Product not found" });
+        return res.status(404).json({ error: 'Product not found' });
       }
 
       const similar = await findSimilarProducts(product, {
@@ -3904,53 +4013,53 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json(similar);
     } catch (error: any) {
       logger.error({ module: 'RelationshipRAG', err: error }, 'Error finding similar products');
-      res.status(500).json({ error: "Failed to find similar products" });
+      res.status(500).json({ error: 'Failed to find similar products' });
     }
   });
 
   // POST /api/relationships/analyze - Analyze relationship between two products
-  app.post("/api/relationships/analyze", requireAuth, async (req, res) => {
+  app.post('/api/relationships/analyze', requireAuth, async (req, res) => {
     try {
       const { sourceProductId, targetProductId } = req.body;
 
       if (!sourceProductId || !targetProductId) {
-        return res.status(400).json({ error: "sourceProductId and targetProductId are required" });
+        return res.status(400).json({ error: 'sourceProductId and targetProductId are required' });
       }
 
       const analysis = await analyzeRelationshipType(sourceProductId, targetProductId);
       res.json(analysis);
     } catch (error: any) {
       logger.error({ module: 'RelationshipRAG', err: error }, 'Error analyzing relationship');
-      res.status(500).json({ error: "Failed to analyze relationship" });
+      res.status(500).json({ error: 'Failed to analyze relationship' });
     }
   });
 
   // POST /api/relationships/batch-suggest - Batch suggest relationships for multiple products
-  app.post("/api/relationships/batch-suggest", requireAuth, async (req, res) => {
+  app.post('/api/relationships/batch-suggest', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const { productIds } = req.body;
 
       if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
-        return res.status(400).json({ error: "productIds array is required" });
+        return res.status(400).json({ error: 'productIds array is required' });
       }
 
       const suggestions = await batchSuggestRelationships(productIds, userId);
       res.json(suggestions);
     } catch (error: any) {
       logger.error({ module: 'RelationshipRAG', err: error }, 'Error batch suggesting');
-      res.status(500).json({ error: "Failed to batch suggest relationships" });
+      res.status(500).json({ error: 'Failed to batch suggest relationships' });
     }
   });
 
   // POST /api/relationships/auto-create - Auto-create relationships based on AI suggestions
-  app.post("/api/relationships/auto-create", requireAuth, async (req, res) => {
+  app.post('/api/relationships/auto-create', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const { productId, minScore, maxToCreate, dryRun } = req.body;
 
       if (!productId) {
-        return res.status(400).json({ error: "productId is required" });
+        return res.status(400).json({ error: 'productId is required' });
       }
 
       const result = await autoCreateRelationships(productId, userId, {
@@ -3962,20 +4071,20 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json(result);
     } catch (error: any) {
       logger.error({ module: 'RelationshipRAG', err: error }, 'Error auto-creating relationships');
-      res.status(500).json({ error: "Failed to auto-create relationships" });
+      res.status(500).json({ error: 'Failed to auto-create relationships' });
     }
   });
 
   // ----- Brand Image Recommendation RAG -----
 
   // POST /api/brand-images/recommend - AI-powered image recommendations
-  app.post("/api/brand-images/recommend", requireAuth, async (req, res) => {
+  app.post('/api/brand-images/recommend', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const { productIds, useCase, platform, mood, maxResults, aspectRatio, categoryFilter } = req.body;
 
       if (!useCase) {
-        return res.status(400).json({ error: "useCase is required" });
+        return res.status(400).json({ error: 'useCase is required' });
       }
 
       const recommendations = await brandImageRecommendationRAG.recommendImages({
@@ -3992,65 +4101,58 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json(recommendations);
     } catch (error: any) {
       logger.error({ module: 'BrandImageRAG', err: error }, 'Error recommending images');
-      res.status(500).json({ error: "Failed to recommend images" });
+      res.status(500).json({ error: 'Failed to recommend images' });
     }
   });
 
   // POST /api/brand-images/match-product/:productId - Match images to a specific product
-  app.post("/api/brand-images/match-product/:productId", requireAuth, async (req, res) => {
+  app.post('/api/brand-images/match-product/:productId', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const { productId } = req.params;
       const { maxResults, categoryFilter } = req.body;
 
-      const matches = await brandImageRecommendationRAG.matchImagesForProduct(
-        productId,
-        userId,
-        {
-          maxResults: maxResults ?? 10,
-          categoryFilter,
-        }
-      );
+      const matches = await brandImageRecommendationRAG.matchImagesForProduct(productId, userId, {
+        maxResults: maxResults ?? 10,
+        categoryFilter,
+      });
 
       res.json(matches);
     } catch (error: any) {
       logger.error({ module: 'BrandImageRAG', err: error }, 'Error matching images');
-      res.status(500).json({ error: "Failed to match images for product" });
+      res.status(500).json({ error: 'Failed to match images for product' });
     }
   });
 
   // POST /api/brand-images/suggest-category - Suggest image categories based on use case
-  app.post("/api/brand-images/suggest-category", requireAuth, async (req, res) => {
+  app.post('/api/brand-images/suggest-category', requireAuth, async (req, res) => {
     try {
       const { useCase, platform, mood, maxSuggestions } = req.body;
 
       if (!useCase) {
-        return res.status(400).json({ error: "useCase is required" });
+        return res.status(400).json({ error: 'useCase is required' });
       }
 
-      const suggestions = brandImageRecommendationRAG.suggestImageCategory(
-        useCase,
-        { platform, mood, maxSuggestions }
-      );
+      const suggestions = brandImageRecommendationRAG.suggestImageCategory(useCase, { platform, mood, maxSuggestions });
 
       res.json(suggestions);
     } catch (error: any) {
       logger.error({ module: 'BrandImageRAG', err: error }, 'Error suggesting category');
-      res.status(500).json({ error: "Failed to suggest image category" });
+      res.status(500).json({ error: 'Failed to suggest image category' });
     }
   });
 
   // ----- Template Pattern RAG -----
 
   // POST /api/templates/match-context - Match templates to user context
-  app.post("/api/templates/match-context", requireAuth, async (req, res) => {
+  app.post('/api/templates/match-context', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const { industry, objective, platform, aspectRatio, mood, style } = req.body;
 
       if (!industry || !objective || !platform || !aspectRatio) {
         return res.status(400).json({
-          error: "industry, objective, platform, and aspectRatio are required",
+          error: 'industry, objective, platform, and aspectRatio are required',
         });
       }
 
@@ -4067,18 +4169,18 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json(result);
     } catch (error: any) {
       logger.error({ module: 'TemplateRAG', err: error }, 'Error matching templates');
-      res.status(500).json({ error: "Failed to match templates" });
+      res.status(500).json({ error: 'Failed to match templates' });
     }
   });
 
   // GET /api/templates/analyze-patterns/:templateId - Analyze visual patterns of a template
-  app.get("/api/templates/analyze-patterns/:templateId", requireAuth, async (req, res) => {
+  app.get('/api/templates/analyze-patterns/:templateId', requireAuth, async (req, res) => {
     try {
       const { templateId } = req.params;
 
       const template = await storage.getPerformingAdTemplate(templateId);
       if (!template) {
-        return res.status(404).json({ error: "Template not found" });
+        return res.status(404).json({ error: 'Template not found' });
       }
 
       const analysis = await analyzeTemplatePatterns(template);
@@ -4086,32 +4188,29 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json(analysis);
     } catch (error: any) {
       logger.error({ module: 'TemplateRAG', err: error }, 'Error analyzing patterns');
-      res.status(500).json({ error: "Failed to analyze template patterns" });
+      res.status(500).json({ error: 'Failed to analyze template patterns' });
     }
   });
 
   // POST /api/templates/suggest-customizations - Suggest customizations for brand alignment
-  app.post("/api/templates/suggest-customizations", requireAuth, async (req, res) => {
+  app.post('/api/templates/suggest-customizations', requireAuth, async (req, res) => {
     try {
       const { templateId, brandGuidelines } = req.body;
 
       if (!templateId) {
-        return res.status(400).json({ error: "templateId is required" });
+        return res.status(400).json({ error: 'templateId is required' });
       }
 
-      const suggestions = await suggestTemplateCustomizations(
-        templateId,
-        brandGuidelines || {}
-      );
+      const suggestions = await suggestTemplateCustomizations(templateId, brandGuidelines || {});
 
       if (!suggestions) {
-        return res.status(404).json({ error: "Template not found" });
+        return res.status(404).json({ error: 'Template not found' });
       }
 
       res.json(suggestions);
     } catch (error: any) {
       logger.error({ module: 'TemplateRAG', err: error }, 'Error suggesting customizations');
-      res.status(500).json({ error: "Failed to suggest customizations" });
+      res.status(500).json({ error: 'Failed to suggest customizations' });
     }
   });
 
@@ -4124,14 +4223,14 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    * List all API key configurations for the current user
    * Returns status and preview (not actual keys) for each supported service
    */
-  app.get("/api/settings/api-keys", requireAuth, async (req, res) => {
+  app.get('/api/settings/api-keys', requireAuth, async (req, res) => {
     try {
       const userId = (req as any).session.userId;
       const supportedServices = getSupportedServices();
 
       // Get all user's custom keys
       const userKeys = await storage.getAllUserApiKeys(userId);
-      const userKeyMap = new Map(userKeys.map(k => [k.service, k]));
+      const userKeyMap = new Map(userKeys.map((k) => [k.service, k]));
 
       // Environment variable mapping for checking fallbacks
       const envVarMap: Record<string, string | undefined> = {
@@ -4141,7 +4240,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         redis: process.env.REDIS_URL,
       };
 
-      const keys = supportedServices.map(service => {
+      const keys = supportedServices.map((service) => {
         const userKey = userKeyMap.get(service);
         const hasEnvVar = !!envVarMap[service];
 
@@ -4178,7 +4277,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json({ keys });
     } catch (error: any) {
       logger.error({ module: 'APIKeys', err: error }, 'Error listing keys');
-      res.status(500).json({ error: "Failed to retrieve API key configurations" });
+      res.status(500).json({ error: 'Failed to retrieve API key configurations' });
     }
   });
 
@@ -4187,10 +4286,10 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    * Save or update an API key for a specific service
    * Flow: validate format -> test API -> encrypt -> save -> log audit -> return preview
    */
-  app.post("/api/settings/api-keys/:service", requireAuth, async (req, res) => {
+  app.post('/api/settings/api-keys/:service', requireAuth, async (req, res) => {
     const userId = (req as any).session.userId;
     const { service } = req.params;
-    const ipAddress = (req.ip || req.headers['x-forwarded-for'] as string || '').split(',')[0].trim();
+    const ipAddress = (req.ip || (req.headers['x-forwarded-for'] as string) || '').split(',')[0].trim();
     const userAgent = req.headers['user-agent'] || '';
 
     try {
@@ -4220,8 +4319,8 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         logger.error({ module: 'APIKeys' }, 'Master encryption key not configured');
         return res.status(500).json({
           success: false,
-          error: "Encryption not configured",
-          solution: "Contact administrator to configure API_KEY_ENCRYPTION_KEY",
+          error: 'Encryption not configured',
+          solution: 'Contact administrator to configure API_KEY_ENCRYPTION_KEY',
         });
       }
 
@@ -4232,8 +4331,8 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         if (!cloudName || !apiSecret) {
           return res.status(400).json({
             success: false,
-            error: "Cloudinary requires cloudName, apiKey, and apiSecret",
-            solution: "Provide all three Cloudinary credentials",
+            error: 'Cloudinary requires cloudName, apiKey, and apiSecret',
+            solution: 'Provide all three Cloudinary credentials',
           });
         }
         validationResult = await validateApiKey(service as ServiceName, trimmedKey, {
@@ -4268,16 +4367,17 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       let encryptedData;
       try {
         // For Cloudinary, we store all credentials as a JSON object
-        const keyToEncrypt = service === 'cloudinary'
-          ? JSON.stringify({ cloudName: cloudName!.trim(), apiKey: trimmedKey, apiSecret: apiSecret!.trim() })
-          : trimmedKey;
+        const keyToEncrypt =
+          service === 'cloudinary'
+            ? JSON.stringify({ cloudName: cloudName!.trim(), apiKey: trimmedKey, apiSecret: apiSecret!.trim() })
+            : trimmedKey;
         encryptedData = encryptApiKey(keyToEncrypt);
       } catch (error: any) {
         logger.error({ module: 'APIKeys', err: error }, 'Encryption failed');
         return res.status(500).json({
           success: false,
-          error: "Encryption failed",
-          solution: "Contact support. This is an internal error.",
+          error: 'Encryption failed',
+          solution: 'Contact support. This is an internal error.',
         });
       }
 
@@ -4338,8 +4438,8 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
 
       res.status(500).json({
         success: false,
-        error: "Failed to save API key",
-        solution: "Please try again. If the problem persists, contact support.",
+        error: 'Failed to save API key',
+        solution: 'Please try again. If the problem persists, contact support.',
       });
     }
   });
@@ -4349,10 +4449,10 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    * Remove a user's custom API key for a service
    * Will fall back to environment variable if available
    */
-  app.delete("/api/settings/api-keys/:service", requireAuth, async (req, res) => {
+  app.delete('/api/settings/api-keys/:service', requireAuth, async (req, res) => {
     const userId = (req as any).session.userId;
     const { service } = req.params;
-    const ipAddress = (req.ip || req.headers['x-forwarded-for'] as string || '').split(',')[0].trim();
+    const ipAddress = (req.ip || (req.headers['x-forwarded-for'] as string) || '').split(',')[0].trim();
     const userAgent = req.headers['user-agent'] || '';
 
     try {
@@ -4370,7 +4470,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       if (!existingKey) {
         return res.status(404).json({
           success: false,
-          error: "No custom API key found for this service",
+          error: 'No custom API key found for this service',
         });
       }
 
@@ -4425,7 +4525,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
 
       res.status(500).json({
         success: false,
-        error: "Failed to delete API key",
+        error: 'Failed to delete API key',
       });
     }
   });
@@ -4435,10 +4535,10 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    * Re-validate an existing API key without updating it
    * Updates the lastValidatedAt and isValid fields in the database
    */
-  app.post("/api/settings/api-keys/:service/validate", requireAuth, async (req, res) => {
+  app.post('/api/settings/api-keys/:service/validate', requireAuth, async (req, res) => {
     const userId = (req as any).session.userId;
     const { service } = req.params;
-    const ipAddress = (req.ip || req.headers['x-forwarded-for'] as string || '').split(',')[0].trim();
+    const ipAddress = (req.ip || (req.headers['x-forwarded-for'] as string) || '').split(',')[0].trim();
     const userAgent = req.headers['user-agent'] || '';
 
     try {
@@ -4457,7 +4557,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       if (resolved.source === 'none' || !resolved.key) {
         return res.status(404).json({
           valid: false,
-          error: "No API key configured for this service",
+          error: 'No API key configured for this service',
           solution: `Add a ${service} API key in settings or configure the environment variable`,
         });
       }
@@ -4472,8 +4572,8 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         } catch {
           validationResult = {
             valid: false,
-            error: "Stored credentials are corrupted",
-            solution: "Re-enter your Cloudinary credentials",
+            error: 'Stored credentials are corrupted',
+            solution: 'Re-enter your Cloudinary credentials',
           };
         }
       } else if (service === 'cloudinary' && resolved.source === 'environment') {
@@ -4532,8 +4632,8 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
 
       res.status(500).json({
         valid: false,
-        error: "Failed to validate API key",
-        solution: "Please try again. If the problem persists, contact support.",
+        error: 'Failed to validate API key',
+        solution: 'Please try again. If the problem persists, contact support.',
       });
     }
   });
@@ -4562,7 +4662,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       logger.error({ module: 'n8nVault', err: error }, 'Failed to save n8n config');
       res.status(500).json({
         success: false,
-        error: 'Failed to save n8n configuration'
+        error: 'Failed to save n8n configuration',
       });
     }
   });
@@ -4589,7 +4689,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       logger.error({ module: 'n8nVault', err: error }, 'Failed to fetch n8n config');
       res.status(500).json({
         success: false,
-        error: 'Failed to fetch n8n configuration'
+        error: 'Failed to fetch n8n configuration',
       });
     }
   });
@@ -4610,7 +4710,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       logger.error({ module: 'n8nVault', err: error }, 'Failed to delete n8n config');
       res.status(500).json({
         success: false,
-        error: 'Failed to delete n8n configuration'
+        error: 'Failed to delete n8n configuration',
       });
     }
   });
@@ -4629,7 +4729,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       const connections = await storage.getSocialConnections(req.user!.id);
 
       // Sanitize: Remove sensitive OAuth token data
-      const safeConnections = connections.map(conn => ({
+      const safeConnections = connections.map((conn) => ({
         id: conn.id,
         userId: conn.userId,
         platform: conn.platform,
@@ -4652,7 +4752,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       logger.error({ module: 'SocialAccounts', err: error }, 'Failed to fetch accounts');
       res.status(500).json({
         success: false,
-        error: 'Failed to fetch social accounts'
+        error: 'Failed to fetch social accounts',
       });
     }
   });
@@ -4671,38 +4771,44 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       if (!connection) {
         return res.status(404).json({
           success: false,
-          error: 'Account not found'
+          error: 'Account not found',
         });
       }
 
       if (connection.userId !== req.user!.id) {
         return res.status(403).json({
           success: false,
-          error: 'Unauthorized: You do not own this account'
+          error: 'Unauthorized: You do not own this account',
         });
       }
 
       await storage.deleteSocialConnection(id);
 
-      logger.info({
-        userId: req.user!.id,
-        platform: connection.platform
-      }, 'Social account disconnected');
+      logger.info(
+        {
+          userId: req.user!.id,
+          platform: connection.platform,
+        },
+        'Social account disconnected',
+      );
 
       res.json({
         success: true,
-        message: `${connection.platform} account disconnected`
+        message: `${connection.platform} account disconnected`,
       });
     } catch (error) {
-      logger.error({
-        module: 'SocialAccounts',
-        err: error,
-        connectionId: req.params.id
-      }, 'Failed to disconnect account');
+      logger.error(
+        {
+          module: 'SocialAccounts',
+          err: error,
+          connectionId: req.params.id,
+        },
+        'Failed to disconnect account',
+      );
 
       res.status(500).json({
         success: false,
-        error: 'Failed to disconnect account'
+        error: 'Failed to disconnect account',
       });
     }
   });
@@ -4714,13 +4820,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    */
   app.post('/api/social/sync-accounts', requireAuth, validate(syncAccountSchema), async (req, res) => {
     try {
-      const {
-        platform,
-        n8nCredentialId,
-        platformUserId,
-        platformUsername,
-        accountType
-      } = req.body;
+      const { platform, n8nCredentialId, platformUserId, platformUsername, accountType } = req.body;
 
       // Check if connection already exists
       const existing = await storage.getSocialConnectionByPlatform(req.user!.id, platform);
@@ -4764,15 +4864,18 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         message: `${platform} account synced (new)`,
       });
     } catch (error) {
-      logger.error({
-        module: 'SocialAccounts',
-        err: error,
-        platform: req.body.platform
-      }, 'Failed to sync account from n8n');
+      logger.error(
+        {
+          module: 'SocialAccounts',
+          err: error,
+          platform: req.body.platform,
+        },
+        'Failed to sync account from n8n',
+      );
 
       res.status(500).json({
         success: false,
-        error: 'Failed to sync account from n8n'
+        error: 'Failed to sync account from n8n',
       });
     }
   });
@@ -4784,40 +4887,38 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    */
   app.post('/api/n8n/callback', validateN8nWebhook, validate(n8nCallbackSchema), async (req, res) => {
     try {
-      const {
-        scheduledPostId,
-        platform,
-        success,
-        platformPostId,
-        platformPostUrl,
-        error,
-        executionId,
-        postedAt,
-      } = req.body;
+      const { scheduledPostId, platform, success, platformPostId, platformPostUrl, error, executionId, postedAt } =
+        req.body;
 
-      logger.info({
-        scheduledPostId,
-        platform,
-        success,
-        executionId,
-      }, 'n8n callback received');
+      logger.info(
+        {
+          scheduledPostId,
+          platform,
+          success,
+          executionId,
+        },
+        'n8n callback received',
+      );
 
       // TODO: Update scheduledPosts table (Phase 8.2 - Approval Queue)
       // For now, just log and acknowledge
 
       res.json({
         success: true,
-        message: 'Callback received and processed'
+        message: 'Callback received and processed',
       });
     } catch (error) {
-      logger.error({
-        module: 'n8nCallback',
-        err: error
-      }, 'Failed to process n8n callback');
+      logger.error(
+        {
+          module: 'n8nCallback',
+          err: error,
+        },
+        'Failed to process n8n callback',
+      );
 
       res.status(500).json({
         success: false,
-        error: 'Failed to process callback'
+        error: 'Failed to process callback',
       });
     }
   });
@@ -4831,11 +4932,12 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    * Rate limit: 10/hour per user
    * Auth: Required
    */
-  app.post("/api/learned-patterns/upload",
+  app.post(
+    '/api/learned-patterns/upload',
     requireAuth,
     uploadPatternLimiter,
     checkPatternQuota,
-    upload.single("image"),
+    upload.single('image'),
     validateFileType,
     async (req, res) => {
       try {
@@ -4843,15 +4945,15 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         const file = req.file;
 
         if (!file) {
-          return res.status(400).json({ error: "No image file provided" });
+          return res.status(400).json({ error: 'No image file provided' });
         }
 
         // Validate metadata
         const parseResult = uploadPatternSchema.safeParse(req.body);
         if (!parseResult.success) {
           return res.status(400).json({
-            error: "Invalid metadata",
-            details: parseResult.error.flatten()
+            error: 'Invalid metadata',
+            details: parseResult.error.flatten(),
           });
         }
 
@@ -4862,14 +4964,14 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         const uploadResult = await new Promise<any>((resolve, reject) => {
           const uploadStream = cloudinary.uploader.upload_stream(
             {
-              folder: "ad-patterns",
-              resource_type: "image",
-              tags: ["pattern-extraction", `user-${user.id}`],
+              folder: 'ad-patterns',
+              resource_type: 'image',
+              tags: ['pattern-extraction', `user-${user.id}`],
             },
             (error, result) => {
               if (error) reject(error);
               else resolve(result);
-            }
+            },
           );
           uploadStream.end(file.buffer);
         });
@@ -4896,33 +4998,27 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
 
         // Process extraction asynchronously
         // In production, this would be a background job
-        processUploadForPatterns(
-          uploadRecord.id,
-          file.buffer,
-          validatedFileType.mime,
-          {
-            name: metadata.name,
-            category: metadata.category,
-            platform: metadata.platform,
-            industry: metadata.industry,
-            engagementTier: metadata.engagementTier,
-          }
-        ).catch(err => {
+        processUploadForPatterns(uploadRecord.id, file.buffer, validatedFileType.mime, {
+          name: metadata.name,
+          category: metadata.category,
+          platform: metadata.platform,
+          industry: metadata.industry,
+          engagementTier: metadata.engagementTier,
+        }).catch((err) => {
           logger.error({ err, uploadId: uploadRecord.id }, 'Background pattern extraction failed');
         });
 
         res.status(202).json({
-          message: "Upload accepted for processing",
+          message: 'Upload accepted for processing',
           uploadId: uploadRecord.id,
-          status: "pending",
+          status: 'pending',
           expiresAt: expiresAt.toISOString(),
         });
-
       } catch (error: any) {
         logger.error({ err: error }, 'Pattern upload failed');
-        res.status(500).json({ error: "Failed to upload pattern" });
+        res.status(500).json({ error: 'Failed to upload pattern' });
       }
-    }
+    },
   );
 
   /**
@@ -4931,7 +5027,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    *
    * Auth: Required + Ownership
    */
-  app.get("/api/learned-patterns/upload/:uploadId", requireAuth, async (req, res) => {
+  app.get('/api/learned-patterns/upload/:uploadId', requireAuth, async (req, res) => {
     try {
       const user = (req as any).user;
       const { uploadId } = req.params;
@@ -4939,12 +5035,12 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       const upload = await storage.getUploadById(uploadId);
 
       if (!upload) {
-        return res.status(404).json({ error: "Upload not found" });
+        return res.status(404).json({ error: 'Upload not found' });
       }
 
       // Ownership check
       if (upload.userId !== user.id) {
-        return res.status(403).json({ error: "Not authorized to access this upload" });
+        return res.status(403).json({ error: 'Not authorized to access this upload' });
       }
 
       res.json({
@@ -4957,10 +5053,9 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         processingDurationMs: upload.processingDurationMs,
         expiresAt: upload.expiresAt,
       });
-
     } catch (error: any) {
       logger.error({ err: error }, 'Failed to get upload status');
-      res.status(500).json({ error: "Failed to get upload status" });
+      res.status(500).json({ error: 'Failed to get upload status' });
     }
   });
 
@@ -4970,7 +5065,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    *
    * Auth: Required
    */
-  app.get("/api/learned-patterns", requireAuth, async (req, res) => {
+  app.get('/api/learned-patterns', requireAuth, async (req, res) => {
     try {
       const user = (req as any).user;
 
@@ -4978,8 +5073,8 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       const parseResult = listPatternsQuerySchema.safeParse(req.query);
       if (!parseResult.success) {
         return res.status(400).json({
-          error: "Invalid query parameters",
-          details: parseResult.error.flatten()
+          error: 'Invalid query parameters',
+          details: parseResult.error.flatten(),
         });
       }
 
@@ -5010,10 +5105,9 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
           industry: filters.industry,
         },
       });
-
     } catch (error: any) {
       logger.error({ err: error }, 'Failed to list patterns');
-      res.status(500).json({ error: "Failed to list patterns" });
+      res.status(500).json({ error: 'Failed to list patterns' });
     }
   });
 
@@ -5023,7 +5117,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    *
    * Auth: Required
    */
-  app.get("/api/learned-patterns/category/:category", requireAuth, async (req, res) => {
+  app.get('/api/learned-patterns/category/:category', requireAuth, async (req, res) => {
     try {
       const user = (req as any).user;
       const { category } = req.params;
@@ -5038,10 +5132,9 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         count: patterns.length,
         category,
       });
-
     } catch (error: any) {
       logger.error({ err: error }, 'Failed to list patterns by category');
-      res.status(500).json({ error: "Failed to list patterns by category" });
+      res.status(500).json({ error: 'Failed to list patterns by category' });
     }
   });
 
@@ -5051,7 +5144,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    *
    * Auth: Required + Ownership
    */
-  app.get("/api/learned-patterns/:patternId", requireAuth, async (req, res) => {
+  app.get('/api/learned-patterns/:patternId', requireAuth, async (req, res) => {
     try {
       const user = (req as any).user;
       const { patternId } = req.params;
@@ -5059,19 +5152,18 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       const pattern = await storage.getLearnedPatternById(patternId);
 
       if (!pattern) {
-        return res.status(404).json({ error: "Pattern not found" });
+        return res.status(404).json({ error: 'Pattern not found' });
       }
 
       // Ownership check
       if (pattern.userId !== user.id) {
-        return res.status(403).json({ error: "Not authorized to access this pattern" });
+        return res.status(403).json({ error: 'Not authorized to access this pattern' });
       }
 
       res.json(pattern);
-
     } catch (error: any) {
       logger.error({ err: error }, 'Failed to get pattern');
-      res.status(500).json({ error: "Failed to get pattern" });
+      res.status(500).json({ error: 'Failed to get pattern' });
     }
   });
 
@@ -5081,7 +5173,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    *
    * Auth: Required + Ownership
    */
-  app.put("/api/learned-patterns/:patternId", requireAuth, async (req, res) => {
+  app.put('/api/learned-patterns/:patternId', requireAuth, async (req, res) => {
     try {
       const user = (req as any).user;
       const { patternId } = req.params;
@@ -5090,29 +5182,28 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       const parseResult = updatePatternSchema.safeParse(req.body);
       if (!parseResult.success) {
         return res.status(400).json({
-          error: "Invalid update data",
-          details: parseResult.error.flatten()
+          error: 'Invalid update data',
+          details: parseResult.error.flatten(),
         });
       }
 
       const pattern = await storage.getLearnedPatternById(patternId);
 
       if (!pattern) {
-        return res.status(404).json({ error: "Pattern not found" });
+        return res.status(404).json({ error: 'Pattern not found' });
       }
 
       // Ownership check
       if (pattern.userId !== user.id) {
-        return res.status(403).json({ error: "Not authorized to update this pattern" });
+        return res.status(403).json({ error: 'Not authorized to update this pattern' });
       }
 
       const updatedPattern = await storage.updateLearnedPattern(patternId, parseResult.data);
 
       res.json(updatedPattern);
-
     } catch (error: any) {
       logger.error({ err: error }, 'Failed to update pattern');
-      res.status(500).json({ error: "Failed to update pattern" });
+      res.status(500).json({ error: 'Failed to update pattern' });
     }
   });
 
@@ -5122,7 +5213,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    *
    * Auth: Required + Ownership
    */
-  app.delete("/api/learned-patterns/:patternId", requireAuth, async (req, res) => {
+  app.delete('/api/learned-patterns/:patternId', requireAuth, async (req, res) => {
     try {
       const user = (req as any).user;
       const { patternId } = req.params;
@@ -5130,21 +5221,20 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       const pattern = await storage.getLearnedPatternById(patternId);
 
       if (!pattern) {
-        return res.status(404).json({ error: "Pattern not found" });
+        return res.status(404).json({ error: 'Pattern not found' });
       }
 
       // Ownership check
       if (pattern.userId !== user.id) {
-        return res.status(403).json({ error: "Not authorized to delete this pattern" });
+        return res.status(403).json({ error: 'Not authorized to delete this pattern' });
       }
 
       await storage.deleteLearnedPattern(patternId);
 
-      res.json({ message: "Pattern deleted successfully" });
-
+      res.json({ message: 'Pattern deleted successfully' });
     } catch (error: any) {
       logger.error({ err: error }, 'Failed to delete pattern');
-      res.status(500).json({ error: "Failed to delete pattern" });
+      res.status(500).json({ error: 'Failed to delete pattern' });
     }
   });
 
@@ -5155,7 +5245,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    * Auth: Required + Ownership
    * Rate limit: 20/hour (uses expensive limiter)
    */
-  app.post("/api/learned-patterns/:patternId/apply", requireAuth, async (req, res) => {
+  app.post('/api/learned-patterns/:patternId/apply', requireAuth, async (req, res) => {
     try {
       const user = (req as any).user;
       const { patternId } = req.params;
@@ -5164,20 +5254,20 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       const parseResult = applyPatternSchema.safeParse(req.body);
       if (!parseResult.success) {
         return res.status(400).json({
-          error: "Invalid apply request",
-          details: parseResult.error.flatten()
+          error: 'Invalid apply request',
+          details: parseResult.error.flatten(),
         });
       }
 
       const pattern = await storage.getLearnedPatternById(patternId);
 
       if (!pattern) {
-        return res.status(404).json({ error: "Pattern not found" });
+        return res.status(404).json({ error: 'Pattern not found' });
       }
 
       // Ownership check
       if (pattern.userId !== user.id) {
-        return res.status(403).json({ error: "Not authorized to use this pattern" });
+        return res.status(403).json({ error: 'Not authorized to use this pattern' });
       }
 
       const { productIds, targetPlatform, aspectRatio, customizations } = parseResult.data;
@@ -5199,7 +5289,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       });
 
       res.json({
-        message: "Pattern ready to apply",
+        message: 'Pattern ready to apply',
         patternPrompt,
         historyId: history.id,
         pattern: {
@@ -5212,10 +5302,9 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
           visualElements: pattern.visualElements,
         },
       });
-
     } catch (error: any) {
       logger.error({ err: error }, 'Failed to apply pattern');
-      res.status(500).json({ error: "Failed to apply pattern" });
+      res.status(500).json({ error: 'Failed to apply pattern' });
     }
   });
 
@@ -5225,7 +5314,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    *
    * Auth: Required + Ownership
    */
-  app.post("/api/learned-patterns/:patternId/rate", requireAuth, async (req, res) => {
+  app.post('/api/learned-patterns/:patternId/rate', requireAuth, async (req, res) => {
     try {
       const user = (req as any).user;
       const { patternId } = req.params;
@@ -5234,20 +5323,20 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       const parseResult = ratePatternSchema.safeParse(req.body);
       if (!parseResult.success) {
         return res.status(400).json({
-          error: "Invalid rating",
-          details: parseResult.error.flatten()
+          error: 'Invalid rating',
+          details: parseResult.error.flatten(),
         });
       }
 
       const pattern = await storage.getLearnedPatternById(patternId);
 
       if (!pattern) {
-        return res.status(404).json({ error: "Pattern not found" });
+        return res.status(404).json({ error: 'Pattern not found' });
       }
 
       // Ownership check
       if (pattern.userId !== user.id) {
-        return res.status(403).json({ error: "Not authorized to rate this pattern" });
+        return res.status(403).json({ error: 'Not authorized to rate this pattern' });
       }
 
       const { rating, wasUsed, feedback } = parseResult.data;
@@ -5255,21 +5344,20 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       // Get the most recent application history for this pattern
       const history = await storage.getPatternApplicationHistory(patternId);
       // Filter to this user's history and get the most recent
-      const userHistory = history.filter(h => h.userId === user.id);
+      const userHistory = history.filter((h) => h.userId === user.id);
       if (userHistory.length > 0) {
         await storage.updateApplicationFeedback(userHistory[0].id, rating, wasUsed, feedback);
       }
 
       res.json({
-        message: "Rating recorded",
+        message: 'Rating recorded',
         patternId,
         rating,
         wasUsed,
       });
-
     } catch (error: any) {
       logger.error({ err: error }, 'Failed to rate pattern');
-      res.status(500).json({ error: "Failed to rate pattern" });
+      res.status(500).json({ error: 'Failed to rate pattern' });
     }
   });
 
@@ -5283,16 +5371,16 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    * GET /api/content-planner/templates
    * Returns all content templates with research data
    */
-  app.get("/api/content-planner/templates", async (req, res) => {
+  app.get('/api/content-planner/templates', async (req, res) => {
     try {
-      const { contentCategories, getAllTemplates } = await import("@shared/contentTemplates");
+      const { contentCategories, getAllTemplates } = await import('@shared/contentTemplates');
       res.json({
         categories: contentCategories,
         templates: getAllTemplates(),
       });
     } catch (error: any) {
       logger.error({ err: error }, 'Failed to get content planner templates');
-      res.status(500).json({ error: "Failed to get templates" });
+      res.status(500).json({ error: 'Failed to get templates' });
     }
   });
 
@@ -5300,10 +5388,11 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    * GET /api/content-planner/balance
    * Returns weekly post counts by category for the current user
    */
-  app.get("/api/content-planner/balance", requireAuth, async (req, res) => {
+  app.get('/api/content-planner/balance', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
-      const { contentCategories, calculateWeeklyBalance, suggestNextCategory } = await import("@shared/contentTemplates");
+      const { contentCategories, calculateWeeklyBalance, suggestNextCategory } =
+        await import('@shared/contentTemplates');
 
       // Get posts from this week
       const weeklyPosts = await storage.getWeeklyBalance(userId);
@@ -5311,7 +5400,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       // Format for UI
       const balance: Record<string, { current: number; target: number; percentage: number }> = {};
       for (const category of contentCategories) {
-        const postData = weeklyPosts.find(p => p.category === category.id);
+        const postData = weeklyPosts.find((p) => p.category === category.id);
         const current = postData?.count || 0;
         balance[category.id] = {
           current,
@@ -5321,7 +5410,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       }
 
       // Get suggested next category
-      const postsForSuggestion = weeklyPosts.map(p => ({ category: p.category }));
+      const postsForSuggestion = weeklyPosts.map((p) => ({ category: p.category }));
       const suggested = suggestNextCategory(postsForSuggestion);
 
       res.json({
@@ -5335,7 +5424,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       });
     } catch (error: any) {
       logger.error({ err: error }, 'Failed to get content planner balance');
-      res.status(500).json({ error: "Failed to get balance" });
+      res.status(500).json({ error: 'Failed to get balance' });
     }
   });
 
@@ -5343,14 +5432,14 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    * GET /api/content-planner/suggestion
    * Returns the suggested next post type based on balance
    */
-  app.get("/api/content-planner/suggestion", requireAuth, async (req, res) => {
+  app.get('/api/content-planner/suggestion', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
-      const { suggestNextCategory, getRandomTemplate, contentCategories } = await import("@shared/contentTemplates");
+      const { suggestNextCategory, getRandomTemplate, contentCategories } = await import('@shared/contentTemplates');
 
       // Get posts from this week
       const weeklyPosts = await storage.getWeeklyBalance(userId);
-      const postsForSuggestion = weeklyPosts.map(p => ({ category: p.category }));
+      const postsForSuggestion = weeklyPosts.map((p) => ({ category: p.category }));
 
       // Get suggested category
       const suggested = suggestNextCategory(postsForSuggestion);
@@ -5359,7 +5448,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       const template = getRandomTemplate(suggested.id);
 
       // Get current count for this category
-      const currentCount = weeklyPosts.find(p => p.category === suggested.id)?.count || 0;
+      const currentCount = weeklyPosts.find((p) => p.category === suggested.id)?.count || 0;
 
       res.json({
         category: {
@@ -5370,18 +5459,20 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
           currentCount,
           bestPractices: suggested.bestPractices,
         },
-        suggestedTemplate: template ? {
-          id: template.id,
-          title: template.title,
-          subType: template.subType,
-          description: template.description,
-          hookFormulas: template.hookFormulas.slice(0, 2), // Preview
-        } : null,
+        suggestedTemplate: template
+          ? {
+              id: template.id,
+              title: template.title,
+              subType: template.subType,
+              description: template.description,
+              hookFormulas: template.hookFormulas.slice(0, 2), // Preview
+            }
+          : null,
         reason: `You've posted ${currentCount} of ${suggested.weeklyTarget} ${suggested.name.toLowerCase()} posts this week. This category needs attention.`,
       });
     } catch (error: any) {
       logger.error({ err: error }, 'Failed to get content planner suggestion');
-      res.status(500).json({ error: "Failed to get suggestion" });
+      res.status(500).json({ error: 'Failed to get suggestion' });
     }
   });
 
@@ -5389,16 +5480,16 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    * POST /api/content-planner/posts
    * Marks a post as completed (tracks in the balance)
    */
-  app.post("/api/content-planner/posts", requireAuth, async (req, res) => {
+  app.post('/api/content-planner/posts', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const { category, subType, platform, notes } = req.body;
 
       // Validate category
-      const { contentCategories } = await import("@shared/contentTemplates");
-      const validCategory = contentCategories.find(c => c.id === category);
+      const { contentCategories } = await import('@shared/contentTemplates');
+      const validCategory = contentCategories.find((c) => c.id === category);
       if (!validCategory) {
-        return res.status(400).json({ error: "Invalid category" });
+        return res.status(400).json({ error: 'Invalid category' });
       }
 
       // Create the post record
@@ -5412,12 +5503,12 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       });
 
       res.status(201).json({
-        message: "Post recorded",
+        message: 'Post recorded',
         post,
       });
     } catch (error: any) {
       logger.error({ err: error }, 'Failed to create content planner post');
-      res.status(500).json({ error: "Failed to record post" });
+      res.status(500).json({ error: 'Failed to record post' });
     }
   });
 
@@ -5425,7 +5516,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    * GET /api/content-planner/posts
    * Returns the user's posts within a date range
    */
-  app.get("/api/content-planner/posts", requireAuth, async (req, res) => {
+  app.get('/api/content-planner/posts', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
       const { startDate, endDate } = req.query;
@@ -5433,13 +5524,13 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       const posts = await storage.getContentPlannerPostsByUser(
         userId,
         startDate ? new Date(startDate as string) : undefined,
-        endDate ? new Date(endDate as string) : undefined
+        endDate ? new Date(endDate as string) : undefined,
       );
 
       res.json({ posts });
     } catch (error: any) {
       logger.error({ err: error }, 'Failed to get content planner posts');
-      res.status(500).json({ error: "Failed to get posts" });
+      res.status(500).json({ error: 'Failed to get posts' });
     }
   });
 
@@ -5447,14 +5538,14 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    * DELETE /api/content-planner/posts/:id
    * Deletes a post record (undo marking as completed)
    */
-  app.delete("/api/content-planner/posts/:id", requireAuth, async (req, res) => {
+  app.delete('/api/content-planner/posts/:id', requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
       await storage.deleteContentPlannerPost(id);
-      res.json({ message: "Post deleted" });
+      res.json({ message: 'Post deleted' });
     } catch (error: any) {
       logger.error({ err: error }, 'Failed to delete content planner post');
-      res.status(500).json({ error: "Failed to delete post" });
+      res.status(500).json({ error: 'Failed to delete post' });
     }
   });
 
@@ -5468,16 +5559,16 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    * - One idea per slide, mobile-first design
    * - Authentic > Polished
    */
-  app.post("/api/content-planner/carousel-outline", requireAuth, async (req, res) => {
+  app.post('/api/content-planner/carousel-outline', requireAuth, async (req, res) => {
     try {
       const { templateId, topic, slideCount = 7, platform = 'linkedin', productNames = [] } = req.body;
 
       if (!templateId) {
-        return res.status(400).json({ error: "templateId is required" });
+        return res.status(400).json({ error: 'templateId is required' });
       }
 
       if (!topic || typeof topic !== 'string' || topic.trim().length === 0) {
-        return res.status(400).json({ error: "topic is required and must be a non-empty string" });
+        return res.status(400).json({ error: 'topic is required and must be a non-empty string' });
       }
 
       // Validate slideCount (5-10 range per 2026 best practices)
@@ -5505,7 +5596,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       });
     } catch (error: any) {
       logger.error({ err: error }, 'Failed to generate carousel outline');
-      res.status(500).json({ error: error.message || "Failed to generate carousel outline" });
+      res.status(500).json({ error: error.message || 'Failed to generate carousel outline' });
     }
   });
 
@@ -5519,36 +5610,41 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    * - Partial success handling (returns whatever succeeds)
    * - Unique content on every generation
    */
-  app.post("/api/content-planner/generate-post", requireAuth, validate(generateCompletePostSchema), async (req, res) => {
-    try {
-      const userId = req.user?.id;
-      if (!userId) {
-        return res.status(401).json({ error: "Unauthorized" });
+  app.post(
+    '/api/content-planner/generate-post',
+    requireAuth,
+    validate(generateCompletePostSchema),
+    async (req, res) => {
+      try {
+        const userId = req.user?.id;
+        if (!userId) {
+          return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        // Body is already validated and transformed by Zod schema
+        const { templateId, productIds, topic, platform } = req.body;
+
+        const { contentPlannerService } = await import('./services/contentPlannerService');
+
+        const result = await contentPlannerService.generateCompletePost({
+          userId,
+          templateId,
+          productIds,
+          topic: topic || undefined,
+          platform,
+        });
+
+        res.json(result);
+      } catch (error: any) {
+        logger.error({ err: error }, 'Failed to generate complete post');
+        res.status(500).json({
+          success: false,
+          copyError: error.message || 'Failed to generate post',
+          imageError: error.message || 'Failed to generate post',
+        });
       }
-
-      // Body is already validated and transformed by Zod schema
-      const { templateId, productIds, topic, platform } = req.body;
-
-      const { contentPlannerService } = await import('./services/contentPlannerService');
-
-      const result = await contentPlannerService.generateCompletePost({
-        userId,
-        templateId,
-        productIds,
-        topic: topic || undefined,
-        platform,
-      });
-
-      res.json(result);
-    } catch (error: any) {
-      logger.error({ err: error }, 'Failed to generate complete post');
-      res.status(500).json({
-        success: false,
-        copyError: error.message || "Failed to generate post",
-        imageError: error.message || "Failed to generate post",
-      });
-    }
-  });
+    },
+  );
 
   // ===== END CONTENT PLANNER ENDPOINTS =====
 
@@ -5597,10 +5693,14 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   })();
 
   const httpServer = createServer(app);
+
+  // Initialize real-time collaboration (Socket.io)
+  try {
+    const { initCollaboration } = await import('./lib/collaboration');
+    initCollaboration(httpServer);
+  } catch (err) {
+    logger.warn({ err }, 'Failed to initialize collaboration (Socket.io) — feature disabled');
+  }
+
   return httpServer;
 }
-
-
-
-
-

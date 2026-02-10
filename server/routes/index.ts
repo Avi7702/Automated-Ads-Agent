@@ -61,6 +61,9 @@ import { approvalQueueRouterModule } from './approvalQueue.router';
 // Style references (Character/Style Consistency)
 import { styleReferencesRouterModule } from './styleReferences.router';
 
+// Custom model training
+import { trainingRouterModule } from './training.router';
+
 // Admin (security-critical - must be last)
 import { adminRouterModule } from './admin.router';
 
@@ -121,6 +124,9 @@ export const routerModules: RouterModule[] = [
   // Style references (Character/Style Consistency)
   styleReferencesRouterModule,
 
+  // Custom model training
+  trainingRouterModule,
+
   // Admin (last - security critical)
   adminRouterModule,
 ];
@@ -166,4 +172,5 @@ export { n8nRouterModule } from './n8n.router';
 export { planningRouterModule } from './planning.router';
 export { approvalQueueRouterModule } from './approvalQueue.router';
 export { styleReferencesRouterModule } from './styleReferences.router';
+export { trainingRouterModule } from './training.router';
 export { adminRouterModule } from './admin.router';

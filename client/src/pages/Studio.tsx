@@ -201,7 +201,11 @@ export default function Studio() {
               <AnimatePresence mode="wait">
                 {orch.state === 'idle' && <ComposerView key="composer" orch={orch} />}
                 {orch.state === 'generating' && (
-                  <GeneratingView key="generating" onCancel={orch.handleCancelGeneration} />
+                  <GeneratingView
+                    key="generating"
+                    onCancel={orch.handleCancelGeneration}
+                    mediaType={orch.generatedMediaType}
+                  />
                 )}
                 {orch.state === 'result' && <ResultViewEnhanced key="result" orch={orch} />}
               </AnimatePresence>
