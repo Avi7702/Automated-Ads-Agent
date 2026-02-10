@@ -31,6 +31,9 @@ import { brandImagesRouterModule } from './brandImages.router';
 import { ideaBankRouterModule } from './ideaBank.router';
 import { productRelationshipsRouterModule, relationshipsRAGRouterModule } from './relationships.router';
 
+// Studio agent (conversational AI)
+import { agentRouterModule } from './agent.router';
+
 // File search (RAG)
 import { catalogRouterModule } from './catalog.router';
 
@@ -96,6 +99,9 @@ export const routerModules: RouterModule[] = [
   ideaBankRouterModule,
   productRelationshipsRouterModule,
   relationshipsRAGRouterModule,
+
+  // Studio agent (conversational AI)
+  agentRouterModule,
 
   // File search (RAG)
   catalogRouterModule,
@@ -180,4 +186,5 @@ export { planningRouterModule } from './planning.router';
 export { approvalQueueRouterModule } from './approvalQueue.router';
 export { styleReferencesRouterModule } from './styleReferences.router';
 export { trainingRouterModule } from './training.router';
+export { agentRouterModule } from './agent.router';
 export { adminRouterModule } from './admin.router';
