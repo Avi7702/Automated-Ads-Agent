@@ -1,49 +1,58 @@
-
-import { migrate } from "drizzle-orm/node-postgres/migrator";
-import { db } from "./db";
+import { pool } from "./db";
 import { logger } from './lib/logger';
 
-// For simple prototyping/dev, we use db push behavior by syncing schema
-// But since drizzle-kit push is a CLI command, for programmatic usage in prod
-// we often use 'migrate' if we have migrations folder.
-// However, since this project used 'db:push', we might lack migration files.
-// Let's check if we can run specific SQL or if we should use 'drizzle-kit push' via exec.
-
-import { exec } from "child_process";
-import { promisify } from "util";
-
-const execAsync = promisify(exec);
-
+/**
+ * Ensure the production DB schema matches our Drizzle schema.
+ *
+ * Uses IF NOT EXISTS / ADD COLUMN IF NOT EXISTS so it's fully idempotent.
+ * This replaces `drizzle-kit push` which times out via npx on cold start.
+ */
 export async function pushSchema() {
-    // Run schema push by default in all environments (drizzle-kit push is idempotent)
-    // Set SKIP_SCHEMA_PUSH=true to disable
-    // Run schema push by default in all environments (drizzle-kit push is idempotent).
-    // Set SKIP_SCHEMA_PUSH=true to explicitly disable.
-    const skipSchemaPush = process.env.SKIP_SCHEMA_PUSH === 'true';
-
-    if (skipSchemaPush || process.env.SKIP_SCHEMA_PUSH === 'true') {
-        logger.info({ module: 'db' }, 'Schema push skipped (production default or SKIP_SCHEMA_PUSH=true)');
+    if (process.env.SKIP_SCHEMA_PUSH === 'true') {
+        logger.info({ module: 'db' }, 'Schema push skipped (SKIP_SCHEMA_PUSH=true)');
         return;
     }
 
     try {
-        logger.info({ module: 'db' }, 'Pushing schema to database...');
-        // We use drizzle-kit push command with --force to skip interactive confirmation.
-        // This requires drizzle.config.ts to be present and correct.
-        const { stdout, stderr } = await execAsync("npx drizzle-kit push --force", {
-            timeout: 30000, // 30 second timeout
-        });
-        logger.info({ module: 'db', output: stdout }, 'Schema push output');
-        if (stderr) logger.error({ module: 'db', stderr }, 'Schema push stderr');
-        logger.info({ module: 'db' }, 'Schema push completed successfully');
-    } catch (error: any) {
-        // Check if it's a timeout error
-        if (error.killed) {
-            logger.error({ module: 'db' }, 'Schema push timed out after 30 seconds - skipping');
-        } else {
-            logger.error({ module: 'db', err: error }, 'Failed to push schema');
-        }
-        // Don't exit process, let app try to start
-        logger.info({ module: 'db' }, 'Continuing without schema push - tables may already exist');
+        logger.info({ module: 'db' }, 'Running schema migrations...');
+
+        // Add missing columns to existing tables (idempotent — IF NOT EXISTS)
+        await pool.query(`
+            -- Users: role column (PR #61)
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS role varchar(20) NOT NULL DEFAULT 'user';
+
+            -- Generations: media type + video duration (PR #64)
+            ALTER TABLE generations ADD COLUMN IF NOT EXISTS media_type varchar(10) DEFAULT 'image';
+            ALTER TABLE generations ADD COLUMN IF NOT EXISTS video_duration_sec integer;
+
+            -- Training tables (PR #64)
+            CREATE TABLE IF NOT EXISTS training_datasets (
+                id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id varchar NOT NULL REFERENCES users(id),
+                name varchar(255) NOT NULL,
+                description text,
+                model_type varchar(50) NOT NULL DEFAULT 'gemini',
+                status varchar(20) NOT NULL DEFAULT 'draft',
+                example_count integer NOT NULL DEFAULT 0,
+                created_at timestamp NOT NULL DEFAULT now(),
+                updated_at timestamp NOT NULL DEFAULT now()
+            );
+
+            CREATE TABLE IF NOT EXISTS training_examples (
+                id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+                dataset_id varchar NOT NULL REFERENCES training_datasets(id) ON DELETE CASCADE,
+                input_text text NOT NULL,
+                expected_output text NOT NULL,
+                metadata jsonb,
+                quality_score real,
+                created_at timestamp NOT NULL DEFAULT now()
+            );
+        `);
+
+        logger.info({ module: 'db' }, 'Schema migrations completed successfully');
+    } catch (error: unknown) {
+        logger.error({ module: 'db', err: error }, 'Schema migration failed');
+        // Don't exit — tables may already exist with the right shape
+        logger.info({ module: 'db' }, 'Continuing without schema migration — tables may already exist');
     }
 }
