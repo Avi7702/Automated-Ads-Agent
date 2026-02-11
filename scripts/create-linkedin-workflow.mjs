@@ -43,7 +43,7 @@ if (!metadata || !metadata.scheduledPostId) {
   throw new Error('Missing required field: metadata.scheduledPostId');
 }
 
-// Pass through validated data
+// Pass through validated data (including personUrn if provided)
 return [{
   json: {
     caption: content.caption,
@@ -53,7 +53,8 @@ return [{
     generationId: metadata.generationId || null,
     userId: body.userId || 'unknown',
     platform: platform || 'linkedin',
-    callbackUrl: body.callbackUrl || null
+    callbackUrl: body.callbackUrl || null,
+    personUrn: metadata.personUrn || body.personUrn || null
   }
 }];
 `.trim();
@@ -61,14 +62,24 @@ return [{
 // -- Code node: Build Post Body --
 const buildPostBodyCode = `
 // Build LinkedIn REST API post body using the profile URN
-const profile = $('Get LinkedIn Profile').first().json;
 const validated = $('Validate Payload').first().json;
 
-// Get the person URN from /v2/userinfo response
-const personUrn = profile.sub ? 'urn:li:person:' + profile.sub : null;
+// Strategy: use personUrn from payload first, then fall back to profile lookup
+let personUrn = validated.personUrn;
 
 if (!personUrn) {
-  throw new Error('Could not determine LinkedIn person URN from profile');
+  // Try to get from profile API response
+  try {
+    const profile = $('Get LinkedIn Profile').first().json;
+    const personId = profile.sub || profile.id;
+    personUrn = personId ? 'urn:li:person:' + personId : null;
+  } catch (e) {
+    // Profile lookup might have failed — that's OK if personUrn was in payload
+  }
+}
+
+if (!personUrn) {
+  throw new Error('LinkedIn person URN not available. Either pass personUrn in the webhook payload, or fix the LinkedIn OAuth credential to include profile scopes (openid or r_liteprofile).');
 }
 
 // Build the post payload for LinkedIn REST API
@@ -100,8 +111,11 @@ const crypto = require('crypto');
 const validated = $('Validate Payload').first().json;
 const postResult = $('Create LinkedIn Post').first().json;
 
-// LinkedIn REST API returns the post URN in the x-restli-id header or response
-const postId = postResult.id || postResult['x-restli-id'] || '';
+// With fullResponse: true, postResult has { body, headers, statusCode }
+// LinkedIn REST API returns the post URN in the x-restli-id response header
+const headers = postResult.headers || {};
+const body = postResult.body || postResult;
+const postId = headers['x-restli-id'] || body.id || body['x-restli-id'] || '';
 
 const callbackPayload = {
   scheduledPostId: validated.scheduledPostId,
@@ -204,13 +218,22 @@ const workflow = {
       typeVersion: 2,
       position: [220, 300]
     },
-    // 3. Get LinkedIn Profile — fetches the person URN
+    // 3. Get LinkedIn Profile — fetches the person URN (optional, continue on fail)
+    //    Uses /v2/userinfo which returns { sub: "personId" }
+    //    If this fails (scope issue), Build Post Body will use personUrn from payload
     {
       parameters: {
         method: 'GET',
-        url: 'https://api.linkedin.com/v2/userinfo',
+        url: 'https://api.linkedin.com/v2/me',
         authentication: 'predefinedCredentialType',
         nodeCredentialType: 'linkedInOAuth2Api',
+        sendHeaders: true,
+        headerParameters: {
+          parameters: [
+            { name: 'LinkedIn-Version', value: '202507' },
+            { name: 'X-Restli-Protocol-Version', value: '2.0.0' }
+          ]
+        },
         options: {}
       },
       id: 'get-profile',
@@ -223,7 +246,8 @@ const workflow = {
           id: 'teqnsCd8EeUwk3Hs',
           name: 'LinkedIn account'
         }
-      }
+      },
+      onError: 'continueRegularOutput'
     },
     // 4. Build Post Body — constructs the LinkedIn API payload
     {
@@ -247,14 +271,20 @@ const workflow = {
         sendHeaders: true,
         headerParameters: {
           parameters: [
-            { name: 'LinkedIn-Version', value: '202401' },
+            { name: 'LinkedIn-Version', value: '202507' },
             { name: 'X-Restli-Protocol-Version', value: '2.0.0' }
           ]
         },
         sendBody: true,
         specifyBody: 'json',
         jsonBody: '={{ JSON.stringify($json.postBody) }}',
-        options: {}
+        options: {
+          response: {
+            response: {
+              fullResponse: true
+            }
+          }
+        }
       },
       id: 'create-post',
       name: 'Create LinkedIn Post',
