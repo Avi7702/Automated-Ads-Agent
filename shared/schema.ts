@@ -463,6 +463,8 @@ export const brandImages = pgTable(
     categoryIdx: index('brand_images_category_idx').on(table.category),
     scenarioIdIdx: index('brand_images_scenario_id_idx').on(table.scenarioId),
     createdAtIdx: index('brand_images_created_at_idx').on(table.createdAt),
+    // ⚡ Bolt Optimization: GIN index for efficient array overlap queries on product_ids
+    productIdsGinIdx: index('brand_images_product_ids_gin_idx').using('gin', table.productIds),
   }),
 );
 
