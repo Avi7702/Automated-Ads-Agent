@@ -282,19 +282,34 @@ export async function handleN8nCallback(data: N8nCallbackData): Promise<void> {
     );
 
     // Update the scheduled post in the database
-    await updatePostAfterCallback(data.scheduledPostId, data.success, {
-      platformPostId: data.platformPostId,
-      platformPostUrl: data.platformPostUrl,
-      errorMessage: data.error,
-      failureReason: data.errorCode,
-    });
+    try {
+      const result = await updatePostAfterCallback(data.scheduledPostId, data.success, {
+        platformPostId: data.platformPostId,
+        platformPostUrl: data.platformPostUrl,
+        errorMessage: data.error,
+        failureReason: data.errorCode,
+      });
 
-    // If failed and the error is retryable, schedule a retry
-    if (!data.success && isRetryableError(data.errorCode)) {
-      await scheduleRetry(data.scheduledPostId);
-      logger.info(
-        { scheduledPostId: data.scheduledPostId, errorCode: data.errorCode },
-        'Retry scheduled for failed post',
+      if (!result || (Array.isArray(result) && result.length === 0)) {
+        logger.warn(
+          { scheduledPostId: data.scheduledPostId },
+          'No scheduled post found with this ID — callback acknowledged but no DB update',
+        );
+      }
+
+      // If failed and the error is retryable, schedule a retry
+      if (!data.success && isRetryableError(data.errorCode) && Array.isArray(result) && result.length > 0) {
+        await scheduleRetry(data.scheduledPostId);
+        logger.info(
+          { scheduledPostId: data.scheduledPostId, errorCode: data.errorCode },
+          'Retry scheduled for failed post',
+        );
+      }
+    } catch (dbError) {
+      // DB error (e.g. table doesn't exist yet) — log but don't fail the callback
+      logger.warn(
+        { scheduledPostId: data.scheduledPostId, err: dbError },
+        'DB update failed for callback — acknowledging anyway',
       );
     }
 
