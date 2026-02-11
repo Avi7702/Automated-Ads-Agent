@@ -242,9 +242,14 @@ const { generateToken, doubleCsrfProtection } = doubleCsrf({
 });
 
 // Apply CSRF protection middleware
-// Skip CSRF for analytics/vitals — sendBeacon() cannot set custom headers
+// Skip CSRF for:
+//   - analytics/vitals — sendBeacon() cannot set custom headers
+//   - n8n webhooks — use HMAC signature auth instead (webhookAuth.ts)
 app.use((req: Request, res: Response, next: NextFunction) => {
   if (req.path === '/api/analytics/vitals' && req.method === 'POST') {
+    return next();
+  }
+  if (req.path.startsWith('/api/n8n/')) {
     return next();
   }
   return doubleCsrfProtection(req, res, next);
