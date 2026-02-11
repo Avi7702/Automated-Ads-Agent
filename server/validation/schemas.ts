@@ -115,11 +115,11 @@ export type SaveN8nConfigInput = z.infer<typeof saveN8nConfigSchema>;
 // ========================================
 
 export const n8nCallbackSchema = z.object({
-  scheduledPostId: z.string().uuid('Invalid post ID format'),
+  scheduledPostId: z.string().min(1, 'Post ID is required'),
   platform: z.enum(['linkedin', 'instagram', 'facebook', 'twitter', 'tiktok', 'youtube', 'pinterest']),
   success: z.boolean(),
   platformPostId: z.string().optional(),
-  platformPostUrl: z.string().url().optional(),
+  platformPostUrl: z.preprocess((val) => (val === '' ? undefined : val), z.string().url().optional()),
   error: z.string().optional(),
   errorCode: z.string().optional(),
   executionId: z.string().min(1, 'Execution ID required'),
