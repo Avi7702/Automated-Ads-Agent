@@ -338,6 +338,7 @@ export interface IStorage {
 
   // Content Planner Post CRUD operations
   createContentPlannerPost(post: InsertContentPlannerPost): Promise<ContentPlannerPost>;
+  getContentPlannerPostById(id: string): Promise<ContentPlannerPost | null>;
   getContentPlannerPostsByUser(userId: string, startDate?: Date, endDate?: Date): Promise<ContentPlannerPost[]>;
   getWeeklyBalance(userId: string): Promise<{ category: string; count: number }[]>;
   deleteContentPlannerPost(id: string): Promise<void>;
@@ -900,6 +901,9 @@ export class DbStorage implements IStorage {
   // ============================================
   async createContentPlannerPost(post: InsertContentPlannerPost): Promise<ContentPlannerPost> {
     return planningRepo.createContentPlannerPost(post);
+  }
+  async getContentPlannerPostById(id: string): Promise<ContentPlannerPost | null> {
+    return planningRepo.getContentPlannerPostById(id);
   }
   async getContentPlannerPostsByUser(userId: string, startDate?: Date, endDate?: Date): Promise<ContentPlannerPost[]> {
     return planningRepo.getContentPlannerPostsByUser(userId, startDate, endDate);

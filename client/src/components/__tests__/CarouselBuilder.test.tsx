@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 // @vitest-environment jsdom
 /**
  * CarouselBuilder Component Tests
@@ -145,7 +146,7 @@ function renderCarouselBuilder(props = {}) {
   return render(
     <QueryClientProvider client={queryClient}>
       <CarouselBuilder {...defaultProps} {...props} />
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
 }
 
@@ -185,11 +186,8 @@ function setupFailedImageGeneration() {
 
 describe('CarouselBuilder - Initialization', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.resetAllMocks();
+    mockFetch.mockReset();
+    global.fetch = mockFetch;
   });
 
   it('displays loading state while generating outline', async () => {
@@ -203,15 +201,17 @@ describe('CarouselBuilder - Initialization', () => {
                 ok: true,
                 json: () => Promise.resolve(mockCarouselOutline),
               }),
-            100
-          )
-        )
+            500,
+          ),
+        ),
     );
 
     renderCarouselBuilder();
 
-    // Should show loading indicator
-    expect(screen.getByText(/Generating carousel outline/i)).toBeInTheDocument();
+    // Wait for useEffect to trigger mutation (isPending = true)
+    await waitFor(() => {
+      expect(screen.getByText(/Generating carousel outline/i)).toBeInTheDocument();
+    });
     expect(screen.getByText(/2026 best practices/i)).toBeInTheDocument();
   });
 
@@ -264,7 +264,7 @@ describe('CarouselBuilder - Initialization', () => {
             platform: 'instagram',
             productNames: ['Product A', 'Product B'],
           }),
-        })
+        }),
       );
     });
   });
@@ -276,11 +276,8 @@ describe('CarouselBuilder - Initialization', () => {
 
 describe('CarouselBuilder - Slide Management', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.resetAllMocks();
+    mockFetch.mockReset();
+    global.fetch = mockFetch;
   });
 
   it('renders all 7 slides in the slide list', async () => {
@@ -416,11 +413,8 @@ describe('CarouselBuilder - Slide Management', () => {
 
 describe('CarouselBuilder - Slide Editing', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.resetAllMocks();
+    mockFetch.mockReset();
+    global.fetch = mockFetch;
   });
 
   it('displays headline input with current value', async () => {
@@ -474,9 +468,7 @@ describe('CarouselBuilder - Slide Editing', () => {
     renderCarouselBuilder();
 
     await waitFor(() => {
-      expect(
-        screen.getByDisplayValue('Create an eye-catching visual for the hook')
-      ).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Create an eye-catching visual for the hook')).toBeInTheDocument();
     });
   });
 
@@ -485,12 +477,12 @@ describe('CarouselBuilder - Slide Editing', () => {
     renderCarouselBuilder();
 
     await waitFor(() => {
-      expect(
-        screen.getByDisplayValue('Create an eye-catching visual for the hook')
-      ).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Create an eye-catching visual for the hook')).toBeInTheDocument();
     });
 
-    const promptTextarea = screen.getByDisplayValue('Create an eye-catching visual for the hook') as HTMLTextAreaElement;
+    const promptTextarea = screen.getByDisplayValue(
+      'Create an eye-catching visual for the hook',
+    ) as HTMLTextAreaElement;
     fireEvent.change(promptTextarea, { target: { value: 'Custom image prompt' } });
 
     expect(screen.getByDisplayValue('Custom image prompt')).toBeInTheDocument();
@@ -508,8 +500,8 @@ describe('CarouselBuilder - Slide Editing', () => {
     // Headline: "Attention-Grabbing Hook" = 23 chars
     expect(screen.getByText('23/100')).toBeInTheDocument();
 
-    // Body: "This is the hook slide body text" = 33 chars
-    expect(screen.getByText('33/200')).toBeInTheDocument();
+    // Body: "This is the hook slide body text" = 32 chars
+    expect(screen.getByText('32/200')).toBeInTheDocument();
 
     // Image prompt: "Create an eye-catching visual for the hook" = 42 chars
     expect(screen.getByText('42/300')).toBeInTheDocument();
@@ -522,11 +514,8 @@ describe('CarouselBuilder - Slide Editing', () => {
 
 describe('CarouselBuilder - Preview & Export', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.resetAllMocks();
+    mockFetch.mockReset();
+    global.fetch = mockFetch;
   });
 
   it('toggles between edit and preview mode', async () => {
@@ -571,9 +560,7 @@ describe('CarouselBuilder - Preview & Export', () => {
     fireEvent.click(previewButton);
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/Swipe or use arrows to preview all 7 slides/i)
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Swipe or use arrows to preview all 7 slides/i)).toBeInTheDocument();
     });
   });
 
@@ -612,7 +599,7 @@ describe('CarouselBuilder - Preview & Export', () => {
 
     await waitFor(() => {
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-        'This is the caption for the carousel post.\n\n#marketing #carousel #social'
+        'This is the caption for the carousel post.\n\n#marketing #carousel #social',
       );
     });
 
@@ -627,11 +614,8 @@ describe('CarouselBuilder - Preview & Export', () => {
 
 describe('CarouselBuilder - Integration', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.resetAllMocks();
+    mockFetch.mockReset();
+    global.fetch = mockFetch;
   });
 
   it('passes product names to outline generation API', async () => {
@@ -645,7 +629,7 @@ describe('CarouselBuilder - Integration', () => {
         '/api/content-planner/carousel-outline',
         expect.objectContaining({
           body: expect.stringContaining('Premium Oak Flooring'),
-        })
+        }),
       );
     });
   });
@@ -669,9 +653,7 @@ describe('CarouselBuilder - Integration', () => {
 
     await waitFor(() => {
       // Check that the transform API was called with product image URLs
-      const transformCall = mockFetch.mock.calls.find(
-        (call) => call[0] === '/api/transform'
-      );
+      const transformCall = mockFetch.mock.calls.find((call) => call[0] === '/api/transform');
       expect(transformCall).toBeDefined();
 
       const requestBody = JSON.parse(transformCall[1].body);
@@ -693,9 +675,9 @@ describe('CarouselBuilder - Integration', () => {
 
     // Find and click close button (X icon)
     const closeButton = screen.getByRole('button', { name: '' }); // Icon-only button
-    const closeButtons = screen.getAllByRole('button').filter(
-      (btn) => btn.querySelector('svg.lucide-x') || btn.querySelector('[class*="lucide-x"]')
-    );
+    const closeButtons = screen
+      .getAllByRole('button')
+      .filter((btn) => btn.querySelector('svg.lucide-x') || btn.querySelector('[class*="lucide-x"]'));
 
     // The close button should be in the header
     if (closeButtons.length > 0) {
@@ -742,11 +724,8 @@ describe('CarouselBuilder - Integration', () => {
 
 describe('CarouselBuilder - Edge Cases', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.resetAllMocks();
+    mockFetch.mockReset();
+    global.fetch = mockFetch;
   });
 
   it('handles empty product names array', async () => {
@@ -774,9 +753,7 @@ describe('CarouselBuilder - Edge Cases', () => {
     fireEvent.click(generateButton);
 
     await waitFor(() => {
-      const transformCall = mockFetch.mock.calls.find(
-        (call) => call[0] === '/api/transform'
-      );
+      const transformCall = mockFetch.mock.calls.find((call) => call[0] === '/api/transform');
       expect(transformCall).toBeDefined();
 
       const requestBody = JSON.parse(transformCall[1].body);
@@ -790,7 +767,7 @@ describe('CarouselBuilder - Edge Cases', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(/Slide 1 is CRITICAL - 80% of engagement comes from the first slide/i)
+        screen.getByText(/Slide 1 is CRITICAL - 80% of engagement comes from the first slide/i),
       ).toBeInTheDocument();
     });
   });
@@ -816,11 +793,8 @@ describe('CarouselBuilder - Edge Cases', () => {
 
 describe('CarouselBuilder - Additional Edge Cases', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.resetAllMocks();
+    mockFetch.mockReset();
+    global.fetch = mockFetch;
   });
 
   // Edge case test
@@ -838,7 +812,7 @@ describe('CarouselBuilder - Additional Edge Cases', () => {
       '/api/content-planner/carousel-outline',
       expect.objectContaining({
         body: expect.stringContaining(longTopic.slice(0, 100)), // At least part of the long string
-      })
+      }),
     );
   });
 
@@ -862,10 +836,7 @@ describe('CarouselBuilder - Additional Edge Cases', () => {
   it('handles network timeout during outline generation', async () => {
     // Mock a delayed response that simulates timeout
     mockFetch.mockImplementationOnce(
-      () =>
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Network timeout')), 50)
-        )
+      () => new Promise((_, reject) => setTimeout(() => reject(new Error('Network timeout')), 50)),
     );
 
     renderCarouselBuilder();
@@ -940,7 +911,7 @@ describe('CarouselBuilder - Additional Edge Cases', () => {
         // The component should still be functional
         expect(screen.getByText('Test Carousel Title')).toBeInTheDocument();
       },
-      { timeout: 5000 }
+      { timeout: 5000 },
     );
   });
 });

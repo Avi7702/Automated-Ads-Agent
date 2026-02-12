@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 /**
  * Database Health and Connection Pool Tests
  *
@@ -68,8 +69,8 @@ describe('Database Health Check', () => {
   describe('Healthy Status', () => {
     it('should return healthy status for fast query with low connection usage', async () => {
       // Mock fast query (< 100ms)
-      mockQuery.mockImplementation(() =>
-        new Promise((resolve) => setTimeout(() => resolve({ rows: [{ '?column?': 1 }] }), 50))
+      mockQuery.mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve({ rows: [{ '?column?': 1 }] }), 50)),
       );
 
       const result = await checkDbHealth();
@@ -108,16 +109,16 @@ describe('Database Health Check', () => {
   });
 
   describe('Degraded Status', () => {
-    it('should return degraded status for slow query (100-500ms)', async () => {
-      // Mock slow query (150ms)
-      mockQuery.mockImplementation(() =>
-        new Promise((resolve) => setTimeout(() => resolve({ rows: [{ '?column?': 1 }] }), 150))
+    it('should return degraded status for slow query (200-500ms)', async () => {
+      // Mock slow query (250ms) - source uses 200ms threshold for degraded
+      mockQuery.mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve({ rows: [{ '?column?': 1 }] }), 250)),
       );
 
       const result = await checkDbHealth();
 
       expect(result.status).toBe('degraded');
-      expect(result.averageQueryTime).toBeGreaterThanOrEqual(100);
+      expect(result.averageQueryTime).toBeGreaterThanOrEqual(200);
       expect(result.averageQueryTime).toBeLessThan(500);
     });
 
@@ -137,23 +138,24 @@ describe('Database Health Check', () => {
       expect(result.activeConnections).toBeGreaterThanOrEqual(result.maxConnections * 0.8);
     });
 
-    it('should return degraded for query at exactly 100ms', async () => {
-      mockQuery.mockImplementation(() =>
-        new Promise((resolve) => setTimeout(() => resolve({ rows: [{ '?column?': 1 }] }), 100))
+    it('should return degraded for query at exactly 200ms', async () => {
+      // Source uses >= 200ms threshold for degraded status
+      mockQuery.mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve({ rows: [{ '?column?': 1 }] }), 200)),
       );
 
       const result = await checkDbHealth();
 
       expect(result.status).toBe('degraded');
-      expect(result.averageQueryTime).toBeGreaterThanOrEqual(100);
+      expect(result.averageQueryTime).toBeGreaterThanOrEqual(200);
     });
   });
 
   describe('Unhealthy Status', () => {
     it('should return unhealthy status for very slow query (>= 500ms)', async () => {
       // Mock very slow query (600ms)
-      mockQuery.mockImplementation(() =>
-        new Promise((resolve) => setTimeout(() => resolve({ rows: [{ '?column?': 1 }] }), 600))
+      mockQuery.mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve({ rows: [{ '?column?': 1 }] }), 600)),
       );
 
       const result = await checkDbHealth();
@@ -178,8 +180,8 @@ describe('Database Health Check', () => {
     });
 
     it('should return unhealthy for query at exactly 500ms', async () => {
-      mockQuery.mockImplementation(() =>
-        new Promise((resolve) => setTimeout(() => resolve({ rows: [{ '?column?': 1 }] }), 500))
+      mockQuery.mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve({ rows: [{ '?column?': 1 }] }), 500)),
       );
 
       const result = await checkDbHealth();
@@ -202,7 +204,7 @@ describe('Database Health Check', () => {
       expect(result.averageQueryTime).toBeUndefined();
       expect(mockLogger.error).toHaveBeenCalledWith(
         { module: 'DbHealth', err: dbError },
-        'Database health check failed'
+        'Database health check failed',
       );
     });
 
@@ -430,9 +432,7 @@ describe('Pool Configuration Validation (getPoolConfig logic)', () => {
       const statementTimeout = 30000;
       mockClient.query(`SET statement_timeout = ${statementTimeout}`);
 
-      expect(mockClientQuery).toHaveBeenCalledWith(
-        `SET statement_timeout = ${statementTimeout}`
-      );
+      expect(mockClientQuery).toHaveBeenCalledWith(`SET statement_timeout = ${statementTimeout}`);
     });
 
     it('should demonstrate error handling pattern for statement_timeout failures', async () => {
@@ -451,7 +451,7 @@ describe('Pool Configuration Validation (getPoolConfig logic)', () => {
 
       expect(mockLogger.error).toHaveBeenCalledWith(
         expect.objectContaining({ module: 'db', err: error }),
-        'Failed to set statement_timeout on connection'
+        'Failed to set statement_timeout on connection',
       );
     });
   });

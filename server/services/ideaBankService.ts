@@ -15,20 +15,17 @@
  * to balance freshness with performance (1-hour TTL).
  */
 
-import { logger } from "../lib/logger";
-import { generateContentWithRetry } from "../lib/geminiClient";
-import { getCacheService, CACHE_TTL } from "../lib/cacheService";
-import { sanitizeForPrompt, sanitizeKBContent, sanitizeOutputString } from "../lib/promptSanitizer";
-import { safeParseLLMResponse, ideaSuggestionArraySchema } from "../validation/llmResponseSchemas";
-import { storage } from "../storage";
-import { visionAnalysisService, type VisionAnalysisResult } from "./visionAnalysisService";
-import { queryFileSearchStore } from "./fileSearchService";
-import { getRelevantPatterns, formatPatternsForPrompt } from "./patternExtractionService";
-import type { LearnedAdPattern } from "../../shared/schema";
-import {
-  productKnowledgeService,
-  type EnhancedProductContext,
-} from "./productKnowledgeService";
+import { logger } from '../lib/logger';
+import { generateContentWithRetry } from '../lib/geminiClient';
+import { getCacheService, CACHE_TTL } from '../lib/cacheService';
+import { sanitizeForPrompt, sanitizeKBContent, sanitizeOutputString } from '../lib/promptSanitizer';
+import { safeParseLLMResponse, ideaSuggestionArraySchema } from '../validation/llmResponseSchemas';
+import { storage } from '../storage';
+import { visionAnalysisService, type VisionAnalysisResult } from './visionAnalysisService';
+import { queryFileSearchStore } from './fileSearchService';
+import { getRelevantPatterns, formatPatternsForPrompt } from './patternExtractionService';
+import type { LearnedAdPattern } from '../../shared/schema';
+import { productKnowledgeService, type EnhancedProductContext } from './productKnowledgeService';
 import type {
   IdeaBankSuggestion,
   IdeaBankSuggestResponse,
@@ -43,14 +40,13 @@ import type {
   TemplateSlotSuggestion,
   IdeaBankTemplateResponse,
   PlacementHints,
-} from "@shared/types/ideaBank";
-import type { Product, AdSceneTemplate, BrandProfile } from "@shared/schema";
-import { createRateLimitMap } from "../utils/memoryManager";
+} from '@shared/types/ideaBank';
+import type { Product, AdSceneTemplate, BrandProfile } from '@shared/schema';
+import { createRateLimitMap } from '../utils/memoryManager';
 
 // LLM model for reasoning - use Gemini 3 Flash for speed
 // MODEL RECENCY RULE: Before changing any model ID, verify today's date and confirm the model is current within the last 3-4 weeks.
-const REASONING_MODEL = process.env.GEMINI_REASONING_MODEL || "gemini-3-flash-preview";
-
+const REASONING_MODEL = process.env.GEMINI_REASONING_MODEL || 'gemini-3-flash-preview';
 
 // Rate limiting for suggest endpoint
 // Now bounded with automatic cleanup of expired entries (max 10000 users)
@@ -71,7 +67,14 @@ export interface IdeaBankRequest {
 }
 
 export interface IdeaBankError {
-  code: "RATE_LIMITED" | "PRODUCT_NOT_FOUND" | "ANALYSIS_FAILED" | "KB_ERROR" | "LLM_ERROR" | "TEMPLATE_NOT_FOUND" | "TEMPLATE_REQUIRED";
+  code:
+    | 'RATE_LIMITED'
+    | 'PRODUCT_NOT_FOUND'
+    | 'ANALYSIS_FAILED'
+    | 'KB_ERROR'
+    | 'LLM_ERROR'
+    | 'TEMPLATE_NOT_FOUND'
+    | 'TEMPLATE_REQUIRED';
   message: string;
 }
 
@@ -102,9 +105,21 @@ function checkRateLimit(userId: string): boolean {
  * - 'template': AI suggests content to fill template slots
  */
 export async function generateSuggestions(
-  request: IdeaBankRequest
-): Promise<{ success: true; response: IdeaBankSuggestResponse | IdeaBankTemplateResponse } | { success: false; error: IdeaBankError }> {
-  const { productId, userId, userGoal, enableWebSearch = false, maxSuggestions = 3, uploadDescriptions = [], mode = 'freestyle', templateId } = request;
+  request: IdeaBankRequest,
+): Promise<
+  | { success: true; response: IdeaBankSuggestResponse | IdeaBankTemplateResponse }
+  | { success: false; error: IdeaBankError }
+> {
+  const {
+    productId,
+    userId,
+    userGoal,
+    enableWebSearch = false,
+    maxSuggestions = 3,
+    uploadDescriptions = [],
+    mode = 'freestyle',
+    templateId,
+  } = request;
   const buildStartTime = Date.now(); // Track for recipe debug timing
 
   // Rate limit check
@@ -112,8 +127,8 @@ export async function generateSuggestions(
     return {
       success: false,
       error: {
-        code: "RATE_LIMITED",
-        message: "Too many suggestion requests. Please wait before trying again.",
+        code: 'RATE_LIMITED',
+        message: 'Too many suggestion requests. Please wait before trying again.',
       },
     };
   }
@@ -126,7 +141,7 @@ export async function generateSuggestions(
       return {
         success: false,
         error: {
-          code: "TEMPLATE_REQUIRED",
+          code: 'TEMPLATE_REQUIRED',
           message: "templateId is required when mode is 'template'",
         },
       };
@@ -137,8 +152,8 @@ export async function generateSuggestions(
       return {
         success: false,
         error: {
-          code: "TEMPLATE_NOT_FOUND",
-          message: "Template not found",
+          code: 'TEMPLATE_NOT_FOUND',
+          message: 'Template not found',
         },
       };
     }
@@ -166,8 +181,8 @@ export async function generateSuggestions(
     return {
       success: false,
       error: {
-        code: "PRODUCT_NOT_FOUND",
-        message: "Either productId or uploadDescriptions is required",
+        code: 'PRODUCT_NOT_FOUND',
+        message: 'Either productId or uploadDescriptions is required',
       },
     };
   }
@@ -201,8 +216,8 @@ export async function generateSuggestions(
       return {
         success: false,
         error: {
-          code: "PRODUCT_NOT_FOUND",
-          message: "Product not found",
+          code: 'PRODUCT_NOT_FOUND',
+          message: 'Product not found',
         },
       };
     }
@@ -216,7 +231,7 @@ export async function generateSuggestions(
       return {
         success: false,
         error: {
-          code: "ANALYSIS_FAILED",
+          code: 'ANALYSIS_FAILED',
           message: analysisResult.error.message,
         },
       };
@@ -267,7 +282,10 @@ export async function generateSuggestions(
       maxPatterns: 3,
     });
     if (learnedPatterns.length > 0) {
-      logger.info({ module: 'IdeaBank', patternCount: learnedPatterns.length }, 'Learned patterns found for suggestion context');
+      logger.info(
+        { module: 'IdeaBank', patternCount: learnedPatterns.length },
+        'Learned patterns found for suggestion context',
+      );
     }
   } catch (err) {
     logger.error({ module: 'IdeaBank', err }, 'Failed to fetch learned patterns');
@@ -379,8 +397,8 @@ export async function generateSuggestions(
     return {
       success: false,
       error: {
-        code: "LLM_ERROR",
-        message: err instanceof Error ? err.message : "Failed to generate suggestions",
+        code: 'LLM_ERROR',
+        message: err instanceof Error ? err.message : 'Failed to generate suggestions',
       },
     };
   }
@@ -395,15 +413,13 @@ function buildSuggestionCacheKey(
   productIds: string[],
   userGoal?: string,
   mode?: string,
-  templateId?: string
+  templateId?: string,
 ): string {
   const cache = getCacheService();
   const baseKey = cache.ideasKey(userId, productIds);
 
   // Add userGoal hash if present (to differentiate different goal queries)
-  const goalHash = userGoal
-    ? `-g${userGoal.slice(0, 20).replace(/[^a-zA-Z0-9]/g, '')}`
-    : '';
+  const goalHash = userGoal ? `-g${userGoal.slice(0, 20).replace(/[^a-zA-Z0-9]/g, '')}` : '';
 
   // Add mode and templateId for template mode
   const modeKey = mode === 'template' && templateId ? `-t${templateId}` : '';
@@ -415,18 +431,13 @@ function buildSuggestionCacheKey(
  * Build a KB query based on product and analysis
  */
 function buildKBQuery(product: Product, analysis: VisionAnalysisResult, userGoal?: string): string {
-  const parts = [
-    `advertising ideas for ${analysis.category}`,
-    analysis.subcategory,
-    analysis.style,
-    product.name,
-  ];
+  const parts = [`advertising ideas for ${analysis.category}`, analysis.subcategory, analysis.style, product.name];
 
   if (userGoal) {
     parts.push(userGoal);
   }
 
-  return parts.filter(Boolean).join(" ");
+  return parts.filter(Boolean).join(' ');
 }
 
 /**
@@ -436,7 +447,7 @@ function buildKBQueryExtended(
   product: Product | undefined,
   analysis: VisionAnalysisResult | null,
   uploadDescriptions: string[],
-  userGoal?: string
+  userGoal?: string,
 ): string {
   const parts: string[] = [];
 
@@ -462,10 +473,10 @@ function buildKBQueryExtended(
 
   // If we have no parts at all, use a generic query
   if (parts.length === 0) {
-    return "advertising ideas creative marketing";
+    return 'advertising ideas creative marketing';
   }
 
-  return parts.filter(Boolean).join(" ");
+  return parts.filter(Boolean).join(' ');
 }
 
 // sanitizeKBContent is now imported from ../lib/promptSanitizer
@@ -502,7 +513,7 @@ function calculateTemplateScore(template: AdSceneTemplate, analysis: VisionAnaly
     template.bestForProductTypes?.some(
       (type) =>
         type.toLowerCase() === analysis.category.toLowerCase() ||
-        type.toLowerCase() === analysis.subcategory.toLowerCase()
+        type.toLowerCase() === analysis.subcategory.toLowerCase(),
     )
   ) {
     score += 30;
@@ -514,7 +525,7 @@ function calculateTemplateScore(template: AdSceneTemplate, analysis: VisionAnaly
   }
 
   // Environment match
-  if (analysis.usageContext.toLowerCase().includes(template.environment?.toLowerCase() || "")) {
+  if (analysis.usageContext.toLowerCase().includes(template.environment?.toLowerCase() || '')) {
     score += 15;
   }
 
@@ -579,16 +590,19 @@ async function generateLLMSuggestions(params: {
     maxSuggestions,
   });
 
-  const response = await generateContentWithRetry({
-    model: REASONING_MODEL,
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-    config: {
-      temperature: 0.7,
-      maxOutputTokens: 8000,
+  const response = await generateContentWithRetry(
+    {
+      model: REASONING_MODEL,
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      config: {
+        temperature: 0.7,
+        maxOutputTokens: 8000,
+      },
     },
-  }, { operation: 'idea_suggestion' });
+    { operation: 'idea_suggestion' },
+  );
 
-  const text = response.text || "";
+  const text = response.text || '';
   logger.info({ module: 'IdeaBank', responseLength: text.length }, 'LLM raw response received');
 
   // Parse JSON response - try multiple patterns
@@ -608,7 +622,7 @@ async function generateLLMSuggestions(params: {
 
   if (!jsonContent || !jsonContent.startsWith('[')) {
     logger.error({ module: 'IdeaBank', responseText: text }, 'Failed to parse response');
-    throw new Error("Failed to parse suggestions response");
+    throw new Error('Failed to parse suggestions response');
   }
 
   // Try to fix truncated JSON by closing incomplete objects
@@ -678,8 +692,18 @@ function buildSuggestionPrompt(params: {
   userGoal?: string;
   maxSuggestions: number;
 }): string {
-  const { product, productAnalysis, uploadDescriptions, enhancedContext, brandProfile, kbContext, matchedTemplates, learnedPatterns, userGoal, maxSuggestions } =
-    params;
+  const {
+    product,
+    productAnalysis,
+    uploadDescriptions,
+    enhancedContext,
+    brandProfile,
+    kbContext,
+    matchedTemplates,
+    learnedPatterns,
+    userGoal,
+    maxSuggestions,
+  } = params;
 
   let prompt = `You are an expert advertising creative director. Generate ${maxSuggestions} distinct ad concept suggestions.
 
@@ -690,8 +714,8 @@ function buildSuggestionPrompt(params: {
     prompt += `## Product Information
 - Name: ${product.name}
 - Category: ${productAnalysis.category} / ${productAnalysis.subcategory}
-- Materials: ${productAnalysis.materials.join(", ") || "Not specified"}
-- Colors: ${productAnalysis.colors.join(", ") || "Not specified"}
+- Materials: ${productAnalysis.materials.join(', ') || 'Not specified'}
+- Colors: ${productAnalysis.colors.join(', ') || 'Not specified'}
 - Style: ${productAnalysis.style}
 - Usage Context: ${productAnalysis.usageContext}
 - Target Demographic: ${productAnalysis.targetDemographic}
@@ -702,7 +726,7 @@ function buildSuggestionPrompt(params: {
   if (uploadDescriptions.length > 0) {
     prompt += `\n## Uploaded Images (User-Provided)
 The user has also uploaded the following images for context:
-${uploadDescriptions.map((desc, i) => `${i + 1}. "${desc}"`).join("\n")}
+${uploadDescriptions.map((desc, i) => `${i + 1}. "${desc}"`).join('\n')}
 
 IMPORTANT: These uploaded images should be incorporated into your ad concepts. Consider how they can be used alongside the products or as the main visual elements.
 `;
@@ -719,11 +743,49 @@ IMPORTANT: These uploaded images should be incorporated into your ad concepts. C
 
   if (brandProfile) {
     prompt += `\n## Brand Guidelines
-- Brand: ${brandProfile.brandName || "Not specified"}
-- Industry: ${brandProfile.industry || "Not specified"}
-- Values: ${brandProfile.brandValues?.join(", ") || "Not specified"}
-- Preferred Styles: ${brandProfile.preferredStyles?.join(", ") || "Not specified"}
+- Brand: ${brandProfile.brandName || 'Not specified'}
+- Industry: ${brandProfile.industry || 'Not specified'}
+- Values: ${brandProfile.brandValues?.join(', ') || 'Not specified'}
+- Preferred Styles: ${brandProfile.preferredStyles?.join(', ') || 'Not specified'}
 `;
+
+    // Brand voice — include principles, words to use/avoid
+    const voice = brandProfile.voice as {
+      principles?: string[];
+      wordsToUse?: string[];
+      wordsToAvoid?: string[];
+    } | null;
+    if (voice) {
+      prompt += `\n### Brand Voice\n`;
+      if (voice.principles?.length) {
+        prompt += `- Voice Principles: ${voice.principles.join(', ')}\n`;
+      }
+      if (voice.wordsToUse?.length) {
+        prompt += `- Words to USE: ${voice.wordsToUse.join(', ')}\n`;
+      }
+      if (voice.wordsToAvoid?.length) {
+        prompt += `- Words to AVOID: ${voice.wordsToAvoid.join(', ')}\n`;
+      }
+    }
+
+    // Target audience context from brand profile
+    const audience = brandProfile.targetAudience as {
+      demographics?: string;
+      psychographics?: string;
+      painPoints?: string[];
+    } | null;
+    if (audience) {
+      prompt += `\n### Target Audience\n`;
+      if (audience.demographics) {
+        prompt += `- Demographics: ${audience.demographics}\n`;
+      }
+      if (audience.psychographics) {
+        prompt += `- Psychographics: ${audience.psychographics}\n`;
+      }
+      if (audience.painPoints?.length) {
+        prompt += `- Pain Points: ${audience.painPoints.join(', ')}\n`;
+      }
+    }
   }
 
   if (kbContext) {
@@ -735,8 +797,8 @@ IMPORTANT: These uploaded images should be incorporated into your ad concepts. C
     matchedTemplates.forEach((t, i) => {
       prompt += `${i + 1}. "${t.title}" (ID: ${t.id})
    - Category: ${t.category}
-   - Mood: ${t.mood || "Not specified"}
-   - Environment: ${t.environment || "Not specified"}
+   - Mood: ${t.mood || 'Not specified'}
+   - Environment: ${t.environment || 'Not specified'}
    - Blueprint: ${t.promptBlueprint.slice(0, 100)}...
 `;
     });
@@ -773,12 +835,8 @@ Return ONLY the JSON array, no other text.`;
  * Sanitize a generated prompt
  */
 function sanitizePrompt(prompt: string): string {
-  if (!prompt) return "";
-  return prompt
-    .replace(/[<>]/g, "")
-    .replace(/\n+/g, " ")
-    .trim()
-    .slice(0, 1000);
+  if (!prompt) return '';
+  return prompt.replace(/[<>]/g, '').replace(/\n+/g, ' ').trim().slice(0, 1000);
 }
 
 // sanitizeString replaced by sanitizeOutputString from ../lib/promptSanitizer
@@ -788,9 +846,9 @@ const sanitizeString = sanitizeOutputString;
  * Validate generation mode
  */
 function validateMode(mode: string): GenerationMode {
-  const valid: GenerationMode[] = ["exact_insert", "inspiration", "standard"];
+  const valid: GenerationMode[] = ['exact_insert', 'inspiration', 'standard'];
   const normalized = mode?.toLowerCase() as GenerationMode;
-  return valid.includes(normalized) ? normalized : "standard";
+  return valid.includes(normalized) ? normalized : 'standard';
 }
 
 // ============================================
@@ -836,16 +894,19 @@ async function generateTemplateSlotSuggestions(params: {
     maxSuggestions,
   });
 
-  const response = await generateContentWithRetry({
-    model: REASONING_MODEL,
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-    config: {
-      temperature: 0.7,
-      maxOutputTokens: 8000,
+  const response = await generateContentWithRetry(
+    {
+      model: REASONING_MODEL,
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      config: {
+        temperature: 0.7,
+        maxOutputTokens: 8000,
+      },
     },
-  }, { operation: 'idea_refinement' });
+    { operation: 'idea_refinement' },
+  );
 
-  const text = response.text || "";
+  const text = response.text || '';
   logger.info({ module: 'IdeaBankTemplate', responseLength: text.length }, 'LLM raw response received');
 
   // Parse JSON response
@@ -863,7 +924,7 @@ async function generateTemplateSlotSuggestions(params: {
 
   if (!jsonContent || !jsonContent.startsWith('[')) {
     logger.error({ module: 'IdeaBankTemplate', responseText: text }, 'Failed to parse response');
-    throw new Error("Failed to parse template slot suggestions response");
+    throw new Error('Failed to parse template slot suggestions response');
   }
 
   // Try to fix truncated JSON
@@ -901,14 +962,14 @@ async function generateTemplateSlotSuggestions(params: {
 
   // Transform and validate slot suggestions
   return rawSuggestions.slice(0, maxSuggestions).map((s) => ({
-    productHighlights: (s.productHighlights || []).slice(0, 5).map(h => sanitizeString(h)),
+    productHighlights: (s.productHighlights || []).slice(0, 5).map((h) => sanitizeString(h)),
     productPlacement: sanitizeString(s.productPlacement || 'center of frame'),
-    detailsToEmphasize: (s.detailsToEmphasize || []).slice(0, 5).map(d => sanitizeString(d)),
+    detailsToEmphasize: (s.detailsToEmphasize || []).slice(0, 5).map((d) => sanitizeString(d)),
     scaleReference: s.scaleReference ? sanitizeString(s.scaleReference) : undefined,
     headerText: s.headerText ? sanitizeString(s.headerText).slice(0, 60) : undefined,
     bodyText: s.bodyText ? sanitizeString(s.bodyText).slice(0, 150) : undefined,
     ctaSuggestion: s.ctaSuggestion ? sanitizeString(s.ctaSuggestion).slice(0, 30) : undefined,
-    colorHarmony: (s.colorHarmony || []).slice(0, 5).map(c => sanitizeString(c)),
+    colorHarmony: (s.colorHarmony || []).slice(0, 5).map((c) => sanitizeString(c)),
     lightingNotes: sanitizeString(s.lightingNotes || 'Natural lighting'),
     confidence: Math.min(100, Math.max(0, s.confidence || 70)),
     reasoning: sanitizeString(s.reasoning || 'Product-template compatibility analysis'),
@@ -977,8 +1038,8 @@ function buildTemplateSlotPrompt(params: {
 ## Product Analysis
 - Name: ${product.name}
 - Category: ${productAnalysis.category} / ${productAnalysis.subcategory}
-- Materials: ${productAnalysis.materials.join(", ") || "Not specified"}
-- Colors: ${productAnalysis.colors.join(", ") || "Not specified"}
+- Materials: ${productAnalysis.materials.join(', ') || 'Not specified'}
+- Colors: ${productAnalysis.colors.join(', ') || 'Not specified'}
 - Style: ${productAnalysis.style}
 - Usage Context: ${productAnalysis.usageContext}
 - Target Demographic: ${productAnalysis.targetDemographic}
@@ -989,7 +1050,7 @@ function buildTemplateSlotPrompt(params: {
   if (uploadDescriptions.length > 0) {
     prompt += `
 ## Additional Uploaded Images
-${uploadDescriptions.map((desc, i) => `${i + 1}. "${desc}"`).join("\n")}
+${uploadDescriptions.map((desc, i) => `${i + 1}. "${desc}"`).join('\n')}
 `;
   }
 
@@ -1006,11 +1067,49 @@ ${uploadDescriptions.map((desc, i) => `${i + 1}. "${desc}"`).join("\n")}
   // Add brand profile
   if (brandProfile) {
     prompt += `\n## Brand Guidelines
-- Brand: ${brandProfile.brandName || "Not specified"}
-- Industry: ${brandProfile.industry || "Not specified"}
-- Values: ${brandProfile.brandValues?.join(", ") || "Not specified"}
-- Preferred Styles: ${brandProfile.preferredStyles?.join(", ") || "Not specified"}
+- Brand: ${brandProfile.brandName || 'Not specified'}
+- Industry: ${brandProfile.industry || 'Not specified'}
+- Values: ${brandProfile.brandValues?.join(', ') || 'Not specified'}
+- Preferred Styles: ${brandProfile.preferredStyles?.join(', ') || 'Not specified'}
 `;
+
+    // Brand voice for template mode
+    const voice = brandProfile.voice as {
+      principles?: string[];
+      wordsToUse?: string[];
+      wordsToAvoid?: string[];
+    } | null;
+    if (voice) {
+      prompt += `\n### Brand Voice\n`;
+      if (voice.principles?.length) {
+        prompt += `- Voice Principles: ${voice.principles.join(', ')}\n`;
+      }
+      if (voice.wordsToUse?.length) {
+        prompt += `- Words to USE: ${voice.wordsToUse.join(', ')}\n`;
+      }
+      if (voice.wordsToAvoid?.length) {
+        prompt += `- Words to AVOID: ${voice.wordsToAvoid.join(', ')}\n`;
+      }
+    }
+
+    // Target audience for template mode
+    const audience = brandProfile.targetAudience as {
+      demographics?: string;
+      psychographics?: string;
+      painPoints?: string[];
+    } | null;
+    if (audience) {
+      prompt += `\n### Target Audience\n`;
+      if (audience.demographics) {
+        prompt += `- Demographics: ${audience.demographics}\n`;
+      }
+      if (audience.psychographics) {
+        prompt += `- Psychographics: ${audience.psychographics}\n`;
+      }
+      if (audience.painPoints?.length) {
+        prompt += `- Pain Points: ${audience.painPoints.join(', ')}\n`;
+      }
+    }
   }
 
   // Add KB context
@@ -1051,7 +1150,7 @@ Return ONLY the JSON array, no other text.`;
 function mergeTemplateWithInsights(
   template: TemplateContext,
   slotSuggestion: TemplateSlotSuggestion,
-  productName: string
+  productName: string,
 ): string {
   // Start with the template blueprint
   let mergedPrompt = template.promptBlueprint;
@@ -1105,7 +1204,7 @@ function mergeTemplateWithInsights(
  */
 export async function getMatchedTemplates(
   productId: string,
-  userId: string
+  userId: string,
 ): Promise<{ templates: AdSceneTemplate[]; analysis: VisionAnalysisResult } | null> {
   const product = await storage.getProductById(productId);
   if (!product) return null;
@@ -1140,19 +1239,21 @@ function buildGenerationRecipe(params: {
   }
 
   // Check if debug context should be included (env var gated)
-  const includeDebug = process.env.ENABLE_DEBUG_CONTEXT === "true";
+  const includeDebug = process.env.ENABLE_DEBUG_CONTEXT === 'true';
 
   // Build products array
-  const products: GenerationRecipeProduct[] = [{
-    id: product.id,
-    name: product.name,
-    category: product.category || undefined,
-    description: product.description || undefined,
-    imageUrls: product.cloudinaryUrl ? [product.cloudinaryUrl] : [],
-  }];
+  const products: GenerationRecipeProduct[] = [
+    {
+      id: product.id,
+      name: product.name,
+      category: product.category || undefined,
+      description: product.description || undefined,
+      imageUrls: product.cloudinaryUrl ? [product.cloudinaryUrl] : [],
+    },
+  ];
 
   // Build relationships array
-  const relationships: GenerationRecipeRelationship[] = enhancedContext.relatedProducts.map(rp => ({
+  const relationships: GenerationRecipeRelationship[] = enhancedContext.relatedProducts.map((rp) => ({
     sourceProductId: product.id,
     sourceProductName: product.name,
     targetProductId: rp.product.id,
@@ -1162,7 +1263,7 @@ function buildGenerationRecipe(params: {
   }));
 
   // Build scenarios array
-  const scenarios: GenerationRecipeScenario[] = enhancedContext.installationScenarios.map(s => ({
+  const scenarios: GenerationRecipeScenario[] = enhancedContext.installationScenarios.map((s) => ({
     id: s.id,
     title: s.title,
     description: s.description,
@@ -1172,29 +1273,34 @@ function buildGenerationRecipe(params: {
   }));
 
   // Build template info (first matched template if any)
-  const template = matchedTemplates.length > 0 ? {
-    id: matchedTemplates[0].id,
-    title: matchedTemplates[0].title,
-    category: matchedTemplates[0].category,
-    aspectRatio: matchedTemplates[0].aspectRatioHints?.[0],
-  } : undefined;
+  const template =
+    matchedTemplates.length > 0
+      ? {
+          id: matchedTemplates[0].id,
+          title: matchedTemplates[0].title,
+          category: matchedTemplates[0].category,
+          aspectRatio: matchedTemplates[0].aspectRatioHints?.[0],
+        }
+      : undefined;
 
   // Build brand images
-  const brandImages = enhancedContext.brandImages.map(bi => ({
+  const brandImages = enhancedContext.brandImages.map((bi) => ({
     id: bi.id,
     imageUrl: bi.cloudinaryUrl,
     category: bi.category,
   }));
 
   // Build brand voice
-  const brandVoice = brandProfile ? {
-    brandName: brandProfile.brandName || undefined,
-    industry: brandProfile.industry || undefined,
-    values: brandProfile.brandValues || undefined,
-  } : undefined;
+  const brandVoice = brandProfile
+    ? {
+        brandName: brandProfile.brandName || undefined,
+        industry: brandProfile.industry || undefined,
+        values: brandProfile.brandValues || undefined,
+      }
+    : undefined;
 
   const recipe: GenerationRecipe = {
-    version: "1.0",
+    version: '1.0',
     products,
     relationships,
     scenarios,
@@ -1205,7 +1311,7 @@ function buildGenerationRecipe(params: {
 
   // Add debug context if enabled
   if (includeDebug) {
-    const activeScenarios = scenarios.filter(s => s.isActive).length;
+    const activeScenarios = scenarios.filter((s) => s.isActive).length;
     recipe.debugContext = {
       relationshipsFound: relationships.length,
       scenariosFound: scenarios.length,
@@ -1233,9 +1339,10 @@ export async function invalidateIdeaCache(userId: string, productIds?: string[])
   try {
     // Build pattern to match user's cached suggestions
     // Pattern: ideas:{userId}:* matches all suggestions for this user
-    const pattern = productIds && productIds.length > 0
-      ? `ideas:${userId}:${[...productIds].sort().join(',')}:*`
-      : `ideas:${userId}:*`;
+    const pattern =
+      productIds && productIds.length > 0
+        ? `ideas:${userId}:${[...productIds].sort().join(',')}:*`
+        : `ideas:${userId}:*`;
 
     const deleted = await cache.invalidate(pattern);
     logger.info({ module: 'IdeaBank', userId, productIds, keysDeleted: deleted }, 'Idea cache invalidated');

@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { queryClient, apiRequest, getQueryFn, initializeCsrf } from '../queryClient';
+import { queryClient, apiRequest, getQueryFn, initializeCsrf, _resetCsrfToken } from '../queryClient';
 
 // ============================================
 // QueryClient Configuration Tests (20 tests)
@@ -60,6 +61,7 @@ describe('apiRequest', () => {
 
   beforeEach(() => {
     originalFetch = global.fetch;
+    _resetCsrfToken(); // Clear cached CSRF token between tests
   });
 
   afterEach(() => {
@@ -77,10 +79,13 @@ describe('apiRequest', () => {
 
       await apiRequest('GET', '/api/test');
 
-      expect(mockFetch).toHaveBeenCalledWith('/api/test', expect.objectContaining({
-        method: 'GET',
-        credentials: 'include',
-      }));
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/test',
+        expect.objectContaining({
+          method: 'GET',
+          credentials: 'include',
+        }),
+      );
       // GET requests should not have x-csrf-token header
       const callArgs = mockFetch.mock.calls[0];
       expect(callArgs?.[1]?.headers?.['x-csrf-token']).toBeUndefined();
@@ -92,16 +97,20 @@ describe('apiRequest', () => {
 
       await apiRequest('GET', '/api/test');
 
-      expect(mockFetch).toHaveBeenCalledWith('/api/test', expect.objectContaining({
-        credentials: 'include',
-      }));
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/test',
+        expect.objectContaining({
+          credentials: 'include',
+        }),
+      );
     });
   });
 
   describe('POST requests', () => {
     beforeEach(() => {
       // Mock CSRF token fetch
-      global.fetch = vi.fn()
+      global.fetch = vi
+        .fn()
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve({ csrfToken: 'test-csrf-token' }),
@@ -158,7 +167,8 @@ describe('apiRequest', () => {
     });
 
     it('retries with fresh CSRF token on 403', async () => {
-      const mockFetch = vi.fn()
+      const mockFetch = vi
+        .fn()
         // First CSRF fetch
         .mockResolvedValueOnce({
           ok: true,
@@ -201,7 +211,8 @@ describe('apiRequest', () => {
 
   describe('state-changing methods', () => {
     it('handles PUT requests with CSRF', async () => {
-      global.fetch = vi.fn()
+      global.fetch = vi
+        .fn()
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve({ csrfToken: 'csrf-token' }),
@@ -215,7 +226,8 @@ describe('apiRequest', () => {
     });
 
     it('handles DELETE requests with CSRF', async () => {
-      global.fetch = vi.fn()
+      global.fetch = vi
+        .fn()
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve({ csrfToken: 'csrf-token' }),
@@ -229,7 +241,8 @@ describe('apiRequest', () => {
     });
 
     it('handles PATCH requests with CSRF', async () => {
-      global.fetch = vi.fn()
+      global.fetch = vi
+        .fn()
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve({ csrfToken: 'csrf-token' }),
@@ -293,8 +306,7 @@ describe('getQueryFn', () => {
         text: () => Promise.resolve('Not authenticated'),
       });
 
-      await expect(queryFn({ queryKey: ['/api', 'protected'] } as any))
-        .rejects.toThrow('401: Not authenticated');
+      await expect(queryFn({ queryKey: ['/api', 'protected'] } as any)).rejects.toThrow('401: Not authenticated');
     });
 
     it('throws on 500 error', async () => {
@@ -305,8 +317,7 @@ describe('getQueryFn', () => {
         text: () => Promise.resolve('Server error'),
       });
 
-      await expect(queryFn({ queryKey: ['/api', 'test'] } as any))
-        .rejects.toThrow('500: Server error');
+      await expect(queryFn({ queryKey: ['/api', 'test'] } as any)).rejects.toThrow('500: Server error');
     });
 
     it('includes credentials in request', async () => {
@@ -357,8 +368,7 @@ describe('getQueryFn', () => {
         text: () => Promise.resolve('Access denied'),
       });
 
-      await expect(queryFn({ queryKey: ['/api', 'admin'] } as any))
-        .rejects.toThrow('403: Access denied');
+      await expect(queryFn({ queryKey: ['/api', 'admin'] } as any)).rejects.toThrow('403: Access denied');
     });
   });
 });
@@ -373,6 +383,7 @@ describe('initializeCsrf', () => {
 
   beforeEach(() => {
     originalFetch = global.fetch;
+    _resetCsrfToken(); // Clear cached CSRF token between tests
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
@@ -404,10 +415,7 @@ describe('initializeCsrf', () => {
 
     await initializeCsrf();
 
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'Failed to initialize CSRF token:',
-      expect.any(Error)
-    );
+    expect(consoleWarnSpy).toHaveBeenCalledWith('Failed to initialize CSRF token:', expect.any(Error));
   });
 
   it('handles 500 error gracefully', async () => {

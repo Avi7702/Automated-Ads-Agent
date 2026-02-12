@@ -117,6 +117,27 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
 
   return (
     <div className="space-y-6">
+      {/* Weekly Plan Context Banner */}
+      {orch.planContext && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                Creating from Weekly Plan — {orch.planContext.dayOfWeek} {orch.planContext.category.replace(/_/g, ' ')}
+              </p>
+              <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 line-clamp-2">{orch.planContext.briefing}</p>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => orch.clearPlanContext()}>
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        </motion.div>
+      )}
+
       {/* Quick Start */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}

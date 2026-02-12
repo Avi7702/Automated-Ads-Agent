@@ -1,4 +1,4 @@
-import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { QueryClient, QueryFunction } from '@tanstack/react-query';
 
 // CSRF token management - stored in memory for security (not localStorage)
 let csrfToken: string | null = null;
@@ -45,6 +45,12 @@ async function refreshCsrfToken(): Promise<string> {
   return fetchCsrfToken();
 }
 
+// Reset CSRF token state (for testing only)
+export function _resetCsrfToken(): void {
+  csrfToken = null;
+  csrfTokenPromise = null;
+}
+
 // Initialize CSRF token on app load
 export async function initializeCsrf(): Promise<void> {
   try {
@@ -62,11 +68,7 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-export async function apiRequest(
-  method: string,
-  url: string,
-  data?: unknown | undefined,
-): Promise<Response> {
+export async function apiRequest(method: string, url: string, data?: unknown | undefined): Promise<Response> {
   const isStateChanging = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method.toUpperCase());
 
   // Build headers
@@ -89,7 +91,7 @@ export async function apiRequest(
     method,
     headers,
     body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
+    credentials: 'include',
   });
 
   // Handle CSRF token expiration/mismatch - retry once with fresh token
@@ -102,7 +104,7 @@ export async function apiRequest(
         method,
         headers,
         body: data ? JSON.stringify(data) : undefined,
-        credentials: "include",
+        credentials: 'include',
       });
     } catch (refreshError) {
       console.error('Failed to refresh CSRF token:', refreshError);
@@ -114,17 +116,15 @@ export async function apiRequest(
   return res;
 }
 
-type UnauthorizedBehavior = "returnNull" | "throw";
-export const getQueryFn: <T>(options: {
-  on401: UnauthorizedBehavior;
-}) => QueryFunction<T> =
+type UnauthorizedBehavior = 'returnNull' | 'throw';
+export const getQueryFn: <T>(options: { on401: UnauthorizedBehavior }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
-      credentials: "include",
+    const res = await fetch(queryKey.join('/') as string, {
+      credentials: 'include',
     });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+    if (unauthorizedBehavior === 'returnNull' && res.status === 401) {
       return null;
     }
 
@@ -135,7 +135,7 @@ export const getQueryFn: <T>(options: {
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      queryFn: getQueryFn({ on401: "throw" }),
+      queryFn: getQueryFn({ on401: 'throw' }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
       staleTime: Infinity,

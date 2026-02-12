@@ -38,3 +38,11 @@ node_modules/
 e2e/.auth/user.json
 e2e/test-results/
 playwright-report/
+
+# Temp debug files
+tmp_*.json
+cookies*.txt
+*csrf_test*.txt
+*test_cookies*.txt
+*login_cookies*.txt
+nul

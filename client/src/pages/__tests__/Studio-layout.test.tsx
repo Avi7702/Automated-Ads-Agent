@@ -1,4 +1,5 @@
 // @ts-nocheck
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 // @vitest-environment jsdom
 /**
  * Studio Component Tests - Layout & Structure
@@ -30,43 +31,23 @@ vi.mock('@/components/layout/Header', () => ({
 }));
 
 vi.mock('@/components/IdeaBankPanel', () => ({
-  IdeaBankPanel: (props: any) => (
-    <div data-testid="mock-idea-bank-panel">
-      Mock Idea Bank Panel
-    </div>
-  ),
+  IdeaBankPanel: (props: any) => <div data-testid="mock-idea-bank-panel">Mock Idea Bank Panel</div>,
 }));
 
 vi.mock('@/components/LinkedInPostPreview', () => ({
-  LinkedInPostPreview: (props: any) => (
-    <div data-testid="mock-linkedin-preview">
-      Mock LinkedIn Preview
-    </div>
-  ),
+  LinkedInPostPreview: (props: any) => <div data-testid="mock-linkedin-preview">Mock LinkedIn Preview</div>,
 }));
 
 vi.mock('@/components/TemplateLibrary', () => ({
-  TemplateLibrary: (props: any) => (
-    <div data-testid="mock-template-library">
-      Mock Template Library
-    </div>
-  ),
+  TemplateLibrary: (props: any) => <div data-testid="mock-template-library">Mock Template Library</div>,
 }));
 
 vi.mock('@/components/UploadZone', () => ({
-  UploadZone: (props: any) => (
-    <div data-testid="mock-upload-zone">
-      Mock Upload Zone
-    </div>
-  ),
+  UploadZone: (props: any) => <div data-testid="mock-upload-zone">Mock Upload Zone</div>,
 }));
 
 vi.mock('@/components/HistoryTimeline', () => ({
-  HistoryTimeline: (props: any) => (
-    <div data-testid="mock-history-timeline">
-      Mock History Timeline
-    </div>
-  ),
+  HistoryTimeline: (props: any) => <div data-testid="mock-history-timeline">Mock History Timeline</div>,
 }));
 
 vi.mock('@/components/studio/HistoryPanel', () => ({
@@ -75,6 +56,18 @@ vi.mock('@/components/studio/HistoryPanel', () => ({
       Mock History Panel
     </div>
   ),
+}));
+
+vi.mock('@/components/studio/InspectorPanel', () => ({
+  InspectorPanel: (props: any) => <div data-testid="mock-inspector-panel">Mock Inspector Panel</div>,
+}));
+
+vi.mock('@/components/studio/IdeaBankBar', () => ({
+  IdeaBankBar: (props: any) => <div data-testid="mock-idea-bank-bar">Mock Idea Bank Bar</div>,
+}));
+
+vi.mock('@/components/studio/AgentChat', () => ({
+  AgentChatPanel: (props: any) => <div data-testid="mock-agent-chat">Mock Agent Chat</div>,
 }));
 
 vi.mock('@/components/SaveToCatalogDialog', () => ({
@@ -86,35 +79,19 @@ vi.mock('@/components/SaveToCatalogDialog', () => ({
 }));
 
 vi.mock('@/components/ContentPlannerGuidance', () => ({
-  ContentPlannerGuidance: (props: any) => (
-    <div data-testid="mock-content-planner">
-      Mock Content Planner
-    </div>
-  ),
+  ContentPlannerGuidance: (props: any) => <div data-testid="mock-content-planner">Mock Content Planner</div>,
 }));
 
 vi.mock('@/components/CarouselBuilder', () => ({
-  CarouselBuilder: (props: any) => (
-    <div data-testid="mock-carousel-builder">
-      Mock Carousel Builder
-    </div>
-  ),
+  CarouselBuilder: (props: any) => <div data-testid="mock-carousel-builder">Mock Carousel Builder</div>,
 }));
 
 vi.mock('@/components/BeforeAfterBuilder', () => ({
-  BeforeAfterBuilder: (props: any) => (
-    <div data-testid="mock-before-after-builder">
-      Mock Before After Builder
-    </div>
-  ),
+  BeforeAfterBuilder: (props: any) => <div data-testid="mock-before-after-builder">Mock Before After Builder</div>,
 }));
 
 vi.mock('@/components/TextOnlyMode', () => ({
-  TextOnlyMode: (props: any) => (
-    <div data-testid="mock-text-only-mode">
-      Mock Text Only Mode
-    </div>
-  ),
+  TextOnlyMode: (props: any) => <div data-testid="mock-text-only-mode">Mock Text Only Mode</div>,
 }));
 
 vi.mock('@/components/ErrorBoundary', () => ({
@@ -183,6 +160,15 @@ vi.mock('framer-motion', () => ({
   motion: {
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
     section: ({ children, ...props }: any) => <section {...props}>{children}</section>,
+    p: ({ children, ...props }: any) => <p {...props}>{children}</p>,
+    span: ({ children, ...props }: any) => <span {...props}>{children}</span>,
+    button: ({ children, ...props }: any) => <button {...props}>{children}</button>,
+    img: (props: any) => <img {...props} />,
+    h1: ({ children, ...props }: any) => <h1 {...props}>{children}</h1>,
+    h2: ({ children, ...props }: any) => <h2 {...props}>{children}</h2>,
+    nav: ({ children, ...props }: any) => <nav {...props}>{children}</nav>,
+    ul: ({ children, ...props }: any) => <ul {...props}>{children}</ul>,
+    li: ({ children, ...props }: any) => <li {...props}>{children}</li>,
   },
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
@@ -192,9 +178,15 @@ const mockLocalStorage = (() => {
   let store: Record<string, string> = {};
   return {
     getItem: (key: string) => store[key] ?? null,
-    setItem: (key: string, value: string) => { store[key] = value; },
-    removeItem: (key: string) => { delete store[key]; },
-    clear: () => { store = {}; },
+    setItem: (key: string, value: string) => {
+      store[key] = value;
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+    clear: () => {
+      store = {};
+    },
   };
 })();
 Object.defineProperty(window, 'localStorage', { value: mockLocalStorage });
@@ -215,11 +207,7 @@ function createWrapper() {
   });
 
   return function Wrapper({ children }: { children: React.ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
-    );
+    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
   };
 }
 
@@ -388,9 +376,10 @@ describe('Studio Component - Layout & Structure', () => {
       render(<Studio />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        // The mobile preview bar should be present in DOM
-        const mobilePreviewText = screen.getAllByText('LinkedIn Preview');
-        expect(mobilePreviewText.length).toBeGreaterThanOrEqual(1);
+        // The new Studio uses InspectorPanel instead of LinkedIn Preview.
+        // Verify the inspector panel mock is present in the DOM.
+        const inspectorPanel = screen.getByTestId('mock-inspector-panel');
+        expect(inspectorPanel).toBeInTheDocument();
       });
     });
 
@@ -398,8 +387,10 @@ describe('Studio Component - Layout & Structure', () => {
       render(<Studio />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        const linkedinPreviews = screen.getAllByTestId('mock-linkedin-preview');
-        expect(linkedinPreviews.length).toBeGreaterThanOrEqual(1);
+        // The new Studio replaced LinkedInPostPreview with InspectorPanel.
+        // Verify the inspector panel is rendered in the desktop layout.
+        const inspectorPanel = screen.getByTestId('mock-inspector-panel');
+        expect(inspectorPanel).toBeInTheDocument();
       });
     });
 
@@ -488,8 +479,10 @@ describe('Studio Component - Layout & Structure', () => {
 
       render(<Studio />, { wrapper: createWrapper() });
 
+      // The new Studio renders the "Your Products" section even when empty.
+      // The product grid is simply empty without a "No products found" message.
       await waitFor(() => {
-        expect(screen.getByText('No products found')).toBeInTheDocument();
+        expect(screen.getByText('Your Products')).toBeInTheDocument();
       });
     });
   });

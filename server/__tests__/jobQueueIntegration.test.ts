@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 /**
  * Job Queue Integration Tests
  *
@@ -27,12 +28,7 @@ import {
 } from '../jobs/types';
 
 // Use vi.hoisted to define mocks that will be available to vi.mock factories
-const {
-  mockStorage,
-  mockGeminiService,
-  mockCloudinary,
-  mockLogger,
-} = vi.hoisted(() => ({
+const { mockStorage, mockGeminiService, mockCloudinary, mockLogger } = vi.hoisted(() => ({
   mockStorage: {
     getGenerationById: vi.fn(),
     updateGeneration: vi.fn(),
@@ -67,6 +63,25 @@ vi.mock('../services/geminiService', () => ({
 
 vi.mock('cloudinary', () => ({
   v2: mockCloudinary,
+}));
+
+// Mock gemini.ts to prevent GoogleGenAI instantiation (requires API key)
+vi.mock('../lib/gemini', () => ({
+  genAI: { models: { generateContent: vi.fn() } },
+  createGeminiClient: vi.fn(),
+  getEnvApiKey: vi.fn(),
+}));
+
+// Mock geminiClient.ts to prevent transitive import of gemini.ts
+vi.mock('../lib/geminiClient', () => ({
+  generateContentWithRetry: vi.fn(),
+  getGlobalGeminiClient: vi.fn(),
+  setGlobalGeminiClient: vi.fn(),
+}));
+
+// Mock geminiVideoService to prevent transitive import of geminiClient
+vi.mock('../services/geminiVideoService', () => ({
+  generateVideo: vi.fn(),
 }));
 
 vi.mock('../lib/logger', () => ({
@@ -110,7 +125,7 @@ describe('Job Queue Integration Tests', () => {
       id: string;
       attemptsMade: number;
       opts: { timeout?: number };
-    }> = {}
+    }> = {},
   ): Job<T, GenerationJobResult> {
     return {
       id: options.id || `test-job-${Date.now()}`,
@@ -242,7 +257,7 @@ describe('Job Queue Integration Tests', () => {
       expect(mockGeminiService.continueConversation).toHaveBeenCalledWith(
         expect.any(Array),
         editJobData.editPrompt,
-        editJobData.userId
+        editJobData.userId,
       );
     });
 
@@ -277,7 +292,7 @@ describe('Job Queue Integration Tests', () => {
       expect(mockGeminiService.generateImage).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({ referenceImages: expect.any(Array) }),
-        variationJobData.userId
+        variationJobData.userId,
       );
     });
   });
@@ -310,9 +325,7 @@ describe('Job Queue Integration Tests', () => {
       });
 
       // Process all jobs concurrently
-      const results = await Promise.all(
-        jobs.map((job) => processGenerationJob(job))
-      );
+      const results = await Promise.all(jobs.map((job) => processGenerationJob(job)));
 
       // All jobs should complete successfully
       expect(results).toHaveLength(jobCount);
@@ -348,15 +361,10 @@ describe('Job Queue Integration Tests', () => {
           };
         });
 
-        return createMockJob(
-          { ...baseGenerateJobData, generationId: genId },
-          { id: `conflict-test-job-${i}` }
-        );
+        return createMockJob({ ...baseGenerateJobData, generationId: genId }, { id: `conflict-test-job-${i}` });
       });
 
-      const results = await Promise.all(
-        jobs.map((job) => processGenerationJob(job))
-      );
+      const results = await Promise.all(jobs.map((job) => processGenerationJob(job)));
 
       // Track unique generation IDs processed
       results.forEach((result) => {
@@ -384,20 +392,13 @@ describe('Job Queue Integration Tests', () => {
       }));
 
       const jobs = Array.from({ length: jobCount }, (_, i) =>
-        createMockJob(
-          { ...baseGenerateJobData, generationId: 4000 + i },
-          { id: `complete-test-${i}` }
-        )
+        createMockJob({ ...baseGenerateJobData, generationId: 4000 + i }, { id: `complete-test-${i}` }),
       );
 
-      const results = await Promise.all(
-        jobs.map((job) => processGenerationJob(job))
-      );
+      const results = await Promise.all(jobs.map((job) => processGenerationJob(job)));
 
       // All should be completed
-      const completedCount = results.filter(
-        (r) => r.status === JobStatus.COMPLETED
-      ).length;
+      const completedCount = results.filter((r) => r.status === JobStatus.COMPLETED).length;
       expect(completedCount).toBe(jobCount);
 
       // All should have image URLs
@@ -436,9 +437,7 @@ describe('Job Queue Integration Tests', () => {
 
       // Verify database was updated with failed status
       const updateCalls = mockStorage.updateGeneration.mock.calls;
-      const failedUpdate = updateCalls.find(
-        (call) => call[1].status === 'failed'
-      );
+      const failedUpdate = updateCalls.find((call) => call[1].status === 'failed');
 
       expect(failedUpdate).toBeDefined();
       expect(failedUpdate![0]).toBe(baseGenerateJobData.generationId);
@@ -473,9 +472,7 @@ describe('Job Queue Integration Tests', () => {
         createMockJob({ ...baseGenerateJobData, generationId: 5003 }, { id: 'success-job-2' }),
       ];
 
-      const results = await Promise.all(
-        jobs.map((job) => processGenerationJob(job))
-      );
+      const results = await Promise.all(jobs.map((job) => processGenerationJob(job)));
 
       // First job failed
       expect(results[0].status).toBe(JobStatus.FAILED);
@@ -498,9 +495,7 @@ describe('Job Queue Integration Tests', () => {
     });
 
     it('should handle Cloudinary upload failures', async () => {
-      mockCloudinary.uploader.upload.mockRejectedValue(
-        new Error('Cloudinary: insufficient storage quota')
-      );
+      mockCloudinary.uploader.upload.mockRejectedValue(new Error('Cloudinary: insufficient storage quota'));
 
       const job = createMockJob(baseGenerateJobData, { id: 'cloudinary-fail-job' });
 
@@ -898,11 +893,7 @@ describe('Job Queue Integration Tests', () => {
       const result = await processGenerationJob(job);
 
       expect(result.status).toBe(JobStatus.COMPLETED);
-      expect(mockGeminiService.generateImage).toHaveBeenCalledWith(
-        longPrompt,
-        expect.any(Object),
-        expect.any(String)
-      );
+      expect(mockGeminiService.generateImage).toHaveBeenCalledWith(longPrompt, expect.any(Object), expect.any(String));
     });
 
     it('should handle special characters in prompts', async () => {
@@ -931,9 +922,7 @@ describe('Job Queue Integration Tests', () => {
     });
 
     it('should handle all supported aspect ratios', async () => {
-      const aspectRatios: Array<'1:1' | '16:9' | '9:16' | '4:3' | '3:4'> = [
-        '1:1', '16:9', '9:16', '4:3', '3:4',
-      ];
+      const aspectRatios: Array<'1:1' | '16:9' | '9:16' | '4:3' | '3:4'> = ['1:1', '16:9', '9:16', '4:3', '3:4'];
 
       for (const aspectRatio of aspectRatios) {
         const jobData: GenerateJobData = {
@@ -960,7 +949,7 @@ describe('Job Queue Integration Tests', () => {
         expect(mockGeminiService.generateImage).toHaveBeenCalledWith(
           expect.any(String),
           expect.objectContaining({ aspectRatio }),
-          expect.any(String)
+          expect.any(String),
         );
       }
     });
@@ -1111,10 +1100,7 @@ describe('Job Queue Integration Tests', () => {
 
     it('should complete cleanly without memory leaks (no lingering promises)', async () => {
       const jobs = Array.from({ length: 10 }, (_, i) =>
-        createMockJob(
-          { ...baseGenerateJobData, generationId: 8000 + i },
-          { id: `memory-test-job-${i}` }
-        )
+        createMockJob({ ...baseGenerateJobData, generationId: 8000 + i }, { id: `memory-test-job-${i}` }),
       );
 
       mockStorage.getGenerationById.mockImplementation((id: string) => ({
@@ -1128,9 +1114,7 @@ describe('Job Queue Integration Tests', () => {
       }));
 
       // Process all jobs
-      const results = await Promise.all(
-        jobs.map((job) => processGenerationJob(job))
-      );
+      const results = await Promise.all(jobs.map((job) => processGenerationJob(job)));
 
       // All should complete
       expect(results.length).toBe(10);
@@ -1219,7 +1203,7 @@ describe('Job Queue Integration Tests', () => {
       expect(mockGeminiService.generateImage).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({ referenceImages: expect.any(Array) }),
-        expect.any(String)
+        expect.any(String),
       );
     });
 

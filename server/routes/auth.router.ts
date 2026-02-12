@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 /**
  * Auth Router
  * Authentication endpoints for user registration, login, and session management
@@ -23,112 +24,118 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
   /**
    * POST /register - Register a new user account
    */
-  router.post('/register', asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const { email, password } = req.body;
+  router.post(
+    '/register',
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const { email, password } = req.body;
 
-      if (!email || !password) {
-        return res.status(400).json({ error: 'Email and password required' });
+        if (!email || !password) {
+          return res.status(400).json({ error: 'Email and password required' });
+        }
+
+        if (password.length < 8) {
+          return res.status(400).json({ error: 'Password must be at least 8 characters' });
+        }
+
+        const existingUser = await storage.getUserByEmail(email);
+        if (existingUser) {
+          return res.status(409).json({ error: 'User already exists' });
+        }
+
+        const hashedPassword = await authService.hashPassword(password);
+        const user = await storage.createUser(email, hashedPassword);
+
+        (req as any).session.userId = user.id;
+
+        telemetry.trackAuth({
+          action: 'register',
+          success: true,
+          userId: user.id,
+        });
+
+        res.json({ id: user.id, email: user.email });
+      } catch (error: any) {
+        logger.error({ module: 'Auth', action: 'register', err: error }, 'Registration error');
+
+        telemetry.trackAuth({
+          action: 'register',
+          success: false,
+          reason: error.message,
+        });
+
+        res.status(500).json({ error: 'Registration failed' });
       }
-
-      if (password.length < 8) {
-        return res.status(400).json({ error: 'Password must be at least 8 characters' });
-      }
-
-      const existingUser = await storage.getUserByEmail(email);
-      if (existingUser) {
-        return res.status(409).json({ error: 'User already exists' });
-      }
-
-      const hashedPassword = await authService.hashPassword(password);
-      const user = await storage.createUser(email, hashedPassword);
-
-      (req as any).session.userId = user.id;
-
-      telemetry.trackAuth({
-        action: 'register',
-        success: true,
-        userId: user.id,
-      });
-
-      res.json({ id: user.id, email: user.email });
-    } catch (error: any) {
-      logger.error({ module: 'Auth', action: 'register', err: error }, 'Registration error');
-
-      telemetry.trackAuth({
-        action: 'register',
-        success: false,
-        reason: error.message,
-      });
-
-      res.status(500).json({ error: 'Registration failed' });
-    }
-  }));
+    }),
+  );
 
   /**
    * POST /login - Login existing user
    */
-  router.post('/login', asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const { email, password } = req.body;
+  router.post(
+    '/login',
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const { email, password } = req.body;
 
-      if (!email || !password) {
-        return res.status(400).json({ error: 'Email and password required' });
-      }
+        if (!email || !password) {
+          return res.status(400).json({ error: 'Email and password required' });
+        }
 
-      // Check lockout
-      if (await authService.isLockedOut(email)) {
-        const remaining = await authService.getLockoutTimeRemaining(email);
-        return res.status(429).json({
-          error: 'Too many failed attempts. Try again later.',
-          retryAfter: remaining
+        // Check lockout
+        if (await authService.isLockedOut(email)) {
+          const remaining = await authService.getLockoutTimeRemaining(email);
+          return res.status(429).json({
+            error: 'Too many failed attempts. Try again later.',
+            retryAfter: remaining,
+          });
+        }
+
+        const user = await storage.getUserByEmail(email);
+        if (!user) {
+          await authService.recordFailedLogin(email);
+          telemetry.trackAuth({
+            action: 'login',
+            success: false,
+            reason: 'user_not_found',
+          });
+          return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
+        const valid = await authService.comparePassword(password, user.passwordHash || user.password);
+        if (!valid) {
+          await authService.recordFailedLogin(email);
+          telemetry.trackAuth({
+            action: 'login',
+            success: false,
+            reason: 'invalid_password',
+          });
+          return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
+        await authService.clearFailedLogins(email);
+        (req as any).session.userId = user.id;
+
+        telemetry.trackAuth({
+          action: 'login',
+          success: true,
+          userId: user.id,
         });
-      }
 
-      const user = await storage.getUserByEmail(email);
-      if (!user) {
-        await authService.recordFailedLogin(email);
+        res.json({ id: user.id, email: user.email });
+      } catch (error: any) {
+        logger.error({ module: 'Auth', action: 'login', err: error }, 'Login error');
+
         telemetry.trackAuth({
           action: 'login',
           success: false,
-          reason: 'user_not_found',
+          reason: error.message,
         });
-        return res.status(401).json({ error: 'Invalid credentials' });
+
+        res.status(500).json({ error: 'Login failed' });
       }
-
-      const valid = await authService.comparePassword(password, user.passwordHash || user.password);
-      if (!valid) {
-        await authService.recordFailedLogin(email);
-        telemetry.trackAuth({
-          action: 'login',
-          success: false,
-          reason: 'invalid_password',
-        });
-        return res.status(401).json({ error: 'Invalid credentials' });
-      }
-
-      await authService.clearFailedLogins(email);
-      (req as any).session.userId = user.id;
-
-      telemetry.trackAuth({
-        action: 'login',
-        success: true,
-        userId: user.id,
-      });
-
-      res.json({ id: user.id, email: user.email });
-    } catch (error: any) {
-      logger.error({ module: 'Auth', action: 'login', err: error }, 'Login error');
-
-      telemetry.trackAuth({
-        action: 'login',
-        success: false,
-        reason: error.message,
-      });
-
-      res.status(500).json({ error: 'Login failed' });
-    }
-  }));
+    }),
+  );
 
   /**
    * POST /logout - Logout current user
@@ -146,49 +153,61 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
    * GET /me - Get current authenticated user
    * Returns 200 with authenticated: false if not logged in (no 401 in console)
    */
-  router.get('/me', asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const userId = (req as any).session?.userId;
+  router.get(
+    '/me',
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const userId = (req as any).session?.userId;
 
-      // Not authenticated - return 200 with authenticated: false (no console error)
-      if (!userId) {
-        return res.json({ authenticated: false });
+        // Not authenticated - return 200 with authenticated: false (no console error)
+        if (!userId) {
+          return res.json({ authenticated: false });
+        }
+
+        const user = await storage.getUserById(userId);
+        if (!user) {
+          // Session refers to non-existent user
+          return res.json({ authenticated: false });
+        }
+
+        res.json({ authenticated: true, id: user.id, email: user.email });
+      } catch (error: any) {
+        logger.error({ module: 'Auth', action: 'me', err: error }, 'Get user error');
+        res.status(500).json({ error: 'Failed to get user' });
       }
-
-      const user = await storage.getUserById(userId);
-      if (!user) {
-        // Session refers to non-existent user
-        return res.json({ authenticated: false });
-      }
-
-      res.json({ authenticated: true, id: user.id, email: user.email });
-    } catch (error: any) {
-      logger.error({ module: 'Auth', action: 'me', err: error }, 'Get user error');
-      res.status(500).json({ error: 'Failed to get user' });
-    }
-  }));
+    }),
+  );
 
   /**
    * GET /demo - Auto-login as demo user for single-tenant mode
+   * Disabled in production unless ENABLE_DEMO_MODE=true
    */
-  router.get('/demo', asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const demoEmail = 'demo@company.com';
-      let user = await storage.getUserByEmail(demoEmail);
+  router.get(
+    '/demo',
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        // BUG-013 fix: Block demo endpoint in production unless explicitly enabled
+        if (process.env.NODE_ENV === 'production' && process.env.ENABLE_DEMO_MODE !== 'true') {
+          return res.status(404).json({ error: 'Not found' });
+        }
 
-      if (!user) {
-        // Create demo user if doesn't exist
-        const hashedPassword = await authService.hashPassword('demo123');
-        user = await storage.createUser(demoEmail, hashedPassword);
+        const demoEmail = 'demo@company.com';
+        let user = await storage.getUserByEmail(demoEmail);
+
+        if (!user) {
+          // Create demo user if doesn't exist
+          const hashedPassword = await authService.hashPassword('demo123');
+          user = await storage.createUser(demoEmail, hashedPassword);
+        }
+
+        (req as any).session.userId = user.id;
+        res.json({ id: user.id, email: user.email, isDemo: true });
+      } catch (error: any) {
+        logger.error({ module: 'Auth', action: 'demo', err: error }, 'Demo login error');
+        res.status(500).json({ error: 'Demo login failed' });
       }
-
-      (req as any).session.userId = user.id;
-      res.json({ id: user.id, email: user.email, isDemo: true });
-    } catch (error: any) {
-      logger.error({ module: 'Auth', action: 'demo', err: error }, 'Demo login error');
-      res.status(500).json({ error: 'Demo login failed' });
-    }
-  }));
+    }),
+  );
 
   return router;
 };
@@ -199,5 +218,5 @@ export const authRouterModule: RouterModule = {
   description: 'User authentication and session management',
   endpointCount: 5,
   requiresAuth: false,
-  tags: ['authentication', 'users']
+  tags: ['authentication', 'users'],
 };

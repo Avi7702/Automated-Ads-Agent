@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Use vi.hoisted to define mocks that will be available to vi.mock factories
@@ -20,11 +21,7 @@ vi.mock('../storage', () => ({
 }));
 
 // Import the service after mocks are set up
-import {
-  checkContentSafety,
-  type SafetyChecks,
-  type CheckSafetyParams,
-} from '../services/contentSafetyService';
+import { checkContentSafety, type SafetyChecks, type CheckSafetyParams } from '../services/contentSafetyService';
 import type { BrandProfile } from '@shared/schema';
 
 describe('ContentSafetyService', () => {
@@ -219,11 +216,12 @@ describe('ContentSafetyService', () => {
 
       const result = await checkContentSafety(params);
 
-      // Should default to PASS on Gemini failure
-      expect(result.hateSpeech).toBe(true);
-      expect(result.violence).toBe(true);
-      expect(result.sexualContent).toBe(true);
-      expect(result.brandSafetyScore).toBe(100);
+      // Fail-CLOSED: On Gemini failure, defaults to BLOCK (all flags false = unsafe)
+      // unless SAFETY_FAIL_OPEN=true in non-production
+      expect(result.hateSpeech).toBe(false);
+      expect(result.violence).toBe(false);
+      expect(result.sexualContent).toBe(false);
+      expect(result.brandSafetyScore).toBe(0);
     });
 
     it('should handle missing brand profile gracefully', async () => {

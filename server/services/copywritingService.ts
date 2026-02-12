@@ -4,6 +4,7 @@ import type { GenerateCopyInput } from '../validation/schemas';
 import { getFileSearchStoreForGeneration, queryFileSearchStore, FileCategory } from './fileSearchService';
 import { sanitizeForPrompt } from '../lib/promptSanitizer';
 import { safeParseLLMResponse, generatedCopySchema } from '../validation/llmResponseSchemas';
+import { productKnowledgeService, type EnhancedProductContext } from './productKnowledgeService';
 
 // Platform character limits (2025 standards)
 interface PlatformLimits {
@@ -79,12 +80,34 @@ class CopywritingService {
 
   /**
    * Generate ad copy with multiple variations using PTCF prompt framework
+   *
+   * @param request - The validated copy generation input
+   * @param options - Optional enrichment: productId + userId to auto-fetch product knowledge
    */
-  async generateCopy(request: GenerateCopyInput): Promise<GeneratedCopy[]> {
+  async generateCopy(
+    request: GenerateCopyInput,
+    options?: { productId?: string; userId?: string },
+  ): Promise<GeneratedCopy[]> {
+    // Build enhanced product context if productId + userId are provided
+    let enhancedContext: EnhancedProductContext | null = null;
+    if (options?.productId && options?.userId) {
+      try {
+        enhancedContext = await productKnowledgeService.buildEnhancedContext(options.productId, options.userId);
+        if (enhancedContext) {
+          logger.info(
+            { module: 'Copywriting', productId: options.productId },
+            'Enhanced product context loaded for copy generation',
+          );
+        }
+      } catch (err) {
+        logger.warn({ module: 'Copywriting', err }, 'Failed to load enhanced product context, continuing without it');
+      }
+    }
+
     const variations: GeneratedCopy[] = [];
 
     for (let i = 0; i < request.variations; i++) {
-      const copy = await this.generateSingleCopy(request, i + 1);
+      const copy = await this.generateSingleCopy(request, i + 1, enhancedContext);
       variations.push(copy);
     }
 
@@ -94,7 +117,11 @@ class CopywritingService {
   /**
    * Generate a single copy variation with RAG enhancement
    */
-  async generateSingleCopy(request: GenerateCopyInput, variationNumber: number): Promise<GeneratedCopy> {
+  async generateSingleCopy(
+    request: GenerateCopyInput,
+    variationNumber: number,
+    enhancedContext?: EnhancedProductContext | null,
+  ): Promise<GeneratedCopy> {
     // STEP 1: Retrieve relevant context from File Search Store (RAG)
     let ragContext = '';
     let citations: any[] = [];
@@ -125,8 +152,8 @@ class CopywritingService {
       // Continue without RAG if File Search fails - graceful degradation
     }
 
-    // STEP 2: Build enhanced prompt with RAG context
-    const prompt = this.buildPTCFPromptWithRAG(request, variationNumber, ragContext);
+    // STEP 2: Build enhanced prompt with RAG context and product knowledge
+    const prompt = this.buildPTCFPromptWithRAG(request, variationNumber, ragContext, enhancedContext);
 
     // STEP 3: Generate with File Search tool enabled
     // Configure with File Search tool if available
@@ -276,9 +303,14 @@ ${variationNumber === 3 ? '- Focus on urgency and scarcity' : ''}
   }
 
   /**
-   * Build PTCF prompt with RAG context (enhanced version)
+   * Build PTCF prompt with RAG context and product knowledge (enhanced version)
    */
-  private buildPTCFPromptWithRAG(request: GenerateCopyInput, variationNumber: number, ragContext: string): string {
+  private buildPTCFPromptWithRAG(
+    request: GenerateCopyInput,
+    variationNumber: number,
+    ragContext: string,
+    enhancedContext?: EnhancedProductContext | null,
+  ): string {
     const limits = PLATFORM_LIMITS[request.platform];
 
     // PERSONA
@@ -292,10 +324,10 @@ ${variationNumber === 3 ? '- Focus on urgency and scarcity' : ''}
 
     const task = `Write compelling ad copy variation #${variationNumber} for a ${request.platform} advertisement using ${framework} framework. This copy must grab attention in 3-8 seconds, resonate with the target audience, and drive them to take action.`;
 
-    // RAG CONTEXT (NEW!)
+    // RAG CONTEXT
     const ragSection = ragContext
       ? `
-📚 REFERENCE MATERIALS FROM KNOWLEDGE BASE:
+REFERENCE MATERIALS FROM KNOWLEDGE BASE:
 ${ragContext}
 
 IMPORTANT: Use these reference materials as inspiration and context, but do NOT copy them directly. Adapt the successful patterns, hooks, and approaches to match THIS specific product and audience.
@@ -304,7 +336,86 @@ IMPORTANT: Use these reference materials as inspiration and context, but do NOT 
 
     const s = (v: string) => sanitizeForPrompt(v, { maxLength: 500, context: 'copy_ptcf_rag' });
 
-    // CONTEXT (same as before, with sanitization)
+    // PRODUCT KNOWLEDGE SECTION — enriched from productKnowledgeService
+    let productKnowledgeSection = '';
+    if (enhancedContext) {
+      const pkParts: string[] = [];
+
+      // Product features (key-value pairs from product DB)
+      const features = enhancedContext.product.features;
+      if (features && typeof features === 'object' && Object.keys(features).length > 0) {
+        const featureLines = Object.entries(features)
+          .slice(0, 10)
+          .map(([k, v]) => `  - ${k}: ${v}`)
+          .join('\n');
+        pkParts.push(`Product Features:\n${featureLines}`);
+      }
+
+      // Product specifications
+      const specs = enhancedContext.product.specifications;
+      if (specs && typeof specs === 'object' && Object.keys(specs).length > 0) {
+        const specLines = Object.entries(specs)
+          .slice(0, 10)
+          .map(([k, v]) => `  - ${k}: ${v}`)
+          .join('\n');
+        pkParts.push(`Technical Specifications:\n${specLines}`);
+      }
+
+      // Product benefits (from DB, supplement what caller may have already provided)
+      const dbBenefits = enhancedContext.product.benefits;
+      if (dbBenefits && dbBenefits.length > 0) {
+        pkParts.push(`Product Benefits: ${dbBenefits.slice(0, 6).join(', ')}`);
+      }
+
+      // Product category and tags
+      if (enhancedContext.product.category) {
+        pkParts.push(`Product Category: ${enhancedContext.product.category}`);
+      }
+      if (enhancedContext.product.tags && enhancedContext.product.tags.length > 0) {
+        pkParts.push(`Product Tags: ${enhancedContext.product.tags.slice(0, 8).join(', ')}`);
+      }
+
+      // Enrichment draft data (AI-scraped info like use cases, installation context)
+      const draft = enhancedContext.product.enrichmentDraft as Record<string, unknown> | undefined;
+      if (draft && typeof draft === 'object') {
+        if (draft['installationContext']) {
+          pkParts.push(`Installation Context: ${s(String(draft['installationContext']))}`);
+        }
+        const useCases = draft['useCases'];
+        if (Array.isArray(useCases) && useCases.length > 0) {
+          pkParts.push(`Real-World Use Cases: ${(useCases as string[]).slice(0, 5).join(', ')}`);
+        }
+      }
+
+      // Related products (complementary/pairs with)
+      if (enhancedContext.relatedProducts.length > 0) {
+        const relatedLines = enhancedContext.relatedProducts
+          .slice(0, 4)
+          .map(
+            (rp) =>
+              `  - ${rp.product.name} (${rp.relationshipType}${rp.relationshipDescription ? ': ' + rp.relationshipDescription : ''})`,
+          )
+          .join('\n');
+        pkParts.push(`Related Products (can reference in copy for cross-sell / bundling):\n${relatedLines}`);
+      }
+
+      // Installation scenarios
+      if (enhancedContext.installationScenarios.length > 0) {
+        const scenarioLines = enhancedContext.installationScenarios
+          .slice(0, 3)
+          .map((sc) => `  - ${sc.title}: ${sc.description.slice(0, 120)}`)
+          .join('\n');
+        pkParts.push(
+          `Installation / Usage Scenarios (can reference for how-to or educational copy):\n${scenarioLines}`,
+        );
+      }
+
+      if (pkParts.length > 0) {
+        productKnowledgeSection = `\nDEEP PRODUCT KNOWLEDGE (use this to write specific, accurate copy — never invent product details):\n${pkParts.join('\n\n')}\n`;
+      }
+    }
+
+    // CONTEXT (core request data, with sanitization)
     const context = `
 PRODUCT INFORMATION:
 - Name: ${s(request.productName)}
@@ -312,7 +423,7 @@ PRODUCT INFORMATION:
 ${request.productBenefits ? `- Key Benefits: ${request.productBenefits.map(s).join(', ')}` : ''}
 ${request.uniqueValueProp ? `- Unique Value: ${s(request.uniqueValueProp)}` : ''}
 - Industry: ${s(request.industry)}
-
+${productKnowledgeSection}
 ${request.campaignObjective ? `CAMPAIGN GOAL: ${s(request.campaignObjective).toUpperCase()}` : ''}
 
 TARGET AUDIENCE:

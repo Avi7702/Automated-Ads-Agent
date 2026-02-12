@@ -1,31 +1,33 @@
-import { Switch, Route, Redirect } from "wouter";
-import { lazy, Suspense, useEffect } from "react";
-import { queryClient, initializeCsrf } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { ThemeProvider } from "next-themes";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as SonnerToaster } from "sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { PWAUpdatePrompt } from "@/components/PWAUpdatePrompt";
+import { Switch, Route, Redirect } from 'wouter';
+import { lazy, Suspense, useEffect } from 'react';
+import { queryClient, initializeCsrf } from './lib/queryClient';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { ThemeProvider } from 'next-themes';
+import { Toaster } from '@/components/ui/toaster';
+import { Toaster as SonnerToaster } from 'sonner';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { PWAUpdatePrompt } from '@/components/PWAUpdatePrompt';
+import { GlobalChatButton } from '@/components/chat/GlobalChatButton';
+import { OnboardingGate } from '@/components/onboarding/OnboardingGate';
 
 // Eager load only critical pages
-import Login from "@/pages/Login";
-import Studio from "@/pages/Studio";
+import Login from '@/pages/Login';
+import Studio from '@/pages/Studio';
 
 // Optimized Studio (memoized components) - for A/B testing
-const StudioOptimized = lazy(() => import("@/pages/StudioOptimized"));
+const StudioOptimized = lazy(() => import('@/pages/StudioOptimized'));
 
 // Lazy load all other pages to reduce initial bundle size
-const GalleryPage = lazy(() => import("@/pages/GalleryPage"));
-const Pipeline = lazy(() => import("@/pages/Pipeline"));
-const Library = lazy(() => import("@/pages/Library"));
-const Settings = lazy(() => import("@/pages/Settings"));
-const TemplateAdmin = lazy(() => import("@/pages/TemplateAdmin"));
-const SystemMap = lazy(() => import("@/pages/SystemMap"));
-const NotFound = lazy(() => import("@/pages/not-found"));
+const GalleryPage = lazy(() => import('@/pages/GalleryPage'));
+const Pipeline = lazy(() => import('@/pages/Pipeline'));
+const Library = lazy(() => import('@/pages/Library'));
+const Settings = lazy(() => import('@/pages/Settings'));
+const TemplateAdmin = lazy(() => import('@/pages/TemplateAdmin'));
+const SystemMap = lazy(() => import('@/pages/SystemMap'));
+const NotFound = lazy(() => import('@/pages/not-found'));
 
 // Loading fallback component
 function PageLoader() {
@@ -99,9 +101,7 @@ function Router() {
       </Route>
 
       {/* Legacy routes → Studio / Settings */}
-      <Route path="/generation/:id">
-        {(params: { id: string }) => <Redirect to={`/?generation=${params.id}`} />}
-      </Route>
+      <Route path="/generation/:id">{(params: { id: string }) => <Redirect to={`/?generation=${params.id}`} />}</Route>
 
       <Route path="/usage">
         <Redirect to="/settings?section=usage" />
@@ -194,12 +194,15 @@ function App() {
                 position="bottom-right"
                 toastOptions={{
                   duration: 3000,
-                  className: 'font-sans'
+                  className: 'font-sans',
                 }}
               />
-              <main id="main-content">
-                <Router />
-              </main>
+              <OnboardingGate>
+                <main id="main-content">
+                  <Router />
+                </main>
+              </OnboardingGate>
+              <GlobalChatButton />
               <PWAUpdatePrompt />
             </TooltipProvider>
           </AuthProvider>

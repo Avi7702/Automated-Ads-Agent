@@ -8,7 +8,7 @@
 
 import { memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -31,6 +31,7 @@ import {
   Copy,
   Wand2,
   Volume2,
+  ArrowLeft,
 } from 'lucide-react';
 import { speakText } from '@/hooks/useVoiceInput';
 import { CanvasEditor } from '@/components/studio/CanvasEditor/CanvasEditor';
@@ -41,10 +42,25 @@ interface ResultViewEnhancedProps {
 }
 
 export const ResultViewEnhanced = memo(function ResultViewEnhanced({ orch }: ResultViewEnhancedProps) {
+  const [, setLocation] = useLocation();
+
   if (!orch.generatedImage) return null;
 
   return (
     <motion.div id="result" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+      {/* Plan Context Banner */}
+      {orch.planContext && (
+        <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-3 flex items-center justify-between">
+          <p className="text-sm text-green-800 dark:text-green-200">
+            Generated for Weekly Plan — {orch.planContext.dayOfWeek} {orch.planContext.category.replace(/_/g, ' ')}
+          </p>
+          <Button variant="outline" size="sm" onClick={() => setLocation('/pipeline?tab=dashboard')}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Plan
+          </Button>
+        </div>
+      )}
+
       {/* Result Header */}
       <div className="flex items-center justify-between">
         <Button variant="ghost" onClick={orch.handleReset}>

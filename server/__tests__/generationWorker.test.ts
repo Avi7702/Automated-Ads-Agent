@@ -23,11 +23,7 @@ import {
 } from '../jobs/types';
 
 // Use vi.hoisted to define mocks that will be available to vi.mock factories
-const {
-  mockStorage,
-  mockGeminiService,
-  mockCloudinary,
-} = vi.hoisted(() => ({
+const { mockStorage, mockGeminiService, mockCloudinary } = vi.hoisted(() => ({
   mockStorage: {
     getGenerationById: vi.fn(),
     updateGeneration: vi.fn(),
@@ -56,6 +52,25 @@ vi.mock('cloudinary', () => ({
   v2: mockCloudinary,
 }));
 
+// Mock gemini.ts to prevent GoogleGenAI instantiation (requires API key)
+vi.mock('../lib/gemini', () => ({
+  genAI: { models: { generateContent: vi.fn() } },
+  createGeminiClient: vi.fn(),
+  getEnvApiKey: vi.fn(),
+}));
+
+// Mock geminiClient.ts to prevent transitive import of gemini.ts
+vi.mock('../lib/geminiClient', () => ({
+  generateContentWithRetry: vi.fn(),
+  getGlobalGeminiClient: vi.fn(),
+  setGlobalGeminiClient: vi.fn(),
+}));
+
+// Mock geminiVideoService to prevent transitive import of geminiClient
+vi.mock('../services/geminiVideoService', () => ({
+  generateVideo: vi.fn(),
+}));
+
 vi.mock('../lib/logger', () => ({
   logger: {
     info: vi.fn(),
@@ -82,7 +97,7 @@ describe('Generation Worker', () => {
       id: string;
       attemptsMade: number;
       opts: { timeout?: number };
-    }> = {}
+    }> = {},
   ): Job<T, GenerationJobResult> {
     return {
       id: options.id || 'test-job-123',
@@ -181,7 +196,7 @@ describe('Generation Worker', () => {
         expect.objectContaining({
           aspectRatio: baseGenerateJobData.aspectRatio,
         }),
-        baseGenerateJobData.userId
+        baseGenerateJobData.userId,
       );
 
       // Verify Cloudinary upload was called
@@ -189,7 +204,7 @@ describe('Generation Worker', () => {
         expect.stringContaining('data:image/png;base64,'),
         expect.objectContaining({
           folder: expect.any(String),
-        })
+        }),
       );
     });
 
@@ -203,7 +218,7 @@ describe('Generation Worker', () => {
         456,
         expect.objectContaining({
           status: 'processing',
-        })
+        }),
       );
     });
 
@@ -218,7 +233,7 @@ describe('Generation Worker', () => {
         expect.objectContaining({
           status: 'completed',
           generatedImagePath: mockCloudinaryUploadResult.secure_url,
-        })
+        }),
       );
     });
 
@@ -273,7 +288,7 @@ describe('Generation Worker', () => {
       expect(mockGeminiService.continueConversation).toHaveBeenCalledWith(
         expect.any(Array), // conversation history
         baseEditJobData.editPrompt,
-        baseEditJobData.userId
+        baseEditJobData.userId,
       );
     });
   });
@@ -308,7 +323,7 @@ describe('Generation Worker', () => {
         expect.objectContaining({
           referenceImages: expect.any(Array),
         }),
-        baseVariationJobData.userId
+        baseVariationJobData.userId,
       );
     });
   });
@@ -331,7 +346,7 @@ describe('Generation Worker', () => {
         456,
         expect.objectContaining({
           status: 'failed',
-        })
+        }),
       );
     });
 
@@ -383,9 +398,7 @@ describe('Generation Worker', () => {
     });
 
     it('handles Cloudinary upload failures', async () => {
-      mockCloudinary.uploader.upload.mockRejectedValue(
-        new Error('Cloudinary upload failed: insufficient credits')
-      );
+      mockCloudinary.uploader.upload.mockRejectedValue(new Error('Cloudinary upload failed: insufficient credits'));
 
       const job = createMockJob(baseGenerateJobData);
 
@@ -439,7 +452,7 @@ describe('Generation Worker', () => {
         456,
         expect.objectContaining({
           conversationHistory: expect.any(Array),
-        })
+        }),
       );
     });
 
@@ -467,7 +480,7 @@ describe('Generation Worker', () => {
         457,
         expect.objectContaining({
           editCount: 3,
-        })
+        }),
       );
     });
   });

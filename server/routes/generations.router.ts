@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 /**
  * Generations Router
  * Generation CRUD, job management, and SSE streaming
@@ -30,6 +31,7 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
    */
   router.get(
     '/',
+    requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const limit = parseInt(req.query.limit as string) || 50;
@@ -47,6 +49,7 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
    */
   router.get(
     '/:id',
+    requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const generation = await storage.getGenerationById(req.params.id);
@@ -66,6 +69,7 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
    */
   router.get(
     '/:id/history',
+    requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const { id } = req.params;
@@ -95,6 +99,7 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
    */
   router.delete(
     '/:id',
+    requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const generation = await storage.getGenerationById(req.params.id);
@@ -125,6 +130,7 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
    */
   router.post(
     '/:id/edit',
+    requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       const userId = (req as any).session?.userId;
 
@@ -210,7 +216,7 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
 
         return res.status(500).json({
           success: false,
-          error: error.message || 'Failed to start edit job',
+          error: 'Failed to start edit job',
         });
       }
     }),
@@ -221,6 +227,7 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
    */
   router.post(
     '/:id/analyze',
+    requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const { id } = req.params;
@@ -358,7 +365,7 @@ Please analyze the transformation and answer the user's question.`,
         logger.error({ module: 'Analyze', err: error }, 'Analyze error');
         return res.status(500).json({
           success: false,
-          error: error.message || 'Failed to analyze image',
+          error: 'Failed to analyze image',
         });
       }
     }),
@@ -436,7 +443,7 @@ Please analyze the transformation and answer the user's question.`,
         });
       } catch (error: any) {
         logger.error({ module: 'VideoGeneration', err: error }, 'Video generation enqueue error');
-        return res.status(500).json({ error: error.message || 'Failed to start video generation' });
+        return res.status(500).json({ error: 'Failed to start video generation' });
       }
     }),
   );
@@ -510,7 +517,7 @@ export const jobsRouter: RouterFactory = (ctx: RouterContext): Router => {
         logger.error({ module: 'JobStatus', err: error }, 'Error getting job status');
         return res.status(500).json({
           success: false,
-          error: error.message || 'Failed to get job status',
+          error: 'Failed to get job status',
         });
       }
     }),

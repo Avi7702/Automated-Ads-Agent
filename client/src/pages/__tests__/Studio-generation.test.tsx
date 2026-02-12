@@ -1,4 +1,5 @@
 // @ts-nocheck
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 // @vitest-environment jsdom
 /**
  * Studio Component Tests - Generation Flow
@@ -39,10 +40,7 @@ vi.mock('@/components/IdeaBankPanel', () => ({
       >
         Select Suggestion
       </button>
-      <button
-        data-testid="quick-generate"
-        onClick={() => onQuickGenerate?.('Quick generate prompt')}
-      >
+      <button data-testid="quick-generate" onClick={() => onQuickGenerate?.('Quick generate prompt')}>
         Quick Generate
       </button>
     </div>
@@ -87,10 +85,7 @@ vi.mock('@/components/UploadZone', () => ({
 vi.mock('@/components/HistoryTimeline', () => ({
   HistoryTimeline: ({ onSelect, currentGenerationId }: any) => (
     <div data-testid="mock-history-timeline" data-current={currentGenerationId}>
-      <button
-        data-testid="select-history-item"
-        onClick={() => onSelect?.(singleCompletedGeneration)}
-      >
+      <button data-testid="select-history-item" onClick={() => onSelect?.(singleCompletedGeneration)}>
         Select History Item
       </button>
     </div>
@@ -100,11 +95,10 @@ vi.mock('@/components/HistoryTimeline', () => ({
 vi.mock('@/components/studio/HistoryPanel', () => ({
   HistoryPanel: ({ isOpen, onToggle, onSelectGeneration }: any) => (
     <div data-testid="mock-history-panel" data-open={isOpen}>
-      <button data-testid="toggle-history" onClick={onToggle}>Toggle</button>
-      <button
-        data-testid="select-generation"
-        onClick={() => onSelectGeneration?.('gen-001')}
-      >
+      <button data-testid="toggle-history" onClick={onToggle}>
+        Toggle
+      </button>
+      <button data-testid="select-generation" onClick={() => onSelectGeneration?.('gen-001')}>
         Select Generation
       </button>
     </div>
@@ -114,33 +108,39 @@ vi.mock('@/components/studio/HistoryPanel', () => ({
 vi.mock('@/components/SaveToCatalogDialog', () => ({
   SaveToCatalogDialog: ({ isOpen, onClose }: any) => (
     <div data-testid="mock-save-dialog" data-open={isOpen}>
-      <button data-testid="close-save-dialog" onClick={onClose}>Close</button>
+      <button data-testid="close-save-dialog" onClick={onClose}>
+        Close
+      </button>
     </div>
   ),
 }));
 
+vi.mock('@/components/studio/InspectorPanel', () => ({
+  InspectorPanel: (props: any) => <div data-testid="mock-inspector-panel">Mock Inspector Panel</div>,
+}));
+
+vi.mock('@/components/studio/IdeaBankBar', () => ({
+  IdeaBankBar: (props: any) => <div data-testid="mock-idea-bank-bar">Mock Idea Bank Bar</div>,
+}));
+
+vi.mock('@/components/studio/AgentChat', () => ({
+  AgentChatPanel: (props: any) => <div data-testid="mock-agent-chat">Mock Agent Chat</div>,
+}));
+
 vi.mock('@/components/ContentPlannerGuidance', () => ({
-  ContentPlannerGuidance: (props: any) => (
-    <div data-testid="mock-content-planner">Mock Content Planner</div>
-  ),
+  ContentPlannerGuidance: (props: any) => <div data-testid="mock-content-planner">Mock Content Planner</div>,
 }));
 
 vi.mock('@/components/CarouselBuilder', () => ({
-  CarouselBuilder: (props: any) => (
-    <div data-testid="mock-carousel-builder">Mock Carousel Builder</div>
-  ),
+  CarouselBuilder: (props: any) => <div data-testid="mock-carousel-builder">Mock Carousel Builder</div>,
 }));
 
 vi.mock('@/components/BeforeAfterBuilder', () => ({
-  BeforeAfterBuilder: (props: any) => (
-    <div data-testid="mock-before-after-builder">Mock Before After Builder</div>
-  ),
+  BeforeAfterBuilder: (props: any) => <div data-testid="mock-before-after-builder">Mock Before After Builder</div>,
 }));
 
 vi.mock('@/components/TextOnlyMode', () => ({
-  TextOnlyMode: (props: any) => (
-    <div data-testid="mock-text-only-mode">Mock Text Only Mode</div>
-  ),
+  TextOnlyMode: (props: any) => <div data-testid="mock-text-only-mode">Mock Text Only Mode</div>,
 }));
 
 vi.mock('@/components/ErrorBoundary', () => ({
@@ -161,7 +161,9 @@ vi.mock('wouter', async () => {
   return {
     ...actual,
     Link: ({ href, children }: { href: string; children: React.ReactNode }) => (
-      <a href={href} data-testid="mock-link">{children}</a>
+      <a href={href} data-testid="mock-link">
+        {children}
+      </a>
     ),
     useLocation: () => ['/', mockSetLocation],
   };
@@ -209,6 +211,15 @@ vi.mock('framer-motion', () => ({
   motion: {
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
     section: ({ children, ...props }: any) => <section {...props}>{children}</section>,
+    p: ({ children, ...props }: any) => <p {...props}>{children}</p>,
+    span: ({ children, ...props }: any) => <span {...props}>{children}</span>,
+    button: ({ children, ...props }: any) => <button {...props}>{children}</button>,
+    img: (props: any) => <img {...props} />,
+    h1: ({ children, ...props }: any) => <h1 {...props}>{children}</h1>,
+    h2: ({ children, ...props }: any) => <h2 {...props}>{children}</h2>,
+    nav: ({ children, ...props }: any) => <nav {...props}>{children}</nav>,
+    ul: ({ children, ...props }: any) => <ul {...props}>{children}</ul>,
+    li: ({ children, ...props }: any) => <li {...props}>{children}</li>,
   },
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
@@ -218,9 +229,15 @@ const mockLocalStorage = (() => {
   let store: Record<string, string> = {};
   return {
     getItem: (key: string) => store[key] ?? null,
-    setItem: (key: string, value: string) => { store[key] = value; },
-    removeItem: (key: string) => { delete store[key]; },
-    clear: () => { store = {}; },
+    setItem: (key: string, value: string) => {
+      store[key] = value;
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+    clear: () => {
+      store = {};
+    },
   };
 })();
 Object.defineProperty(window, 'localStorage', { value: mockLocalStorage });
@@ -241,11 +258,7 @@ function createWrapper() {
   });
 
   return function Wrapper({ children }: { children: React.ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
-    );
+    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
   };
 }
 
@@ -278,28 +291,31 @@ describe('Studio Component - Generation Flow', () => {
       if (url.includes('/api/transform') && options?.method === 'POST') {
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({
-            imageUrl: 'https://example.com/generated.jpg',
-            generationId: 'gen-new-001',
-          }),
+          json: () =>
+            Promise.resolve({
+              imageUrl: 'https://example.com/generated.jpg',
+              generationId: 'gen-new-001',
+            }),
         });
       }
       if (url.includes('/api/generations/') && url.includes('/edit')) {
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({
-            success: true,
-            generationId: 'gen-edit-001',
-          }),
+          json: () =>
+            Promise.resolve({
+              success: true,
+              generationId: 'gen-edit-001',
+            }),
         });
       }
       if (url.includes('/api/generations/') && url.includes('/analyze')) {
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({
-            success: true,
-            answer: 'This is an AI analysis response.',
-          }),
+          json: () =>
+            Promise.resolve({
+              success: true,
+              answer: 'This is an AI analysis response.',
+            }),
         });
       }
       if (url.includes('/api/generations/')) {
@@ -311,10 +327,11 @@ describe('Studio Component - Generation Flow', () => {
       if (url.includes('/api/copy/generate')) {
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({
-            success: true,
-            variations: [{ copy: 'Generated ad copy text' }],
-          }),
+          json: () =>
+            Promise.resolve({
+              success: true,
+              variations: [{ copy: 'Generated ad copy text' }],
+            }),
         });
       }
       if (url.includes('/api/pricing/estimate')) {
@@ -346,7 +363,7 @@ describe('Studio Component - Generation Flow', () => {
 
       await waitFor(() => {
         const generateButtons = screen.getAllByRole('button', { name: /Generate/i });
-        const mainGenerateButton = generateButtons.find(btn => btn.textContent?.includes('Generate Image'));
+        const mainGenerateButton = generateButtons.find((btn) => btn.textContent?.includes('Generate Image'));
         expect(mainGenerateButton).toBeDisabled();
       });
     });
@@ -428,8 +445,8 @@ describe('Studio Component - Generation Flow', () => {
 
       // Find the main prompt textarea (not quick start)
       const promptTextareas = screen.getAllByRole('textbox');
-      const mainPromptTextarea = promptTextareas.find(ta =>
-        ta.getAttribute('placeholder')?.includes('Professional construction site')
+      const mainPromptTextarea = promptTextareas.find((ta) =>
+        ta.getAttribute('placeholder')?.includes('Professional construction site'),
       );
 
       if (mainPromptTextarea) {
@@ -532,15 +549,15 @@ describe('Studio Component - Generation Flow', () => {
 
       // Find the main prompt textarea
       const promptTextareas = screen.getAllByRole('textbox');
-      const mainPromptTextarea = promptTextareas.find(ta =>
-        ta.getAttribute('placeholder')?.includes('Professional construction site')
+      const mainPromptTextarea = promptTextareas.find((ta) =>
+        ta.getAttribute('placeholder')?.includes('Professional construction site'),
       );
 
       if (mainPromptTextarea) {
         fireEvent.change(mainPromptTextarea, { target: { value: 'Draft prompt text' } });
 
         // Wait for debounce
-        await new Promise(resolve => setTimeout(resolve, 600));
+        await new Promise((resolve) => setTimeout(resolve, 600));
 
         expect(mockLocalStorage.getItem('studio-prompt-draft')).toBe('Draft prompt text');
       }
@@ -689,7 +706,7 @@ describe('Studio Component - Generation Flow', () => {
       await act(async () => {
         fireEvent.click(generateNowButton);
         // Allow async operations to complete
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
       });
 
       // Verify that fetch was called - may be products or transform

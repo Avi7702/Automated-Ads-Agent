@@ -143,6 +143,15 @@ export function useStudioOrchestrator() {
   const [generationMode, setGenerationMode] = useState<GenerationMode>('standard');
   const [selectedTemplateForMode, setSelectedTemplateForMode] = useState<AdSceneTemplate | null>(null);
 
+  // ── Weekly Plan Context ──────────────────────────────
+  const [planContext, setPlanContext] = useState<{
+    planId: string;
+    postIndex: number;
+    briefing: string;
+    category: string;
+    dayOfWeek: string;
+  } | null>(null);
+
   // ── Content Planner ───────────────────────────────────
   const [cpTemplate, setCpTemplate] = useState<ContentTemplate | null>(null);
   const [showCarouselBuilder, setShowCarouselBuilder] = useState(false);
@@ -174,6 +183,8 @@ export function useStudioOrchestrator() {
   const generateButtonRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
   const zoomContainerRef = useRef<HTMLDivElement>(null);
+  const videoPollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const videoPollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Queries ───────────────────────────────────────────
   const { data: authUser } = useQuery({
@@ -415,7 +426,76 @@ export function useStudioOrchestrator() {
     if (suggestedPrompt && !prompt && !cpTemplateId) {
       setPrompt(suggestedPrompt);
     }
-  }, [templates, prompt, cpTemplate]);
+
+    // Weekly Plan deep-link: /?planId=xxx&postIndex=2
+    const planId = params.get('planId');
+    const postIndexParam = params.get('postIndex');
+    if (planId && postIndexParam !== null && !planContext) {
+      const postIdx = Number(postIndexParam);
+      fetch(`/api/planner/weekly/current`, { credentials: 'include' })
+        .then((res) => res.json())
+        .then((plan) => {
+          if (!plan || !plan.posts) return;
+          const post = plan.posts[postIdx];
+          if (!post) return;
+
+          // Set plan context
+          setPlanContext({
+            planId: plan.id || planId,
+            postIndex: postIdx,
+            briefing: post.briefing || '',
+            category: post.category || '',
+            dayOfWeek: post.dayOfWeek || '',
+          });
+
+          // Auto-select products from plan
+          if (post.productIds && post.productIds.length > 0 && products.length > 0) {
+            const planProducts = products.filter((p) => post.productIds.includes(String(p.id)));
+            if (planProducts.length > 0) setSelectedProducts(planProducts);
+          }
+
+          // Auto-set platform
+          if (post.platform) {
+            const platformMap: Record<string, string> = {
+              linkedin: 'LinkedIn',
+              instagram: 'Instagram',
+              facebook: 'Facebook',
+              twitter: 'Twitter',
+              tiktok: 'TikTok',
+            };
+            const mapped = platformMap[post.platform.toLowerCase()] || 'LinkedIn';
+            setPlatform(mapped);
+          }
+
+          // Auto-set prompt from briefing
+          if (post.briefing) {
+            setPrompt(post.briefing);
+          }
+
+          // Clean up URL params
+          const newParams = new URLSearchParams(window.location.search);
+          newParams.delete('planId');
+          newParams.delete('postIndex');
+          const newUrl = newParams.toString() ? `?${newParams.toString()}` : window.location.pathname;
+          window.history.replaceState({}, '', newUrl);
+        })
+        .catch(console.error);
+    }
+  }, [templates, prompt, cpTemplate, products, planContext]);
+
+  // Cleanup video polling on unmount
+  useEffect(() => {
+    return () => {
+      if (videoPollIntervalRef.current) {
+        clearInterval(videoPollIntervalRef.current);
+        videoPollIntervalRef.current = null;
+      }
+      if (videoPollTimeoutRef.current) {
+        clearTimeout(videoPollTimeoutRef.current);
+        videoPollTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   // Scroll tracking
   useEffect(() => {
@@ -519,6 +599,17 @@ export function useStudioOrchestrator() {
       setState('result');
       localStorage.removeItem('studio-prompt-draft');
 
+      // Auto-update weekly plan post status if creating from plan
+      if (planContext && data.generationId) {
+        const csrfToken = await getCsrfToken().catch(() => '');
+        fetch(`/api/planner/weekly/${planContext.planId}/posts/${planContext.postIndex}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
+          credentials: 'include',
+          body: JSON.stringify({ status: 'generated', generationId: data.generationId }),
+        }).catch(console.error);
+      }
+
       setTimeout(() => {
         document.getElementById('result')?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
@@ -587,6 +678,16 @@ export function useStudioOrchestrator() {
       setGenerationId(data.generationId);
       setVideoJobId(data.jobId);
 
+      // Clear any previous polling
+      if (videoPollIntervalRef.current) {
+        clearInterval(videoPollIntervalRef.current);
+        videoPollIntervalRef.current = null;
+      }
+      if (videoPollTimeoutRef.current) {
+        clearTimeout(videoPollTimeoutRef.current);
+        videoPollTimeoutRef.current = null;
+      }
+
       // Poll for completion
       const pollInterval = setInterval(async () => {
         try {
@@ -597,12 +698,22 @@ export function useStudioOrchestrator() {
 
           if (statusData.state === 'completed' && statusData.generation?.generatedImagePath) {
             clearInterval(pollInterval);
+            videoPollIntervalRef.current = null;
+            if (videoPollTimeoutRef.current) {
+              clearTimeout(videoPollTimeoutRef.current);
+              videoPollTimeoutRef.current = null;
+            }
             setGeneratedImage(statusData.generation.generatedImagePath);
             setState('result');
             setVideoJobId(null);
             toast.success('Video generated!');
           } else if (statusData.state === 'failed') {
             clearInterval(pollInterval);
+            videoPollIntervalRef.current = null;
+            if (videoPollTimeoutRef.current) {
+              clearTimeout(videoPollTimeoutRef.current);
+              videoPollTimeoutRef.current = null;
+            }
             toast.error(`Video generation failed: ${statusData.failedReason || 'Unknown error'}`);
             setState('idle');
             setVideoJobId(null);
@@ -611,16 +722,18 @@ export function useStudioOrchestrator() {
           // silently retry on network blips
         }
       }, 5000);
+      videoPollIntervalRef.current = pollInterval;
 
       // Safety timeout — stop polling after 12 minutes
-      setTimeout(() => {
+      const safetyTimeout = setTimeout(() => {
         clearInterval(pollInterval);
-        if (videoJobId) {
-          toast.error('Video generation timed out. Check Gallery for results.');
-          setState('idle');
-          setVideoJobId(null);
-        }
+        videoPollIntervalRef.current = null;
+        videoPollTimeoutRef.current = null;
+        toast.error('Video generation timed out. Check Gallery for results.');
+        setState('idle');
+        setVideoJobId(null);
       }, 720_000);
+      videoPollTimeoutRef.current = safetyTimeout;
     } catch (error: any) {
       toast.error(`Video generation failed: ${error.message}`);
       setState('idle');
@@ -844,6 +957,10 @@ export function useStudioOrchestrator() {
     [prompt],
   );
 
+  const clearPlanContext = useCallback(() => {
+    setPlanContext(null);
+  }, []);
+
   const handleCopyText = useCallback(() => {
     if (!generatedCopy) return;
     haptic('light');
@@ -939,6 +1056,7 @@ export function useStudioOrchestrator() {
     ideaBankMode,
     generationMode,
     selectedTemplateForMode,
+    planContext,
     cpTemplate,
     showCarouselBuilder,
     carouselTopic,
@@ -1005,6 +1123,8 @@ export function useStudioOrchestrator() {
     setIdeaBankMode,
     setGenerationMode,
     setSelectedTemplateForMode,
+    setPlanContext,
+    clearPlanContext,
     setCpTemplate,
     setShowCarouselBuilder,
     setCarouselTopic,

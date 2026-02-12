@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 // @vitest-environment jsdom
 /**
  * IdeaBankPanel Component Tests
@@ -78,10 +79,7 @@ function createMockResponse(overrides: Partial<IdeaBankSuggestResponse> = {}): I
 
 function createTemplateResponse(templateId: string) {
   return {
-    slotSuggestions: [
-      createMockSlotSuggestion(),
-      createMockSlotSuggestion({ confidence: 75 }),
-    ],
+    slotSuggestions: [createMockSlotSuggestion(), createMockSlotSuggestion({ confidence: 75 })],
     template: {
       id: templateId,
       title: 'Professional Product Showcase',
@@ -193,23 +191,19 @@ afterEach(() => {
 
 describe('IdeaBankPanel - Rendering', () => {
   it('returns null when no products are selected', () => {
-    const { container } = render(
-      <IdeaBankPanel
-        selectedProducts={[]}
-        onSelectPrompt={vi.fn()}
-      />
-    );
+    const { container } = render(<IdeaBankPanel selectedProducts={[]} onSelectPrompt={vi.fn()} />);
 
-    expect(container.firstChild).toBeNull();
+    // Component returns null when no products are selected.
+    // The test-utils render wraps in ThemeProvider which injects a <script> tag,
+    // so container.firstChild is not null. Instead, check that the panel content
+    // is not rendered (no "Intelligent Idea Bank" heading).
+    expect(screen.queryByText('Intelligent Idea Bank')).not.toBeInTheDocument();
+    // Verify there's no motion.div panel content in the container
+    expect(container.querySelector('[class*="rounded-2xl"]')).toBeNull();
   });
 
   it('renders with a single product selected', async () => {
-    render(
-      <IdeaBankPanel
-        selectedProducts={[mockProduct]}
-        onSelectPrompt={vi.fn()}
-      />
-    );
+    render(<IdeaBankPanel selectedProducts={[mockProduct]} onSelectPrompt={vi.fn()} />);
 
     await waitFor(() => {
       expect(screen.getByText('Intelligent Idea Bank')).toBeInTheDocument();
@@ -222,12 +216,7 @@ describe('IdeaBankPanel - Rendering', () => {
   it('renders with multiple products (1-6)', async () => {
     const multipleProducts = [mockProduct, mockProduct2];
 
-    render(
-      <IdeaBankPanel
-        selectedProducts={multipleProducts}
-        onSelectPrompt={vi.fn()}
-      />
-    );
+    render(<IdeaBankPanel selectedProducts={multipleProducts} onSelectPrompt={vi.fn()} />);
 
     await waitFor(() => {
       expect(screen.getByText('Intelligent Idea Bank')).toBeInTheDocument();
@@ -237,12 +226,7 @@ describe('IdeaBankPanel - Rendering', () => {
   });
 
   it('displays loading state while fetching suggestions', async () => {
-    render(
-      <IdeaBankPanel
-        selectedProducts={[mockProduct]}
-        onSelectPrompt={vi.fn()}
-      />
-    );
+    render(<IdeaBankPanel selectedProducts={[mockProduct]} onSelectPrompt={vi.fn()} />);
 
     // Should show title immediately
     expect(screen.getByText('Intelligent Idea Bank')).toBeInTheDocument();
@@ -256,16 +240,14 @@ describe('IdeaBankPanel - Rendering', () => {
   it('displays error state when API fails', async () => {
     mockShouldFail = true;
 
-    render(
-      <IdeaBankPanel
-        selectedProducts={[mockProduct]}
-        onSelectPrompt={vi.fn()}
-      />
-    );
+    render(<IdeaBankPanel selectedProducts={[mockProduct]} onSelectPrompt={vi.fn()} />);
 
-    await waitFor(() => {
-      expect(screen.getByText(/failed|error|retry|unable/i)).toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(screen.getByText(/failed|error|retry|unable/i)).toBeInTheDocument();
+      },
+      { timeout: 5000 },
+    );
   });
 });
 
@@ -275,12 +257,7 @@ describe('IdeaBankPanel - Rendering', () => {
 
 describe('IdeaBankPanel - Idea Suggestions', () => {
   it('fetches suggestions on mount when products are selected', async () => {
-    render(
-      <IdeaBankPanel
-        selectedProducts={[mockProduct]}
-        onSelectPrompt={vi.fn()}
-      />
-    );
+    render(<IdeaBankPanel selectedProducts={[mockProduct]} onSelectPrompt={vi.fn()} />);
 
     await waitFor(() => {
       expect(fetchCallCount).toBeGreaterThan(0);
@@ -291,17 +268,12 @@ describe('IdeaBankPanel - Idea Suggestions', () => {
       expect.objectContaining({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-      })
+      }),
     );
   });
 
   it('refreshes suggestions when refresh button is clicked', async () => {
-    render(
-      <IdeaBankPanel
-        selectedProducts={[mockProduct]}
-        onSelectPrompt={vi.fn()}
-      />
-    );
+    render(<IdeaBankPanel selectedProducts={[mockProduct]} onSelectPrompt={vi.fn()} />);
 
     // Wait for initial load
     await waitFor(() => {
@@ -320,12 +292,7 @@ describe('IdeaBankPanel - Idea Suggestions', () => {
   });
 
   it('displays suggestion metadata (summary and reasoning)', async () => {
-    render(
-      <IdeaBankPanel
-        selectedProducts={[mockProduct]}
-        onSelectPrompt={vi.fn()}
-      />
-    );
+    render(<IdeaBankPanel selectedProducts={[mockProduct]} onSelectPrompt={vi.fn()} />);
 
     await waitFor(() => {
       // Should show suggestion summaries
@@ -337,12 +304,7 @@ describe('IdeaBankPanel - Idea Suggestions', () => {
   });
 
   it('displays correct mode badges (exact_insert, inspiration, standard)', async () => {
-    render(
-      <IdeaBankPanel
-        selectedProducts={[mockProduct]}
-        onSelectPrompt={vi.fn()}
-      />
-    );
+    render(<IdeaBankPanel selectedProducts={[mockProduct]} onSelectPrompt={vi.fn()} />);
 
     await waitFor(() => {
       // Check for mode badge text
@@ -353,12 +315,7 @@ describe('IdeaBankPanel - Idea Suggestions', () => {
   });
 
   it('displays confidence indicators with correct styling', async () => {
-    render(
-      <IdeaBankPanel
-        selectedProducts={[mockProduct]}
-        onSelectPrompt={vi.fn()}
-      />
-    );
+    render(<IdeaBankPanel selectedProducts={[mockProduct]} onSelectPrompt={vi.fn()} />);
 
     await waitFor(() => {
       // Should show confidence percentages
@@ -369,12 +326,7 @@ describe('IdeaBankPanel - Idea Suggestions', () => {
   });
 
   it('displays analysis status summary', async () => {
-    render(
-      <IdeaBankPanel
-        selectedProducts={[mockProduct]}
-        onSelectPrompt={vi.fn()}
-      />
-    );
+    render(<IdeaBankPanel selectedProducts={[mockProduct]} onSelectPrompt={vi.fn()} />);
 
     await waitFor(() => {
       // Check analysis status indicators
@@ -405,12 +357,7 @@ describe('IdeaBankPanel - Source Attribution', () => {
       ],
     });
 
-    render(
-      <IdeaBankPanel
-        selectedProducts={[mockProduct]}
-        onSelectPrompt={vi.fn()}
-      />
-    );
+    render(<IdeaBankPanel selectedProducts={[mockProduct]} onSelectPrompt={vi.fn()} />);
 
     await waitFor(() => {
       expect(screen.getByText('Vision')).toBeInTheDocument();
@@ -432,12 +379,7 @@ describe('IdeaBankPanel - Source Attribution', () => {
       ],
     });
 
-    render(
-      <IdeaBankPanel
-        selectedProducts={[mockProduct]}
-        onSelectPrompt={vi.fn()}
-      />
-    );
+    render(<IdeaBankPanel selectedProducts={[mockProduct]} onSelectPrompt={vi.fn()} />);
 
     await waitFor(() => {
       expect(screen.getByText('Knowledge')).toBeInTheDocument();
@@ -465,12 +407,7 @@ describe('IdeaBankPanel - Source Attribution', () => {
       },
     });
 
-    render(
-      <IdeaBankPanel
-        selectedProducts={[mockProduct]}
-        onSelectPrompt={vi.fn()}
-      />
-    );
+    render(<IdeaBankPanel selectedProducts={[mockProduct]} onSelectPrompt={vi.fn()} />);
 
     await waitFor(() => {
       expect(screen.getByText('Web')).toBeInTheDocument();
@@ -492,12 +429,7 @@ describe('IdeaBankPanel - Source Attribution', () => {
       ],
     });
 
-    render(
-      <IdeaBankPanel
-        selectedProducts={[mockProduct]}
-        onSelectPrompt={vi.fn()}
-      />
-    );
+    render(<IdeaBankPanel selectedProducts={[mockProduct]} onSelectPrompt={vi.fn()} />);
 
     await waitFor(() => {
       expect(screen.getByText('Templates')).toBeInTheDocument();
@@ -513,12 +445,7 @@ describe('IdeaBankPanel - User Interactions', () => {
   it('calls onSelectPrompt when an idea is selected', async () => {
     const onSelectPrompt = vi.fn();
 
-    render(
-      <IdeaBankPanel
-        selectedProducts={[mockProduct]}
-        onSelectPrompt={onSelectPrompt}
-      />
-    );
+    render(<IdeaBankPanel selectedProducts={[mockProduct]} onSelectPrompt={onSelectPrompt} />);
 
     await waitFor(() => {
       expect(screen.getByText(/AI-generated/i)).toBeInTheDocument();
@@ -531,7 +458,7 @@ describe('IdeaBankPanel - User Interactions', () => {
     expect(onSelectPrompt).toHaveBeenCalledWith(
       expect.any(String), // prompt
       expect.any(String), // id
-      expect.any(String)  // reasoning
+      expect.any(String), // reasoning
     );
   });
 
@@ -544,7 +471,7 @@ describe('IdeaBankPanel - User Interactions', () => {
         selectedProducts={[mockProduct]}
         onSelectPrompt={onSelectPrompt}
         onQuickGenerate={onQuickGenerate}
-      />
+      />,
     );
 
     await waitFor(() => {
@@ -561,13 +488,7 @@ describe('IdeaBankPanel - User Interactions', () => {
   it('marks suggestion as selected when clicked', async () => {
     const onSelectPrompt = vi.fn();
 
-    render(
-      <IdeaBankPanel
-        selectedProducts={[mockProduct]}
-        onSelectPrompt={onSelectPrompt}
-        selectedPromptId="sug-1"
-      />
-    );
+    render(<IdeaBankPanel selectedProducts={[mockProduct]} onSelectPrompt={onSelectPrompt} selectedPromptId="sug-1" />);
 
     await waitFor(() => {
       expect(screen.getByText(/AI-generated/i)).toBeInTheDocument();
@@ -584,7 +505,7 @@ describe('IdeaBankPanel - User Interactions', () => {
         onSelectPrompt={vi.fn()}
         onQuickGenerate={vi.fn()}
         isGenerating={true}
-      />
+      />,
     );
 
     await waitFor(() => {
@@ -592,21 +513,14 @@ describe('IdeaBankPanel - User Interactions', () => {
     });
 
     // Generate buttons should be disabled
-    const generateButtons = screen.getAllByRole('button').filter(
-      btn => btn.hasAttribute('disabled')
-    );
+    const generateButtons = screen.getAllByRole('button').filter((btn) => btn.hasAttribute('disabled'));
     expect(generateButtons.length).toBeGreaterThan(0);
   });
 
   it('handles card click to select idea', async () => {
     const onSelectPrompt = vi.fn();
 
-    render(
-      <IdeaBankPanel
-        selectedProducts={[mockProduct]}
-        onSelectPrompt={onSelectPrompt}
-      />
-    );
+    render(<IdeaBankPanel selectedProducts={[mockProduct]} onSelectPrompt={onSelectPrompt} />);
 
     await waitFor(() => {
       expect(screen.getByText(/AI-generated/i)).toBeInTheDocument();
@@ -635,12 +549,7 @@ describe('IdeaBankPanel - Platform Recommendations', () => {
       ],
     });
 
-    render(
-      <IdeaBankPanel
-        selectedProducts={[mockProduct]}
-        onSelectPrompt={vi.fn()}
-      />
-    );
+    render(<IdeaBankPanel selectedProducts={[mockProduct]} onSelectPrompt={vi.fn()} />);
 
     await waitFor(() => {
       expect(screen.getByText('instagram')).toBeInTheDocument();
@@ -657,12 +566,7 @@ describe('IdeaBankPanel - Platform Recommendations', () => {
       ],
     });
 
-    render(
-      <IdeaBankPanel
-        selectedProducts={[mockProduct]}
-        onSelectPrompt={vi.fn()}
-      />
-    );
+    render(<IdeaBankPanel selectedProducts={[mockProduct]} onSelectPrompt={vi.fn()} />);
 
     await waitFor(() => {
       expect(screen.getByText('16:9')).toBeInTheDocument();
@@ -681,13 +585,7 @@ describe('IdeaBankPanel - Platform Recommendations', () => {
       ],
     });
 
-    render(
-      <IdeaBankPanel
-        selectedProducts={[mockProduct]}
-        onSelectPrompt={vi.fn()}
-        onSetPlatform={onSetPlatform}
-      />
-    );
+    render(<IdeaBankPanel selectedProducts={[mockProduct]} onSelectPrompt={vi.fn()} onSetPlatform={onSetPlatform} />);
 
     await waitFor(() => {
       expect(screen.getByText('linkedin')).toBeInTheDocument();
@@ -713,11 +611,7 @@ describe('IdeaBankPanel - Platform Recommendations', () => {
     });
 
     render(
-      <IdeaBankPanel
-        selectedProducts={[mockProduct]}
-        onSelectPrompt={vi.fn()}
-        onSetAspectRatio={onSetAspectRatio}
-      />
+      <IdeaBankPanel selectedProducts={[mockProduct]} onSelectPrompt={vi.fn()} onSetAspectRatio={onSetAspectRatio} />,
     );
 
     await waitFor(() => {
@@ -733,12 +627,7 @@ describe('IdeaBankPanel - Platform Recommendations', () => {
 
   it('shows template mode badge when mode is template', async () => {
     render(
-      <IdeaBankPanel
-        selectedProducts={[mockProduct]}
-        onSelectPrompt={vi.fn()}
-        mode="template"
-        templateId="tpl-123"
-      />
+      <IdeaBankPanel selectedProducts={[mockProduct]} onSelectPrompt={vi.fn()} mode="template" templateId="tpl-123" />,
     );
 
     await waitFor(() => {
@@ -754,30 +643,22 @@ describe('IdeaBankPanel - Platform Recommendations', () => {
 describe('IdeaBankPanel - Template Mode', () => {
   it('displays slot suggestions in template mode', async () => {
     render(
-      <IdeaBankPanel
-        selectedProducts={[mockProduct]}
-        onSelectPrompt={vi.fn()}
-        mode="template"
-        templateId="tpl-123"
-      />
+      <IdeaBankPanel selectedProducts={[mockProduct]} onSelectPrompt={vi.fn()} mode="template" templateId="tpl-123" />,
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/slot suggestion/i)).toBeInTheDocument();
+      // Should show template-specific content (multiple slots may render)
+      expect(screen.getAllByText('Template Slot').length).toBeGreaterThan(0);
     });
 
-    // Should show template-specific content
-    expect(screen.getByText('Template Slot')).toBeInTheDocument();
+    // Each slot card shows "Template Slot" badge - verify at least 2 are rendered
+    // (createTemplateResponse creates 2 slot suggestions)
+    expect(screen.getAllByText('Template Slot').length).toBe(2);
   });
 
   it('displays template context info in template mode', async () => {
     render(
-      <IdeaBankPanel
-        selectedProducts={[mockProduct]}
-        onSelectPrompt={vi.fn()}
-        mode="template"
-        templateId="tpl-123"
-      />
+      <IdeaBankPanel selectedProducts={[mockProduct]} onSelectPrompt={vi.fn()} mode="template" templateId="tpl-123" />,
     );
 
     await waitFor(() => {
@@ -795,7 +676,7 @@ describe('IdeaBankPanel - Template Mode', () => {
         mode="template"
         templateId="tpl-123"
         onSlotSuggestionSelect={onSlotSuggestionSelect}
-      />
+      />,
     );
 
     await waitFor(() => {

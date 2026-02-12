@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 /**
  * Catalog Router (File Search)
  * RAG file search and reference file management
@@ -16,6 +17,7 @@ import type { RouterContext, RouterFactory, RouterModule } from '../types/router
 import { createRouter, asyncHandler } from './utils/createRouter';
 import { validate } from '../middleware/validate';
 import { catalogFilesQuerySchema } from '../validation/schemas';
+import path from 'path';
 
 export const catalogRouter: RouterFactory = (ctx: RouterContext): Router => {
   const router = createRouter();
@@ -46,8 +48,8 @@ export const catalogRouter: RouterFactory = (ctx: RouterContext): Router => {
    */
   router.post(
     '/upload',
-    uploadSingle('file'),
     requireAuth,
+    uploadSingle('file'),
     asyncHandler(async (req: Request, res: Response) => {
       try {
         if (!req.file) {
@@ -98,9 +100,16 @@ export const catalogRouter: RouterFactory = (ctx: RouterContext): Router => {
           return res.status(400).json({ error: 'Directory path and category are required' });
         }
 
+        // BUG-009 fix: Validate directory path to prevent path traversal
+        const allowedBaseDir = path.resolve(process.cwd(), 'uploads');
+        const resolvedPath = path.resolve(directoryPath);
+        if (!resolvedPath.startsWith(allowedBaseDir)) {
+          return res.status(400).json({ error: 'Directory path must be within the allowed uploads directory' });
+        }
+
         const { uploadDirectoryToFileSearch } = await import('../services/fileSearchService');
         const results = await uploadDirectoryToFileSearch({
-          directoryPath,
+          directoryPath: resolvedPath,
           category,
           description,
         });

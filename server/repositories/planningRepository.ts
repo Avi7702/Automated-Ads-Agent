@@ -1,23 +1,16 @@
-import {
-  type ContentPlannerPost,
-  type InsertContentPlannerPost,
-  contentPlannerPosts,
-} from "@shared/schema";
-import { db } from "../db";
-import { and, eq, desc, gte, lte } from "drizzle-orm";
+import { type ContentPlannerPost, type InsertContentPlannerPost, contentPlannerPosts } from '@shared/schema';
+import { db } from '../db';
+import { and, eq, desc, gte, lte } from 'drizzle-orm';
 
 export async function createContentPlannerPost(post: InsertContentPlannerPost): Promise<ContentPlannerPost> {
-  const [result] = await db
-    .insert(contentPlannerPosts)
-    .values(post)
-    .returning();
+  const [result] = await db.insert(contentPlannerPosts).values(post).returning();
   return result;
 }
 
 export async function getContentPlannerPostsByUser(
   userId: string,
   startDate?: Date,
-  endDate?: Date
+  endDate?: Date,
 ): Promise<ContentPlannerPost[]> {
   const conditions = [eq(contentPlannerPosts.userId, userId)];
 
@@ -47,12 +40,7 @@ export async function getWeeklyBalance(userId: string): Promise<{ category: stri
       category: contentPlannerPosts.category,
     })
     .from(contentPlannerPosts)
-    .where(
-      and(
-        eq(contentPlannerPosts.userId, userId),
-        gte(contentPlannerPosts.postedAt, weekStart)
-      )
-    );
+    .where(and(eq(contentPlannerPosts.userId, userId), gte(contentPlannerPosts.postedAt, weekStart)));
 
   const countMap: Record<string, number> = {};
   for (const post of posts) {
@@ -63,6 +51,11 @@ export async function getWeeklyBalance(userId: string): Promise<{ category: stri
     category,
     count,
   }));
+}
+
+export async function getContentPlannerPostById(id: string): Promise<ContentPlannerPost | null> {
+  const rows = await db.select().from(contentPlannerPosts).where(eq(contentPlannerPosts.id, id)).limit(1);
+  return rows[0] ?? null;
 }
 
 export async function deleteContentPlannerPost(id: string): Promise<void> {
