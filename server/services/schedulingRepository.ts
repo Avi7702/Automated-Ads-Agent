@@ -129,6 +129,7 @@ export async function schedulePost(input: SchedulePostInput) {
 
 /**
  * Reschedule a post to a new date/time.
+ * Only posts with status 'scheduled' can be rescheduled.
  */
 export async function reschedulePost(postId: string, userId: string, newDate: Date) {
   const rows = await db
@@ -137,7 +138,9 @@ export async function reschedulePost(postId: string, userId: string, newDate: Da
       scheduledFor: newDate,
       updatedAt: new Date(),
     })
-    .where(and(eq(scheduledPosts.id, postId), eq(scheduledPosts.userId, userId)))
+    .where(
+      and(eq(scheduledPosts.id, postId), eq(scheduledPosts.userId, userId), eq(scheduledPosts.status, 'scheduled')),
+    )
     .returning();
 
   return rows[0] ?? null;
@@ -145,6 +148,7 @@ export async function reschedulePost(postId: string, userId: string, newDate: Da
 
 /**
  * Cancel a scheduled post.
+ * Only posts with status 'scheduled' can be cancelled.
  */
 export async function cancelScheduledPost(postId: string, userId: string) {
   const rows = await db
@@ -153,7 +157,9 @@ export async function cancelScheduledPost(postId: string, userId: string) {
       status: 'cancelled',
       updatedAt: new Date(),
     })
-    .where(and(eq(scheduledPosts.id, postId), eq(scheduledPosts.userId, userId)))
+    .where(
+      and(eq(scheduledPosts.id, postId), eq(scheduledPosts.userId, userId), eq(scheduledPosts.status, 'scheduled')),
+    )
     .returning();
 
   return rows[0] ?? null;

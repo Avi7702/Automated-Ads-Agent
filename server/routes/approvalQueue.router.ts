@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 /**
  * Approval Queue Router
  * Human-in-the-loop approval workflow for AI-generated content
@@ -86,9 +87,6 @@ export const approvalQueueRouter: RouterFactory = (ctx: RouterContext): Router =
         res.status(500).json({
           success: false,
           error: 'Failed to fetch approval queue',
-          // Temporarily expose error details to diagnose the issue
-          details: errorMessage,
-          code: errorCode,
         });
       }
     }),

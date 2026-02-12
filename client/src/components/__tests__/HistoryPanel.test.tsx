@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 // @vitest-environment jsdom
 /**
  * HistoryPanel Component Tests
@@ -17,11 +18,7 @@ import '@testing-library/jest-dom';
 
 import { HistoryPanel } from '../studio/HistoryPanel/HistoryPanel';
 import { server, http, HttpResponse } from '@/mocks/server';
-import {
-  mockGenerations,
-  completedGenerations,
-  createMockGeneration,
-} from '@/fixtures';
+import { mockGenerations, completedGenerations, createMockGeneration } from '@/fixtures';
 
 // ============================================
 // MOCKS
@@ -92,7 +89,7 @@ function renderHistoryPanel(props: Partial<React.ComponentProps<typeof HistoryPa
     ...render(
       <QueryClientProvider client={queryClient}>
         <HistoryPanel {...defaultProps} {...props} />
-      </QueryClientProvider>
+      </QueryClientProvider>,
     ),
     queryClient,
     props: { ...defaultProps, ...props },
@@ -109,7 +106,7 @@ function mockGenerationsApi(generations: unknown[], statusCode = 200) {
         return HttpResponse.json({ error: 'Server error' }, { status: statusCode });
       }
       return HttpResponse.json(generations);
-    })
+    }),
   );
 }
 
@@ -174,8 +171,9 @@ describe('HistoryPanel', () => {
       mockGenerationsApi([]);
       renderHistoryPanel();
 
+      // Default tab is 'all', so empty state text is "No generations yet"
       await waitFor(() => {
-        expect(screen.getByText(/No recent generations/i)).toBeInTheDocument();
+        expect(screen.getByText(/No generations yet/i)).toBeInTheDocument();
       });
 
       // Should show the empty state icon
@@ -188,7 +186,7 @@ describe('HistoryPanel', () => {
         http.get('/api/generations', async () => {
           await new Promise((resolve) => setTimeout(resolve, 100));
           return HttpResponse.json(mockGenerationsWithImages);
-        })
+        }),
       );
 
       renderHistoryPanel();
@@ -281,7 +279,7 @@ describe('HistoryPanel', () => {
       expect(screen.getByAltText('Completed generation')).toBeInTheDocument();
     });
 
-    it('groups generations by date in Recent tab', async () => {
+    it('groups generations by date in All tab', async () => {
       // Create generations from different time periods
       const recentGen = {
         id: 'gen-recent',
@@ -301,16 +299,14 @@ describe('HistoryPanel', () => {
       mockGenerationsApi([recentGen, oldGen]);
       renderHistoryPanel();
 
-      // Wait for data to load
+      // Default tab is 'all', so both generations should show
       await waitFor(() => {
-        expect(screen.getAllByRole('img').length).toBeGreaterThan(0);
+        expect(screen.getAllByRole('img').length).toBe(2);
       });
 
-      // The "Recent" tab should only show items from the last 24 hours
-      // Since we're on the default "recent" tab, only recentGen should show
-      const images = screen.getAllByRole('img');
-      expect(images.length).toBe(1);
+      // Verify both recent and old generations are displayed
       expect(screen.getByAltText('Recent generation')).toBeInTheDocument();
+      expect(screen.getByAltText('Old generation')).toBeInTheDocument();
     });
 
     it('supports loading more items through tab navigation (pagination equivalent)', async () => {
@@ -350,9 +346,7 @@ describe('HistoryPanel', () => {
       });
 
       // Click on the first generation (which is inside a button)
-      const generationButtons = screen.getAllByRole('button').filter(
-        (btn) => btn.querySelector('img')
-      );
+      const generationButtons = screen.getAllByRole('button').filter((btn) => btn.querySelector('img'));
       expect(generationButtons.length).toBeGreaterThan(0);
 
       const firstGenButton = generationButtons[0];
@@ -452,32 +446,27 @@ describe('HistoryPanel', () => {
         expect(screen.getAllByRole('img').length).toBeGreaterThan(0);
       });
 
-      // Initially on "Recent" tab - should show only recent (last 24 hours)
-      const recentTab = screen.getByRole('tab', { name: /Recent/i });
-      expect(recentTab).toHaveAttribute('data-state', 'active');
+      // Initially on "All" tab (the default) - should show all 4 generations
+      const allTab = screen.getByRole('tab', { name: /All/i });
+      expect(allTab).toHaveAttribute('data-state', 'active');
 
-      // Get count of images on Recent tab (should be 2 - the recent ones)
-      const recentImages = screen.getAllByRole('img');
-      expect(recentImages.length).toBe(2);
+      const allImages = screen.getAllByRole('img');
+      expect(allImages.length).toBe(4);
 
       // Verify all tabs are present and clickable
-      const allTab = screen.getByRole('tab', { name: /All/i });
+      const recentTab = screen.getByRole('tab', { name: /Recent/i });
       const favoritesTab = screen.getByRole('tab', { name: /Favorites/i });
 
-      expect(allTab).toBeInTheDocument();
+      expect(recentTab).toBeInTheDocument();
       expect(favoritesTab).toBeInTheDocument();
 
       // Verify tabs have correct initial states
-      expect(allTab).toHaveAttribute('data-state', 'inactive');
+      expect(recentTab).toHaveAttribute('data-state', 'inactive');
       expect(favoritesTab).toHaveAttribute('data-state', 'inactive');
-
-      // Test tab interactions - clicking tabs triggers the appropriate callbacks
-      // Note: Radix UI tabs in jsdom don't always propagate state changes reliably
-      // The filtering logic is tested implicitly by the "groups generations by date" test
-      // which verifies the Recent tab correctly filters to last 24 hours
 
       // Verify the tabs are accessible and interactive
       expect(allTab).not.toBeDisabled();
+      expect(recentTab).not.toBeDisabled();
       expect(favoritesTab).not.toBeDisabled();
     });
 
@@ -490,9 +479,7 @@ describe('HistoryPanel', () => {
       });
 
       // Find a generation button
-      const generationButtons = screen.getAllByRole('button').filter(
-        (btn) => btn.querySelector('img')
-      );
+      const generationButtons = screen.getAllByRole('button').filter((btn) => btn.querySelector('img'));
 
       const firstGenButton = generationButtons[0];
       if (firstGenButton) {
@@ -563,8 +550,9 @@ describe('HistoryPanel', () => {
       mockGenerationsApi([]);
       renderHistoryPanel();
 
+      // Default tab is 'all', so empty state text is "No generations yet"
       await waitFor(() => {
-        expect(screen.getByText(/No recent generations/i)).toBeInTheDocument();
+        expect(screen.getByText(/No generations yet/i)).toBeInTheDocument();
       });
     });
   });
@@ -584,9 +572,7 @@ describe('HistoryPanel', () => {
       });
 
       // The selected item should have special styling (border-primary, ring)
-      const generationButtons = screen.getAllByRole('button').filter(
-        (btn) => btn.querySelector('img')
-      );
+      const generationButtons = screen.getAllByRole('button').filter((btn) => btn.querySelector('img'));
 
       const selectedButton = generationButtons[0];
       // The component applies these classes for selected state:
@@ -605,25 +591,19 @@ describe('HistoryPanel', () => {
       });
 
       // Click on the second generation
-      const generationButtons = screen.getAllByRole('button').filter(
-        (btn) => btn.querySelector('img')
-      );
+      const generationButtons = screen.getAllByRole('button').filter((btn) => btn.querySelector('img'));
 
       // Get the "All" tab first to see all items
       const allTab = screen.getByRole('tab', { name: /All/i });
       fireEvent.click(allTab);
 
       await waitFor(() => {
-        const updatedButtons = screen.getAllByRole('button').filter(
-          (btn) => btn.querySelector('img')
-        );
+        const updatedButtons = screen.getAllByRole('button').filter((btn) => btn.querySelector('img'));
         expect(updatedButtons.length).toBeGreaterThanOrEqual(2);
       });
 
       // Click second item
-      const updatedButtons = screen.getAllByRole('button').filter(
-        (btn) => btn.querySelector('img')
-      );
+      const updatedButtons = screen.getAllByRole('button').filter((btn) => btn.querySelector('img'));
       const secondGenButton = updatedButtons[1];
       if (secondGenButton) {
         fireEvent.click(secondGenButton);

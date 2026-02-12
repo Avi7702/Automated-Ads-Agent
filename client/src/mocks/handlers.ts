@@ -102,6 +102,11 @@ const mockCopy = [
 ];
 
 export const handlers = [
+  // ============ CSRF Token Endpoint ============
+  http.get('/api/csrf-token', () => {
+    return HttpResponse.json({ csrfToken: 'test-csrf-token' });
+  }),
+
   // ============ Auth Endpoints ============
   http.post('/api/auth/login', async ({ request }) => {
     const body = (await request.json()) as { email: string; password: string };
@@ -305,7 +310,8 @@ export const handlers = [
     const url = new URL(request.url);
     const query = url.searchParams.get('q') || '';
     const filtered = mockTemplates.filter(
-      (t) => t.name.toLowerCase().includes(query.toLowerCase()) || t.category.toLowerCase().includes(query.toLowerCase())
+      (t) =>
+        t.name.toLowerCase().includes(query.toLowerCase()) || t.category.toLowerCase().includes(query.toLowerCase()),
     );
     return HttpResponse.json(filtered);
   }),
@@ -426,7 +432,7 @@ export const handlers = [
         name: body.name,
         template: body.template,
       },
-      { status: 201 }
+      { status: 201 },
     );
   }),
 
@@ -608,7 +614,7 @@ export const handlers = [
         status: 'draft',
         createdAt: new Date().toISOString(),
       },
-      { status: 201 }
+      { status: 201 },
     );
   }),
 

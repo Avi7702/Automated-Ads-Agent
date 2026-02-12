@@ -147,6 +147,7 @@
     "@tailwindcss/vite": "^4.1.14",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
+    "@testing-library/user-event": "^14.6.1",
     "@types/connect-pg-simple": "^7.0.3",
     "@types/connect-timeout": "^1.9.0",
     "@types/cookie-parser": "^1.4.8",

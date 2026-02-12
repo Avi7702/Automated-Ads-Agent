@@ -182,7 +182,10 @@ describe('ProductCardSkeleton', () => {
 
   it('accepts className prop', () => {
     const { container } = render(<ProductCardSkeleton className="custom-class" />);
-    expect(container.firstChild).toHaveClass('custom-class');
+    // The Card component renders with the className. Due to provider wrappers
+    // (ThemeProvider, etc.), container.firstChild may not be the Card directly.
+    const cardElement = container.querySelector('.custom-class');
+    expect(cardElement).toBeInTheDocument();
   });
 });
 

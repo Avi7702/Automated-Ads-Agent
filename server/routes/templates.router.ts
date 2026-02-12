@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 /**
  * Templates Router
  * Ad scene template management endpoints
@@ -15,6 +16,7 @@ import type { Router, Request, Response } from 'express';
 import type { RouterContext, RouterFactory, RouterModule } from '../types/router';
 import { createRouter, asyncHandler } from './utils/createRouter';
 import { validate } from '../middleware/validate';
+import { requireRole } from '../middleware/requireRole';
 import { templatesListQuerySchema, templatesSearchQuerySchema } from '../validation/schemas';
 
 export const templatesRouter: RouterFactory = (ctx: RouterContext): Router => {
@@ -90,19 +92,15 @@ export const templatesRouter: RouterFactory = (ctx: RouterContext): Router => {
 
   /**
    * POST / - Create a new template
-   * Admin only (TODO: add admin check)
+   * Admin only
    */
   router.post(
     '/',
     requireAuth,
+    requireRole('admin'),
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const userId = (req.session as any).userId;
-
-        // TODO: Add admin role check here
-        // if (!await isUserAdmin(userId)) {
-        //   return res.status(403).json({ error: "Admin access required" });
-        // }
 
         const templateData = {
           ...req.body,
@@ -129,6 +127,7 @@ export const templatesRouter: RouterFactory = (ctx: RouterContext): Router => {
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const userId = (req.session as any).userId;
+        const userRole = req.user?.role;
         const template = await storage.getAdSceneTemplateById(req.params.id);
 
         if (!template) {
@@ -136,8 +135,7 @@ export const templatesRouter: RouterFactory = (ctx: RouterContext): Router => {
         }
 
         // Only creator or admin can update
-        // TODO: Add admin check
-        if (template.createdBy !== userId) {
+        if (template.createdBy !== userId && userRole !== 'admin') {
           return res.status(403).json({ error: 'Not authorized to update this template' });
         }
 
@@ -160,6 +158,7 @@ export const templatesRouter: RouterFactory = (ctx: RouterContext): Router => {
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const userId = (req.session as any).userId;
+        const userRole = req.user?.role;
         const template = await storage.getAdSceneTemplateById(req.params.id);
 
         if (!template) {
@@ -167,8 +166,7 @@ export const templatesRouter: RouterFactory = (ctx: RouterContext): Router => {
         }
 
         // Only creator or admin can delete
-        // TODO: Add admin check
-        if (template.createdBy !== userId) {
+        if (template.createdBy !== userId && userRole !== 'admin') {
           return res.status(403).json({ error: 'Not authorized to delete this template' });
         }
 

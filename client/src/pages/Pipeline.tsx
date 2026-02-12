@@ -2,8 +2,9 @@ import { lazy, Suspense, useMemo } from 'react';
 import { useSearch } from 'wouter';
 import { Header } from '@/components/layout/Header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CalendarDays, CheckCircle, Share2, Calendar } from 'lucide-react';
+import { CalendarDays, CheckCircle, Share2, Calendar, LayoutDashboard } from 'lucide-react';
 
+const WeeklyPlanView = lazy(() => import('@/components/planner/WeeklyPlanView'));
 const ContentPlanner = lazy(() => import('@/pages/ContentPlanner'));
 const ApprovalQueue = lazy(() => import('@/pages/ApprovalQueue'));
 const SocialAccounts = lazy(() => import('@/pages/SocialAccounts'));
@@ -17,9 +18,10 @@ function TabLoader() {
   );
 }
 
-type PipelineTab = 'planner' | 'calendar' | 'approval' | 'accounts';
+type PipelineTab = 'dashboard' | 'planner' | 'calendar' | 'approval' | 'accounts';
 
 const TAB_CONFIG = [
+  { id: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
   { id: 'planner' as const, label: 'Content Planner', icon: CalendarDays },
   { id: 'calendar' as const, label: 'Calendar', icon: Calendar },
   { id: 'approval' as const, label: 'Approval Queue', icon: CheckCircle },
@@ -29,14 +31,14 @@ const TAB_CONFIG = [
 export default function Pipeline() {
   const search = useSearch();
   const params = useMemo(() => new URLSearchParams(search), [search]);
-  const activeTab = (params.get('tab') as PipelineTab) || 'planner';
+  const activeTab = (params.get('tab') as PipelineTab) || 'dashboard';
 
   return (
     <div className="min-h-screen bg-background">
       <Header currentPage="pipeline" />
       <div className="container px-4 md:px-6 py-4 md:py-6">
         <Tabs value={activeTab} className="w-full">
-          <TabsList className="grid w-full max-w-2xl grid-cols-4 mb-6">
+          <TabsList className="grid w-full max-w-3xl grid-cols-5 mb-6">
             {TAB_CONFIG.map(({ id, label, icon: Icon }) => (
               <TabsTrigger
                 key={id}
@@ -53,6 +55,12 @@ export default function Pipeline() {
               </TabsTrigger>
             ))}
           </TabsList>
+
+          <TabsContent value="dashboard">
+            <Suspense fallback={<TabLoader />}>
+              <WeeklyPlanView />
+            </Suspense>
+          </TabsContent>
 
           <TabsContent value="planner">
             <Suspense fallback={<TabLoader />}>

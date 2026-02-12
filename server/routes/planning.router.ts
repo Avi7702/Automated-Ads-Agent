@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 /**
  * Planning Router
  * Content planner endpoints for post scheduling and balance tracking
@@ -214,7 +215,18 @@ export const planningRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
+        const userId = (req.session as any).userId;
         const { id } = req.params;
+
+        // Verify ownership before deleting
+        const post = await storage.getContentPlannerPostById(id);
+        if (!post) {
+          return res.status(404).json({ error: 'Post not found' });
+        }
+        if (post.userId !== userId) {
+          return res.status(403).json({ error: 'Not authorized to delete this post' });
+        }
+
         await storage.deleteContentPlannerPost(id);
         res.json({ message: 'Post deleted' });
       } catch (error: any) {
@@ -267,7 +279,7 @@ export const planningRouter: RouterFactory = (ctx: RouterContext): Router => {
         });
       } catch (error: any) {
         logger.error({ err: error }, 'Failed to generate carousel outline');
-        res.status(500).json({ error: error.message || 'Failed to generate carousel outline' });
+        res.status(500).json({ error: 'Failed to generate carousel outline' });
       }
     }),
   );
@@ -304,8 +316,8 @@ export const planningRouter: RouterFactory = (ctx: RouterContext): Router => {
         logger.error({ err: error }, 'Failed to generate complete post');
         res.status(500).json({
           success: false,
-          copyError: error.message || 'Failed to generate post',
-          imageError: error.message || 'Failed to generate post',
+          copyError: 'Failed to generate post',
+          imageError: 'Failed to generate post',
         });
       }
     }),

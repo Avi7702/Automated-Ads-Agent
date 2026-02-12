@@ -1,4 +1,3 @@
-
 import {
   encryptApiKey,
   decryptApiKey,
@@ -67,15 +66,11 @@ describe('Encryption Service', () => {
     });
 
     it('should throw on null plaintext', () => {
-      expect(() => encryptApiKey(null as unknown as string)).toThrow(
-        'Plaintext must be a non-empty string'
-      );
+      expect(() => encryptApiKey(null as unknown as string)).toThrow('Plaintext must be a non-empty string');
     });
 
     it('should throw on undefined plaintext', () => {
-      expect(() => encryptApiKey(undefined as unknown as string)).toThrow(
-        'Plaintext must be a non-empty string'
-      );
+      expect(() => encryptApiKey(undefined as unknown as string)).toThrow('Plaintext must be a non-empty string');
     });
 
     it('should generate 12-byte IV (base64 encoded)', () => {
@@ -129,7 +124,7 @@ describe('Encryption Service', () => {
       encrypted.authTag = tamperedAuthTag.toString('base64');
 
       expect(() => decryptApiKey(encrypted)).toThrow(DecryptionError);
-      expect(() => decryptApiKey(encrypted)).toThrow(/tampered/i);
+      expect(() => decryptApiKey(encrypted)).toThrow(/Decryption failed/);
     });
 
     it('should throw DecryptionError when ciphertext is tampered', () => {
@@ -160,7 +155,7 @@ describe('Encryption Service', () => {
           ciphertext: '',
           iv: 'AAAAAAAAAAAAAAAA',
           authTag: 'AAAAAAAAAAAAAAAAAAAAAA==',
-        })
+        }),
       ).toThrow(DecryptionError);
     });
 
@@ -170,7 +165,7 @@ describe('Encryption Service', () => {
           ciphertext: 'AAAA',
           iv: '',
           authTag: 'AAAAAAAAAAAAAAAAAAAAAA==',
-        })
+        }),
       ).toThrow(DecryptionError);
     });
 
@@ -180,7 +175,7 @@ describe('Encryption Service', () => {
           ciphertext: 'AAAA',
           iv: 'AAAAAAAAAAAAAAAA',
           authTag: '',
-        })
+        }),
       ).toThrow(DecryptionError);
     });
 
@@ -189,7 +184,7 @@ describe('Encryption Service', () => {
       encrypted.iv = Buffer.alloc(8).toString('base64'); // Wrong size (8 instead of 12)
 
       expect(() => decryptApiKey(encrypted)).toThrow(DecryptionError);
-      expect(() => decryptApiKey(encrypted)).toThrow(/Invalid IV length/);
+      expect(() => decryptApiKey(encrypted)).toThrow(/Decryption failed/);
     });
 
     it('should throw DecryptionError when auth tag has wrong length', () => {
@@ -197,7 +192,7 @@ describe('Encryption Service', () => {
       encrypted.authTag = Buffer.alloc(8).toString('base64'); // Wrong size (8 instead of 16)
 
       expect(() => decryptApiKey(encrypted)).toThrow(DecryptionError);
-      expect(() => decryptApiKey(encrypted)).toThrow(/Invalid auth tag length/);
+      expect(() => decryptApiKey(encrypted)).toThrow(/Decryption failed/);
     });
   });
 
@@ -246,8 +241,7 @@ describe('Encryption Service', () => {
 
     it('should truncate keys longer than 32 bytes', () => {
       // 64 bytes raw - should use first 32
-      process.env.API_KEY_ENCRYPTION_KEY =
-        '12345678901234567890123456789012' + '99999999999999999999999999999999';
+      process.env.API_KEY_ENCRYPTION_KEY = '12345678901234567890123456789012' + '99999999999999999999999999999999';
 
       const encrypted = encryptApiKey('test-key');
       const decrypted = decryptApiKey(encrypted);
@@ -268,14 +262,10 @@ describe('Encryption Service', () => {
   describe('generateKeyPreview', () => {
     it('should generate correct preview for standard API keys', () => {
       // Gemini key (39 chars) - first 4 + last 6
-      expect(generateKeyPreview('AIzaSyC1234567890abcdefghijklmnopqrstuv')).toBe(
-        'AIza...qrstuv'
-      );
+      expect(generateKeyPreview('AIzaSyC1234567890abcdefghijklmnopqrstuv')).toBe('AIza...qrstuv');
 
       // OpenAI key - first 4 + last 6
-      expect(
-        generateKeyPreview('sk-proj-abc123xyz789def456uvw012ghi345jkl678')
-      ).toBe('sk-p...jkl678');
+      expect(generateKeyPreview('sk-proj-abc123xyz789def456uvw012ghi345jkl678')).toBe('sk-p...jkl678');
     });
 
     it('should show first 4 and last 6 characters', () => {
@@ -307,9 +297,7 @@ describe('Encryption Service', () => {
     });
 
     it('should trim whitespace from key', () => {
-      expect(generateKeyPreview('  AIzaSyC1234567890abcdef  ')).toBe(
-        'AIza...abcdef'
-      );
+      expect(generateKeyPreview('  AIzaSyC1234567890abcdef  ')).toBe('AIza...abcdef');
     });
 
     it('should handle keys with special characters', () => {

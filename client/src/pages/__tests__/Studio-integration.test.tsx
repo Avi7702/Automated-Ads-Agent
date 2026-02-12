@@ -1,4 +1,5 @@
 // @ts-nocheck
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 // @vitest-environment jsdom
 /**
  * Studio Component Tests - Integration
@@ -73,35 +74,30 @@ vi.mock('@/components/IdeaBankPanel', () => ({
       >
         <button
           data-testid="select-prompt-btn"
-          onClick={() => onSelectPrompt?.('AI suggested prompt for product showcase', 'sug-001', 'High engagement potential')}
+          onClick={() =>
+            onSelectPrompt?.('AI suggested prompt for product showcase', 'sug-001', 'High engagement potential')
+          }
         >
           Select Prompt
         </button>
-        <button
-          data-testid="set-platform-btn"
-          onClick={() => onSetPlatform?.('Instagram')}
-        >
+        <button data-testid="set-platform-btn" onClick={() => onSetPlatform?.('Instagram')}>
           Set Platform
         </button>
-        <button
-          data-testid="set-aspect-ratio-btn"
-          onClick={() => onSetAspectRatio?.('1080x1350')}
-        >
+        <button data-testid="set-aspect-ratio-btn" onClick={() => onSetAspectRatio?.('1080x1350')}>
           Set Aspect Ratio
         </button>
-        <button
-          data-testid="quick-generate-btn"
-          onClick={() => onQuickGenerate?.('Quick generate prompt')}
-        >
+        <button data-testid="quick-generate-btn" onClick={() => onQuickGenerate?.('Quick generate prompt')}>
           Quick Generate
         </button>
         <button
           data-testid="recipe-available-btn"
-          onClick={() => onRecipeAvailable?.({
-            products: [{ id: 'prod-1', name: 'Test Product', benefits: ['Durable'] }],
-            relationships: [],
-            scenarios: [],
-          })}
+          onClick={() =>
+            onRecipeAvailable?.({
+              products: [{ id: 'prod-1', name: 'Test Product', benefits: ['Durable'] }],
+              relationships: [],
+              scenarios: [],
+            })
+          }
         >
           Set Recipe
         </button>
@@ -131,10 +127,7 @@ vi.mock('@/components/LinkedInPostPreview', () => ({
       data-image={imageUrl}
       data-editable={isEditable}
     >
-      <button
-        data-testid="change-text-btn"
-        onClick={() => onTextChange?.('Updated post text')}
-      >
+      <button data-testid="change-text-btn" onClick={() => onTextChange?.('Updated post text')}>
         Change Text
       </button>
       {onGenerateCopy && (
@@ -155,11 +148,7 @@ vi.mock('@/components/TemplateLibrary', () => ({
   TemplateLibrary: ({ onSelectTemplate, selectedTemplateId, className }: any) => (
     <div data-testid="mock-template-library" data-selected={selectedTemplateId}>
       {mockAdSceneTemplates.slice(0, 3).map((template) => (
-        <button
-          key={template.id}
-          data-testid={`template-${template.id}`}
-          onClick={() => onSelectTemplate?.(template)}
-        >
+        <button key={template.id} data-testid={`template-${template.id}`} onClick={() => onSelectTemplate?.(template)}>
           {template.title}
         </button>
       ))}
@@ -169,12 +158,7 @@ vi.mock('@/components/TemplateLibrary', () => ({
 
 vi.mock('@/components/UploadZone', () => ({
   UploadZone: ({ uploads, onUploadsChange, maxFiles, disabled }: any) => (
-    <div
-      data-testid="mock-upload-zone"
-      data-count={uploads?.length ?? 0}
-      data-max={maxFiles}
-      data-disabled={disabled}
-    >
+    <div data-testid="mock-upload-zone" data-count={uploads?.length ?? 0} data-max={maxFiles} data-disabled={disabled}>
       <button
         data-testid="add-upload-btn"
         disabled={disabled}
@@ -189,10 +173,7 @@ vi.mock('@/components/UploadZone', () => ({
       >
         Add Upload
       </button>
-      <button
-        data-testid="clear-uploads-btn"
-        onClick={() => onUploadsChange?.([])}
-      >
+      <button data-testid="clear-uploads-btn" onClick={() => onUploadsChange?.([])}>
         Clear Uploads
       </button>
     </div>
@@ -206,11 +187,13 @@ vi.mock('@/components/HistoryTimeline', () => ({
         <button
           key={gen.id}
           data-testid={`history-item-${gen.id}`}
-          onClick={() => onSelect?.({
-            id: gen.id,
-            imageUrl: gen.imagePath,
-            prompt: gen.prompt,
-          })}
+          onClick={() =>
+            onSelect?.({
+              id: gen.id,
+              imageUrl: gen.imagePath,
+              prompt: gen.prompt,
+            })
+          }
         >
           {gen.prompt?.slice(0, 20)}
         </button>
@@ -225,10 +208,7 @@ vi.mock('@/components/studio/HistoryPanel', () => ({
       <button data-testid="toggle-history-btn" onClick={onToggle}>
         {isOpen ? 'Close History' : 'Open History'}
       </button>
-      <button
-        data-testid="select-gen-001-btn"
-        onClick={() => onSelectGeneration?.('gen-001')}
-      >
+      <button data-testid="select-gen-001-btn" onClick={() => onSelectGeneration?.('gen-001')}>
         Select Gen 001
       </button>
     </div>
@@ -238,9 +218,23 @@ vi.mock('@/components/studio/HistoryPanel', () => ({
 vi.mock('@/components/SaveToCatalogDialog', () => ({
   SaveToCatalogDialog: ({ isOpen, onClose, imageUrl, defaultName }: any) => (
     <div data-testid="mock-save-dialog" data-open={isOpen} data-image={imageUrl}>
-      <button data-testid="close-save-dialog" onClick={onClose}>Close</button>
+      <button data-testid="close-save-dialog" onClick={onClose}>
+        Close
+      </button>
     </div>
   ),
+}));
+
+vi.mock('@/components/studio/InspectorPanel', () => ({
+  InspectorPanel: (props: any) => <div data-testid="mock-inspector-panel">Mock Inspector Panel</div>,
+}));
+
+vi.mock('@/components/studio/IdeaBankBar', () => ({
+  IdeaBankBar: (props: any) => <div data-testid="mock-idea-bank-bar">Mock Idea Bank Bar</div>,
+}));
+
+vi.mock('@/components/studio/AgentChat', () => ({
+  AgentChatPanel: (props: any) => <div data-testid="mock-agent-chat">Mock Agent Chat</div>,
 }));
 
 vi.mock('@/components/ContentPlannerGuidance', () => ({
@@ -272,7 +266,9 @@ vi.mock('wouter', async () => {
   return {
     ...actual,
     Link: ({ href, children }: { href: string; children: React.ReactNode }) => (
-      <a href={href} data-testid="mock-link">{children}</a>
+      <a href={href} data-testid="mock-link">
+        {children}
+      </a>
     ),
     useLocation: () => ['/', vi.fn()],
   };
@@ -312,6 +308,15 @@ vi.mock('framer-motion', () => ({
   motion: {
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
     section: ({ children, ...props }: any) => <section {...props}>{children}</section>,
+    p: ({ children, ...props }: any) => <p {...props}>{children}</p>,
+    span: ({ children, ...props }: any) => <span {...props}>{children}</span>,
+    button: ({ children, ...props }: any) => <button {...props}>{children}</button>,
+    img: (props: any) => <img {...props} />,
+    h1: ({ children, ...props }: any) => <h1 {...props}>{children}</h1>,
+    h2: ({ children, ...props }: any) => <h2 {...props}>{children}</h2>,
+    nav: ({ children, ...props }: any) => <nav {...props}>{children}</nav>,
+    ul: ({ children, ...props }: any) => <ul {...props}>{children}</ul>,
+    li: ({ children, ...props }: any) => <li {...props}>{children}</li>,
   },
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
@@ -321,9 +326,15 @@ const mockLocalStorage = (() => {
   let store: Record<string, string> = {};
   return {
     getItem: (key: string) => store[key] ?? null,
-    setItem: (key: string, value: string) => { store[key] = value; },
-    removeItem: (key: string) => { delete store[key]; },
-    clear: () => { store = {}; },
+    setItem: (key: string, value: string) => {
+      store[key] = value;
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+    clear: () => {
+      store = {};
+    },
   };
 })();
 Object.defineProperty(window, 'localStorage', { value: mockLocalStorage });
@@ -379,10 +390,11 @@ describe('Studio Component - Integration', () => {
       if (url.includes('/api/transform')) {
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({
-            imageUrl: 'https://example.com/generated.jpg',
-            generationId: 'gen-new-001',
-          }),
+          json: () =>
+            Promise.resolve({
+              imageUrl: 'https://example.com/generated.jpg',
+              generationId: 'gen-new-001',
+            }),
         });
       }
       if (url.includes('/api/generations/')) {
@@ -394,10 +406,11 @@ describe('Studio Component - Integration', () => {
       if (url.includes('/api/copy/generate')) {
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({
-            success: true,
-            variations: [{ copy: 'Generated ad copy' }],
-          }),
+          json: () =>
+            Promise.resolve({
+              success: true,
+              variations: [{ copy: 'Generated ad copy' }],
+            }),
         });
       }
       if (url.includes('/api/pricing/estimate')) {
@@ -433,8 +446,10 @@ describe('Studio Component - Integration', () => {
         expect(screen.getByText('Your Products')).toBeInTheDocument();
       });
 
-      // The subtitle shows the selection count
-      expect(screen.getByText(/Select up to 6 products/)).toBeInTheDocument();
+      // The new Studio uses ComposerView with a product grid.
+      // Product section title is "Your Products" (no subtitle about 6 max).
+      // The Search products input should be present.
+      expect(screen.getByPlaceholderText('Search products...')).toBeInTheDocument();
     });
 
     it('passes selected products to IdeaBankPanel', async () => {
@@ -543,9 +558,7 @@ describe('Studio Component - Integration', () => {
       await waitFor(() => {
         // History button might have accessible name or be identified differently
         const historyButtons = screen.getAllByRole('button');
-        const historyButton = historyButtons.find(btn =>
-          btn.textContent?.toLowerCase().includes('history')
-        );
+        const historyButton = historyButtons.find((btn) => btn.textContent?.toLowerCase().includes('history'));
         expect(historyButton ?? screen.getByTestId('toggle-history-btn')).toBeInTheDocument();
       });
     });
@@ -577,7 +590,7 @@ describe('Studio Component - Integration', () => {
       await waitFor(() => {
         expect(global.fetch).toHaveBeenCalledWith(
           expect.stringContaining('/api/generations/gen-001'),
-          expect.any(Object)
+          expect.any(Object),
         );
       });
     });
@@ -608,14 +621,17 @@ describe('Studio Component - Integration', () => {
     });
 
     it('restores collapsed sections from localStorage on mount', async () => {
-      mockLocalStorage.setItem('studio-collapsed-sections', JSON.stringify({
-        upload: true,
-        products: true,
-        templates: false,
-        refine: true,
-        copy: true,
-        preview: true,
-      }));
+      mockLocalStorage.setItem(
+        'studio-collapsed-sections',
+        JSON.stringify({
+          upload: true,
+          products: true,
+          templates: false,
+          refine: true,
+          copy: true,
+          preview: true,
+        }),
+      );
 
       render(<Studio />, { wrapper: createWrapper() });
 
@@ -755,20 +771,15 @@ describe('Studio Component - Integration', () => {
       });
     });
 
-    it('LinkedInPostPreview receives generated copy and image', async () => {
+    it('InspectorPanel is rendered for result preview and editing', async () => {
       render(<Studio />, { wrapper: createWrapper() });
 
+      // The new Studio replaced LinkedInPostPreview with InspectorPanel
+      // for edit/copy/ask-ai/details tabs.
       await waitFor(() => {
-        const linkedinPreviews = screen.getAllByTestId('mock-linkedin-preview');
-        expect(linkedinPreviews.length).toBeGreaterThanOrEqual(1);
+        const inspectorPanel = screen.getByTestId('mock-inspector-panel');
+        expect(inspectorPanel).toBeInTheDocument();
       });
-
-      // LinkedIn preview should have an author attribute (may be user email or fallback)
-      const linkedinPreview = screen.getAllByTestId('mock-linkedin-preview')[0];
-      expect(linkedinPreview).toHaveAttribute('data-author');
-      // Author can be 'test' (from email) or 'Your Company' (fallback)
-      const author = linkedinPreview.getAttribute('data-author');
-      expect(['test', 'Your Company']).toContain(author);
     });
   });
 });

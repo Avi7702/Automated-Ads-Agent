@@ -61,6 +61,9 @@ import { calendarRouterModule } from './calendar.router';
 // Content planning
 import { planningRouterModule } from './planning.router';
 
+// Weekly planner (WS-C1)
+import { weeklyPlannerRouterModule } from './weeklyPlanner.router';
+
 // Approval queue (Phase 8)
 import { approvalQueueRouterModule } from './approvalQueue.router';
 
@@ -69,6 +72,9 @@ import { styleReferencesRouterModule } from './styleReferences.router';
 
 // Custom model training
 import { trainingRouterModule } from './training.router';
+
+// Product intelligence layer (WS-C5)
+import { intelligenceRouterModule } from './intelligence.router';
 
 // Admin (security-critical - must be last)
 import { adminRouterModule } from './admin.router';
@@ -130,6 +136,9 @@ export const routerModules: RouterModule[] = [
   // Content planning
   planningRouterModule,
 
+  // Weekly planner (WS-C1)
+  weeklyPlannerRouterModule,
+
   // Approval queue (Phase 8)
   approvalQueueRouterModule,
 
@@ -138,6 +147,9 @@ export const routerModules: RouterModule[] = [
 
   // Custom model training
   trainingRouterModule,
+
+  // Product intelligence layer (WS-C5)
+  intelligenceRouterModule,
 
   // Admin (last - security critical)
   adminRouterModule,
@@ -183,8 +195,10 @@ export { socialRouterModule } from './social.router';
 export { n8nRouterModule } from './n8n.router';
 export { calendarRouterModule } from './calendar.router';
 export { planningRouterModule } from './planning.router';
+export { weeklyPlannerRouterModule } from './weeklyPlanner.router';
 export { approvalQueueRouterModule } from './approvalQueue.router';
 export { styleReferencesRouterModule } from './styleReferences.router';
 export { trainingRouterModule } from './training.router';
 export { agentRouterModule } from './agent.router';
+export { intelligenceRouterModule } from './intelligence.router';
 export { adminRouterModule } from './admin.router';

@@ -3,25 +3,29 @@ import { useSettingsSectionUrl } from '@/hooks/useUrlState';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import {
-  User,
-  Key,
-  BarChart3,
-  Database,
-  Loader2,
-  ChevronRight,
-} from 'lucide-react';
+import { User, Key, BarChart3, Database, Target, Loader2, ChevronRight } from 'lucide-react';
 
 // Lazy load section content for code splitting
 const BrandProfile = lazy(() => import('./BrandProfile'));
 const ApiKeySettings = lazy(() => import('./ApiKeySettings'));
 const QuotaDashboard = lazy(() => import('./QuotaDashboard'));
-const KnowledgeBaseSection = lazy(() => import('@/components/settings/KnowledgeBaseSection').then(m => ({ default: m.KnowledgeBaseSection })));
+const KnowledgeBaseSection = lazy(() =>
+  import('@/components/settings/KnowledgeBaseSection').then((m) => ({ default: m.KnowledgeBaseSection })),
+);
+const StrategySection = lazy(() =>
+  import('@/components/settings/StrategySection').then((m) => ({ default: m.StrategySection })),
+);
 
 const sections = [
   { id: 'brand', label: 'Brand Profile', icon: User, description: 'Manage your brand identity and voice' },
-  { id: 'knowledge-base', label: 'Knowledge Base', icon: Database, description: 'Products, scenarios, and brand assets' },
+  {
+    id: 'knowledge-base',
+    label: 'Knowledge Base',
+    icon: Database,
+    description: 'Products, scenarios, and brand assets',
+  },
   { id: 'api-keys', label: 'API Keys', icon: Key, description: 'Configure external service integrations' },
+  { id: 'strategy', label: 'Strategy', icon: Target, description: 'Content strategy and product priorities' },
   { id: 'usage', label: 'Usage & Quotas', icon: BarChart3, description: 'Monitor API usage and costs' },
 ] as const;
 
@@ -54,9 +58,7 @@ export default function Settings() {
       <main className="container mx-auto px-4 py-6">
         <div className="mb-6">
           <h1 className="text-2xl font-bold">Settings</h1>
-          <p className="text-muted-foreground">
-            Configure your account and preferences
-          </p>
+          <p className="text-muted-foreground">Configure your account and preferences</p>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-6 min-h-0">
@@ -72,26 +74,14 @@ export default function Settings() {
                     key={section.id}
                     variant={isActive ? 'secondary' : 'ghost'}
                     onClick={() => setSection(section.id)}
-                    className={cn(
-                      'w-full justify-start gap-3 h-auto py-3',
-                      isActive && 'bg-primary/10'
-                    )}
+                    className={cn('w-full justify-start gap-3 h-auto py-3', isActive && 'bg-primary/10')}
                   >
                     <Icon className={cn('w-5 h-5', isActive && 'text-primary')} />
                     <div className="flex-1 text-left">
-                      <p className={cn('font-medium', isActive && 'text-primary')}>
-                        {section.label}
-                      </p>
-                      <p className="text-xs text-muted-foreground font-normal">
-                        {section.description}
-                      </p>
+                      <p className={cn('font-medium', isActive && 'text-primary')}>{section.label}</p>
+                      <p className="text-xs text-muted-foreground font-normal">{section.description}</p>
                     </div>
-                    <ChevronRight
-                      className={cn(
-                        'w-4 h-4 text-muted-foreground',
-                        isActive && 'text-primary'
-                      )}
-                    />
+                    <ChevronRight className={cn('w-4 h-4 text-muted-foreground', isActive && 'text-primary')} />
                   </Button>
                 );
               })}
@@ -104,6 +94,7 @@ export default function Settings() {
               <Suspense fallback={<SectionLoading />}>
                 {activeSection === 'brand' && <BrandProfileContent />}
                 {activeSection === 'knowledge-base' && <KnowledgeBaseSection />}
+                {activeSection === 'strategy' && <StrategySection />}
                 {activeSection === 'api-keys' && <ApiKeySettingsContent />}
                 {activeSection === 'usage' && <QuotaDashboardContent />}
               </Suspense>

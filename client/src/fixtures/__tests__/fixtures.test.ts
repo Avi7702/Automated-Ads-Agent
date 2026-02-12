@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 /**
  * @vitest-environment node
  *
@@ -191,8 +192,8 @@ describe('Template Fixtures', () => {
 });
 
 describe('Generation Fixtures', () => {
-  it('has 15 generations', () => {
-    expect(mockGenerations).toHaveLength(15);
+  it('has 14 generations', () => {
+    expect(mockGenerations).toHaveLength(14);
   });
 
   it('has generations in all statuses', () => {
@@ -330,7 +331,7 @@ describe('Ad Copy Fixtures', () => {
 
   it('has high quality copy', () => {
     expect(highQualityCopy.length).toBeGreaterThan(0);
-    highQualityCopy.forEach(copy => {
+    highQualityCopy.forEach((copy) => {
       expect(copy.qualityScore!.overallScore).toBeGreaterThanOrEqual(8);
     });
   });
@@ -454,38 +455,38 @@ describe('Social Connection Fixtures', () => {
 
 describe('Fixture Integrity', () => {
   it('all products have unique IDs', () => {
-    const ids = mockProducts.map(p => p.id);
+    const ids = mockProducts.map((p) => p.id);
     const uniqueIds = new Set(ids);
     expect(uniqueIds.size).toBe(ids.length);
   });
 
   it('all generations have unique IDs', () => {
-    const ids = mockGenerations.map(g => g.id);
+    const ids = mockGenerations.map((g) => g.id);
     const uniqueIds = new Set(ids);
     expect(uniqueIds.size).toBe(ids.length);
   });
 
   it('all users have unique IDs and emails', () => {
-    const ids = mockUsers.map(u => u.id);
-    const emails = mockUsers.map(u => u.email);
+    const ids = mockUsers.map((u) => u.id);
+    const emails = mockUsers.map((u) => u.email);
     expect(new Set(ids).size).toBe(ids.length);
     expect(new Set(emails).size).toBe(emails.length);
   });
 
   it('all ad copy has unique IDs', () => {
-    const ids = mockAdCopy.map(c => c.id);
+    const ids = mockAdCopy.map((c) => c.id);
     const uniqueIds = new Set(ids);
     expect(uniqueIds.size).toBe(ids.length);
   });
 
   it('all suggestions have unique IDs', () => {
-    const ids = mockSuggestions.map(s => s.id);
+    const ids = mockSuggestions.map((s) => s.id);
     const uniqueIds = new Set(ids);
     expect(uniqueIds.size).toBe(ids.length);
   });
 
   it('all social connections have unique IDs', () => {
-    const ids = mockSocialConnections.map(c => c.id);
+    const ids = mockSocialConnections.map((c) => c.id);
     const uniqueIds = new Set(ids);
     expect(uniqueIds.size).toBe(ids.length);
   });

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 /**
  * Copywriting Router
  * Standalone copywriting generation endpoint
@@ -13,72 +14,76 @@ import { createRouter, asyncHandler } from './utils/createRouter';
 export const copywritingRouter: RouterFactory = (ctx: RouterContext): Router => {
   const router = createRouter();
   const { logger } = ctx.services;
+  const { requireAuth } = ctx.middleware;
 
   /**
    * POST /standalone - Generate standalone ad copy without a linked generation
    */
-  router.post('/standalone', asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const {
-        platform = 'linkedin',
-        tone = 'authentic',
-        framework = 'auto',
-        campaignObjective = 'engagement',
-        productName,
-        productDescription,
-        variations = 3,
-        industry = 'general',
-      } = req.body;
+  router.post(
+    '/standalone',
+    requireAuth,
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const {
+          platform = 'linkedin',
+          tone = 'authentic',
+          framework = 'auto',
+          campaignObjective = 'engagement',
+          productName,
+          productDescription,
+          variations = 3,
+          industry = 'general',
+        } = req.body;
 
-      // Validate required fields
-      if (!productName || !productDescription) {
-        return res.status(400).json({
-          error: 'Missing required fields',
-          details: 'productName and productDescription are required'
+        // Validate required fields
+        if (!productName || !productDescription) {
+          return res.status(400).json({
+            error: 'Missing required fields',
+            details: 'productName and productDescription are required',
+          });
+        }
+
+        // Validate variations
+        const variationCount = Math.min(Math.max(parseInt(variations) || 3, 1), 5);
+
+        // Call copywriting service
+        const { copywritingService } = await import('../services/copywritingService');
+        const generatedVariations = await copywritingService.generateCopy({
+          platform,
+          tone,
+          framework,
+          campaignObjective,
+          productName,
+          productDescription,
+          industry,
+          variations: variationCount,
+          // Provide defaults for fields that copywritingService expects
+          productBenefits: [],
+          uniqueValueProp: productDescription,
+        } as any);
+
+        // Transform to simplified response format
+        const responseVariations = generatedVariations.map((v: any) => ({
+          copy: v.caption || v.bodyText || '',
+          headline: v.headline,
+          hook: v.hook,
+          hashtags: v.hashtags || [],
+          framework: v.framework,
+          cta: v.cta,
+        }));
+
+        res.json({
+          success: true,
+          variations: responseVariations,
+        });
+      } catch (error: any) {
+        logger.error({ module: 'StandaloneCopy', err: error }, 'Error generating standalone copy');
+        res.status(500).json({
+          error: 'Failed to generate copy',
         });
       }
-
-      // Validate variations
-      const variationCount = Math.min(Math.max(parseInt(variations) || 3, 1), 5);
-
-      // Call copywriting service
-      const { copywritingService } = await import('../services/copywritingService');
-      const generatedVariations = await copywritingService.generateCopy({
-        platform,
-        tone,
-        framework,
-        campaignObjective,
-        productName,
-        productDescription,
-        industry,
-        variations: variationCount,
-        // Provide defaults for fields that copywritingService expects
-        productBenefits: [],
-        uniqueValueProp: productDescription,
-      } as any);
-
-      // Transform to simplified response format
-      const responseVariations = generatedVariations.map((v: any) => ({
-        copy: v.caption || v.bodyText || '',
-        headline: v.headline,
-        hook: v.hook,
-        hashtags: v.hashtags || [],
-        framework: v.framework,
-        cta: v.cta,
-      }));
-
-      res.json({
-        success: true,
-        variations: responseVariations,
-      });
-    } catch (error: any) {
-      logger.error({ module: 'StandaloneCopy', err: error }, 'Error generating standalone copy');
-      res.status(500).json({
-        error: 'Failed to generate copy',
-        details: error.message
-      });
-    }
-  }));
+    }),
+  );
 
   return router;
 };
@@ -89,5 +94,5 @@ export const copywritingRouterModule: RouterModule = {
   description: 'Standalone copywriting generation',
   endpointCount: 1,
   requiresAuth: false,
-  tags: ['copywriting', 'ai', 'content']
+  tags: ['copywriting', 'ai', 'content'],
 };

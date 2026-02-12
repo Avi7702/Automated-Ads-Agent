@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 /**
  * Products Router
  * Product management including CRUD, Cloudinary uploads, analysis, and enrichment
@@ -45,6 +46,7 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
    */
   router.post(
     '/',
+    requireAuth,
     uploadSingle('image'),
     asyncHandler(async (req: Request, res: Response) => {
       try {
@@ -107,7 +109,7 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
         res.json(product);
       } catch (error: any) {
         logger.error({ module: 'ProductUpload', err: error }, 'Upload error');
-        res.status(500).json({ error: 'Failed to upload product', details: error.message });
+        res.status(500).json({ error: 'Failed to upload product' });
       }
     }),
   );
@@ -117,6 +119,7 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
    */
   router.get(
     '/',
+    requireAuth,
     asyncHandler(async (_req: Request, res: Response) => {
       try {
         const products = await storage.getProducts();
@@ -162,6 +165,7 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
    */
   router.post(
     '/sync',
+    requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
         if (!isCloudinaryConfigured() || !cloudinary) {
@@ -220,7 +224,7 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
         });
       } catch (error: any) {
         logger.error({ module: 'CloudinarySync', err: error }, 'Sync error');
-        res.status(500).json({ error: 'Failed to sync from Cloudinary', details: error.message });
+        res.status(500).json({ error: 'Failed to sync from Cloudinary' });
       }
     }),
   );
@@ -264,6 +268,7 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
    */
   router.get(
     '/:id',
+    requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const product = await storage.getProductById(req.params.id);
@@ -283,6 +288,7 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
    */
   router.delete(
     '/:id',
+    requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const product = await storage.getProductById(req.params.id);
@@ -320,6 +326,7 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
    */
   router.delete(
     '/',
+    requireAuth,
     asyncHandler(async (_req: Request, res: Response) => {
       try {
         const products = await storage.getProducts();

@@ -8,36 +8,70 @@ process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:po
 // Import jest-dom matchers for DOM assertions
 import '@testing-library/jest-dom';
 
-// MSW Server Setup for client-side tests
-// The server is started conditionally based on the test environment
-import { beforeAll, afterAll, afterEach } from 'vitest';
-
-// Only setup MSW for client tests (jsdom environment)
-// Server tests don't need MSW as they test the actual API
+// Only setup MSW & jsdom polyfills for client tests (jsdom environment)
 const isClientTest = typeof window !== 'undefined' || process.env.VITEST_ENVIRONMENT === 'jsdom';
 
-let mswServer: { listen: (opts?: object) => void; resetHandlers: () => void; close: () => void } | null = null;
+// Mock window.matchMedia for jsdom (not provided by jsdom)
+if (isClientTest && typeof window !== 'undefined' && !window.matchMedia) {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: (query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    }),
+  });
+}
 
-beforeAll(async () => {
-  if (isClientTest) {
-    try {
-      const { server } = await import('./client/src/mocks/server');
-      mswServer = server;
-      mswServer.listen({ onUnhandledRequest: 'bypass' });
-    } catch {
-      // MSW server not available - likely running server-side tests
+// Mock IntersectionObserver for jsdom (needed by embla-carousel and other libs)
+if (isClientTest && typeof window !== 'undefined' && !window.IntersectionObserver) {
+  class MockIntersectionObserver {
+    readonly root: Element | null = null;
+    readonly rootMargin: string = '';
+    readonly thresholds: ReadonlyArray<number> = [];
+    constructor(_callback: IntersectionObserverCallback, _options?: IntersectionObserverInit) {}
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+    takeRecords(): IntersectionObserverEntry[] {
+      return [];
     }
   }
-});
+  Object.defineProperty(window, 'IntersectionObserver', {
+    writable: true,
+    value: MockIntersectionObserver,
+  });
+}
 
-afterEach(() => {
-  if (mswServer) {
-    mswServer.resetHandlers();
+// Mock ResizeObserver for jsdom (needed by many UI libraries)
+if (isClientTest && typeof window !== 'undefined' && !window.ResizeObserver) {
+  class MockResizeObserver {
+    constructor(_callback: ResizeObserverCallback) {}
+    observe() {}
+    unobserve() {}
+    disconnect() {}
   }
-});
+  Object.defineProperty(window, 'ResizeObserver', {
+    writable: true,
+    value: MockResizeObserver,
+  });
+}
 
-afterAll(() => {
-  if (mswServer) {
-    mswServer.close();
-  }
-});
+// MSW Server Setup for client-side tests
+// NOTE: We avoid importing { beforeAll, afterEach, afterAll } from 'vitest'
+// at the top level because in Vitest 4 with projects configuration, the runner
+// is not yet initialized when setupFiles are evaluated, causing
+// "Vitest failed to find the runner" errors.
+//
+// Instead, individual test files that need MSW should import and configure it:
+//   import { server } from '@/mocks/server';
+//   beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
+//   afterEach(() => server.resetHandlers());
+//   afterAll(() => server.close());
+//
+// Most client tests that mock fetch directly don't need MSW at all.

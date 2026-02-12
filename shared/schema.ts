@@ -2057,3 +2057,163 @@ export type TrainingDataset = typeof trainingDatasets.$inferSelect;
 export type InsertTrainingDataset = z.infer<typeof insertTrainingDatasetSchema>;
 export type TrainingExample = typeof trainingExamples.$inferSelect;
 export type InsertTrainingExample = z.infer<typeof insertTrainingExampleSchema>;
+
+// ============================================
+// WEEKLY CONTENT PLANNER (WS-C1)
+// ============================================
+
+/**
+ * WeeklyPlanPost — a single post slot in a weekly plan
+ */
+export interface WeeklyPlanPost {
+  dayOfWeek: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+  scheduledDate: string; // ISO date
+  suggestedTime: string; // HH:mm
+  category: string; // product_showcase, educational, industry_insights, etc.
+  subcategory?: string;
+  templateId?: string;
+  productIds: string[];
+  platform: 'linkedin' | 'instagram' | 'facebook' | 'twitter';
+  briefing: string; // AI-generated guidance for this specific post
+  status: 'planned' | 'in_progress' | 'generated' | 'approved' | 'scheduled';
+  generationId?: string; // Link to generation if created
+  scheduledPostId?: string; // Link to scheduledPosts if scheduled
+}
+
+export const weeklyPlans = pgTable(
+  'weekly_plans',
+  {
+    id: varchar('id')
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: varchar('user_id').notNull(),
+    weekStart: timestamp('week_start').notNull(), // Monday of the week
+    status: varchar('status', { length: 20 }).notNull().default('draft'), // draft | active | completed
+    posts: jsonb('posts').notNull().$type<WeeklyPlanPost[]>(),
+    metadata: jsonb('metadata').$type<{
+      postsPerWeek: number;
+      categoryTargets: Record<string, number>;
+      generatedAt: string;
+    }>(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    userWeekIdx: index('weekly_plans_user_week_idx').on(table.userId, table.weekStart),
+    statusIdx: index('weekly_plans_status_idx').on(table.status),
+  }),
+);
+
+export const insertWeeklyPlanSchema = createInsertSchema(weeklyPlans).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertWeeklyPlan = z.infer<typeof insertWeeklyPlanSchema>;
+export type WeeklyPlan = typeof weeklyPlans.$inferSelect;
+
+// ============================================
+// PRODUCT INTELLIGENCE LAYER (WS-C5)
+// ============================================
+
+/**
+ * Product priority tiers for content planning
+ * Tracks revenue importance, competitive angles, and posting targets per product
+ */
+export const productPriorities = pgTable(
+  'product_priorities',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text('user_id').notNull(),
+    productId: text('product_id').notNull(),
+    revenueTier: text('revenue_tier').notNull().default('core'), // flagship | core | supporting | new
+    revenueWeight: integer('revenue_weight').notNull().default(5), // 1-10
+    competitiveAngle: text('competitive_angle'), // What makes this product stand out
+    keySellingPoints: jsonb('key_selling_points').$type<string[]>().default([]),
+    monthlyTarget: integer('monthly_target').notNull().default(2), // Posts per month
+    lastPostedDate: timestamp('last_posted_date'),
+    totalPosts: integer('total_posts').notNull().default(0),
+    seasonalRelevance: jsonb('seasonal_relevance').$type<{ months: number[]; boost: number }>(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    userProductIdx: unique('product_priorities_user_product').on(table.userId, table.productId),
+    userIdIdx: index('product_priorities_user_id_idx').on(table.userId),
+    revenueTierIdx: index('product_priorities_revenue_tier_idx').on(table.revenueTier),
+  }),
+);
+
+/**
+ * Business intelligence data (one per user)
+ * Stores onboarding results: industry, niche, target customer, content strategy
+ */
+export const businessIntelligence = pgTable(
+  'business_intelligence',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text('user_id').notNull().unique(),
+    industry: text('industry'),
+    niche: text('niche'),
+    differentiator: text('differentiator'), // What makes this business unique
+    targetCustomer: jsonb('target_customer').$type<{
+      type: 'B2B' | 'B2C' | 'both';
+      demographics: string;
+      painPoints: string[];
+      decisionFactors: string[];
+    }>(),
+    contentThemes: jsonb('content_themes').$type<string[]>().default([]),
+    postsPerWeek: integer('posts_per_week').notNull().default(5),
+    categoryTargets: jsonb('category_targets').$type<Record<string, number>>().default({
+      product_showcase: 30,
+      educational: 25,
+      industry_insights: 20,
+      company_updates: 15,
+      engagement: 10,
+    }),
+    preferredPlatforms: jsonb('preferred_platforms').$type<string[]>().default(['linkedin']),
+    postingTimes: jsonb('posting_times').$type<Record<string, string>>().default({
+      monday: '09:00',
+      tuesday: '10:00',
+      wednesday: '09:00',
+      thursday: '10:00',
+      friday: '11:00',
+    }),
+    onboardingComplete: boolean('onboarding_complete').notNull().default(false),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index('business_intelligence_user_id_idx').on(table.userId),
+    onboardingIdx: index('business_intelligence_onboarding_idx').on(table.onboardingComplete),
+  }),
+);
+
+// Product Intelligence enum constraints
+export const revenueTierEnum = z.enum(['flagship', 'core', 'supporting', 'new']);
+
+// Insert schemas
+export const insertProductPrioritySchema = createInsertSchema(productPriorities, {
+  revenueTier: revenueTierEnum,
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBusinessIntelligenceSchema = createInsertSchema(businessIntelligence).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Type exports
+export type InsertProductPriority = z.infer<typeof insertProductPrioritySchema>;
+export type ProductPriority = typeof productPriorities.$inferSelect;
+
+export type InsertBusinessIntelligence = z.infer<typeof insertBusinessIntelligenceSchema>;
+export type BusinessIntelligence = typeof businessIntelligence.$inferSelect;

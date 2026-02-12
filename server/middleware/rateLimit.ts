@@ -105,8 +105,12 @@ export function createRateLimiter(options: RateLimiterOptions = {}) {
   }
 
   return (req: Request, res: Response, next: NextFunction) => {
-    // Skip rate limiting in test environment or for E2E tests with special header
-    if (process.env.NODE_ENV === 'test' || req.headers['x-e2e-test'] === 'true') {
+    // Skip rate limiting in test environment only
+    // BUG-022b fix: Only allow x-e2e-test header bypass in non-production environments
+    if (
+      process.env.NODE_ENV === 'test' ||
+      (process.env.NODE_ENV !== 'production' && req.headers['x-e2e-test'] === 'true')
+    ) {
       return next();
     }
 

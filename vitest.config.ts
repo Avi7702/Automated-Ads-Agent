@@ -19,43 +19,64 @@ const integrationTests = [
   '**/patternExtraction.test.ts', // Requires database (via patternExtractionService)
 ];
 
+const sharedExclude =
+  isCI || !hasDatabase
+    ? [
+        'node_modules/**',
+        '**/node_modules/**',
+        'e2e/**', // Playwright e2e tests
+        ...integrationTests,
+      ]
+    : [
+        'node_modules/**',
+        '**/node_modules/**',
+        'e2e/**', // Playwright e2e tests
+      ];
+
+const sharedResolve = {
+  alias: {
+    '@shared': path.resolve(__dirname, './shared'),
+    '@server': path.resolve(__dirname, './server'),
+    '@': path.resolve(__dirname, './client/src'),
+  },
+  dedupe: ['react', 'react-dom'],
+};
+
 export default defineConfig({
   plugins: [react()],
   test: {
-    globals: true,
-    environment: 'node',
-    // Use jsdom for client tests via @vitest-environment jsdom directive in test files
-    environmentMatchGlobs: [
-      ['client/**/*.test.tsx', 'jsdom'],
-      ['client/**/*.test.ts', 'jsdom'],
+    // Vitest 4 removed environmentMatchGlobs — use projects instead
+    projects: [
+      {
+        // Client tests run in jsdom environment
+        plugins: [react()],
+        test: {
+          name: 'client',
+          globals: true,
+          environment: 'jsdom',
+          include: ['client/**/*.test.tsx', 'client/**/*.test.ts'],
+          exclude: sharedExclude,
+          setupFiles: ['./vitest.setup.ts'],
+        },
+        resolve: sharedResolve,
+      },
+      {
+        // Server tests run in node environment
+        test: {
+          name: 'server',
+          globals: true,
+          environment: 'node',
+          include: ['server/**/*.test.ts'],
+          exclude: sharedExclude,
+          setupFiles: ['./vitest.setup.ts'],
+        },
+        resolve: sharedResolve,
+      },
     ],
-    setupFiles: ['./vitest.setup.ts'],
-    // Exclude database-dependent tests in CI or when no DATABASE_URL is set
-    // Also exclude e2e tests - those should be run with Playwright, not vitest
-    exclude: (isCI || !hasDatabase)
-      ? [
-          'node_modules/**',
-          '**/node_modules/**',
-          'e2e/**', // Playwright e2e tests
-          ...integrationTests,
-        ]
-      : [
-          'node_modules/**',
-          '**/node_modules/**',
-          'e2e/**', // Playwright e2e tests
-        ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
-      exclude: [
-        'node_modules/',
-        'dist/',
-        '**/*.d.ts',
-        '**/*.config.*',
-        '**/mockData',
-        'e2e/**',
-        'scripts/**',
-      ],
+      exclude: ['node_modules/', 'dist/', '**/*.d.ts', '**/*.config.*', '**/mockData', 'e2e/**', 'scripts/**'],
       // Coverage thresholds - fail if below these (80%+ requirement)
       thresholds: {
         // Global thresholds (everything-claude-code standard)
@@ -68,12 +89,5 @@ export default defineConfig({
       },
     },
   },
-  resolve: {
-    alias: {
-      '@shared': path.resolve(__dirname, './shared'),
-      '@server': path.resolve(__dirname, './server'),
-      '@': path.resolve(__dirname, './client/src'),
-    },
-    dedupe: ['react', 'react-dom'],
-  },
+  resolve: sharedResolve,
 });
