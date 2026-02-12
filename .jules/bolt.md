@@ -1,0 +1,3 @@
+## 2026-02-17 - In-memory Filtering Anti-pattern
+**Learning:** Found a recurring anti-pattern where the application fetches entire table contents for a user/category and then filters or aggregates the data in JavaScript. This is especially problematic for array columns (like `product_ids`) where native PostgreSQL operators like `&&` (overlap) combined with GIN indexes can perform the same operation orders of magnitude faster and with significantly less memory and network overhead.
+**Action:** Always prefer database-side filtering using `sql` fragments for array overlaps and native SQL aggregation (`GROUP BY`, `COUNT`) over in-memory processing. Ensure array columns used in filters are backed by GIN indexes.
