@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Header } from '@/components/layout/Header';
+import { formatDistanceToNow } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 interface SocialAccountsProps {
   embedded?: boolean;
@@ -10,13 +12,24 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ConnectedAccountCard } from '@/components/social/ConnectedAccountCard';
 import { useToast } from '@/hooks/use-toast';
 import { SocialConnection } from '@/types/social';
-import { RefreshCw, Link as LinkIcon, AlertCircle, ExternalLink } from 'lucide-react';
+import { RefreshCw, Link as LinkIcon, AlertCircle, ExternalLink, Zap } from 'lucide-react';
 
 export default function SocialAccounts({ embedded = false }: SocialAccountsProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [accounts, setAccounts] = useState<SocialConnection[]>([]);
+
+  const activeAccountCount = accounts.filter((a) => a.isActive).length;
+  const totalAccountCount = accounts.length;
+  const isConnected = totalAccountCount > 0;
+  const lastSyncTime =
+    accounts.length > 0
+      ? formatDistanceToNow(
+          new Date(Math.max(...accounts.map((a) => new Date(a.updatedAt || a.connectedAt).getTime()))),
+          { addSuffix: true },
+        )
+      : 'Never';
 
   // Fetch connected accounts
   const fetchAccounts = async (showToast = false) => {
@@ -67,11 +80,10 @@ export default function SocialAccounts({ embedded = false }: SocialAccountsProps
   // Sync accounts from n8n
   const handleSyncFromN8n = async () => {
     toast({
-      title: 'Not Implemented',
-      description: 'Please configure OAuth in n8n manually. This sync feature will be implemented in a future update.',
+      title: 'Managed via n8n',
+      description: 'Connect your accounts in the n8n dashboard and they will appear here automatically.',
       variant: 'default',
     });
-    // TODO: Implement sync from n8n API
   };
 
   // Disconnect account
@@ -146,6 +158,51 @@ export default function SocialAccounts({ embedded = false }: SocialAccountsProps
           </div>
         ) : (
           <div className="space-y-6">
+            {/* n8n Connection Status */}
+            <Card className={cn(!isConnected && 'opacity-60')}>
+              <CardContent className="p-5">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
+                    <Zap className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-sm">Automation Engine (n8n)</h3>
+                    <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Status</span>
+                        <p className="font-medium flex items-center gap-1.5 mt-0.5">
+                          <span
+                            className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-gray-400'} inline-block`}
+                          />
+                          {isConnected ? 'Connected' : 'No accounts'}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Workflows</span>
+                        <p className="font-medium mt-0.5">{activeAccountCount} active</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Accounts</span>
+                        <p className="font-medium mt-0.5">{totalAccountCount} total</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Last sync</span>
+                        <p className="font-medium mt-0.5">{lastSyncTime}</p>
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <Button variant="outline" size="sm" className="gap-2" asChild>
+                        <a href="https://ndsteel.app.n8n.cloud" target="_blank" rel="noopener noreferrer">
+                          Manage Workflows
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Connected Accounts */}
             {accounts.length > 0 && (
               <div className="space-y-4">
@@ -213,26 +270,32 @@ export default function SocialAccounts({ embedded = false }: SocialAccountsProps
                   </div>
 
                   {/* Sync button */}
-                  <div className="flex gap-3">
-                    <Button
-                      onClick={handleSyncFromN8n}
-                      variant="default"
-                      className="gap-2"
-                      disabled={loading || refreshing}
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                      Sync Accounts from n8n
-                    </Button>
-                    <Button variant="outline" className="gap-2" asChild>
-                      <a
-                        href="https://docs.n8n.io/integrations/builtin/credentials/"
-                        target="_blank"
-                        rel="noopener noreferrer"
+                  <div className="space-y-2">
+                    <div className="flex gap-3">
+                      <Button
+                        onClick={handleSyncFromN8n}
+                        variant="default"
+                        className="gap-2"
+                        disabled={loading || refreshing}
                       >
-                        <ExternalLink className="w-4 h-4" />
-                        n8n Documentation
-                      </a>
-                    </Button>
+                        <RefreshCw className="w-4 h-4" />
+                        Sync Accounts from n8n
+                      </Button>
+                      <Button variant="outline" className="gap-2" asChild>
+                        <a
+                          href="https://docs.n8n.io/integrations/builtin/credentials/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                          n8n Documentation
+                        </a>
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Accounts are managed through n8n. Connect your LinkedIn or Instagram in the n8n dashboard, and
+                      they'll appear here automatically.
+                    </p>
                   </div>
 
                   {/* Supported platforms */}

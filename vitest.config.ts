@@ -17,6 +17,7 @@ const integrationTests = [
   '**/productKnowledge.test.ts', // Requires database
   '**/ragEndpoints.test.ts', // Requires database
   '**/patternExtraction.test.ts', // Requires database (via patternExtractionService)
+  '**/calendarDashboard.test.ts', // Requires database
 ];
 
 export default defineConfig({
@@ -32,30 +33,23 @@ export default defineConfig({
     setupFiles: ['./vitest.setup.ts'],
     // Exclude database-dependent tests in CI or when no DATABASE_URL is set
     // Also exclude e2e tests - those should be run with Playwright, not vitest
-    exclude: (isCI || !hasDatabase)
-      ? [
-          'node_modules/**',
-          '**/node_modules/**',
-          'e2e/**', // Playwright e2e tests
-          ...integrationTests,
-        ]
-      : [
-          'node_modules/**',
-          '**/node_modules/**',
-          'e2e/**', // Playwright e2e tests
-        ],
+    exclude:
+      isCI || !hasDatabase
+        ? [
+            'node_modules/**',
+            '**/node_modules/**',
+            'e2e/**', // Playwright e2e tests
+            ...integrationTests,
+          ]
+        : [
+            'node_modules/**',
+            '**/node_modules/**',
+            'e2e/**', // Playwright e2e tests
+          ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
-      exclude: [
-        'node_modules/',
-        'dist/',
-        '**/*.d.ts',
-        '**/*.config.*',
-        '**/mockData',
-        'e2e/**',
-        'scripts/**',
-      ],
+      exclude: ['node_modules/', 'dist/', '**/*.d.ts', '**/*.config.*', '**/mockData', 'e2e/**', 'scripts/**'],
       // Coverage thresholds - fail if below these (80%+ requirement)
       thresholds: {
         // Global thresholds (everything-claude-code standard)

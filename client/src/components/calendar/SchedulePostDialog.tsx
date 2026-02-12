@@ -124,7 +124,7 @@ export function SchedulePostDialog({ open, onOpenChange, defaultDate, prefill }:
     staleTime: 60_000,
   });
 
-  const activeAccounts = useMemo(() => accounts.filter((a) => a.isActive), [accounts]);
+  const activeAccounts = useMemo(() => (Array.isArray(accounts) ? accounts : []).filter((a) => a.isActive), [accounts]);
 
   // Selected account's platform (for character limit)
   const selectedAccount = useMemo(

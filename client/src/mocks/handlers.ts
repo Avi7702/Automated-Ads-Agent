@@ -305,7 +305,8 @@ export const handlers = [
     const url = new URL(request.url);
     const query = url.searchParams.get('q') || '';
     const filtered = mockTemplates.filter(
-      (t) => t.name.toLowerCase().includes(query.toLowerCase()) || t.category.toLowerCase().includes(query.toLowerCase())
+      (t) =>
+        t.name.toLowerCase().includes(query.toLowerCase()) || t.category.toLowerCase().includes(query.toLowerCase()),
     );
     return HttpResponse.json(filtered);
   }),
@@ -426,7 +427,7 @@ export const handlers = [
         name: body.name,
         template: body.template,
       },
-      { status: 201 }
+      { status: 201 },
     );
   }),
 
@@ -608,7 +609,7 @@ export const handlers = [
         status: 'draft',
         createdAt: new Date().toISOString(),
       },
-      { status: 201 }
+      { status: 201 },
     );
   }),
 
@@ -730,6 +731,93 @@ export const handlers = [
       memory: 60,
       disk: 45,
     });
+  }),
+
+  // ============ Calendar Dashboard Endpoints ============
+  http.get('/api/calendar/dashboard', () => {
+    return HttpResponse.json({
+      stats: { upcoming: 5, publishing: 1, published: 23, failed: 2 },
+      recentActivity: [
+        {
+          id: 'post-mock-001',
+          caption: 'Check out our latest product launch! #innovation #tech',
+          status: 'published',
+          platform: 'linkedin',
+          scheduledFor: new Date(Date.now() - 86400000).toISOString(),
+          publishedAt: new Date(Date.now() - 86000000).toISOString(),
+          platformPostUrl: 'https://linkedin.com/feed/update/urn:li:share:mock123',
+          errorMessage: null,
+          imageUrl: 'https://picsum.photos/400/300',
+          updatedAt: new Date(Date.now() - 86000000).toISOString(),
+        },
+        {
+          id: 'post-mock-002',
+          caption: 'Exciting news coming soon! Stay tuned.',
+          status: 'scheduled',
+          platform: 'instagram',
+          scheduledFor: new Date(Date.now() + 86400000).toISOString(),
+          publishedAt: null,
+          platformPostUrl: null,
+          errorMessage: null,
+          imageUrl: null,
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'post-mock-003',
+          caption: 'Failed post that needs retry',
+          status: 'failed',
+          platform: 'linkedin',
+          scheduledFor: new Date(Date.now() - 3600000).toISOString(),
+          publishedAt: null,
+          platformPostUrl: null,
+          errorMessage: 'Rate limit exceeded',
+          imageUrl: null,
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+    });
+  }),
+
+  http.get('/api/calendar/posts/:id', ({ params }) => {
+    return HttpResponse.json({
+      id: params.id,
+      userId: 'user-mock-1',
+      connectionId: 'conn-mock-1',
+      caption: 'Mock post caption for testing',
+      hashtags: ['test', 'mock'],
+      imageUrl: null,
+      imagePublicId: null,
+      scheduledFor: new Date().toISOString(),
+      timezone: 'UTC',
+      status: 'scheduled',
+      publishedAt: null,
+      platformPostId: null,
+      platformPostUrl: null,
+      errorMessage: null,
+      failureReason: null,
+      retryCount: 0,
+      nextRetryAt: null,
+      generationId: null,
+      templateId: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+  }),
+
+  http.get('/api/csrf-token', () => {
+    return HttpResponse.json({ csrfToken: 'mock-csrf-token' });
+  }),
+
+  http.post('/api/calendar/schedule', async () => {
+    return HttpResponse.json({ id: 'new-post-1', status: 'scheduled' }, { status: 201 });
+  }),
+
+  http.patch('/api/calendar/posts/:id/cancel', ({ params }) => {
+    return HttpResponse.json({ id: params.id, status: 'cancelled' });
+  }),
+
+  http.patch('/api/calendar/posts/:id/reschedule', ({ params }) => {
+    return HttpResponse.json({ id: params.id, status: 'scheduled' });
   }),
 
   // ============ Social Accounts Endpoints ============

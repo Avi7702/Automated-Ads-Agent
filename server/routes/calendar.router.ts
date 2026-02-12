@@ -5,6 +5,7 @@
  * Endpoints:
  * - GET  /api/calendar/posts       — Posts in date range (calendar grid)
  * - GET  /api/calendar/counts      — Post counts per day (dot indicators)
+ * - GET  /api/calendar/dashboard   — Aggregated stats and recent activity
  * - GET  /api/calendar/posts/:id   — Single post details
  * - POST /api/calendar/schedule    — Schedule a new post
  * - PATCH /api/calendar/posts/:id/reschedule — Change scheduled date
@@ -18,6 +19,7 @@ import {
   getScheduledPostsByDateRange,
   getScheduledPostById,
   getPostCountsByMonth,
+  getDashboardData,
   schedulePost,
   reschedulePost,
   cancelScheduledPost,
@@ -102,6 +104,25 @@ export const calendarRouter: RouterFactory = (ctx: RouterContext): Router => {
         res.json(post);
       } catch (error) {
         handleRouteError(res, error, 'calendar.getPost');
+      }
+    }),
+  );
+
+  /**
+   * GET /dashboard — Aggregated stats and recent activity
+   */
+  router.get(
+    '/dashboard',
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const userId = (req as any).user?.id;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
+        const data = await getDashboardData(userId);
+        res.json(data);
+      } catch (error) {
+        handleRouteError(res, error, 'calendar.dashboard');
       }
     }),
   );
@@ -224,7 +245,7 @@ export const calendarRouterModule: RouterModule = {
   prefix: '/api/calendar',
   factory: calendarRouter,
   description: 'Content calendar scheduling and management',
-  endpointCount: 6,
+  endpointCount: 7,
   requiresAuth: true,
   tags: ['calendar', 'scheduling', 'content'],
 };

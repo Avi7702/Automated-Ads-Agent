@@ -6,7 +6,7 @@
  * Ask AI section, copy generation, LinkedIn preview, and history timeline.
  */
 
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'wouter';
 import { cn } from '@/lib/utils';
@@ -31,9 +31,12 @@ import {
   Copy,
   Wand2,
   Volume2,
+  CalendarPlus,
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { speakText } from '@/hooks/useVoiceInput';
 import { CanvasEditor } from '@/components/studio/CanvasEditor/CanvasEditor';
+import { SchedulePostDialog } from '@/components/calendar/SchedulePostDialog';
 import type { StudioOrchestrator } from '@/hooks/useStudioOrchestrator';
 
 interface ResultViewEnhancedProps {
@@ -41,6 +44,9 @@ interface ResultViewEnhancedProps {
 }
 
 export const ResultViewEnhanced = memo(function ResultViewEnhanced({ orch }: ResultViewEnhancedProps) {
+  const { toast } = useToast();
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+
   if (!orch.generatedImage) return null;
 
   return (
@@ -72,6 +78,30 @@ export const ResultViewEnhanced = memo(function ResultViewEnhanced({ orch }: Res
             </Button>
           </Link>
         </div>
+      </div>
+
+      {/* Publish Actions */}
+      <div className="bg-muted/30 rounded-xl p-4 border border-dashed border-border space-y-3">
+        <p className="text-sm font-medium text-muted-foreground">Ready to share?</p>
+        <div className="flex gap-3">
+          <Button variant="default" onClick={() => setScheduleOpen(true)}>
+            <CalendarPlus className="w-4 h-4 mr-2" />
+            Schedule Post
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              toast({
+                title: 'Coming soon',
+                description: 'Publish flow will be available in a future update.',
+              });
+            }}
+          >
+            <Send className="w-4 h-4 mr-2" />
+            Publish Now
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">Publish directly to LinkedIn, Instagram, and more</p>
       </div>
 
       {/* Generated Media — Video or Image with Zoom */}
@@ -393,6 +423,17 @@ export const ResultViewEnhanced = memo(function ResultViewEnhanced({ orch }: Res
           />
         )}
       </AnimatePresence>
+
+      {/* Schedule Post Dialog */}
+      <SchedulePostDialog
+        open={scheduleOpen}
+        onOpenChange={setScheduleOpen}
+        prefill={{
+          caption: orch.generatedCopy || undefined,
+          imageUrl: orch.generatedImage || undefined,
+          generationId: orch.generationId || undefined,
+        }}
+      />
     </motion.div>
   );
 });

@@ -300,3 +300,49 @@ export function useRetryPost() {
     },
   });
 }
+
+/* ------------------------------------------------------------------ */
+/*  Dashboard                                                          */
+/* ------------------------------------------------------------------ */
+
+export interface DashboardStats {
+  upcoming: number;
+  publishing: number;
+  published: number;
+  failed: number;
+}
+
+export interface DashboardActivity {
+  id: string;
+  caption: string;
+  status: string;
+  platform: string | null;
+  scheduledFor: string;
+  publishedAt: string | null;
+  platformPostUrl: string | null;
+  errorMessage: string | null;
+  imageUrl: string | null;
+  updatedAt: string;
+}
+
+export interface DashboardData {
+  stats: DashboardStats;
+  recentActivity: DashboardActivity[];
+}
+
+/**
+ * Fetch pipeline dashboard stats + recent activity.
+ * Refetches every 30 seconds to stay in sync with publishing state.
+ */
+export function useDashboardData() {
+  return useQuery<DashboardData>({
+    queryKey: ['dashboard-data'],
+    queryFn: async () => {
+      const res = await fetch('/api/calendar/dashboard', { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch dashboard data');
+      return res.json();
+    },
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+  });
+}

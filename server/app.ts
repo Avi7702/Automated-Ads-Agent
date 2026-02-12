@@ -243,9 +243,13 @@ const { generateToken, doubleCsrfProtection } = doubleCsrf({
 
 // Apply CSRF protection middleware
 // Skip CSRF for:
+//   - development mode — unnecessary friction for local dev
 //   - analytics/vitals — sendBeacon() cannot set custom headers
 //   - n8n webhooks — use HMAC signature auth instead (webhookAuth.ts)
 app.use((req: Request, res: Response, next: NextFunction) => {
+  if (process.env.NODE_ENV !== 'production') {
+    return next();
+  }
   if (req.path === '/api/analytics/vitals' && req.method === 'POST') {
     return next();
   }
@@ -257,6 +261,10 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 // CSRF token endpoint - clients must fetch this before making state-changing requests
 app.get('/api/csrf-token', (req: Request, res: Response) => {
+  if (process.env.NODE_ENV !== 'production') {
+    // In dev mode CSRF is disabled — return a dummy token
+    return res.json({ csrfToken: 'dev-mode-no-csrf' });
+  }
   res.json({ csrfToken: generateToken(req, res) });
 });
 

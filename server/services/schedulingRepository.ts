@@ -38,6 +38,31 @@ export interface DayCount {
   failed: number;
 }
 
+export interface DashboardStats {
+  upcoming: number;
+  publishing: number;
+  published: number;
+  failed: number;
+}
+
+export interface DashboardActivity {
+  id: string;
+  caption: string;
+  status: string;
+  platform: string | null;
+  scheduledFor: string;
+  publishedAt: string | null;
+  platformPostUrl: string | null;
+  errorMessage: string | null;
+  imageUrl: string | null;
+  updatedAt: string;
+}
+
+export interface DashboardData {
+  stats: DashboardStats;
+  recentActivity: DashboardActivity[];
+}
+
 /* ------------------------------------------------------------------ */
 /*  Queries                                                            */
 /* ------------------------------------------------------------------ */
@@ -97,6 +122,43 @@ export async function getPostCountsByMonth(userId: string, year: number, month: 
   );
 
   return result.rows as DayCount[];
+}
+
+/**
+ * Get aggregated dashboard stats and recent activity for a user.
+ * Used by the Pipeline Dashboard overview.
+ */
+export async function getDashboardData(userId: string): Promise<DashboardData> {
+  const statsResult = await pool.query(
+    `SELECT
+       COUNT(*) FILTER (WHERE status = 'scheduled' AND scheduled_for > NOW())::int AS upcoming,
+       COUNT(*) FILTER (WHERE status = 'publishing')::int AS publishing,
+       COUNT(*) FILTER (WHERE status = 'published')::int AS published,
+       COUNT(*) FILTER (WHERE status = 'failed')::int AS failed
+     FROM scheduled_posts
+     WHERE user_id = $1`,
+    [userId],
+  );
+
+  const stats = statsResult.rows[0] as DashboardStats;
+
+  const activityResult = await pool.query(
+    `SELECT
+       sp.id, sp.caption, sp.status, sp.scheduled_for AS "scheduledFor",
+       sp.published_at AS "publishedAt", sp.platform_post_url AS "platformPostUrl",
+       sp.error_message AS "errorMessage", sp.image_url AS "imageUrl",
+       sp.updated_at AS "updatedAt", sc.platform
+     FROM scheduled_posts sp
+     LEFT JOIN social_connections sc ON sp.connection_id = sc.id
+     WHERE sp.user_id = $1
+     ORDER BY sp.updated_at DESC
+     LIMIT 20`,
+    [userId],
+  );
+
+  const recentActivity = activityResult.rows as DashboardActivity[];
+
+  return { stats, recentActivity };
 }
 
 /* ------------------------------------------------------------------ */
