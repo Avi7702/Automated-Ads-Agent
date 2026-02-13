@@ -1,0 +1,3 @@
+## 2026-02-13 - [Optimize Array Queries with GIN Indexes]
+**Learning:** Found an anti-pattern in `knowledgeRepository.ts` where all brand images for a user were fetched and then filtered in-memory using `.filter()`. This becomes a significant bottleneck as the user's library grows. Additionally, PostgreSQL array columns used in such overlap queries require GIN indexes for efficient execution, which were missing in `shared/schema.ts`.
+**Action:** Always favor database-side filtering using the array overlap operator `&&` (via Drizzle `sql` fragments) for array columns, and ensure corresponding GIN indexes are defined in the schema. Use `sql.join` to safely build SQL array fragments for multiple product IDs.
