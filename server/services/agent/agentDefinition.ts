@@ -4,7 +4,7 @@
  * Model: gemini-3-pro-preview (latest, Nov 2025)
  */
 
-import { LlmAgent } from '@google/adk';
+import { LlmAgent, Gemini } from '@google/adk';
 import type { IStorage } from '../../storage';
 import { createProductTools } from './tools/productTools';
 import { createGenerationTools } from './tools/generationTools';
@@ -77,9 +77,19 @@ export function createStudioAgent(storage: IStorage) {
     ...createKnowledgeTools(storage),
   ];
 
+  // Resolve API key from the env vars this app uses.
+  // The ADK internally looks for GOOGLE_GENAI_API_KEY or GEMINI_API_KEY,
+  // but this app stores the key in GOOGLE_API_KEY. Pass it explicitly.
+  const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY;
+
+  const model = new Gemini({
+    model: 'gemini-3-pro-preview',
+    apiKey,
+  });
+
   return new LlmAgent({
     name: 'studio_assistant',
-    model: 'gemini-3-pro-preview',
+    model,
     description: 'AI assistant for the Automated Ads Agent Studio',
     instruction: SYSTEM_INSTRUCTION,
     tools,

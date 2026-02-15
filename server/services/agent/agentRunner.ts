@@ -17,13 +17,9 @@ export type AgentSSEEvent =
   | { type: 'done' };
 
 let runner: InMemoryRunner | null = null;
-let runnerInitError: Error | null = null;
 
-/** Lazily initialize the runner on first use */
+/** Lazily initialize the runner on first use. Retries on each call if init fails. */
 function getRunner(storage: IStorage): InMemoryRunner {
-  if (runnerInitError) {
-    throw runnerInitError;
-  }
   if (!runner) {
     try {
       const agent = createStudioAgent(storage);
@@ -33,9 +29,8 @@ function getRunner(storage: IStorage): InMemoryRunner {
       });
       logger.info({ module: 'AgentRunner' }, 'ADK InMemoryRunner initialized');
     } catch (err: unknown) {
-      runnerInitError = err instanceof Error ? err : new Error(String(err));
       logger.error({ module: 'AgentRunner', err }, 'Failed to initialize ADK InMemoryRunner');
-      throw runnerInitError;
+      throw err instanceof Error ? err : new Error(String(err));
     }
   }
   return runner;
