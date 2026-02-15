@@ -121,14 +121,8 @@ test.describe('Login Page', { tag: '@login' }, () => {
   });
 
   test.describe('Authentication Flow', () => {
-    test('valid demo credentials login and redirect to Studio /', async ({ page, request }) => {
+    test('valid demo credentials login and redirect to Studio /', async ({ page, baseURL }) => {
       // Ensure demo user exists via API
-      const demoResponse = await request.get('http://localhost:3000/api/auth/demo', {
-        headers: { 'x-e2e-test': 'true' },
-      });
-      expect(demoResponse.ok()).toBeTruthy();
-
-      // Clear any session from the API call above (page context is separate)
       const loginPage = new LoginPage(page);
       await loginPage.goto();
 
@@ -155,12 +149,7 @@ test.describe('Login Page', { tag: '@login' }, () => {
       await expect(page).toHaveURL(/\/login/);
     });
 
-    test('wrong password shows error', async ({ page, request }) => {
-      // Ensure demo user exists
-      await request.get('http://localhost:3000/api/auth/demo', {
-        headers: { 'x-e2e-test': 'true' },
-      });
-
+    test('wrong password shows error', async ({ page }) => {
       const loginPage = new LoginPage(page);
       await loginPage.goto();
 

@@ -106,12 +106,11 @@ test.describe('Accessibility', { tag: '@a11y' }, () => {
 
   test('API key form opens as a dialog with proper role', async ({ page }) => {
     await gotoWithAuth(page, '/settings?section=api-keys');
-    await page.waitForTimeout(3000);
 
-    const configureBtn = page.getByRole('button', { name: /Configure|Edit/i }).first();
+    // Look for the API key card button
+    const configureBtn = page.getByRole('button', { name: /Edit Key|Add Key/i }).first();
     await expect(configureBtn).toBeVisible();
     await configureBtn.click();
-    await page.waitForTimeout(500);
 
     const dialog = page.locator('[role="dialog"]');
     await expect(dialog).toBeVisible();
@@ -133,7 +132,6 @@ test.describe('Accessibility', { tag: '@a11y' }, () => {
 
   test('Settings Brand Profile form fields have associated labels or accessible names', async ({ page }) => {
     await gotoWithAuth(page, '/settings');
-    await page.waitForTimeout(2000);
 
     // Open the brand profile edit form
     const editBtn = page
@@ -142,7 +140,6 @@ test.describe('Accessibility', { tag: '@a11y' }, () => {
 
     await expect(editBtn).toBeVisible();
     await editBtn.click();
-    await page.waitForTimeout(500);
 
     const dialog = page.locator('[role="dialog"]');
     await expect(dialog).toBeVisible();

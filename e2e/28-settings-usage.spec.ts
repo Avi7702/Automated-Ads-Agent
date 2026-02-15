@@ -86,7 +86,7 @@ test.describe('Settings - Usage & Quotas', { tag: '@settings' }, () => {
     await page.waitForTimeout(1000);
 
     // The active tab panel should change
-    const activePanel = page.locator('[role="tabpanel"]');
+    const activePanel = page.locator('[role="tabpanel"][data-state="active"]');
     await expect(activePanel).toBeVisible();
   });
 
@@ -100,7 +100,7 @@ test.describe('Settings - Usage & Quotas', { tag: '@settings' }, () => {
     await perfTab.click();
     await page.waitForTimeout(1000);
 
-    const activePanel = page.locator('[role="tabpanel"]');
+    const activePanel = page.locator('[role="tabpanel"][data-state="active"]');
     await expect(activePanel).toBeVisible();
   });
 
@@ -114,7 +114,7 @@ test.describe('Settings - Usage & Quotas', { tag: '@settings' }, () => {
     await errorsTab.click();
     await page.waitForTimeout(1000);
 
-    const activePanel = page.locator('[role="tabpanel"]');
+    const activePanel = page.locator('[role="tabpanel"][data-state="active"]');
     await expect(activePanel).toBeVisible();
   });
 
@@ -132,7 +132,7 @@ test.describe('Settings - Usage & Quotas', { tag: '@settings' }, () => {
     await expect(quotaTab).toHaveAttribute('data-state', 'active');
 
     // Content panel should be visible
-    const activePanel = page.locator('[role="tabpanel"]');
+    const activePanel = page.locator('[role="tabpanel"][data-state="active"]');
     await expect(activePanel).toBeVisible();
   });
 

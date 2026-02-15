@@ -18,7 +18,7 @@ export class LoginPage {
     this.page = page;
     this.emailInput = page.locator('input#email');
     this.passwordInput = page.locator('input#password');
-    this.signInButton = page.getByRole('button', { name: /Sign In/i });
+    this.signInButton = page.getByRole('button', { name: 'Sign In', exact: true });
     this.errorMessage = page.locator('.text-destructive');
     this.pageTitle = page.locator('h1');
     this.pageSubtitle = page.locator('text=Sign in to continue');
