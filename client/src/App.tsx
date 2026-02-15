@@ -10,7 +10,6 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { PWAUpdatePrompt } from '@/components/PWAUpdatePrompt';
-import { GlobalChatButton } from '@/components/chat/GlobalChatButton';
 import { OnboardingGate } from '@/components/onboarding/OnboardingGate';
 
 // Eager load only critical pages
@@ -175,7 +174,6 @@ function App() {
                   <Router />
                 </main>
               </OnboardingGate>
-              <GlobalChatButton />
               <PWAUpdatePrompt />
             </TooltipProvider>
           </AuthProvider>
