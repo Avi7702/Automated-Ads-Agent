@@ -43,10 +43,12 @@ export function buildPrompt(ctx: GenerationContext): string {
   // Layer shared context sections onto any mode's prompt
   prompt = appendStyleDirective(prompt, ctx);
   prompt = appendBrandContext(prompt, ctx);
+  prompt = appendBrandDNAContext(prompt, ctx);
   prompt = appendProductContext(prompt, ctx);
   prompt = appendPatternsContext(prompt, ctx);
   prompt = appendKBContext(prompt, ctx);
   prompt = appendVisionContext(prompt, ctx);
+  prompt = appendPlatformGuidelines(prompt, ctx);
 
   return prompt;
 }
@@ -293,5 +295,69 @@ PRODUCT VISUAL ANALYSIS:
 - Usage Context: ${ctx.vision.usageContext}
 
 Ensure the generated image is consistent with these product characteristics.`
+  );
+}
+
+/**
+ * Append Brand DNA context (Phase 5 Intelligence Layer).
+ * Adds persistent brand insights learned from historical brand data analysis.
+ */
+function appendBrandDNAContext(prompt: string, ctx: GenerationContext): string {
+  if (!ctx.brandDNA?.contentRules) return prompt;
+
+  logger.info({ module: 'PromptBuilder' }, 'Brand DNA context applied to prompt');
+
+  return (
+    prompt +
+    `
+${ctx.brandDNA.contentRules}
+
+Apply these brand DNA insights to ensure generation aligns with the brand's proven patterns.`
+  );
+}
+
+// ============================================
+// PLATFORM-SPECIFIC GUIDELINES (Phase 5.3)
+// ============================================
+
+/**
+ * Returns platform-specific image guidelines for the target platform.
+ */
+export function getPlatformGuidelines(platform: string): string {
+  const guidelines: Record<string, string> = {
+    instagram:
+      'Square (1:1) or vertical (4:5), vibrant colors, lifestyle-focused, clean composition, high visual impact',
+    linkedin: 'Horizontal (1.91:1), professional tone, data-driven visuals, minimal text overlay, business-appropriate',
+    tiktok: 'Vertical (9:16), bold text, high contrast, dynamic composition, eye-catching in first frame',
+    facebook: 'Flexible (1.91:1 for ads, 1:1 for posts), engaging, storytelling-focused, works at small sizes in feed',
+    twitter: 'Horizontal (16:9), clean composition, minimal text, works well cropped, stands out in timeline',
+    'twitter/x': 'Horizontal (16:9), clean composition, minimal text, works well cropped, stands out in timeline',
+  };
+
+  return guidelines[platform.toLowerCase()] || '';
+}
+
+/**
+ * Append platform-specific guidelines to the prompt if a target platform is specified.
+ */
+function appendPlatformGuidelines(prompt: string, ctx: GenerationContext): string {
+  // Determine platform from input or recipe
+  const platform = ctx.input.platform || (ctx.input.recipe as any)?.platform || null;
+
+  if (!platform) return prompt;
+
+  const guidelines = getPlatformGuidelines(platform);
+  if (!guidelines) return prompt;
+
+  logger.info({ module: 'PromptBuilder', platform }, 'Platform guidelines applied to prompt');
+
+  return (
+    prompt +
+    `
+
+PLATFORM GUIDELINES (${platform.toUpperCase()}):
+${guidelines}
+
+Optimize the image composition and style for ${platform} best practices.`
   );
 }

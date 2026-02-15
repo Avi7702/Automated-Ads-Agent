@@ -12,10 +12,10 @@
  * Provides links to manage each data source.
  */
 
-import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { useQuery } from '@tanstack/react-query';
+import { Link } from 'wouter';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   Package,
   Link2,
@@ -28,7 +28,7 @@ import {
   RefreshCw,
   CheckCircle,
   AlertCircle,
-} from "lucide-react";
+} from 'lucide-react';
 
 interface KBStat {
   label: string;
@@ -40,19 +40,19 @@ interface KBStat {
 
 export function KnowledgeBaseSection() {
   const { data: products = [], isLoading: loadingProducts } = useQuery({
-    queryKey: ["products"],
+    queryKey: ['products'],
     queryFn: async () => {
-      const res = await fetch("/api/products");
+      const res = await fetch('/api/products');
       if (!res.ok) return [];
       const data = await res.json();
-      return Array.isArray(data) ? data : (data?.products || []);
+      return Array.isArray(data) ? data : data?.products || [];
     },
   });
 
   const { data: templates = [], isLoading: loadingTemplates } = useQuery({
-    queryKey: ["templates"],
+    queryKey: ['templates'],
     queryFn: async () => {
-      const res = await fetch("/api/templates");
+      const res = await fetch('/api/templates');
       if (!res.ok) return [];
       const data = await res.json();
       return data.templates || [];
@@ -60,18 +60,18 @@ export function KnowledgeBaseSection() {
   });
 
   const { data: brandImages = [], isLoading: loadingBrandImages } = useQuery({
-    queryKey: ["brand-images"],
+    queryKey: ['brand-images'],
     queryFn: async () => {
-      const res = await fetch("/api/brand-images");
+      const res = await fetch('/api/brand-images');
       if (!res.ok) return [];
       return res.json();
     },
   });
 
   const { data: scenarios = [], isLoading: loadingScenarios } = useQuery({
-    queryKey: ["installation-scenarios"],
+    queryKey: ['installation-scenarios'],
     queryFn: async () => {
-      const res = await fetch("/api/installation-scenarios");
+      const res = await fetch('/api/installation-scenarios');
       if (!res.ok) return [];
       return res.json();
     },
@@ -81,32 +81,32 @@ export function KnowledgeBaseSection() {
 
   const stats: KBStat[] = [
     {
-      label: "Products",
+      label: 'Products',
       count: products.length,
       icon: Package,
-      href: "/library?tab=products",
-      color: "text-blue-500",
+      href: '/library?tab=products',
+      color: 'text-blue-500',
     },
     {
-      label: "Brand Images",
+      label: 'Brand Images',
       count: brandImages.length,
       icon: ImageIcon,
-      href: "/library?tab=brand-images",
-      color: "text-purple-500",
+      href: '/library?tab=brand-images',
+      color: 'text-purple-500',
     },
     {
-      label: "Installation Scenarios",
+      label: 'Installation Scenarios',
       count: scenarios.length,
       icon: MapPin,
-      href: "/library?tab=scenarios",
-      color: "text-green-500",
+      href: '/library?tab=scenarios',
+      color: 'text-green-500',
     },
     {
-      label: "Scene Templates",
+      label: 'Gen Templates',
       count: templates.length,
       icon: Layout,
-      href: "/library?tab=scene-templates",
-      color: "text-amber-500",
+      href: '/library?tab=scene-templates',
+      color: 'text-amber-500',
     },
   ];
 
@@ -160,11 +160,7 @@ export function KnowledgeBaseSection() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium">{stat.label}</p>
                   <p className="text-2xl font-bold">
-                    {isLoading ? (
-                      <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                    ) : (
-                      stat.count
-                    )}
+                    {isLoading ? <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /> : stat.count}
                   </p>
                 </div>
                 <ExternalLink className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -202,8 +198,8 @@ export function KnowledgeBaseSection() {
       {/* Info */}
       <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t border-border">
         <p>
-          The knowledge base powers the Idea Bank, copy generation, and template matching.
-          More data = better AI suggestions.
+          The knowledge base powers the Idea Bank, copy generation, and template matching. More data = better AI
+          suggestions.
         </p>
       </div>
     </div>

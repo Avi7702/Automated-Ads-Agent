@@ -14,6 +14,7 @@
  * 7. Learned Patterns — patternExtractionService
  * 8. Template Resolution — storage.getAdSceneTemplateById
  * 9. Prompt Assembly — promptBuilder
+ * 9.5. Pre-Generation Quality Gate — preGenGate (blocks score<40, warns 40-60)
  * 10. Generation — Gemini API
  * 10.5. Critic — auto-quality evaluation + silent retry (PaperBanana pattern)
  * 11. Persistence — storage.saveGeneration
@@ -35,8 +36,11 @@ import { saveOriginalFile, saveGeneratedImage } from '../../fileStorage';
 import { normalizeResolution, estimateGenerationCostMicros } from '../pricingEstimator';
 import { buildPrompt } from './promptBuilder';
 import { runCriticLoop } from './criticStage';
+import { evaluatePreGenGate, BLOCK_THRESHOLD, WARN_THRESHOLD } from './preGenGate';
+import type { PreGenGateResult } from './preGenGate';
 import { captureException } from '../../lib/sentry';
 import { notify } from '../notificationService';
+import { getBrandDNAContext } from '../brandDNAService';
 
 import type { GenerationContext, GenerationInput, GenerationResult } from '../../types/generationPipeline';
 
@@ -119,6 +123,64 @@ export async function executeGenerationPipeline(input: GenerationInput): Promise
     },
     'Prompt assembled',
   );
+
+  // Stage 9.5: Pre-Generation Quality Gate
+  // Evaluates prompt + context completeness before expensive image generation.
+  // Score < 40 blocks (throws), 40-60 warns (continues), > 60 passes.
+  // NOTE: Unlike other stages, a BLOCK result must propagate — not be swallowed by runStage.
+  let preGenGateResult: PreGenGateResult | undefined;
+  try {
+    preGenGateResult = await evaluatePreGenGate({
+      prompt: input.prompt,
+      hasImages: input.images.length > 0,
+      imageCount: input.images.length,
+      hasTemplate: !!ctx.template,
+      hasBrandContext: !!ctx.brand,
+      hasRecipe: !!input.recipe,
+      mode: input.mode,
+    });
+    stagesCompleted.push('preGenGate');
+
+    if (preGenGateResult.score < BLOCK_THRESHOLD) {
+      // Block generation — throw with suggestions so the caller can return a 400
+      const suggestionsText =
+        preGenGateResult.suggestions.length > 0
+          ? `\nSuggestions:\n${preGenGateResult.suggestions.map((s) => `  - ${s}`).join('\n')}`
+          : '';
+      const err = new Error(
+        `Pre-generation quality gate failed (score: ${preGenGateResult.score}/100).${suggestionsText}`,
+      );
+      (err as any).name = 'PreGenGateError';
+      (err as any).score = preGenGateResult.score;
+      (err as any).suggestions = preGenGateResult.suggestions;
+      (err as any).breakdown = preGenGateResult.breakdown;
+      throw err;
+    }
+
+    if (preGenGateResult.score < WARN_THRESHOLD) {
+      logger.warn(
+        {
+          module: 'GenerationPipeline',
+          score: preGenGateResult.score,
+          suggestions: preGenGateResult.suggestions,
+          breakdown: preGenGateResult.breakdown,
+        },
+        'Pre-gen gate warning — proceeding with reduced confidence',
+      );
+    } else {
+      logger.info({ module: 'GenerationPipeline', score: preGenGateResult.score }, 'Pre-gen gate passed');
+    }
+  } catch (err: any) {
+    // If it's a PreGenGateError, re-throw — caller should handle it
+    if (err.name === 'PreGenGateError') {
+      throw err;
+    }
+    // For any other error (LLM failure, network issue), log and continue
+    logger.warn(
+      { module: 'GenerationPipeline', stage: 'preGenGate', err },
+      'Pre-gen gate failed — continuing without it',
+    );
+  }
 
   // Stage 10: Generation (must succeed — alert on failure)
   let genResult;
@@ -259,9 +321,25 @@ async function stageProductContext(ctx: GenerationContext) {
 /**
  * Stage 3: Brand Context
  * Fetch brand profile for the current user.
+ * Also fetches Brand DNA context for enrichment.
  */
 async function stageBrandContext(ctx: GenerationContext) {
   const brandProfile = await storage.getBrandProfileByUserId(ctx.input.userId);
+
+  // Fetch Brand DNA context (Phase 5) — runs in parallel, fault-tolerant
+  try {
+    const dnaContext = await getBrandDNAContext(ctx.input.userId, storage);
+    if (dnaContext) {
+      ctx.brandDNA = {
+        visualSignature: undefined,
+        toneGuidance: undefined,
+        contentRules: dnaContext,
+      };
+    }
+  } catch (err) {
+    logger.warn({ module: 'GenerationPipeline', err }, 'Brand DNA fetch failed — continuing without it');
+  }
+
   if (!brandProfile) return undefined;
 
   return {

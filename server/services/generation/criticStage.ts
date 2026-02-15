@@ -35,7 +35,7 @@ export async function evaluateGeneration(ctx: GenerationContext, geminiClient: a
 
   try {
     const result = await geminiClient.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3-flash',
       contents: [
         {
           role: 'user',

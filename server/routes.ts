@@ -78,6 +78,7 @@ import {
   saveN8nConfigSchema,
   n8nCallbackSchema,
   syncAccountSchema,
+  performanceWebhookSchema,
 } from './validation/schemas';
 import { logger } from './lib/logger';
 import { validateFileType, uploadPatternLimiter, checkPatternQuota } from './middleware/uploadValidation';
@@ -616,382 +617,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
           'Processing request',
         );
 
-        // Fetch template if using template-based mode
-        let template = null;
-        if (templateId) {
-          template = await storage.getAdSceneTemplateById(templateId);
-          if (!template) {
-            return res.status(404).json({ error: 'Template not found' });
+        // --- PIPELINE MIGRATION ---
+        // All prompt building, context gathering, Gemini call, critic loop,
+        // and persistence are now handled by executeGenerationPipeline().
+        // This replaces ~330 lines of inline logic.
+
+        // Convert multer files to ImageInput format for the pipeline
+        const imageInputs = files.map((f: Express.Multer.File) => ({
+          buffer: f.buffer,
+          mimetype: f.mimetype,
+          originalname: f.originalname,
+        }));
+
+        // Parse recipe into the shape the pipeline expects
+        let parsedRecipe = recipe;
+        // Parse templateReferenceUrls from FormData (may come as JSON string)
+        let parsedTemplateReferenceUrls: string[] | undefined;
+        if (templateReferenceUrls) {
+          try {
+            parsedTemplateReferenceUrls =
+              typeof templateReferenceUrls === 'string' ? JSON.parse(templateReferenceUrls) : templateReferenceUrls;
+          } catch {
+            parsedTemplateReferenceUrls = Array.isArray(templateReferenceUrls)
+              ? templateReferenceUrls
+              : [templateReferenceUrls];
           }
         }
 
-        // Build the prompt for transformation or generation based on mode
-        let enhancedPrompt = prompt;
-
-        if (generationMode === 'exact_insert' && template) {
-          // EXACT_INSERT MODE: Product must be inserted into template scene with quality constraints
-          if (hasFiles) {
-            enhancedPrompt = `Insert this product into the following scene template while maintaining exact quality standards.
-
-Template Scene: ${template.promptBlueprint}
-
-User Instructions: ${prompt}
-
-CRITICAL QUALITY CONSTRAINTS:
-- Product must be clearly visible and recognizable as the main subject
-- Product lighting must match the template scene's lighting style exactly
-- Product placement must follow the template's placement hints: ${JSON.stringify(template.placementHints || {})}
-- Maintain professional photography quality
-- Scene environment should match template exactly: ${template.environment || 'as described'}
-- Overall mood must match template mood: ${template.mood || 'as described'}
-- Do not add text or watermarks
-- Product must look natural and integrated into the scene, not pasted on
-
-If multiple products provided, arrange them according to the template's composition while maintaining all quality constraints.`;
-          } else {
-            enhancedPrompt = `Generate an image following this scene template exactly.
-
-Template Scene: ${template.promptBlueprint}
-
-User Instructions: ${prompt}
-
-QUALITY CONSTRAINTS:
-- Follow the template's scene description precisely
-- Match lighting style: ${template.lightingStyle || 'as described in template'}
-- Match environment: ${template.environment || 'as described'}
-- Match mood: ${template.mood || 'as described'}
-- Professional photography quality
-- Do not add text or watermarks`;
-          }
-        } else if (generationMode === 'inspiration' && template) {
-          // INSPIRATION MODE: Use template as style guide, but create new scene
-          if (hasFiles) {
-            enhancedPrompt = `Transform this product photo inspired by the following template style, but create a unique scene.
-
-Template Inspiration:
-- Category: ${template.category}
-- Mood: ${template.mood || 'not specified'}
-- Lighting Style: ${template.lightingStyle || 'not specified'}
-- Environment Type: ${template.environment || 'not specified'}
-- General Vibe: ${template.promptBlueprint.slice(0, 200)}
-
-User Instructions: ${prompt}
-
-Guidelines:
-- Keep the product as the hero/focus
-- Capture the template's mood and style, but create a NEW unique scene
-- Maintain professional photography quality
-- Ensure the product is clearly visible and recognizable
-- Do not copy the template scene exactly - be creative while maintaining the aesthetic
-- Do not add text or watermarks`;
-          } else {
-            enhancedPrompt = `Generate an image inspired by this template style, creating a unique scene.
-
-Template Inspiration:
-- Category: ${template.category}
-- Mood: ${template.mood || 'not specified'}
-- Lighting Style: ${template.lightingStyle || 'not specified'}
-- Environment: ${template.environment || 'not specified'}
-
-User Instructions: ${prompt}
-
-Guidelines:
-- Capture the template's aesthetic and mood
-- Create a unique scene, don't copy the template exactly
-- Professional photography quality
-- Do not add text or watermarks`;
-          }
-        } else {
-          // STANDARD MODE: Original behavior
-          if (hasFiles) {
-            if (files.length === 1) {
-              enhancedPrompt = `Transform this product photo based on the following instructions: ${prompt}
-
-Guidelines:
-- Keep the product as the hero/focus
-- Maintain professional photography quality
-- Ensure the product is clearly visible and recognizable
-- Apply the requested scene, lighting, and style changes
-- Do not add text or watermarks`;
-            } else {
-              enhancedPrompt = `Transform these ${files.length} product photos based on the following instructions: ${prompt}
-
-Guidelines:
-- Combine/arrange all products in a cohesive scene
-- Keep all products clearly visible and recognizable
-- Maintain professional photography quality
-- Apply the requested scene, lighting, and style changes
-- Show how the products work together or as a collection
-- Do not add text or watermarks`;
-            }
-          }
-          // If no files in standard mode, use prompt as-is for text-only generation
-        }
-
-        // INJECT BRAND PROFILE (if available)
-        const brandProfile = userId ? await storage.getBrandProfileByUserId(userId) : null;
-        if (brandProfile) {
-          logger.info({ module: 'Transform', brandName: brandProfile.brandName }, 'Applying Brand Profile');
-          const brandContext = `
-
-BRAND GUIDELINES (${brandProfile.brandName}):
-- Visual Style: ${brandProfile.preferredStyles?.join(', ') || 'Professional'}
-- Brand Values: ${brandProfile.brandValues?.join(', ') || 'Reliability'}
-- Brand Colors: ${brandProfile.colorPreferences?.join(', ') || 'Standard'}
-- Voice Principles: ${(brandProfile.voice as { principles?: string[] })?.principles?.join(', ') || 'Professional'}
-
-Ensure the generated image aligns with these brand guidelines where possible.`;
-          enhancedPrompt += brandContext;
-        }
-
-        // INJECT RECIPE CONTEXT (if provided from IdeaBank)
-        if (recipe) {
-          let recipeContext = `
-
-PRODUCT CONTEXT (from IdeaBank):`;
-
-          // Add related products context
-          if (recipe.relationships && recipe.relationships.length > 0) {
-            recipeContext += `
-Related Products:`;
-            for (const rel of recipe.relationships.slice(0, 5)) {
-              recipeContext += `
-- ${rel.targetProductName} (${rel.relationshipType})${rel.description ? `: ${rel.description}` : ''}`;
-            }
-          }
-
-          // Add installation scenario context (only include active scenarios)
-          if (recipe.scenarios && recipe.scenarios.length > 0) {
-            const activeScenarios = recipe.scenarios.filter(
-              (s: { title: string; description: string; isActive?: boolean }) => s.isActive !== false,
-            );
-            if (activeScenarios.length > 0) {
-              recipeContext += `
-Installation Context:`;
-              for (const scenario of activeScenarios.slice(0, 2)) {
-                recipeContext += `
-- ${scenario.title}: ${scenario.description.slice(0, 200)}`;
-              }
-            }
-          }
-
-          // Add brand voice if not already from profile
-          if (recipe.brandVoice && !brandProfile) {
-            recipeContext += `
-Brand Context:
-- Brand: ${recipe.brandVoice.brandName || 'Not specified'}
-- Industry: ${recipe.brandVoice.industry || 'Not specified'}
-- Values: ${recipe.brandVoice.values?.join(', ') || 'Not specified'}`;
-          }
-
-          recipeContext += `
-
-Consider these product relationships and usage contexts when generating the image.`;
-          enhancedPrompt += recipeContext;
-          logger.info(
-            {
-              module: 'Transform',
-              relationshipsCount: recipe.relationships?.length || 0,
-              scenariosCount: recipe.scenarios?.length || 0,
-            },
-            'Recipe context applied',
-          );
-        }
-
-        // Build user message parts
-        const userParts: any[] = [];
-
-        // Add template reference images first (for exact_insert mode)
-        if (generationMode === 'exact_insert' && templateReferenceUrls && Array.isArray(templateReferenceUrls)) {
-          // Helper to validate URL is safe (SSRF protection)
-          const isAllowedUrl = (url: string): boolean => {
-            try {
-              const parsed = new URL(url);
-              // Only allow HTTPS from known CDN domains
-              const allowedHosts = ['res.cloudinary.com', 'images.unsplash.com', 'cdn.pixabay.com'];
-              return parsed.protocol === 'https:' && allowedHosts.some((h) => parsed.hostname.endsWith(h));
-            } catch {
-              return false;
-            }
-          };
-
-          for (const refUrl of templateReferenceUrls.slice(0, 3)) {
-            // Max 3 reference images
-            // Skip invalid or potentially malicious URLs
-            if (!isAllowedUrl(refUrl)) {
-              logger.warn({ module: 'Transform', url: refUrl }, 'Skipping disallowed URL');
-              continue;
-            }
-
-            try {
-              // Add timeout with AbortController
-              const controller = new AbortController();
-              const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
-
-              const response = await fetch(refUrl, { signal: controller.signal });
-              clearTimeout(timeoutId);
-
-              if (response.ok) {
-                const buffer = await response.arrayBuffer();
-                userParts.push({
-                  inlineData: {
-                    mimeType: 'image/jpeg',
-                    data: Buffer.from(buffer).toString('base64'),
-                  },
-                });
-              }
-            } catch (err) {
-              logger.warn({ module: 'Transform', url: refUrl, err }, 'Failed to fetch template reference image');
-            }
-          }
-        }
-
-        // Add product images (if provided)
-        if (hasFiles) {
-          files.forEach((file, index) => {
-            userParts.push({
-              inlineData: {
-                mimeType: file.mimetype,
-                data: file.buffer.toString('base64'),
-              },
-            });
-          });
-        }
-
-        // Then add the prompt
-        userParts.push({ text: enhancedPrompt });
-
-        // Build the contents array for the API call
-        const contents = [{ role: 'user', parts: userParts }];
-
-        // Generate content with image input using Gemini image generation model
-        // Resolves user-saved API key from database, falls back to env var
-        const geminiClient = await getGeminiClientForUser(userId);
-
-        const modelName = 'gemini-3-pro-image-preview';
-        const validResolutions = ['1K', '2K', '4K'];
-        const requestedResolution = validResolutions.includes(req.body.resolution) ? req.body.resolution : '2K';
-        logger.info(
-          { module: 'Transform', model: modelName, resolution: requestedResolution },
-          'Using model (direct Google API)',
-        );
-
-        const result = await geminiClient.models.generateContent({
-          model: modelName,
-          contents,
-          config: {
-            imageConfig: {
-              imageSize: requestedResolution, // "1K", "2K", or "4K"
-            },
-          },
+        // Execute the full generation pipeline
+        const { executeGenerationPipeline } = await import('./services/generation');
+        const pipelineResult = await executeGenerationPipeline({
+          prompt,
+          mode: generationMode as 'standard' | 'exact_insert' | 'inspiration',
+          images: imageInputs,
+          templateId: templateId || undefined,
+          templateReferenceUrls: parsedTemplateReferenceUrls,
+          recipe: parsedRecipe || undefined,
+          styleReferenceIds: req.body.styleReferenceIds || undefined,
+          resolution: selectedResolution as '1K' | '2K' | '4K',
+          userId: userId!,
+          aspectRatio: req.body.aspectRatio || undefined,
+          productIds: req.body.productIds || undefined,
         });
 
-        logger.info(
-          { module: 'Transform', modelVersion: result.modelVersion, candidates: result.candidates?.length },
-          'Model response received',
-        );
-        const usageMetadata = (result as any).usageMetadata;
-        if (usageMetadata) {
-          logger.info({ module: 'Transform', usageMetadata }, 'Captured usageMetadata');
-        }
+        success = true;
 
-        // Check if we got an image back
-        if (!result.candidates?.[0]?.content?.parts?.[0]) {
-          throw new Error('No image generated');
-        }
-
-        const modelResponse = result.candidates[0].content;
-        const imagePart = modelResponse.parts?.find((p: any) => p.inlineData);
-
-        if (imagePart && imagePart.inlineData && imagePart.inlineData.data) {
-          // Save uploaded files to disk (if any were provided)
-          const originalImagePaths: string[] = [];
-          if (hasFiles) {
-            for (const file of files) {
-              const savedPath = await saveOriginalFile(file.buffer, file.originalname);
-              originalImagePaths.push(savedPath);
-            }
-          }
-
-          // Save generated image to disk
-          const generatedImageData = imagePart.inlineData.data;
-          const mimeType = imagePart.inlineData.mimeType || 'image/png';
-          const format = mimeType.split('/')[1] || 'png';
-          const generatedImagePath = await saveGeneratedImage(generatedImageData, format);
-
-          // CRITICAL: Build and store conversation history for future edits
-          // This includes the thought signatures that Gemini needs to "remember" the image
-          // Store as raw object - Drizzle will handle JSONB serialization
-          const conversationHistory = [
-            { role: 'user', parts: userParts },
-            modelResponse, // This contains thoughtSignature fields - DO NOT MODIFY
-          ];
-
-          // Save generation record to database with conversation history
-          const generation = await storage.saveGeneration({
-            userId, // Now properly set from authenticated session
-            prompt,
-            originalImagePaths,
-            generatedImagePath,
-            resolution: selectedResolution,
-            conversationHistory, // Pass as object, Drizzle handles JSONB
-            parentGenerationId: null,
-            editPrompt: null,
-          });
-
-          logger.info(
-            { module: 'Transform', generationId: generation.id },
-            'Saved generation with conversation history',
-          );
-          // Persist usage/cost estimate for adaptive pricing
-          try {
-            const durationMsForUsage = Date.now() - startTime;
-            const cost = estimateGenerationCostMicros({
-              resolution: selectedResolution,
-              inputImagesCount: hasFiles ? files.length : 0,
-              promptChars: String(prompt).length,
-              usageMetadata: typeof usageMetadata === 'object' ? usageMetadata : null,
-            });
-
-            await storage.saveGenerationUsage({
-              generationId: generation.id,
-              brandId: userId || 'anonymous',
-              model: modelName,
-              operation: 'generate',
-              resolution: selectedResolution,
-              inputImagesCount: hasFiles ? files.length : 0,
-              promptChars: String(prompt).length,
-              durationMs: durationMsForUsage,
-              inputTokens: cost.inputTokens,
-              outputTokens: cost.outputTokens,
-              estimatedCostMicros: cost.estimatedCostMicros,
-              estimationSource: cost.estimationSource,
-            });
-          } catch (e) {
-            logger.warn({ module: 'Transform', err: e }, 'Failed to persist generation usage (run db:push?)');
-          }
-
-          success = true;
-
-          // Return the file path or Cloudinary URL for the frontend to use
-          res.json({
-            success: true,
-            imageUrl: generatedImagePath.startsWith('http')
-              ? generatedImagePath
-              : `/${generatedImagePath.replace(/\\/g, '/')}`,
-            generationId: generation.id,
-            prompt: prompt,
-            canEdit: true,
-            mode: generationMode,
-            templateId: templateId || null,
-          });
-        } else {
-          errorType = 'no_image_content';
-          throw new Error('Generated content was not an image');
-        }
+        // Return response in the same format the frontend expects
+        res.json({
+          success: true,
+          imageUrl: pipelineResult.imageUrl,
+          generationId: pipelineResult.generationId,
+          prompt: pipelineResult.prompt,
+          canEdit: pipelineResult.canEdit,
+          mode: pipelineResult.mode,
+          templateId: pipelineResult.templateId || null,
+          stagesCompleted: pipelineResult.stagesCompleted,
+        });
       } catch (error: any) {
         logger.error({ module: 'Transform', err: error }, 'Transform error');
         errorType = errorType || error.name || 'unknown';
+
+        // Pre-generation quality gate blocks return 400 with suggestions
+        if (error.name === 'PreGenGateError') {
+          telemetry.trackError({
+            endpoint: '/api/transform',
+            errorType: 'pre_gen_gate_blocked',
+            statusCode: 400,
+            userId,
+          });
+
+          return res.status(400).json({
+            error: 'Generation request does not meet quality threshold',
+            details: error.message,
+            score: error.score,
+            suggestions: error.suggestions,
+            breakdown: error.breakdown,
+          });
+        }
 
         telemetry.trackError({
           endpoint: '/api/transform',
@@ -4920,6 +4622,54 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.status(500).json({
         success: false,
         error: 'Failed to process callback',
+      });
+    }
+  });
+
+  // ===== GENERATION PERFORMANCE WEBHOOK (Phase 5) =====
+
+  /**
+   * POST /api/webhooks/performance
+   * Webhook for n8n to POST social media engagement data for a generation.
+   * Requires webhook signature validation (same secret as n8n callbacks).
+   */
+  app.post('/api/webhooks/performance', validateN8nWebhook, validate(performanceWebhookSchema), async (req, res) => {
+    try {
+      const { generationId, platform, impressions, engagementRate, clicks, conversions } = req.body;
+
+      logger.info({ module: 'PerformanceWebhook', generationId, platform }, 'Performance data received');
+
+      // Verify generation exists
+      const generation = await storage.getGenerationById(generationId);
+      if (!generation) {
+        return res.status(404).json({
+          success: false,
+          error: 'Generation not found',
+        });
+      }
+
+      // Save performance data
+      const performanceRecord = await storage.saveGenerationPerformance({
+        generationId,
+        platform,
+        impressions: impressions ?? 0,
+        engagementRate: engagementRate ?? 0,
+        clicks: clicks ?? 0,
+        conversions: conversions ?? 0,
+        fetchedAt: new Date(),
+      });
+
+      res.json({
+        success: true,
+        data: { id: performanceRecord.id },
+        message: 'Performance data saved',
+      });
+    } catch (error) {
+      logger.error({ module: 'PerformanceWebhook', err: error }, 'Failed to save performance data');
+
+      res.status(500).json({
+        success: false,
+        error: 'Failed to save performance data',
       });
     }
   });

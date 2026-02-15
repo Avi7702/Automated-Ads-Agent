@@ -64,16 +64,6 @@ export default function SocialAccounts({ embedded = false }: SocialAccountsProps
     await fetchAccounts(true);
   };
 
-  // Sync accounts from n8n
-  const handleSyncFromN8n = async () => {
-    toast({
-      title: 'Not Implemented',
-      description: 'Please configure OAuth in n8n manually. This sync feature will be implemented in a future update.',
-      variant: 'default',
-    });
-    // TODO: Implement sync from n8n API
-  };
-
   // Disconnect account
   const handleDisconnect = async (accountId: string) => {
     try {
@@ -206,7 +196,7 @@ export default function SocialAccounts({ embedded = false }: SocialAccountsProps
                       <li className="pl-2">
                         <span className="font-medium">Sync accounts to this app</span>
                         <p className="ml-6 mt-1 text-muted-foreground">
-                          Click the "Sync Accounts from n8n" button below to discover your connected platforms
+                          Accounts will be synced automatically once the integration is complete
                         </p>
                       </li>
                     </ol>
@@ -214,15 +204,7 @@ export default function SocialAccounts({ embedded = false }: SocialAccountsProps
 
                   {/* Sync button */}
                   <div className="flex gap-3">
-                    <Button
-                      onClick={handleSyncFromN8n}
-                      variant="default"
-                      className="gap-2"
-                      disabled={loading || refreshing}
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                      Sync Accounts from n8n
-                    </Button>
+                    {/* TODO: Wire to /api/social/sync-accounts when n8n sync is implemented */}
                     <Button variant="outline" className="gap-2" asChild>
                       <a
                         href="https://docs.n8n.io/integrations/builtin/credentials/"

@@ -5,8 +5,8 @@
  * These functions power the 4-gate verification system.
  */
 
-import { logger } from "../../lib/logger";
-import { generateContentWithRetry } from "../../lib/geminiClient";
+import { logger } from '../../lib/logger';
+import { generateContentWithRetry } from '../../lib/geminiClient';
 import type {
   ComparisonResult,
   EquivalenceResult,
@@ -14,7 +14,7 @@ import type {
   ExtractedClaim,
   ExtractedData,
   VisionResult,
-} from "./types";
+} from './types';
 
 // ============================================
 // CONSTANTS
@@ -22,11 +22,11 @@ import type {
 
 // Text model for comparisons and verification (fast, accurate)
 // MODEL RECENCY RULE: Before changing any model ID, verify today's date and confirm the model is current within the last 3-4 weeks.
-const TEXT_MODEL = process.env.GEMINI_TEXT_MODEL || "gemini-2.5-flash";
+const TEXT_MODEL = process.env.GEMINI_TEXT_MODEL || 'gemini-3-flash';
 
 // Vision model for image comparisons (best spatial reasoning)
 // MODEL RECENCY RULE: Before changing any model ID, verify today's date and confirm the model is current within the last 3-4 weeks.
-const VISION_MODEL = process.env.GEMINI_VISION_MODEL || "gemini-3-pro-preview";
+const VISION_MODEL = process.env.GEMINI_VISION_MODEL || 'gemini-3-pro-preview';
 
 // ============================================
 // SEMANTIC COMPARISON FUNCTIONS
@@ -51,8 +51,8 @@ export async function aiCompareDescriptions(params: {
 
 ## Our Product (from image analysis):
 - Category: ${params.ourProduct.category}
-- Materials: ${params.ourProduct.materials.join(", ")}
-- Colors: ${params.ourProduct.colors.join(", ")}
+- Materials: ${params.ourProduct.materials.join(', ')}
+- Colors: ${params.ourProduct.colors.join(', ')}
 - Style: ${params.ourProduct.style}
 
 ## Source Product (from website):
@@ -74,23 +74,26 @@ Consider:
 }`;
 
   try {
-    const response = await generateContentWithRetry({
-      model: TEXT_MODEL,
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      config: { temperature: 0.1 },
-    }, { operation: 'enrichment_ai' });
+    const response = await generateContentWithRetry(
+      {
+        model: TEXT_MODEL,
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: { temperature: 0.1 },
+      },
+      { operation: 'enrichment_ai' },
+    );
 
-    const text = response.text || "";
+    const text = response.text || '';
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      return { similar: false, confidence: 0, reasoning: "Failed to parse AI response" };
+      return { similar: false, confidence: 0, reasoning: 'Failed to parse AI response' };
     }
 
     const parsed = JSON.parse(jsonMatch[0]);
     return {
       similar: Boolean(parsed.similar),
       confidence: Math.min(100, Math.max(0, Number(parsed.confidence) || 0)),
-      reasoning: String(parsed.reasoning || ""),
+      reasoning: String(parsed.reasoning || ''),
     };
   } catch (err) {
     logger.error({ module: 'aiHelpers', err }, 'aiCompareDescriptions failed');
@@ -103,7 +106,7 @@ Consider:
  */
 export async function aiCompareImages(
   productImageBase64: string,
-  sourceImageBase64: string
+  sourceImageBase64: string,
 ): Promise<ComparisonResult> {
   const prompt = `You are a visual product matching expert. Determine if these two images show the SAME product.
 
@@ -121,32 +124,35 @@ Compare the two images and determine:
 }`;
 
   try {
-    const response = await generateContentWithRetry({
-      model: VISION_MODEL,
-      contents: [
-        {
-          role: "user",
-          parts: [
-            { text: prompt },
-            { inlineData: { mimeType: "image/jpeg", data: productImageBase64 } },
-            { inlineData: { mimeType: "image/jpeg", data: sourceImageBase64 } },
-          ],
-        },
-      ],
-      config: { temperature: 0.1 },
-    }, { operation: 'enrichment_ai' });
+    const response = await generateContentWithRetry(
+      {
+        model: VISION_MODEL,
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              { text: prompt },
+              { inlineData: { mimeType: 'image/jpeg', data: productImageBase64 } },
+              { inlineData: { mimeType: 'image/jpeg', data: sourceImageBase64 } },
+            ],
+          },
+        ],
+        config: { temperature: 0.1 },
+      },
+      { operation: 'enrichment_ai' },
+    );
 
-    const text = response.text || "";
+    const text = response.text || '';
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      return { similar: false, confidence: 0, reasoning: "Failed to parse AI response" };
+      return { similar: false, confidence: 0, reasoning: 'Failed to parse AI response' };
     }
 
     const parsed = JSON.parse(jsonMatch[0]);
     return {
       similar: Boolean(parsed.similar),
       confidence: Math.min(100, Math.max(0, Number(parsed.confidence) || 0)),
-      reasoning: String(parsed.reasoning || ""),
+      reasoning: String(parsed.reasoning || ''),
     };
   } catch (err) {
     logger.error({ module: 'aiHelpers', err }, 'aiCompareImages failed');
@@ -161,13 +167,10 @@ Compare the two images and determine:
 /**
  * Extract structured product data from webpage content
  */
-export async function aiExtractProductData(
-  pageContent: string,
-  productNameHint?: string
-): Promise<ExtractedData> {
+export async function aiExtractProductData(pageContent: string, productNameHint?: string): Promise<ExtractedData> {
   const prompt = `You are a product data extraction expert. Extract structured information from this webpage content.
 
-${productNameHint ? `## Product Name Hint: ${productNameHint}` : ""}
+${productNameHint ? `## Product Name Hint: ${productNameHint}` : ''}
 
 ## Webpage Content
 ${pageContent.substring(0, 8000)}
@@ -193,38 +196,41 @@ Extract the following information about the product. Be accurate - only include 
 Only include fields that have explicit information in the source content. Leave fields empty ("" or []) if not found.`;
 
   try {
-    const response = await generateContentWithRetry({
-      model: TEXT_MODEL,
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      config: { temperature: 0.1, maxOutputTokens: 2000 },
-    }, { operation: 'enrichment_ai' });
+    const response = await generateContentWithRetry(
+      {
+        model: TEXT_MODEL,
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: { temperature: 0.1, maxOutputTokens: 2000 },
+      },
+      { operation: 'enrichment_ai' },
+    );
 
-    const text = response.text || "";
+    const text = response.text || '';
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      throw new Error("Failed to parse extraction response");
+      throw new Error('Failed to parse extraction response');
     }
 
     const parsed = JSON.parse(jsonMatch[0]);
     return {
-      sourceUrl: "",  // Will be filled by caller
-      productName: String(parsed.productName || ""),
-      description: String(parsed.description || ""),
+      sourceUrl: '', // Will be filled by caller
+      productName: String(parsed.productName || ''),
+      description: String(parsed.description || ''),
       specifications: parsed.specifications || {},
       relatedProducts: Array.isArray(parsed.relatedProducts) ? parsed.relatedProducts : [],
-      installationInfo: String(parsed.installationInfo || ""),
+      installationInfo: String(parsed.installationInfo || ''),
       certifications: Array.isArray(parsed.certifications) ? parsed.certifications : [],
       rawExtract: pageContent,
     };
   } catch (err) {
     logger.error({ module: 'aiHelpers', err }, 'aiExtractProductData failed');
     return {
-      sourceUrl: "",
-      productName: "",
-      description: "",
+      sourceUrl: '',
+      productName: '',
+      description: '',
       specifications: {},
       relatedProducts: [],
-      installationInfo: "",
+      installationInfo: '',
       certifications: [],
       rawExtract: pageContent,
     };
@@ -234,10 +240,7 @@ Only include fields that have explicit information in the source content. Leave 
 /**
  * Re-extract a specific field from content (for verification)
  */
-export async function aiReExtractField(
-  pageContent: string,
-  fieldName: string
-): Promise<string> {
+export async function aiReExtractField(pageContent: string, fieldName: string): Promise<string> {
   const prompt = `Extract the "${fieldName}" from this product page content.
 
 ## Content
@@ -250,17 +253,20 @@ Find and extract ONLY the ${fieldName} information. Return the exact value as it
 Return ONLY the extracted value, nothing else. If not found, return "NOT_FOUND".`;
 
   try {
-    const response = await generateContentWithRetry({
-      model: TEXT_MODEL,
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      config: { temperature: 0.1, maxOutputTokens: 500 },
-    }, { operation: 'enrichment_ai' });
+    const response = await generateContentWithRetry(
+      {
+        model: TEXT_MODEL,
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: { temperature: 0.1, maxOutputTokens: 500 },
+      },
+      { operation: 'enrichment_ai' },
+    );
 
-    const text = (response.text || "").trim();
-    return text === "NOT_FOUND" ? "" : text;
+    const text = (response.text || '').trim();
+    return text === 'NOT_FOUND' ? '' : text;
   } catch (err) {
     logger.error({ module: 'aiHelpers', err }, 'aiReExtractField failed');
-    return "";
+    return '';
   }
 }
 
@@ -271,10 +277,7 @@ Return ONLY the extracted value, nothing else. If not found, return "NOT_FOUND".
 /**
  * Verify a claim against source content
  */
-export async function aiVerifyClaim(params: {
-  claim: string;
-  source: string;
-}): Promise<ClaimSupportResult> {
+export async function aiVerifyClaim(params: { claim: string; source: string }): Promise<ClaimSupportResult> {
   const prompt = `You are a fact-checking expert. Verify if the following claim is supported by the source content.
 
 ## Claim
@@ -298,16 +301,19 @@ Determine if the source content:
 }`;
 
   try {
-    const response = await generateContentWithRetry({
-      model: TEXT_MODEL,
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      config: { temperature: 0.1 },
-    }, { operation: 'enrichment_ai' });
+    const response = await generateContentWithRetry(
+      {
+        model: TEXT_MODEL,
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: { temperature: 0.1 },
+      },
+      { operation: 'enrichment_ai' },
+    );
 
-    const text = response.text || "";
+    const text = response.text || '';
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      return { supports: false, contradicts: false, neutral: true, reasoning: "Failed to parse" };
+      return { supports: false, contradicts: false, neutral: true, reasoning: 'Failed to parse' };
     }
 
     const parsed = JSON.parse(jsonMatch[0]);
@@ -315,7 +321,7 @@ Determine if the source content:
       supports: Boolean(parsed.supports),
       contradicts: Boolean(parsed.contradicts),
       neutral: Boolean(parsed.neutral),
-      reasoning: String(parsed.reasoning || ""),
+      reasoning: String(parsed.reasoning || ''),
     };
   } catch (err) {
     logger.error({ module: 'aiHelpers', err }, 'aiVerifyClaim failed');
@@ -332,14 +338,14 @@ export async function aiCheckEquivalence(values: string[]): Promise<EquivalenceR
       allEquivalent: true,
       compatible: true,
       resolvedValue: values[0] || null,
-      reasoning: "Only one value provided",
+      reasoning: 'Only one value provided',
     };
   }
 
   const prompt = `You are a unit conversion and equivalence expert. Determine if these values are equivalent.
 
 ## Values to Compare
-${values.map((v, i) => `${i + 1}. "${v}"`).join("\n")}
+${values.map((v, i) => `${i + 1}. "${v}"`).join('\n')}
 
 ## Task
 Determine if all these values represent the SAME measurement or property:
@@ -356,20 +362,23 @@ Determine if all these values represent the SAME measurement or property:
 }`;
 
   try {
-    const response = await generateContentWithRetry({
-      model: TEXT_MODEL,
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      config: { temperature: 0.1 },
-    }, { operation: 'enrichment_ai' });
+    const response = await generateContentWithRetry(
+      {
+        model: TEXT_MODEL,
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: { temperature: 0.1 },
+      },
+      { operation: 'enrichment_ai' },
+    );
 
-    const text = response.text || "";
+    const text = response.text || '';
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       return {
         allEquivalent: false,
         compatible: false,
         resolvedValue: null,
-        reasoning: "Failed to parse response",
+        reasoning: 'Failed to parse response',
       };
     }
 
@@ -378,7 +387,7 @@ Determine if all these values represent the SAME measurement or property:
       allEquivalent: Boolean(parsed.allEquivalent),
       compatible: Boolean(parsed.compatible || parsed.allEquivalent),
       resolvedValue: parsed.resolvedValue || null,
-      reasoning: String(parsed.reasoning || ""),
+      reasoning: String(parsed.reasoning || ''),
     };
   } catch (err) {
     logger.error({ module: 'aiHelpers', err }, 'aiCheckEquivalence failed');
@@ -419,13 +428,16 @@ Ignore marketing language and subjective statements.
 }`;
 
   try {
-    const response = await generateContentWithRetry({
-      model: TEXT_MODEL,
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      config: { temperature: 0.1, maxOutputTokens: 1500 },
-    }, { operation: 'enrichment_ai' });
+    const response = await generateContentWithRetry(
+      {
+        model: TEXT_MODEL,
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: { temperature: 0.1, maxOutputTokens: 1500 },
+      },
+      { operation: 'enrichment_ai' },
+    );
 
-    const text = response.text || "";
+    const text = response.text || '';
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       return [];
@@ -437,8 +449,8 @@ Ignore marketing language and subjective statements.
     }
 
     return parsed.claims.map((c: { claim?: string; importance?: string }) => ({
-      claim: String(c.claim || ""),
-      importance: (c.importance as "high" | "medium" | "low") || "medium",
+      claim: String(c.claim || ''),
+      importance: (c.importance as 'high' | 'medium' | 'low') || 'medium',
     }));
   } catch (err) {
     logger.error({ module: 'aiHelpers', err }, 'aiExtractClaims failed');
@@ -453,18 +465,13 @@ Ignore marketing language and subjective statements.
 /**
  * Select the best value from multiple extractions using trust-weighted voting
  */
-export function selectBestValue(
-  extractions: Array<{ value: string; trustLevel: number }>,
-  fieldName: string
-): string {
-  if (extractions.length === 0) return "";
+export function selectBestValue(extractions: Array<{ value: string; trustLevel: number }>, fieldName: string): string {
+  if (extractions.length === 0) return '';
 
   // Sort by trust level (highest first)
-  const sorted = [...extractions]
-    .filter(e => e.value && e.value.trim())
-    .sort((a, b) => b.trustLevel - a.trustLevel);
+  const sorted = [...extractions].filter((e) => e.value && e.value.trim()).sort((a, b) => b.trustLevel - a.trustLevel);
 
-  if (sorted.length === 0) return "";
+  if (sorted.length === 0) return '';
 
   // Return the highest trust value
   return sorted[0].value;
@@ -474,8 +481,7 @@ export function selectBestValue(
  * Check if two string values agree (case-insensitive, whitespace-normalized)
  */
 export function valuesAgree(value1: string, value2: string): boolean {
-  const normalize = (s: string) =>
-    s.toLowerCase().replace(/\s+/g, " ").trim();
+  const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim();
 
   return normalize(value1) === normalize(value2);
 }
@@ -487,17 +493,13 @@ export function valuesAgree(value1: string, value2: string): boolean {
 /**
  * Compare SKU/part numbers with fuzzy matching
  */
-export function compareSkus(
-  detectedTexts: string[],
-  sourceSku: string | null
-): { match: boolean; confidence: number } {
+export function compareSkus(detectedTexts: string[], sourceSku: string | null): { match: boolean; confidence: number } {
   if (!sourceSku || detectedTexts.length === 0) {
     return { match: false, confidence: 0 };
   }
 
   // Normalize for comparison
-  const normalizeForComparison = (s: string) =>
-    s.toUpperCase().replace(/[\s\-_\.]/g, "");
+  const normalizeForComparison = (s: string) => s.toUpperCase().replace(/[\s\-_\.]/g, '');
 
   const normalizedSource = normalizeForComparison(sourceSku);
 
@@ -510,8 +512,7 @@ export function compareSkus(
     }
 
     // Contains match (detected contains source or vice versa)
-    if (normalizedDetected.includes(normalizedSource) ||
-        normalizedSource.includes(normalizedDetected)) {
+    if (normalizedDetected.includes(normalizedSource) || normalizedSource.includes(normalizedDetected)) {
       return { match: true, confidence: 85 };
     }
 
@@ -562,8 +563,8 @@ function normalizeImageUrl(url: string, width: number = 800): string {
   if (!url) return url;
 
   // Handle Shopify URLs with {width} placeholder (e.g., nextdaysteel.co.uk)
-  if (url.includes("{width}")) {
-    return url.replace("{width}", String(width));
+  if (url.includes('{width}')) {
+    return url.replace('{width}', String(width));
   }
 
   return url;
@@ -582,7 +583,7 @@ export async function fetchImageAsBase64(url: string): Promise<string> {
       throw new Error(`Failed to fetch image: ${response.status} for URL: ${normalizedUrl}`);
     }
     const arrayBuffer = await response.arrayBuffer();
-    return Buffer.from(arrayBuffer).toString("base64");
+    return Buffer.from(arrayBuffer).toString('base64');
   } catch (err) {
     logger.error({ module: 'aiHelpers', err }, 'fetchImageAsBase64 failed');
     throw err;
@@ -602,11 +603,7 @@ export function calculateMatchConfidence(params: {
   const visualScore = params.visualSimilarity.similar ? params.visualSimilarity.confidence : 0;
   const semanticScore = params.semanticMatch.similar ? params.semanticMatch.confidence : 0;
 
-  return Math.round(
-    skuScore * 0.4 +
-    visualScore * 0.35 +
-    semanticScore * 0.25
-  );
+  return Math.round(skuScore * 0.4 + visualScore * 0.35 + semanticScore * 0.25);
 }
 
 // Export all helpers

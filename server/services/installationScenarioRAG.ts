@@ -38,21 +38,17 @@ export const ROOM_TYPES = [
   'outdoor',
   'hallway',
   'office',
-  'dining_room'
+  'dining_room',
 ] as const;
 
-export type RoomType = typeof ROOM_TYPES[number];
+export type RoomType = (typeof ROOM_TYPES)[number];
 
 /**
  * Scenario types for installation contexts
  */
-export const SCENARIO_TYPES = [
-  'room_type',
-  'application',
-  'before_after'
-] as const;
+export const SCENARIO_TYPES = ['room_type', 'application', 'before_after'] as const;
 
-export type ScenarioType = typeof SCENARIO_TYPES[number];
+export type ScenarioType = (typeof SCENARIO_TYPES)[number];
 
 /**
  * Context for installation suggestions
@@ -168,7 +164,7 @@ export interface RoomInstallationContext {
 
 // Model for text analysis
 // MODEL RECENCY RULE: Before changing any model ID, verify today's date and confirm the model is current within the last 3-4 weeks.
-const TEXT_MODEL = 'gemini-2.0-flash';
+const TEXT_MODEL = 'gemini-3-flash';
 
 /**
  * Room-specific installation considerations
@@ -178,62 +174,62 @@ const ROOM_CONSIDERATIONS: Record<RoomType, string[]> = {
     'High traffic area - consider durability',
     'May need furniture moving and replacement',
     'Natural lighting affects color perception',
-    'Consider noise reduction for attached rooms'
+    'Consider noise reduction for attached rooms',
   ],
   bedroom: [
     'Softer feel underfoot preferred',
     'Sound insulation important',
     'Consider allergies - hypoallergenic options',
-    'Closet and doorway transitions'
+    'Closet and doorway transitions',
   ],
   kitchen: [
     'Water and moisture resistance essential',
     'Easy to clean surface preferred',
     'Consider subfloor leveling for appliances',
-    'May need to work around fixed cabinets'
+    'May need to work around fixed cabinets',
   ],
   bathroom: [
     'Waterproof flooring required',
     'Non-slip surface critical for safety',
     'Proper sealing around fixtures',
-    'Moisture barrier installation essential'
+    'Moisture barrier installation essential',
   ],
   basement: [
     'Moisture control is primary concern',
     'Concrete subfloor preparation needed',
     'Consider floating floor systems',
-    'Temperature and humidity fluctuations'
+    'Temperature and humidity fluctuations',
   ],
   commercial: [
     'Heavy duty products required',
     'ADA compliance considerations',
     'Minimal downtime during installation',
-    'Durability and maintenance long-term'
+    'Durability and maintenance long-term',
   ],
   outdoor: [
     'Weather resistance critical',
     'UV protection needed',
     'Drainage considerations',
-    'Expansion and contraction allowance'
+    'Expansion and contraction allowance',
   ],
   hallway: [
     'High traffic durability needed',
     'Transition strips to adjacent rooms',
     'Narrow space installation challenges',
-    'Consider pattern direction flow'
+    'Consider pattern direction flow',
   ],
   office: [
     'Professional appearance important',
     'Static control may be needed',
     'Under-desk and chair durability',
-    'Acoustic properties for noise'
+    'Acoustic properties for noise',
   ],
   dining_room: [
     'Spill and stain resistance',
     'Easy to clean under furniture',
     'Chair leg protection considerations',
-    'May connect to kitchen and living room'
-  ]
+    'May connect to kitchen and living room',
+  ],
 };
 
 /**
@@ -248,7 +244,7 @@ const ACCESSORY_CATEGORIES = [
   'fasteners',
   'tools',
   'cleaning_supplies',
-  'protection'
+  'protection',
 ] as const;
 
 // ============================================
@@ -260,9 +256,7 @@ const ACCESSORY_CATEGORIES = [
  *
  * Uses RAG to query knowledge base and AI to generate contextual steps
  */
-export async function suggestInstallationSteps(
-  context: InstallationContext
-): Promise<InstallationSuggestionResult> {
+export async function suggestInstallationSteps(context: InstallationContext): Promise<InstallationSuggestionResult> {
   const startTime = Date.now();
 
   try {
@@ -292,9 +286,7 @@ export async function suggestInstallationSteps(
 
     // 7. Build context for AI generation
     const productContext = buildProductContext(product, productAnalysis);
-    const roomContext = context.roomType
-      ? buildRoomContext(context.roomType)
-      : null;
+    const roomContext = context.roomType ? buildRoomContext(context.roomType) : null;
     const scenarioContext = buildScenarioContext(allScenarios);
 
     // 8. Generate installation suggestions using AI
@@ -304,16 +296,19 @@ export async function suggestInstallationSteps(
       roomContext,
       scenarioContext,
       kbContext,
-      context.maxSteps
+      context.maxSteps,
     );
 
-    const response = await generateContentWithRetry({
-      model: TEXT_MODEL,
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      config: {
-        temperature: 0.3, // Lower temperature for more consistent results
-      }
-    }, { operation: 'installation_scenario' });
+    const response = await generateContentWithRetry(
+      {
+        model: TEXT_MODEL,
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: {
+          temperature: 0.3, // Lower temperature for more consistent results
+        },
+      },
+      { operation: 'installation_scenario' },
+    );
 
     const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
@@ -335,7 +330,6 @@ export async function suggestInstallationSteps(
     });
 
     return suggestions;
-
   } catch (error) {
     telemetry.trackGeminiUsage({
       model: TEXT_MODEL,
@@ -371,7 +365,7 @@ export function getRoomInstallationContext(roomType: RoomType): RoomInstallation
     considerations,
     recommendedProductTypes,
     challenges,
-    bestPractices
+    bestPractices,
   };
 }
 
@@ -383,7 +377,7 @@ export function getRoomInstallationContext(roomType: RoomType): RoomInstallation
 export async function suggestAccessories(
   productId: string,
   roomType?: RoomType,
-  userId?: string
+  userId?: string,
 ): Promise<AccessoryRecommendation[]> {
   const startTime = Date.now();
 
@@ -396,8 +390,8 @@ export async function suggestAccessories(
 
     // Get product relationships (items that pair with this product)
     const relationships = await storage.getProductRelationships([productId]);
-    const requiredRelationships = relationships.filter(r => r.isRequired);
-    const pairsWithRelationships = relationships.filter(r => r.relationshipType === 'pairs_with');
+    const requiredRelationships = relationships.filter((r) => r.isRequired);
+    const pairsWithRelationships = relationships.filter((r) => r.relationshipType === 'pairs_with');
 
     // Query knowledge base for accessory recommendations
     const kbContext = await queryAccessoryKnowledgeBase(product, roomType);
@@ -405,13 +399,16 @@ export async function suggestAccessories(
     // Build accessory prompt
     const prompt = buildAccessoryPrompt(product, roomType, kbContext);
 
-    const response = await generateContentWithRetry({
-      model: TEXT_MODEL,
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      config: {
-        temperature: 0.2,
-      }
-    }, { operation: 'installation_scenario' });
+    const response = await generateContentWithRetry(
+      {
+        model: TEXT_MODEL,
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: {
+          temperature: 0.2,
+        },
+      },
+      { operation: 'installation_scenario' },
+    );
 
     const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
@@ -419,11 +416,7 @@ export async function suggestAccessories(
     const aiAccessories = parseAccessoryRecommendations(responseText);
 
     // Merge with database relationships
-    const mergedAccessories = mergeWithRelationships(
-      aiAccessories,
-      requiredRelationships,
-      pairsWithRelationships
-    );
+    const mergedAccessories = mergeWithRelationships(aiAccessories, requiredRelationships, pairsWithRelationships);
 
     // Track telemetry
     telemetry.trackGeminiUsage({
@@ -436,7 +429,6 @@ export async function suggestAccessories(
     });
 
     return mergedAccessories;
-
   } catch (error) {
     telemetry.trackGeminiUsage({
       model: TEXT_MODEL,
@@ -456,7 +448,7 @@ export async function suggestAccessories(
 export async function getInstallationTips(
   productId: string,
   roomType?: RoomType,
-  userId?: string
+  userId?: string,
 ): Promise<InstallationTip[]> {
   const tips: InstallationTip[] = [];
 
@@ -480,7 +472,7 @@ export async function getInstallationTips(
               tip: step,
               category: 'prep',
               relevance: 80,
-              source: 'scenario'
+              source: 'scenario',
             });
           }
         });
@@ -494,8 +486,8 @@ export async function getInstallationTips(
         tips.push({
           tip: practice,
           category: 'prep',
-          relevance: 70 - (index * 5),
-          source: 'ai_inference'
+          relevance: 70 - index * 5,
+          source: 'ai_inference',
         });
       });
     }
@@ -507,13 +499,12 @@ export async function getInstallationTips(
         tip: kbContext,
         category: 'prep',
         relevance: 90,
-        source: 'kb'
+        source: 'kb',
       });
     }
 
     // Sort by relevance
     return tips.sort((a, b) => b.relevance - a.relevance);
-
   } catch (error) {
     logger.error({ module: 'InstallationRAG', err: error }, 'Error getting tips');
     return tips;
@@ -527,10 +518,7 @@ export async function getInstallationTips(
 /**
  * Query knowledge base for installation guides
  */
-async function queryInstallationKnowledgeBase(
-  product: Product,
-  roomType?: RoomType
-): Promise<string | null> {
+async function queryInstallationKnowledgeBase(product: Product, roomType?: RoomType): Promise<string | null> {
   try {
     let query = `Installation guide for ${product.name}`;
     if (product.category) {
@@ -544,11 +532,10 @@ async function queryInstallationKnowledgeBase(
     const result = await queryFileSearchStore({
       query,
       category: FileCategory.INSTALLATION_GUIDES,
-      maxResults: 5
+      maxResults: 5,
     });
 
     return result?.context || null;
-
   } catch (error) {
     logger.warn({ module: 'InstallationRAG', err: error }, 'KB query failed');
     return null;
@@ -558,10 +545,7 @@ async function queryInstallationKnowledgeBase(
 /**
  * Query knowledge base for accessory recommendations
  */
-async function queryAccessoryKnowledgeBase(
-  product: Product,
-  roomType?: RoomType
-): Promise<string | null> {
+async function queryAccessoryKnowledgeBase(product: Product, roomType?: RoomType): Promise<string | null> {
   try {
     let query = `Required accessories and materials for installing ${product.name}`;
     if (product.category) {
@@ -575,11 +559,10 @@ async function queryAccessoryKnowledgeBase(
     const result = await queryFileSearchStore({
       query,
       category: FileCategory.INSTALLATION_GUIDES,
-      maxResults: 3
+      maxResults: 3,
     });
 
     return result?.context || null;
-
   } catch (error) {
     logger.warn({ module: 'InstallationRAG', err: error }, 'Accessory KB query failed');
     return null;
@@ -589,10 +572,7 @@ async function queryAccessoryKnowledgeBase(
 /**
  * Query knowledge base for installation tips
  */
-async function queryTipsKnowledgeBase(
-  product: Product,
-  roomType?: RoomType
-): Promise<string | null> {
+async function queryTipsKnowledgeBase(product: Product, roomType?: RoomType): Promise<string | null> {
   try {
     let query = `Installation tips and tricks for ${product.name}`;
     if (roomType) {
@@ -603,11 +583,10 @@ async function queryTipsKnowledgeBase(
     const result = await queryFileSearchStore({
       query,
       category: FileCategory.INSTALLATION_GUIDES,
-      maxResults: 3
+      maxResults: 3,
     });
 
     return result?.context || null;
-
   } catch (error) {
     logger.warn({ module: 'InstallationRAG', err: error }, 'Tips KB query failed');
     return null;
@@ -622,9 +601,7 @@ async function queryTipsKnowledgeBase(
  * Build product context string for AI prompts
  */
 function buildProductContext(product: Product, analysis?: ProductAnalysis | null): string {
-  const parts: string[] = [
-    `Name: ${product.name}`,
-  ];
+  const parts: string[] = [`Name: ${product.name}`];
 
   if (product.description) {
     parts.push(`Description: ${product.description}`);
@@ -680,7 +657,7 @@ function buildScenarioContext(scenarios: InstallationScenario[]): string {
     return '';
   }
 
-  const scenarioSummaries = scenarios.slice(0, 3).map(s => {
+  const scenarioSummaries = scenarios.slice(0, 3).map((s) => {
     const parts = [`Title: ${s.title}`];
     if (s.description) parts.push(`Description: ${s.description}`);
     if (s.installationSteps && s.installationSteps.length > 0) {
@@ -708,21 +685,15 @@ function buildInstallationPrompt(
   roomContext: string | null,
   scenarioContext: string,
   kbContext: string | null,
-  maxSteps?: number
+  maxSteps?: number,
 ): string {
   const stepLimit = maxSteps || 10;
 
-  const kbSection = kbContext
-    ? `\nKnowledge Base Context:\n${kbContext}\n`
-    : '';
+  const kbSection = kbContext ? `\nKnowledge Base Context:\n${kbContext}\n` : '';
 
-  const roomSection = roomContext
-    ? `\nRoom Context:\n${roomContext}\n`
-    : '';
+  const roomSection = roomContext ? `\nRoom Context:\n${roomContext}\n` : '';
 
-  const scenarioSection = scenarioContext
-    ? `\n${scenarioContext}\n`
-    : '';
+  const scenarioSection = scenarioContext ? `\n${scenarioContext}\n` : '';
 
   return `You are an expert flooring and home improvement installation specialist. Generate detailed installation steps for the following product.
 
@@ -785,14 +756,8 @@ Respond in this exact JSON format:
 /**
  * Build prompt for accessory recommendations
  */
-function buildAccessoryPrompt(
-  product: Product,
-  roomType: RoomType | undefined,
-  kbContext: string | null
-): string {
-  const kbSection = kbContext
-    ? `\nKnowledge Base Context:\n${kbContext}\n`
-    : '';
+function buildAccessoryPrompt(product: Product, roomType: RoomType | undefined, kbContext: string | null): string {
+  const kbSection = kbContext ? `\nKnowledge Base Context:\n${kbContext}\n` : '';
 
   const roomSection = roomType
     ? `\nRoom Type: ${roomType.replace('_', ' ')}\nConsiderations: ${ROOM_CONSIDERATIONS[roomType]?.join(', ') || 'Standard installation'}\n`
@@ -847,7 +812,7 @@ Respond in this exact JSON format:
 function parseInstallationSuggestions(
   responseText: string,
   product: Product,
-  roomType?: RoomType
+  roomType?: RoomType,
 ): InstallationSuggestionResult {
   const defaultResult: InstallationSuggestionResult = {
     steps: [],
@@ -859,8 +824,8 @@ function parseInstallationSuggestions(
       productName: product.name,
       roomType,
       kbContextUsed: false,
-      generatedAt: new Date()
-    }
+      generatedAt: new Date(),
+    },
   };
 
   try {
@@ -880,7 +845,7 @@ function parseInstallationSuggestions(
       estimatedTime: step.estimatedTime,
       toolsRequired: step.toolsRequired || [],
       tips: step.tips || [],
-      warnings: step.warnings || []
+      warnings: step.warnings || [],
     }));
 
     // Parse accessories
@@ -889,7 +854,7 @@ function parseInstallationSuggestions(
       category: acc.category || 'general',
       reason: acc.reason || '',
       isRequired: acc.isRequired ?? false,
-      quantitySuggestion: acc.quantitySuggestion
+      quantitySuggestion: acc.quantitySuggestion,
     }));
 
     // Parse tips
@@ -897,7 +862,7 @@ function parseInstallationSuggestions(
       tip: typeof tip === 'string' ? tip : tip.tip || '',
       category: tip.category || 'prep',
       relevance: 75,
-      source: 'ai_inference' as const
+      source: 'ai_inference' as const,
     }));
 
     // Parse metadata
@@ -908,7 +873,7 @@ function parseInstallationSuggestions(
       totalEstimatedTime: parsed.metadata?.totalEstimatedTime,
       difficultyLevel: parsed.metadata?.difficultyLevel,
       kbContextUsed: false,
-      generatedAt: new Date()
+      generatedAt: new Date(),
     };
 
     return {
@@ -916,9 +881,8 @@ function parseInstallationSuggestions(
       accessories,
       tips,
       matchingScenarios: [],
-      metadata
+      metadata,
     };
-
   } catch (error) {
     logger.error({ module: 'InstallationRAG', err: error }, 'Failed to parse suggestions');
     return defaultResult;
@@ -941,9 +905,8 @@ function parseAccessoryRecommendations(responseText: string): AccessoryRecommend
       category: acc.category || 'general',
       reason: acc.reason || '',
       isRequired: acc.isRequired ?? false,
-      quantitySuggestion: acc.quantitySuggestion
+      quantitySuggestion: acc.quantitySuggestion,
     }));
-
   } catch (error) {
     logger.error({ module: 'InstallationRAG', err: error }, 'Failed to parse accessory recommendations');
     return [];
@@ -959,7 +922,7 @@ function parseAccessoryRecommendations(responseText: string): AccessoryRecommend
  */
 function deduplicateScenarios(scenarios: InstallationScenario[]): InstallationScenario[] {
   const seen = new Set<string>();
-  return scenarios.filter(s => {
+  return scenarios.filter((s) => {
     if (seen.has(s.id)) return false;
     seen.add(s.id);
     return true;
@@ -972,10 +935,10 @@ function deduplicateScenarios(scenarios: InstallationScenario[]): InstallationSc
 function mergeWithRelationships(
   aiAccessories: AccessoryRecommendation[],
   requiredRelationships: any[],
-  pairsWithRelationships: any[]
+  pairsWithRelationships: any[],
 ): AccessoryRecommendation[] {
   const merged = [...aiAccessories];
-  const existingNames = new Set(aiAccessories.map(a => a.name.toLowerCase()));
+  const existingNames = new Set(aiAccessories.map((a) => a.name.toLowerCase()));
 
   // Add required relationships
   for (const rel of requiredRelationships) {
@@ -985,7 +948,7 @@ function mergeWithRelationships(
         category: 'required',
         reason: 'Required for proper installation',
         isRequired: true,
-        relatedProductId: rel.targetProductId
+        relatedProductId: rel.targetProductId,
       });
     }
   }
@@ -998,7 +961,7 @@ function mergeWithRelationships(
         category: 'recommended',
         reason: rel.description || 'Works well with this product',
         isRequired: false,
-        relatedProductId: rel.targetProductId
+        relatedProductId: rel.targetProductId,
       });
     }
   }
@@ -1020,7 +983,7 @@ function getRecommendedProductsForRoom(roomType: RoomType): string[] {
     outdoor: ['tile', 'composite_decking', 'natural_stone', 'rubber'],
     hallway: ['laminate', 'luxury_vinyl', 'tile', 'hardwood'],
     office: ['carpet_tile', 'laminate', 'luxury_vinyl'],
-    dining_room: ['hardwood', 'laminate', 'tile', 'luxury_vinyl']
+    dining_room: ['hardwood', 'laminate', 'tile', 'luxury_vinyl'],
   };
 
   return recommendations[roomType] || ['laminate', 'luxury_vinyl'];
@@ -1040,7 +1003,7 @@ function getChallengesForRoom(roomType: RoomType): string[] {
     outdoor: ['Weather exposure', 'UV damage', 'Proper drainage'],
     hallway: ['Narrow working space', 'Multiple room transitions', 'Heavy traffic wear'],
     office: ['Static electricity', 'Cable management under flooring', 'Chair caster damage'],
-    dining_room: ['Chair movement wear', 'Spill cleanup', 'Table leg pressure points']
+    dining_room: ['Chair movement wear', 'Spill cleanup', 'Table leg pressure points'],
   };
 
   return challenges[roomType] || ['Standard installation challenges'];
@@ -1052,15 +1015,23 @@ function getChallengesForRoom(roomType: RoomType): string[] {
 function getBestPracticesForRoom(roomType: RoomType): string[] {
   const practices: Record<RoomType, string[]> = {
     living_room: ['Acclimate flooring for 48-72 hours', 'Use furniture pads', 'Leave expansion gaps at walls'],
-    bedroom: ['Install underlayment for sound reduction', 'Consider radiant heating compatibility', 'Plan closet transitions'],
+    bedroom: [
+      'Install underlayment for sound reduction',
+      'Consider radiant heating compatibility',
+      'Plan closet transitions',
+    ],
     kitchen: ['Use waterproof flooring options', 'Install moisture barrier', 'Seal edges around appliances'],
     bathroom: ['Always use waterproof products', 'Apply silicone sealant at edges', 'Ensure proper ventilation'],
     basement: ['Test for moisture before installation', 'Use vapor barrier', 'Consider floating floor systems'],
-    commercial: ['Schedule installation during off-hours', 'Use commercial-grade adhesives', 'Plan for heavy equipment'],
+    commercial: [
+      'Schedule installation during off-hours',
+      'Use commercial-grade adhesives',
+      'Plan for heavy equipment',
+    ],
     outdoor: ['Ensure proper drainage slope', 'Use weather-resistant fasteners', 'Allow for expansion'],
     hallway: ['Plan layout to minimize waste', 'Install transition strips properly', 'Consider pattern direction'],
     office: ['Use anti-static underlayment', 'Plan for cable access', 'Choose durable commercial products'],
-    dining_room: ['Use protective mats under chairs', 'Choose stain-resistant finishes', 'Plan for easy cleaning']
+    dining_room: ['Use protective mats under chairs', 'Choose stain-resistant finishes', 'Plan for easy cleaning'],
   };
 
   return practices[roomType] || ['Follow manufacturer instructions', 'Acclimate flooring before installation'];

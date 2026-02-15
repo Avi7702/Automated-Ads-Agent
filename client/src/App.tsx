@@ -17,16 +17,11 @@ import { OnboardingGate } from '@/components/onboarding/OnboardingGate';
 import Login from '@/pages/Login';
 import Studio from '@/pages/Studio';
 
-// Optimized Studio (memoized components) - for A/B testing
-const StudioOptimized = lazy(() => import('@/pages/StudioOptimized'));
-
 // Lazy load all other pages to reduce initial bundle size
 const GalleryPage = lazy(() => import('@/pages/GalleryPage'));
 const Pipeline = lazy(() => import('@/pages/Pipeline'));
 const Library = lazy(() => import('@/pages/Library'));
 const Settings = lazy(() => import('@/pages/Settings'));
-const TemplateAdmin = lazy(() => import('@/pages/TemplateAdmin'));
-const SystemMap = lazy(() => import('@/pages/SystemMap'));
 const NotFound = lazy(() => import('@/pages/not-found'));
 
 // Loading fallback component
@@ -140,29 +135,7 @@ function Router() {
       </Route>
 
       <Route path="/admin/templates">
-        <ProtectedRoute>
-          <Suspense fallback={<PageLoader />}>
-            <TemplateAdmin />
-          </Suspense>
-        </ProtectedRoute>
-      </Route>
-
-      {/* Developer Tools */}
-      <Route path="/system-map">
-        <ProtectedRoute>
-          <Suspense fallback={<PageLoader />}>
-            <SystemMap />
-          </Suspense>
-        </ProtectedRoute>
-      </Route>
-
-      {/* Performance Testing: Optimized Studio with memoized components */}
-      <Route path="/studio-v2">
-        <ProtectedRoute>
-          <Suspense fallback={<PageLoader />}>
-            <StudioOptimized />
-          </Suspense>
-        </ProtectedRoute>
+        <Redirect to="/library?tab=scene-templates" />
       </Route>
 
       <Route>

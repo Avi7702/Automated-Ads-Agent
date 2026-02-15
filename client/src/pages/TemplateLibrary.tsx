@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useLocation } from "wouter";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
   Filter,
@@ -24,39 +24,27 @@ import {
   Linkedin,
   Facebook,
   Twitter,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import type { PerformingAdTemplate } from "@shared/schema";
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import type { PerformingAdTemplate } from '@shared/schema';
 
 // Components
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import { Header } from "@/components/layout/Header";
-import { AddTemplateModal } from "@/components/AddTemplateModal";
+} from '@/components/ui/dropdown-menu';
+import { Header } from '@/components/layout/Header';
+import { AddTemplateModal } from '@/components/AddTemplateModal';
 
 interface TemplateLibraryProps {
   embedded?: boolean;
@@ -74,19 +62,19 @@ const platformIcons: Record<string, typeof Instagram> = {
 
 // Engagement tier colors (light mode readable + dark mode optimized)
 const engagementTierColors: Record<string, string> = {
-  "top-5": "bg-yellow-500/20 text-yellow-900 dark:text-yellow-400 border-yellow-500/30",
-  "top-10": "bg-orange-500/20 text-orange-900 dark:text-orange-400 border-orange-500/30",
-  "top-25": "bg-blue-500/20 text-blue-900 dark:text-blue-400 border-blue-500/30",
-  "unranked": "bg-muted text-muted-foreground",
+  'top-5': 'bg-yellow-500/20 text-yellow-900 dark:text-yellow-400 border-yellow-500/30',
+  'top-10': 'bg-orange-500/20 text-orange-900 dark:text-orange-400 border-orange-500/30',
+  'top-25': 'bg-blue-500/20 text-blue-900 dark:text-blue-400 border-blue-500/30',
+  unranked: 'bg-muted text-muted-foreground',
 };
 
 // Category colors (light mode readable + dark mode optimized)
 const categoryColors: Record<string, string> = {
-  product_showcase: "bg-blue-500/20 text-blue-900 dark:text-blue-400 border-blue-500/30",
-  installation: "bg-green-500/20 text-green-900 dark:text-green-400 border-green-500/30",
-  worksite: "bg-amber-500/20 text-amber-900 dark:text-amber-400 border-amber-500/30",
-  professional: "bg-purple-500/20 text-purple-900 dark:text-purple-400 border-purple-500/30",
-  educational: "bg-pink-500/20 text-pink-900 dark:text-pink-400 border-pink-500/30",
+  product_showcase: 'bg-blue-500/20 text-blue-900 dark:text-blue-400 border-blue-500/30',
+  installation: 'bg-green-500/20 text-green-900 dark:text-green-400 border-green-500/30',
+  worksite: 'bg-amber-500/20 text-amber-900 dark:text-amber-400 border-amber-500/30',
+  professional: 'bg-purple-500/20 text-purple-900 dark:text-purple-400 border-purple-500/30',
+  educational: 'bg-pink-500/20 text-pink-900 dark:text-pink-400 border-pink-500/30',
 };
 
 // Template image with fallback
@@ -141,11 +129,11 @@ function TemplateCard({
       )}
 
       {/* Engagement tier badge */}
-      {template.engagementTier && template.engagementTier !== "unranked" && (
+      {template.engagementTier && template.engagementTier !== 'unranked' && (
         <div className="absolute top-3 right-3 z-10">
-          <Badge className={cn("gap-1", engagementTierColors[template.engagementTier])}>
+          <Badge className={cn('gap-1', engagementTierColors[template.engagementTier])}>
             <TrendingUp className="w-3 h-3" />
-            {template.engagementTier.replace("-", " ")}
+            {template.engagementTier.replace('-', ' ')}
           </Badge>
         </div>
       )}
@@ -167,13 +155,11 @@ function TemplateCard({
           )}
         </div>
 
-        {template.description && (
-          <p className="text-sm text-muted-foreground line-clamp-2">{template.description}</p>
-        )}
+        {template.description && <p className="text-sm text-muted-foreground line-clamp-2">{template.description}</p>}
 
         {/* Category and platforms */}
         <div className="flex items-center gap-2 flex-wrap">
-          <Badge variant="outline" className={cn("text-xs", categoryColors[template.category])}>
+          <Badge variant="outline" className={cn('text-xs', categoryColors[template.category])}>
             {template.category}
           </Badge>
           {template.targetPlatforms?.slice(0, 3).map((platform) => {
@@ -185,9 +171,7 @@ function TemplateCard({
             );
           })}
           {template.targetPlatforms && template.targetPlatforms.length > 3 && (
-            <span className="text-xs text-muted-foreground">
-              +{template.targetPlatforms.length - 3}
-            </span>
+            <span className="text-xs text-muted-foreground">+{template.targetPlatforms.length - 3}</span>
           )}
         </div>
 
@@ -266,9 +250,7 @@ function TemplateDetailModal({
                 {template.engagementTier && (
                   <div className="p-2 bg-muted/50 rounded-lg">
                     <div className="text-xs text-muted-foreground">Tier</div>
-                    <div className="font-medium capitalize">
-                      {template.engagementTier.replace("-", " ")}
-                    </div>
+                    <div className="font-medium capitalize">{template.engagementTier.replace('-', ' ')}</div>
                   </div>
                 )}
                 {template.estimatedEngagementRate && (
@@ -289,7 +271,7 @@ function TemplateDetailModal({
                 {template.estimatedBudget && (
                   <div className="p-2 bg-muted/50 rounded-lg">
                     <div className="text-xs text-muted-foreground">Budget</div>
-                    <div className="font-medium">${template.estimatedBudget.replace("-", " - $")}</div>
+                    <div className="font-medium">${template.estimatedBudget.replace('-', ' - $')}</div>
                   </div>
                 )}
               </div>
@@ -303,13 +285,19 @@ function TemplateDetailModal({
               </h4>
               <div className="flex flex-wrap gap-2">
                 {template.mood && (
-                  <Badge variant="outline" className="capitalize">{template.mood}</Badge>
+                  <Badge variant="outline" className="capitalize">
+                    {template.mood}
+                  </Badge>
                 )}
                 {template.style && (
-                  <Badge variant="outline" className="capitalize">{template.style}</Badge>
+                  <Badge variant="outline" className="capitalize">
+                    {template.style}
+                  </Badge>
                 )}
                 {template.backgroundType && (
-                  <Badge variant="outline" className="capitalize">{template.backgroundType}</Badge>
+                  <Badge variant="outline" className="capitalize">
+                    {template.backgroundType}
+                  </Badge>
                 )}
               </div>
             </div>
@@ -341,7 +329,9 @@ function TemplateDetailModal({
                 <h4 className="text-sm font-medium">Aspect Ratios</h4>
                 <div className="flex flex-wrap gap-2">
                   {template.targetAspectRatios.map((ratio) => (
-                    <Badge key={ratio} variant="outline">{ratio}</Badge>
+                    <Badge key={ratio} variant="outline">
+                      {ratio}
+                    </Badge>
                   ))}
                 </div>
               </div>
@@ -414,19 +404,19 @@ function TemplateSkeleton() {
 export default function TemplateLibrary({ embedded = false, selectedId }: TemplateLibraryProps) {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [selectedPlatform, setSelectedPlatform] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedPlatform, setSelectedPlatform] = useState<string>('all');
   const [selectedTemplate, setSelectedTemplate] = useState<PerformingAdTemplate | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   // Fetch templates
   const { data: templates, isLoading } = useQuery<PerformingAdTemplate[]>({
-    queryKey: ["performing-ad-templates"],
+    queryKey: ['performing-ad-templates'],
     queryFn: async () => {
-      const response = await fetch("/api/performing-ad-templates");
-      if (!response.ok) throw new Error("Failed to fetch templates");
+      const response = await fetch('/api/performing-ad-templates');
+      if (!response.ok) throw new Error('Failed to fetch templates');
       return response.json();
     },
   });
@@ -435,13 +425,13 @@ export default function TemplateLibrary({ embedded = false, selectedId }: Templa
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const response = await fetch(`/api/performing-ad-templates/${id}`, {
-        method: "DELETE",
+        method: 'DELETE',
       });
-      if (!response.ok) throw new Error("Failed to delete template");
+      if (!response.ok) throw new Error('Failed to delete template');
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["performing-ad-templates"] });
+      queryClient.invalidateQueries({ queryKey: ['performing-ad-templates'] });
     },
   });
 
@@ -452,19 +442,16 @@ export default function TemplateLibrary({ embedded = false, selectedId }: Templa
       template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       template.description?.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesCategory =
-      selectedCategory === "all" || template.category === selectedCategory;
+    const matchesCategory = selectedCategory === 'all' || template.category === selectedCategory;
 
-    const matchesPlatform =
-      selectedPlatform === "all" ||
-      template.targetPlatforms?.includes(selectedPlatform);
+    const matchesPlatform = selectedPlatform === 'all' || template.targetPlatforms?.includes(selectedPlatform);
 
     return matchesSearch && matchesCategory && matchesPlatform;
   });
 
   // Get unique categories and platforms
-  const categories = ["all", "product_showcase", "installation", "worksite", "professional", "educational"];
-  const platforms = ["all", "instagram", "facebook", "linkedin", "twitter", "tiktok"];
+  const categories = ['all', 'product_showcase', 'installation', 'worksite', 'professional', 'educational'];
+  const platforms = ['all', 'instagram', 'facebook', 'linkedin', 'twitter', 'tiktok'];
 
   const handleTemplateClick = (template: PerformingAdTemplate) => {
     setSelectedTemplate(template);
@@ -481,9 +468,9 @@ export default function TemplateLibrary({ embedded = false, selectedId }: Templa
     // Navigate to Studio with template context
     if (selectedTemplate) {
       // Store template in sessionStorage for Studio to pick up
-      sessionStorage.setItem("selectedPerformingTemplate", JSON.stringify(selectedTemplate));
+      sessionStorage.setItem('selectedPerformingTemplate', JSON.stringify(selectedTemplate));
       setIsDetailOpen(false);
-      setLocation("/?template=" + selectedTemplate.id);
+      setLocation('/?template=' + selectedTemplate.id);
     }
   };
 
@@ -492,14 +479,12 @@ export default function TemplateLibrary({ embedded = false, selectedId }: Templa
       {/* Title and Actions */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-display font-bold">Template Library</h1>
-          <p className="text-muted-foreground mt-1">
-            High-performing ad templates for inspiration
-          </p>
+          <h1 className="text-3xl font-display font-bold">Ad References</h1>
+          <p className="text-muted-foreground mt-1">High-performing ad references for inspiration</p>
         </div>
         <Button className="gap-2" onClick={() => setIsAddModalOpen(true)}>
           <Plus className="w-4 h-4" />
-          Add Template
+          Add Reference
         </Button>
       </div>
 
@@ -511,7 +496,7 @@ export default function TemplateLibrary({ embedded = false, selectedId }: Templa
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search templates..."
+            placeholder="Search ad references..."
             className="pl-10"
           />
         </div>
@@ -524,7 +509,7 @@ export default function TemplateLibrary({ embedded = false, selectedId }: Templa
           <SelectContent>
             {categories.map((category) => (
               <SelectItem key={category} value={category}>
-                <span className="capitalize">{category === "all" ? "All Categories" : category}</span>
+                <span className="capitalize">{category === 'all' ? 'All Categories' : category}</span>
               </SelectItem>
             ))}
           </SelectContent>
@@ -538,7 +523,7 @@ export default function TemplateLibrary({ embedded = false, selectedId }: Templa
           <SelectContent>
             {platforms.map((platform) => (
               <SelectItem key={platform} value={platform}>
-                <span className="capitalize">{platform === "all" ? "All Platforms" : platform}</span>
+                <span className="capitalize">{platform === 'all' ? 'All Platforms' : platform}</span>
               </SelectItem>
             ))}
           </SelectContent>
@@ -559,20 +544,20 @@ export default function TemplateLibrary({ embedded = false, selectedId }: Templa
           </div>
           <div>
             <h2 className="text-2xl font-display font-medium mb-2">
-              {searchQuery || selectedCategory !== "all" || selectedPlatform !== "all"
-                ? "No matching templates"
-                : "No templates yet"}
+              {searchQuery || selectedCategory !== 'all' || selectedPlatform !== 'all'
+                ? 'No matching ad references'
+                : 'No ad references yet'}
             </h2>
             <p className="text-muted-foreground">
-              {searchQuery || selectedCategory !== "all" || selectedPlatform !== "all"
-                ? "Try adjusting your filters"
-                : "Add high-performing ad templates to build your library"}
+              {searchQuery || selectedCategory !== 'all' || selectedPlatform !== 'all'
+                ? 'Try adjusting your filters'
+                : 'Add high-performing ad references to build your library'}
             </p>
           </div>
-          {!searchQuery && selectedCategory === "all" && selectedPlatform === "all" && (
+          {!searchQuery && selectedCategory === 'all' && selectedPlatform === 'all' && (
             <Button className="gap-2" onClick={() => setIsAddModalOpen(true)}>
               <Plus className="w-4 h-4" />
-              Add First Template
+              Add First Reference
             </Button>
           )}
         </div>
@@ -600,10 +585,7 @@ export default function TemplateLibrary({ embedded = false, selectedId }: Templa
       />
 
       {/* Add Template Modal */}
-      <AddTemplateModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-      />
+      <AddTemplateModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
     </>
   );
 
@@ -622,9 +604,7 @@ export default function TemplateLibrary({ embedded = false, selectedId }: Templa
       <Header currentPage="template-library" />
 
       {/* Content */}
-      <main className="container max-w-7xl mx-auto px-4 sm:px-6 pt-24 pb-20 relative z-10">
-        {mainContent}
-      </main>
+      <main className="container max-w-7xl mx-auto px-4 sm:px-6 pt-24 pb-20 relative z-10">{mainContent}</main>
     </div>
   );
 }

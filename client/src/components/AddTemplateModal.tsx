@@ -1,47 +1,29 @@
 // @ts-nocheck
-import { useState, useRef } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  Upload,
-  X,
-  Loader2,
-  ImagePlus,
-  Star,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useState, useRef } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Upload, X, Loader2, ImagePlus, Star } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 // Components
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
 
 // Options
-const CATEGORIES = ["product_showcase", "installation", "worksite", "professional", "educational"];
-const ENGAGEMENT_TIERS = ["top-5", "top-10", "top-25", "unranked"];
-const PLATFORMS = ["instagram", "facebook", "linkedin", "twitter", "tiktok"];
-const ASPECT_RATIOS = ["1:1", "4:5", "9:16", "16:9", "4:3"];
-const OBJECTIVES = ["awareness", "consideration", "conversion", "engagement"];
-const BACKGROUND_TYPES = ["solid", "gradient", "image", "video"];
-const MOODS = ["professional", "playful", "bold", "minimal", "luxurious", "energetic"];
-const STYLES = ["modern", "classic", "retro", "corporate", "creative", "elegant"];
+const CATEGORIES = ['product_showcase', 'installation', 'worksite', 'professional', 'educational'];
+const ENGAGEMENT_TIERS = ['top-5', 'top-10', 'top-25', 'unranked'];
+const PLATFORMS = ['instagram', 'facebook', 'linkedin', 'twitter', 'tiktok'];
+const ASPECT_RATIOS = ['1:1', '4:5', '9:16', '16:9', '4:3'];
+const OBJECTIVES = ['awareness', 'consideration', 'conversion', 'engagement'];
+const BACKGROUND_TYPES = ['solid', 'gradient', 'image', 'video'];
+const MOODS = ['professional', 'playful', 'bold', 'minimal', 'luxurious', 'energetic'];
+const STYLES = ['modern', 'classic', 'retro', 'corporate', 'creative', 'elegant'];
 
 interface AddTemplateModalProps {
   isOpen: boolean;
@@ -55,25 +37,25 @@ export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
 
   // Form state
   const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    category: "product_showcase",
-    sourceUrl: "",
-    sourcePlatform: "",
-    advertiserName: "",
-    engagementTier: "unranked",
-    estimatedEngagementRate: "",
-    runningDays: "",
-    mood: "",
-    style: "",
-    backgroundType: "",
+    name: '',
+    description: '',
+    category: 'product_showcase',
+    sourceUrl: '',
+    sourcePlatform: '',
+    advertiserName: '',
+    engagementTier: 'unranked',
+    estimatedEngagementRate: '',
+    runningDays: '',
+    mood: '',
+    style: '',
+    backgroundType: '',
     isFeatured: false,
   });
 
   const [targetPlatforms, setTargetPlatforms] = useState<string[]>([]);
   const [targetAspectRatios, setTargetAspectRatios] = useState<string[]>([]);
   const [bestForObjectives, setBestForObjectives] = useState<string[]>([]);
-  const [industriesInput, setIndustriesInput] = useState("");
+  const [industriesInput, setIndustriesInput] = useState('');
   const [bestForIndustries, setBestForIndustries] = useState<string[]>([]);
   const [previewFile, setPreviewFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -81,25 +63,25 @@ export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
   // Reset form
   const resetForm = () => {
     setFormData({
-      name: "",
-      description: "",
-      category: "product_showcase",
-      sourceUrl: "",
-      sourcePlatform: "",
-      advertiserName: "",
-      engagementTier: "unranked",
-      estimatedEngagementRate: "",
-      runningDays: "",
-      mood: "",
-      style: "",
-      backgroundType: "",
+      name: '',
+      description: '',
+      category: 'product_showcase',
+      sourceUrl: '',
+      sourcePlatform: '',
+      advertiserName: '',
+      engagementTier: 'unranked',
+      estimatedEngagementRate: '',
+      runningDays: '',
+      mood: '',
+      style: '',
+      backgroundType: '',
       isFeatured: false,
     });
     setTargetPlatforms([]);
     setTargetAspectRatios([]);
     setBestForObjectives([]);
     setBestForIndustries([]);
-    setIndustriesInput("");
+    setIndustriesInput('');
     setPreviewFile(null);
     setPreviewUrl(null);
   };
@@ -115,11 +97,7 @@ export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
   };
 
   // Toggle multi-select options
-  const toggleOption = (
-    value: string,
-    current: string[],
-    setter: (val: string[]) => void
-  ) => {
+  const toggleOption = (value: string, current: string[], setter: (val: string[]) => void) => {
     if (current.includes(value)) {
       setter(current.filter((v) => v !== value));
     } else {
@@ -132,7 +110,7 @@ export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
     const trimmed = industriesInput.trim().toLowerCase();
     if (trimmed && !bestForIndustries.includes(trimmed)) {
       setBestForIndustries([...bestForIndustries, trimmed]);
-      setIndustriesInput("");
+      setIndustriesInput('');
     }
   };
 
@@ -142,70 +120,70 @@ export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
       const formDataToSend = new FormData();
 
       // Basic fields
-      formDataToSend.append("name", formData.name);
-      formDataToSend.append("description", formData.description);
-      formDataToSend.append("category", formData.category);
-      formDataToSend.append("engagementTier", formData.engagementTier);
-      formDataToSend.append("isFeatured", String(formData.isFeatured));
+      formDataToSend.append('name', formData.name);
+      formDataToSend.append('description', formData.description);
+      formDataToSend.append('category', formData.category);
+      formDataToSend.append('engagementTier', formData.engagementTier);
+      formDataToSend.append('isFeatured', String(formData.isFeatured));
 
       // Optional fields
-      if (formData.sourceUrl) formDataToSend.append("sourceUrl", formData.sourceUrl);
-      if (formData.sourcePlatform) formDataToSend.append("sourcePlatform", formData.sourcePlatform);
-      if (formData.advertiserName) formDataToSend.append("advertiserName", formData.advertiserName);
+      if (formData.sourceUrl) formDataToSend.append('sourceUrl', formData.sourceUrl);
+      if (formData.sourcePlatform) formDataToSend.append('sourcePlatform', formData.sourcePlatform);
+      if (formData.advertiserName) formDataToSend.append('advertiserName', formData.advertiserName);
       if (formData.estimatedEngagementRate) {
-        formDataToSend.append("estimatedEngagementRate", formData.estimatedEngagementRate);
+        formDataToSend.append('estimatedEngagementRate', formData.estimatedEngagementRate);
       }
-      if (formData.runningDays) formDataToSend.append("runningDays", formData.runningDays);
-      if (formData.mood) formDataToSend.append("mood", formData.mood);
-      if (formData.style) formDataToSend.append("style", formData.style);
-      if (formData.backgroundType) formDataToSend.append("backgroundType", formData.backgroundType);
+      if (formData.runningDays) formDataToSend.append('runningDays', formData.runningDays);
+      if (formData.mood) formDataToSend.append('mood', formData.mood);
+      if (formData.style) formDataToSend.append('style', formData.style);
+      if (formData.backgroundType) formDataToSend.append('backgroundType', formData.backgroundType);
 
       // JSON arrays
       if (targetPlatforms.length > 0) {
-        formDataToSend.append("targetPlatforms", JSON.stringify(targetPlatforms));
+        formDataToSend.append('targetPlatforms', JSON.stringify(targetPlatforms));
       }
       if (targetAspectRatios.length > 0) {
-        formDataToSend.append("targetAspectRatios", JSON.stringify(targetAspectRatios));
+        formDataToSend.append('targetAspectRatios', JSON.stringify(targetAspectRatios));
       }
       if (bestForObjectives.length > 0) {
-        formDataToSend.append("bestForObjectives", JSON.stringify(bestForObjectives));
+        formDataToSend.append('bestForObjectives', JSON.stringify(bestForObjectives));
       }
       if (bestForIndustries.length > 0) {
-        formDataToSend.append("bestForIndustries", JSON.stringify(bestForIndustries));
+        formDataToSend.append('bestForIndustries', JSON.stringify(bestForIndustries));
       }
 
       // Preview image
       if (previewFile) {
-        formDataToSend.append("preview", previewFile);
+        formDataToSend.append('preview', previewFile);
       }
 
-      const response = await fetch("/api/performing-ad-templates", {
-        method: "POST",
+      const response = await fetch('/api/performing-ad-templates', {
+        method: 'POST',
         body: formDataToSend,
-        credentials: "include",
+        credentials: 'include',
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Failed to create template");
+        throw new Error(error.error || 'Failed to create template');
       }
 
       return response.json();
     },
     onSuccess: () => {
       toast({
-        title: "Template created",
-        description: "Your template has been added to the library.",
+        title: 'Template created',
+        description: 'Your template has been added to the library.',
       });
-      queryClient.invalidateQueries({ queryKey: ["performing-ad-templates"] });
+      queryClient.invalidateQueries({ queryKey: ['performing-ad-templates'] });
       resetForm();
       onClose();
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: 'Error',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
     },
   });
@@ -214,9 +192,9 @@ export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
     e.preventDefault();
     if (!formData.name.trim()) {
       toast({
-        title: "Name required",
-        description: "Please enter a template name.",
-        variant: "destructive",
+        title: 'Name required',
+        description: 'Please enter a template name.',
+        variant: 'destructive',
       });
       return;
     }
@@ -227,10 +205,8 @@ export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add Template</DialogTitle>
-          <DialogDescription>
-            Add a high-performing ad template to your library for inspiration.
-          </DialogDescription>
+          <DialogTitle>Add Ad Reference</DialogTitle>
+          <DialogDescription>Add a high-performing ad reference to your library for inspiration.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -240,18 +216,14 @@ export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
             <div
               onClick={() => fileInputRef.current?.click()}
               className={cn(
-                "border-2 border-dashed rounded-xl p-6 cursor-pointer transition-colors",
-                "hover:border-primary/50 hover:bg-muted/50",
-                previewUrl ? "border-primary/30" : "border-border"
+                'border-2 border-dashed rounded-xl p-6 cursor-pointer transition-colors',
+                'hover:border-primary/50 hover:bg-muted/50',
+                previewUrl ? 'border-primary/30' : 'border-border',
               )}
             >
               {previewUrl ? (
                 <div className="relative">
-                  <img
-                    src={previewUrl}
-                    alt="Preview"
-                    className="w-full h-48 object-cover rounded-lg"
-                  />
+                  <img src={previewUrl} alt="Preview" className="w-full h-48 object-cover rounded-lg" />
                   <Button
                     type="button"
                     variant="destructive"
@@ -274,13 +246,7 @@ export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
                 </div>
               )}
             </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
           </div>
 
           {/* Basic Info */}
@@ -309,10 +275,7 @@ export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
 
             <div>
               <Label>Category</Label>
-              <Select
-                value={formData.category}
-                onValueChange={(v) => setFormData({ ...formData, category: v })}
-              >
+              <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v })}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -338,7 +301,7 @@ export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
                 <SelectContent>
                   {ENGAGEMENT_TIERS.map((tier) => (
                     <SelectItem key={tier} value={tier}>
-                      <span className="capitalize">{tier.replace("-", " ")}</span>
+                      <span className="capitalize">{tier.replace('-', ' ')}</span>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -412,10 +375,7 @@ export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <Label>Mood</Label>
-              <Select
-                value={formData.mood}
-                onValueChange={(v) => setFormData({ ...formData, mood: v })}
-              >
+              <Select value={formData.mood} onValueChange={(v) => setFormData({ ...formData, mood: v })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select..." />
                 </SelectTrigger>
@@ -431,10 +391,7 @@ export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
 
             <div>
               <Label>Style</Label>
-              <Select
-                value={formData.style}
-                onValueChange={(v) => setFormData({ ...formData, style: v })}
-              >
+              <Select value={formData.style} onValueChange={(v) => setFormData({ ...formData, style: v })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select..." />
                 </SelectTrigger>
@@ -475,7 +432,7 @@ export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
               {PLATFORMS.map((platform) => (
                 <Badge
                   key={platform}
-                  variant={targetPlatforms.includes(platform) ? "default" : "outline"}
+                  variant={targetPlatforms.includes(platform) ? 'default' : 'outline'}
                   className="cursor-pointer capitalize"
                   onClick={() => toggleOption(platform, targetPlatforms, setTargetPlatforms)}
                 >
@@ -492,7 +449,7 @@ export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
               {ASPECT_RATIOS.map((ratio) => (
                 <Badge
                   key={ratio}
-                  variant={targetAspectRatios.includes(ratio) ? "default" : "outline"}
+                  variant={targetAspectRatios.includes(ratio) ? 'default' : 'outline'}
                   className="cursor-pointer"
                   onClick={() => toggleOption(ratio, targetAspectRatios, setTargetAspectRatios)}
                 >
@@ -509,7 +466,7 @@ export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
               {OBJECTIVES.map((obj) => (
                 <Badge
                   key={obj}
-                  variant={bestForObjectives.includes(obj) ? "default" : "outline"}
+                  variant={bestForObjectives.includes(obj) ? 'default' : 'outline'}
                   className="cursor-pointer capitalize"
                   onClick={() => toggleOption(obj, bestForObjectives, setBestForObjectives)}
                 >
@@ -526,7 +483,7 @@ export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
               <Input
                 value={industriesInput}
                 onChange={(e) => setIndustriesInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addIndustry())}
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addIndustry())}
                 placeholder="Add industry and press Enter"
               />
               <Button type="button" variant="outline" onClick={addIndustry}>
@@ -553,9 +510,7 @@ export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
             <Checkbox
               id="featured"
               checked={formData.isFeatured}
-              onCheckedChange={(checked) =>
-                setFormData({ ...formData, isFeatured: checked === true })
-              }
+              onCheckedChange={(checked) => setFormData({ ...formData, isFeatured: checked === true })}
             />
             <Label htmlFor="featured" className="flex items-center gap-1 cursor-pointer">
               <Star className="w-4 h-4 text-yellow-500" />
@@ -565,11 +520,7 @@ export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
 
           {/* Actions */}
           <div className="flex gap-3 pt-4 border-t">
-            <Button
-              type="submit"
-              className="flex-1"
-              disabled={createMutation.isPending}
-            >
+            <Button type="submit" className="flex-1" disabled={createMutation.isPending}>
               {createMutation.isPending ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />

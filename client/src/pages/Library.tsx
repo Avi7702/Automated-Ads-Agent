@@ -1,16 +1,9 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { useLibraryTabUrl } from '@/hooks/useUrlState';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import { Header } from '@/components/layout/Header';
-import {
-  Package,
-  ImageIcon,
-  Layout,
-  Layers,
-  Sparkles,
-  Grid3X3,
-  Loader2,
-} from 'lucide-react';
+import { Package, ImageIcon, Layout, Layers, Sparkles, Grid3X3, Loader2, Settings2 } from 'lucide-react';
 
 // Lazy load tab content for code splitting
 const ProductLibrary = lazy(() => import('./ProductLibrary'));
@@ -19,12 +12,13 @@ const TemplateLibrary = lazy(() => import('./TemplateLibrary'));
 const Templates = lazy(() => import('./Templates'));
 const InstallationScenarios = lazy(() => import('./InstallationScenarios'));
 const LearnFromWinners = lazy(() => import('./LearnFromWinners'));
+const TemplateAdmin = lazy(() => import('./TemplateAdmin'));
 
 const tabs = [
   { id: 'products', label: 'Products', icon: Package },
   { id: 'brand-images', label: 'Brand Images', icon: ImageIcon },
-  { id: 'templates', label: 'Templates', icon: Layout },
-  { id: 'scene-templates', label: 'Scenes', icon: Grid3X3 },
+  { id: 'templates', label: 'Ad References', icon: Layout },
+  { id: 'scene-templates', label: 'Gen Templates', icon: Grid3X3 },
   { id: 'scenarios', label: 'Scenarios', icon: Layers },
   { id: 'patterns', label: 'Patterns', icon: Sparkles },
 ] as const;
@@ -44,8 +38,8 @@ function TabLoading() {
  * Combines 6 separate pages into a tabbed interface:
  * - Products (/products)
  * - Brand Images (/brand-images)
- * - Templates (/template-library)
- * - Scene Templates (/templates)
+ * - Ad References (/template-library)
+ * - Gen Templates (/templates)
  * - Scenarios (/installation-scenarios)
  * - Patterns (/learn-from-winners)
  *
@@ -62,15 +56,11 @@ export default function Library() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold">Library</h1>
           <p className="text-muted-foreground">
-            Manage your products, templates, and creative assets
+            Manage your products, ad references, gen templates, and creative assets
           </p>
         </div>
 
-        <Tabs
-          value={activeTab}
-          onValueChange={setTab}
-          className="space-y-6"
-        >
+        <Tabs value={activeTab} onValueChange={setTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-flex">
             {tabs.map((tab) => {
               const Icon = tab.icon;
@@ -144,7 +134,30 @@ function TemplateLibraryContent({ selectedId }: { selectedId: string | null }) {
 }
 
 function SceneTemplatesContent({ selectedId }: { selectedId: string | null }) {
-  return <Templates embedded selectedId={selectedId} />;
+  const [adminMode, setAdminMode] = useState(false);
+
+  return (
+    <div>
+      <div className="flex items-center justify-end mb-4">
+        <Button
+          variant={adminMode ? 'default' : 'outline'}
+          size="sm"
+          className="gap-2"
+          onClick={() => setAdminMode(!adminMode)}
+        >
+          <Settings2 className="w-4 h-4" />
+          {adminMode ? 'Exit Admin Mode' : 'Admin Mode'}
+        </Button>
+      </div>
+      {adminMode ? (
+        <Suspense fallback={<TabLoading />}>
+          <TemplateAdmin embedded />
+        </Suspense>
+      ) : (
+        <Templates embedded selectedId={selectedId} />
+      )}
+    </div>
+  );
 }
 
 function ScenariosContent({ selectedId }: { selectedId: string | null }) {

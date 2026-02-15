@@ -1999,7 +1999,7 @@ export const trainingDatasets = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
-    baseModel: varchar('base_model', { length: 100 }).default('gemini-2.5-flash'),
+    baseModel: varchar('base_model', { length: 100 }).default('gemini-3-flash'),
     status: varchar('status', { length: 30 }).default('draft'), // draft, ready, training, completed, failed
     exampleCount: integer('example_count').default(0),
     tunedModelName: text('tuned_model_name'), // Returned after tuning completes
@@ -2217,3 +2217,76 @@ export type ProductPriority = typeof productPriorities.$inferSelect;
 
 export type InsertBusinessIntelligence = z.infer<typeof insertBusinessIntelligenceSchema>;
 export type BusinessIntelligence = typeof businessIntelligence.$inferSelect;
+
+// ============================================
+// PHASE 5: INTELLIGENCE LAYER
+// ============================================
+
+/**
+ * Brand DNA — persistent brand understanding built from analysis of
+ * brand profile, brand images, and successful generations.
+ * Enriches every generation with deep brand context.
+ */
+export const brandDNA = pgTable(
+  'brand_dna',
+  {
+    id: serial('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' })
+      .unique(),
+    visualSignature: jsonb('visual_signature'), // colors, composition, typography, lighting
+    toneAnalysis: jsonb('tone_analysis'), // formality, humor, technical depth, emotions
+    audienceProfile: jsonb('audience_profile'), // engagement patterns, preferences
+    competitorDiff: jsonb('competitor_diff'), // how brand differs from learned patterns
+    contentRules: jsonb('content_rules'), // auto-learned do's and don'ts
+    version: integer('version').default(1).notNull(),
+    analyzedAt: timestamp('analyzed_at').defaultNow().notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index('brand_dna_user_id_idx').on(table.userId),
+    analyzedAtIdx: index('brand_dna_analyzed_at_idx').on(table.analyzedAt),
+  }),
+);
+
+/**
+ * Generation Performance — tracks how generated content performs on social media.
+ * Data is ingested from n8n webhooks after content is published.
+ * Used by Brand DNA Engine to learn what works.
+ */
+export const generationPerformance = pgTable(
+  'generation_performance',
+  {
+    id: serial('id').primaryKey(),
+    generationId: varchar('generation_id')
+      .notNull()
+      .references(() => generations.id, { onDelete: 'cascade' }),
+    platform: varchar('platform', { length: 50 }).notNull(),
+    impressions: integer('impressions').default(0),
+    engagementRate: real('engagement_rate').default(0),
+    clicks: integer('clicks').default(0),
+    conversions: integer('conversions').default(0),
+    fetchedAt: timestamp('fetched_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    generationIdIdx: index('gen_perf_generation_id_idx').on(table.generationId),
+    platformIdx: index('gen_perf_platform_idx').on(table.platform),
+    fetchedAtIdx: index('gen_perf_fetched_at_idx').on(table.fetchedAt),
+  }),
+);
+
+// Brand DNA schemas and types
+export const insertBrandDNASchema = createInsertSchema(brandDNA).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertBrandDNA = z.infer<typeof insertBrandDNASchema>;
+export type BrandDNA = typeof brandDNA.$inferSelect;
+
+// Generation Performance schemas and types
+export const insertGenerationPerformanceSchema = createInsertSchema(generationPerformance).omit({
+  id: true,
+});
+export type InsertGenerationPerformance = z.infer<typeof insertGenerationPerformanceSchema>;
+export type GenerationPerformance = typeof generationPerformance.$inferSelect;

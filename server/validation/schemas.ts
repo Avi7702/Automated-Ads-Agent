@@ -138,6 +138,21 @@ export type N8nCallbackInput = z.infer<typeof n8nCallbackSchema>;
 export type SyncAccountInput = z.infer<typeof syncAccountSchema>;
 
 // ============================================
+// GENERATION PERFORMANCE WEBHOOK (Phase 5)
+// ============================================
+
+export const performanceWebhookSchema = z.object({
+  generationId: z.string().min(1, 'Generation ID is required'),
+  platform: z.enum(['linkedin', 'instagram', 'facebook', 'twitter', 'tiktok', 'youtube', 'pinterest']),
+  impressions: z.number().int().min(0).optional().default(0),
+  engagementRate: z.number().min(0).max(100).optional().default(0),
+  clicks: z.number().int().min(0).optional().default(0),
+  conversions: z.number().int().min(0).optional().default(0),
+});
+
+export type PerformanceWebhookInput = z.infer<typeof performanceWebhookSchema>;
+
+// ============================================
 // LEARN FROM WINNERS - PATTERN SCHEMAS
 // ============================================
 
