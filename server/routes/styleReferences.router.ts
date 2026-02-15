@@ -18,6 +18,16 @@ import { analyzeStyleImage, generateStyleFingerprint, type StyleElements } from 
 
 const VALID_CATEGORIES = ['character', 'style', 'scene'] as const;
 
+/**
+ * Check if a database error is caused by a missing table (migration not yet applied).
+ * PostgreSQL error code 42P01 = "undefined_table"
+ */
+function isTableMissingError(error: any): boolean {
+  return (
+    error?.code === '42P01' || (error?.message?.includes('relation') && error?.message?.includes('does not exist'))
+  );
+}
+
 export const styleReferencesRouter: RouterFactory = (ctx: RouterContext): Router => {
   const router = createRouter();
   const { storage, logger } = ctx.services;
@@ -99,6 +109,12 @@ export const styleReferencesRouter: RouterFactory = (ctx: RouterContext): Router
 
         res.status(201).json(ref);
       } catch (error: any) {
+        if (isTableMissingError(error)) {
+          logger.warn({ module: 'StyleReferences' }, 'style_references table not found. Run migrations to create it.');
+          return res
+            .status(503)
+            .json({ error: 'Style references feature is not yet available. Database migration required.' });
+        }
         logger.error({ module: 'StyleReferences', err: error }, 'Upload error');
         res.status(500).json({ error: 'Failed to upload style reference' });
       }
@@ -127,6 +143,13 @@ export const styleReferencesRouter: RouterFactory = (ctx: RouterContext): Router
 
         res.json(refs);
       } catch (error: any) {
+        if (isTableMissingError(error)) {
+          logger.warn(
+            { module: 'StyleReferences' },
+            'style_references table not found — returning empty list. Run migrations to create it.',
+          );
+          return res.json([]);
+        }
         logger.error({ module: 'StyleReferences', err: error }, 'List error');
         res.status(500).json({ error: 'Failed to list style references' });
       }
@@ -150,6 +173,10 @@ export const styleReferencesRouter: RouterFactory = (ctx: RouterContext): Router
 
         res.json(ref);
       } catch (error: any) {
+        if (isTableMissingError(error)) {
+          logger.warn({ module: 'StyleReferences' }, 'style_references table not found. Run migrations to create it.');
+          return res.status(404).json({ error: 'Style reference not found' });
+        }
         logger.error({ module: 'StyleReferences', err: error }, 'Get error');
         res.status(500).json({ error: 'Failed to get style reference' });
       }
@@ -181,6 +208,12 @@ export const styleReferencesRouter: RouterFactory = (ctx: RouterContext): Router
         const ref = await storage.updateStyleReference(req.params.id, updates);
         res.json(ref);
       } catch (error: any) {
+        if (isTableMissingError(error)) {
+          logger.warn({ module: 'StyleReferences' }, 'style_references table not found. Run migrations to create it.');
+          return res
+            .status(503)
+            .json({ error: 'Style references feature is not yet available. Database migration required.' });
+        }
         logger.error({ module: 'StyleReferences', err: error }, 'Update error');
         res.status(500).json({ error: 'Failed to update style reference' });
       }
@@ -206,6 +239,12 @@ export const styleReferencesRouter: RouterFactory = (ctx: RouterContext): Router
         await storage.deleteStyleReference(req.params.id);
         res.json({ success: true });
       } catch (error: any) {
+        if (isTableMissingError(error)) {
+          logger.warn({ module: 'StyleReferences' }, 'style_references table not found. Run migrations to create it.');
+          return res
+            .status(503)
+            .json({ error: 'Style references feature is not yet available. Database migration required.' });
+        }
         logger.error({ module: 'StyleReferences', err: error }, 'Delete error');
         res.status(500).json({ error: 'Failed to delete style reference' });
       }
@@ -238,6 +277,12 @@ export const styleReferencesRouter: RouterFactory = (ctx: RouterContext): Router
 
         res.json(updated);
       } catch (error: any) {
+        if (isTableMissingError(error)) {
+          logger.warn({ module: 'StyleReferences' }, 'style_references table not found. Run migrations to create it.');
+          return res
+            .status(503)
+            .json({ error: 'Style references feature is not yet available. Database migration required.' });
+        }
         logger.error({ module: 'StyleReferences', err: error }, 'Reanalyze error');
         res.status(500).json({ error: 'Failed to reanalyze style reference' });
       }
