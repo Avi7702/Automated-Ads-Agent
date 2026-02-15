@@ -22,7 +22,6 @@ const GalleryPage = lazy(() => import('@/pages/GalleryPage'));
 const Pipeline = lazy(() => import('@/pages/Pipeline'));
 const Library = lazy(() => import('@/pages/Library'));
 const Settings = lazy(() => import('@/pages/Settings'));
-const TemplateAdmin = lazy(() => import('@/pages/TemplateAdmin'));
 const NotFound = lazy(() => import('@/pages/not-found'));
 
 // Loading fallback component
@@ -136,11 +135,7 @@ function Router() {
       </Route>
 
       <Route path="/admin/templates">
-        <ProtectedRoute>
-          <Suspense fallback={<PageLoader />}>
-            <TemplateAdmin />
-          </Suspense>
-        </ProtectedRoute>
+        <Redirect to="/library?tab=scene-templates" />
       </Route>
 
       <Route>

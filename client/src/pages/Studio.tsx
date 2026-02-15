@@ -271,7 +271,7 @@ export default function Studio() {
               <DialogTitle className="flex items-center gap-2">
                 <TrendingUp className="w-5 h-5" /> Template Inspiration
               </DialogTitle>
-              <DialogDescription>Browse high-performing ad templates for creative direction</DialogDescription>
+              <DialogDescription>Browse high-performing ad references for creative direction</DialogDescription>
             </DialogHeader>
             <div className="flex-1 overflow-y-auto">
               {orch.isLoadingFeatured ? (

@@ -1,12 +1,12 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
-import { TemplateCard } from "./TemplateCard";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { Search, Filter, Sparkles, RefreshCw } from "lucide-react";
-import type { AdSceneTemplate } from "@shared/schema";
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { motion, AnimatePresence } from 'framer-motion';
+import { TemplateCard } from './TemplateCard';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { Search, Filter, Sparkles, RefreshCw } from 'lucide-react';
+import type { AdSceneTemplate } from '@shared/schema';
 
 interface TemplateLibraryProps {
   onSelectTemplate?: (template: AdSceneTemplate) => void;
@@ -15,21 +15,17 @@ interface TemplateLibraryProps {
 }
 
 const categories = [
-  { value: "all", label: "All Templates" },
-  { value: "product_showcase", label: "Product Showcase" },
-  { value: "installation", label: "Installation" },
-  { value: "worksite", label: "Worksite" },
-  { value: "professional", label: "Professional" },
-  { value: "educational", label: "Educational" },
+  { value: 'all', label: 'All Templates' },
+  { value: 'product_showcase', label: 'Product Showcase' },
+  { value: 'installation', label: 'Installation' },
+  { value: 'worksite', label: 'Worksite' },
+  { value: 'professional', label: 'Professional' },
+  { value: 'educational', label: 'Educational' },
 ];
 
-export function TemplateLibrary({
-  onSelectTemplate,
-  selectedTemplateId,
-  className,
-}: TemplateLibraryProps) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
+export function TemplateLibrary({ onSelectTemplate, selectedTemplateId, className }: TemplateLibraryProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [isGlobalOnly, setIsGlobalOnly] = useState(false);
 
   // Fetch templates
@@ -40,20 +36,20 @@ export function TemplateLibrary({
     refetch,
     isRefetching,
   } = useQuery<AdSceneTemplate[]>({
-    queryKey: ["templates", selectedCategory, isGlobalOnly],
+    queryKey: ['templates', selectedCategory, isGlobalOnly],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (selectedCategory !== "all") {
-        params.set("category", selectedCategory);
+      if (selectedCategory !== 'all') {
+        params.set('category', selectedCategory);
       }
       if (isGlobalOnly) {
-        params.set("isGlobal", "true");
+        params.set('isGlobal', 'true');
       }
 
-      const url = `/api/templates${params.toString() ? `?${params.toString()}` : ""}`;
+      const url = `/api/templates${params.toString() ? `?${params.toString()}` : ''}`;
       const res = await fetch(url);
       if (!res.ok) {
-        throw new Error("Failed to fetch templates");
+        throw new Error('Failed to fetch templates');
       }
       // API returns { templates: [], total: number }
       const data = await res.json();
@@ -81,17 +77,17 @@ export function TemplateLibrary({
   };
 
   return (
-    <div className={cn("space-y-6", className)}>
+    <div className={cn('space-y-6', className)}>
       {/* Header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h2 className="text-2xl font-display font-semibold flex items-center gap-2">
             <Sparkles className="w-6 h-6 text-primary" />
-            Template Library
+            Gen Templates
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
-            {filteredTemplates.length} template{filteredTemplates.length !== 1 ? "s" : ""} available
-            {selectedCategory !== "all" && ` in ${selectedCategory}`}
+            {filteredTemplates.length} template{filteredTemplates.length !== 1 ? 's' : ''} available
+            {selectedCategory !== 'all' && ` in ${selectedCategory}`}
           </p>
         </div>
 
@@ -103,7 +99,7 @@ export function TemplateLibrary({
           disabled={isRefetching}
           data-testid="button-refresh-templates"
         >
-          <RefreshCw className={cn("w-4 h-4 mr-2", isRefetching && "animate-spin")} />
+          <RefreshCw className={cn('w-4 h-4 mr-2', isRefetching && 'animate-spin')} />
           Refresh
         </Button>
       </div>
@@ -135,10 +131,10 @@ export function TemplateLibrary({
                 key={category.value}
                 onClick={() => setSelectedCategory(category.value)}
                 className={cn(
-                  "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+                  'px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200',
                   selectedCategory === category.value
-                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                    : "bg-card border border-border text-muted-foreground hover:text-foreground hover:border-primary/50"
+                    ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
+                    : 'bg-card border border-border text-muted-foreground hover:text-foreground hover:border-primary/50',
                 )}
                 data-testid={`button-category-${category.value}`}
               >
@@ -153,21 +149,17 @@ export function TemplateLibrary({
           <button
             onClick={() => setIsGlobalOnly(!isGlobalOnly)}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+              'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200',
               isGlobalOnly
-                ? "bg-primary/20 text-primary border border-primary/30"
-                : "bg-card border border-border text-muted-foreground hover:text-foreground hover:border-primary/50"
+                ? 'bg-primary/20 text-primary border border-primary/30'
+                : 'bg-card border border-border text-muted-foreground hover:text-foreground hover:border-primary/50',
             )}
             data-testid="button-toggle-global"
           >
-            <svg
-              className="w-4 h-4"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
             </svg>
-            {isGlobalOnly ? "Global Templates Only" : "Show Global Only"}
+            {isGlobalOnly ? 'Global Templates Only' : 'Show Global Only'}
           </button>
         </div>
       </div>
@@ -189,12 +181,7 @@ export function TemplateLibrary({
       {error && (
         <div className="text-center py-12">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-destructive/10 flex items-center justify-center">
-            <svg
-              className="w-8 h-8 text-destructive"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className="w-8 h-8 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -205,7 +192,7 @@ export function TemplateLibrary({
           </div>
           <h3 className="text-lg font-semibold mb-2">Failed to load templates</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            {error instanceof Error ? error.message : "Unknown error"}
+            {error instanceof Error ? error.message : 'Unknown error'}
           </p>
           <Button variant="outline" onClick={() => refetch()}>
             Try Again
@@ -223,16 +210,16 @@ export function TemplateLibrary({
           <p className="text-sm text-muted-foreground mb-4">
             {searchQuery
               ? `No templates match "${searchQuery}"`
-              : selectedCategory !== "all"
+              : selectedCategory !== 'all'
                 ? `No templates in the ${selectedCategory} category`
-                : "No templates available"}
+                : 'No templates available'}
           </p>
-          {(searchQuery || selectedCategory !== "all" || isGlobalOnly) && (
+          {(searchQuery || selectedCategory !== 'all' || isGlobalOnly) && (
             <Button
               variant="outline"
               onClick={() => {
-                setSearchQuery("");
-                setSelectedCategory("all");
+                setSearchQuery('');
+                setSelectedCategory('all');
                 setIsGlobalOnly(false);
               }}
             >
