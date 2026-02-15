@@ -9,14 +9,14 @@
  * 4. Status polling and metrics collection
  * 5. Model version management
  *
- * The Gemini API supports supervised fine-tuning on gemini-2.5-flash.
+ * The Gemini API supports supervised fine-tuning on gemini-3-flash.
  * Training data format: { input, output } pairs in JSONL.
  */
 
 import { getGlobalGeminiClient } from '../lib/geminiClient';
 import { logger } from '../lib/logger';
 
-const DEFAULT_BASE_MODEL = 'models/gemini-2.5-flash-001-tuning';
+const DEFAULT_BASE_MODEL = 'models/gemini-3-flash-001-tuning';
 
 export interface TrainingConfig {
   epochs?: number; // Default: 5

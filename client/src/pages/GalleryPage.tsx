@@ -1,22 +1,37 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { ArrowLeft, Search, SortDesc, Trash2, Image as ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 import type { Generation } from '@shared/schema';
 
 type SortOption = 'newest' | 'oldest';
 
 export default function GalleryPage() {
   const [, navigate] = useLocation();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { data: generations, isLoading } = useQuery<Generation[]>({
     queryKey: ['generations'],
@@ -59,6 +74,52 @@ export default function GalleryPage() {
 
   const clearSelection = () => setSelectedIds(new Set());
 
+  const handleDeleteSelected = async () => {
+    setIsDeleting(true);
+    try {
+      const ids = Array.from(selectedIds);
+      const results = await Promise.allSettled(
+        ids.map((id) =>
+          fetch(`/api/generations/${id}`, {
+            method: 'DELETE',
+            credentials: 'include',
+          }).then((res) => {
+            if (!res.ok) throw new Error(`Failed to delete generation ${id}`);
+            return res.json();
+          }),
+        ),
+      );
+
+      const failed = results.filter((r) => r.status === 'rejected').length;
+      const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+
+      if (failed > 0) {
+        toast({
+          title: 'Partial delete',
+          description: `Deleted ${succeeded} of ${ids.length} generations. ${failed} failed.`,
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Deleted',
+          description: `${succeeded} generation${succeeded !== 1 ? 's' : ''} deleted.`,
+        });
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['generations'] });
+      setSelectedIds(new Set());
+    } catch (error: any) {
+      toast({
+        title: 'Delete failed',
+        description: error.message || 'Failed to delete generations',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header currentPage="gallery" />
@@ -86,7 +147,7 @@ export default function GalleryPage() {
               <Button variant="outline" size="sm" onClick={clearSelection}>
                 Clear
               </Button>
-              <Button variant="destructive" size="sm">
+              <Button variant="destructive" size="sm" onClick={() => setShowDeleteDialog(true)}>
                 <Trash2 className="h-4 w-4 mr-1" />
                 Delete
               </Button>
@@ -193,6 +254,29 @@ export default function GalleryPage() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Generations</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {selectedIds.size} generation{selectedIds.size !== 1 ? 's' : ''}? This
+              action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteSelected}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

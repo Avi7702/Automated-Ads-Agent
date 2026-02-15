@@ -21,16 +21,9 @@ import { queryFileSearchStore, FileCategory } from './fileSearchService';
 import type { Product, ProductAnalysis, ProductRelationship } from '@shared/schema';
 
 // Relationship types enum (matching schema)
-export const RELATIONSHIP_TYPES = [
-  'pairs_with',
-  'requires',
-  'replaces',
-  'matches',
-  'completes',
-  'upgrades'
-] as const;
+export const RELATIONSHIP_TYPES = ['pairs_with', 'requires', 'replaces', 'matches', 'completes', 'upgrades'] as const;
 
-export type RelationshipType = typeof RELATIONSHIP_TYPES[number];
+export type RelationshipType = (typeof RELATIONSHIP_TYPES)[number];
 
 /**
  * Relationship suggestion returned by the discovery service
@@ -87,15 +80,13 @@ export interface SimilarProductMatch {
 
 // Model for text analysis
 // MODEL RECENCY RULE: Before changing any model ID, verify today's date and confirm the model is current within the last 3-4 weeks.
-const TEXT_MODEL = 'gemini-2.0-flash';
+const TEXT_MODEL = 'gemini-3-flash';
 
 /**
  * Build product context string for AI prompts
  */
 function buildProductContext(product: Product, analysis?: ProductAnalysis | null): string {
-  const parts: string[] = [
-    `Name: ${product.name}`,
-  ];
+  const parts: string[] = [`Name: ${product.name}`];
 
   if (product.description) {
     parts.push(`Description: ${product.description}`);
@@ -154,7 +145,7 @@ export async function suggestRelationships(
     maxSuggestions?: number;
     minScore?: number;
     includeExisting?: boolean;
-  }
+  },
 ): Promise<RelationshipSuggestion[]> {
   const startTime = Date.now();
   const maxSuggestions = options?.maxSuggestions ?? 10;
@@ -174,9 +165,7 @@ export async function suggestRelationships(
     // 3. Get existing relationships
     const existingRelationships = await storage.getProductRelationships([productId]);
     const existingTargetIds = new Set(
-      existingRelationships.map(r =>
-        r.sourceProductId === productId ? r.targetProductId : r.sourceProductId
-      )
+      existingRelationships.map((r) => (r.sourceProductId === productId ? r.targetProductId : r.sourceProductId)),
     );
 
     // 4. Find similar products
@@ -187,7 +176,7 @@ export async function suggestRelationships(
 
     // 6. Get all candidate products (excluding source)
     const allProducts = await storage.getProducts();
-    const candidateProducts = allProducts.filter(p => p.id !== productId);
+    const candidateProducts = allProducts.filter((p) => p.id !== productId);
 
     if (candidateProducts.length === 0) {
       return [];
@@ -198,14 +187,15 @@ export async function suggestRelationships(
 
     // 8. Prepare candidate summaries
     const candidateSummaries = await Promise.all(
-      candidateProducts.slice(0, 20).map(async (p) => { // Limit to 20 for API
+      candidateProducts.slice(0, 20).map(async (p) => {
+        // Limit to 20 for API
         const analysis = await storage.getProductAnalysisByProductId(p.id);
         return {
           id: p.id,
           name: p.name,
-          context: buildProductContext(p, analysis)
+          context: buildProductContext(p, analysis),
         };
-      })
+      }),
     );
 
     // 9. Build AI prompt for relationship discovery
@@ -214,17 +204,20 @@ export async function suggestRelationships(
       sourceContext,
       candidateSummaries,
       kbContext,
-      similarProducts
+      similarProducts,
     );
 
     // 10. Call Gemini for relationship analysis
-    const response = await generateContentWithRetry({
-      model: TEXT_MODEL,
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      config: {
-        temperature: 0.3, // Lower temperature for more consistent results
-      }
-    }, { operation: 'relationship_discovery' });
+    const response = await generateContentWithRetry(
+      {
+        model: TEXT_MODEL,
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: {
+          temperature: 0.3, // Lower temperature for more consistent results
+        },
+      },
+      { operation: 'relationship_discovery' },
+    );
 
     const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
@@ -233,12 +226,12 @@ export async function suggestRelationships(
       responseText,
       candidateSummaries,
       existingTargetIds,
-      includeExisting
+      includeExisting,
     );
 
     // 12. Filter and sort by score
     const filteredSuggestions = suggestions
-      .filter(s => s.score >= minScore)
+      .filter((s) => s.score >= minScore)
       .sort((a, b) => b.score - a.score)
       .slice(0, maxSuggestions);
 
@@ -253,7 +246,6 @@ export async function suggestRelationships(
     });
 
     return filteredSuggestions;
-
   } catch (error) {
     telemetry.trackGeminiUsage({
       model: TEXT_MODEL,
@@ -275,7 +267,7 @@ export async function findSimilarProducts(
   options?: {
     maxResults?: number;
     minSimilarity?: number;
-  }
+  },
 ): Promise<SimilarProductMatch[]> {
   const maxResults = options?.maxResults ?? 10;
   const minSimilarity = options?.minSimilarity ?? 30;
@@ -285,55 +277,51 @@ export async function findSimilarProducts(
 
   // Get all products
   const allProducts = await storage.getProducts();
-  const candidates = allProducts.filter(p => p.id !== product.id);
+  const candidates = allProducts.filter((p) => p.id !== product.id);
 
   // Calculate similarity scores
   const matches: SimilarProductMatch[] = [];
 
   for (const candidate of candidates) {
     const candidateAnalysis = await storage.getProductAnalysisByProductId(candidate.id);
-    const { similarity, reasons } = calculateSimilarity(
-      product, sourceAnalysis,
-      candidate, candidateAnalysis
-    );
+    const { similarity, reasons } = calculateSimilarity(product, sourceAnalysis, candidate, candidateAnalysis);
 
     if (similarity >= minSimilarity) {
       matches.push({
         product: candidate,
         similarity,
-        matchReasons: reasons
+        matchReasons: reasons,
       });
     }
   }
 
   // Sort by similarity and return top results
-  return matches
-    .sort((a, b) => b.similarity - a.similarity)
-    .slice(0, maxResults);
+  return matches.sort((a, b) => b.similarity - a.similarity).slice(0, maxResults);
 }
 
 /**
  * Calculate similarity between two products
  */
 function calculateSimilarity(
-  source: Product, sourceAnalysis: ProductAnalysis | undefined,
-  target: Product, targetAnalysis: ProductAnalysis | undefined
+  source: Product,
+  sourceAnalysis: ProductAnalysis | undefined,
+  target: Product,
+  targetAnalysis: ProductAnalysis | undefined,
 ): { similarity: number; reasons: string[] } {
   let score = 0;
   const reasons: string[] = [];
 
   // Category match (20 points)
-  if (source.category && target.category &&
-      source.category.toLowerCase() === target.category.toLowerCase()) {
+  if (source.category && target.category && source.category.toLowerCase() === target.category.toLowerCase()) {
     score += 20;
     reasons.push(`Same category: ${source.category}`);
   }
 
   // Tag overlap (up to 25 points)
   if (source.tags && target.tags) {
-    const sourceTags = new Set(source.tags.map(t => t.toLowerCase()));
-    const targetTags = new Set(target.tags.map(t => t.toLowerCase()));
-    const overlap = Array.from(sourceTags).filter(t => targetTags.has(t));
+    const sourceTags = new Set(source.tags.map((t) => t.toLowerCase()));
+    const targetTags = new Set(target.tags.map((t) => t.toLowerCase()));
+    const overlap = Array.from(sourceTags).filter((t) => targetTags.has(t));
     const overlapScore = Math.min(overlap.length * 5, 25);
     if (overlapScore > 0) {
       score += overlapScore;
@@ -344,17 +332,20 @@ function calculateSimilarity(
   // Analysis-based matching
   if (sourceAnalysis && targetAnalysis) {
     // Subcategory match (15 points)
-    if (sourceAnalysis.subcategory && targetAnalysis.subcategory &&
-        sourceAnalysis.subcategory.toLowerCase() === targetAnalysis.subcategory.toLowerCase()) {
+    if (
+      sourceAnalysis.subcategory &&
+      targetAnalysis.subcategory &&
+      sourceAnalysis.subcategory.toLowerCase() === targetAnalysis.subcategory.toLowerCase()
+    ) {
       score += 15;
       reasons.push(`Same subcategory: ${sourceAnalysis.subcategory}`);
     }
 
     // Material overlap (up to 15 points)
     if (sourceAnalysis.materials && targetAnalysis.materials) {
-      const sourceMaterials = new Set(sourceAnalysis.materials.map(m => m.toLowerCase()));
-      const targetMaterials = new Set(targetAnalysis.materials.map(m => m.toLowerCase()));
-      const overlap = Array.from(sourceMaterials).filter(m => targetMaterials.has(m));
+      const sourceMaterials = new Set(sourceAnalysis.materials.map((m) => m.toLowerCase()));
+      const targetMaterials = new Set(targetAnalysis.materials.map((m) => m.toLowerCase()));
+      const overlap = Array.from(sourceMaterials).filter((m) => targetMaterials.has(m));
       const overlapScore = Math.min(overlap.length * 5, 15);
       if (overlapScore > 0) {
         score += overlapScore;
@@ -364,9 +355,9 @@ function calculateSimilarity(
 
     // Color similarity (up to 15 points)
     if (sourceAnalysis.colors && targetAnalysis.colors) {
-      const sourceColors = new Set(sourceAnalysis.colors.map(c => c.toLowerCase()));
-      const targetColors = new Set(targetAnalysis.colors.map(c => c.toLowerCase()));
-      const overlap = Array.from(sourceColors).filter(c => targetColors.has(c));
+      const sourceColors = new Set(sourceAnalysis.colors.map((c) => c.toLowerCase()));
+      const targetColors = new Set(targetAnalysis.colors.map((c) => c.toLowerCase()));
+      const overlap = Array.from(sourceColors).filter((c) => targetColors.has(c));
       const overlapScore = Math.min(overlap.length * 5, 15);
       if (overlapScore > 0) {
         score += overlapScore;
@@ -375,8 +366,11 @@ function calculateSimilarity(
     }
 
     // Style match (10 points)
-    if (sourceAnalysis.style && targetAnalysis.style &&
-        sourceAnalysis.style.toLowerCase() === targetAnalysis.style.toLowerCase()) {
+    if (
+      sourceAnalysis.style &&
+      targetAnalysis.style &&
+      sourceAnalysis.style.toLowerCase() === targetAnalysis.style.toLowerCase()
+    ) {
       score += 10;
       reasons.push(`Same style: ${sourceAnalysis.style}`);
     }
@@ -391,7 +385,7 @@ function calculateSimilarity(
 export async function analyzeRelationshipType(
   sourceProduct: Product,
   targetProduct: Product,
-  userId?: string
+  userId?: string,
 ): Promise<RelationshipAnalysisResult> {
   const startTime = Date.now();
 
@@ -399,7 +393,7 @@ export async function analyzeRelationshipType(
     // Get analyses for both products
     const [sourceAnalysis, targetAnalysis] = await Promise.all([
       storage.getProductAnalysisByProductId(sourceProduct.id),
-      storage.getProductAnalysisByProductId(targetProduct.id)
+      storage.getProductAnalysisByProductId(targetProduct.id),
     ]);
 
     // Build contexts
@@ -415,17 +409,20 @@ export async function analyzeRelationshipType(
       sourceContext,
       targetProduct.name,
       targetContext,
-      kbContext
+      kbContext,
     );
 
     // Call Gemini for analysis
-    const response = await generateContentWithRetry({
-      model: TEXT_MODEL,
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      config: {
-        temperature: 0.2, // Low temperature for analytical tasks
-      }
-    }, { operation: 'relationship_discovery' });
+    const response = await generateContentWithRetry(
+      {
+        model: TEXT_MODEL,
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: {
+          temperature: 0.2, // Low temperature for analytical tasks
+        },
+      },
+      { operation: 'relationship_discovery' },
+    );
 
     const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
@@ -443,7 +440,6 @@ export async function analyzeRelationshipType(
     });
 
     return result;
-
   } catch (error) {
     telemetry.trackGeminiUsage({
       model: TEXT_MODEL,
@@ -460,10 +456,7 @@ export async function analyzeRelationshipType(
 /**
  * Query knowledge base for product relationship context
  */
-async function queryKnowledgeBase(
-  sourceProduct: Product,
-  targetProduct?: Product
-): Promise<string | null> {
+async function queryKnowledgeBase(sourceProduct: Product, targetProduct?: Product): Promise<string | null> {
   try {
     // Build search query
     let query = `Product relationships for ${sourceProduct.name}`;
@@ -479,11 +472,10 @@ async function queryKnowledgeBase(
     const result = await queryFileSearchStore({
       query,
       category: FileCategory.PRODUCT_RELATIONSHIPS,
-      maxResults: 5
+      maxResults: 5,
     });
 
     return result?.context || null;
-
   } catch (error) {
     // KB query failures are non-fatal - log and continue
     logger.warn({ module: 'RelationshipRAG', err: error }, 'KB query failed');
@@ -499,7 +491,7 @@ function buildRelationshipDiscoveryPrompt(
   sourceContext: string,
   candidates: Array<{ id: string; name: string; context: string }>,
   kbContext: string | null,
-  similarProducts: SimilarProductMatch[]
+  similarProducts: SimilarProductMatch[],
 ): string {
   const relationshipDefinitions = `
 Relationship Types:
@@ -511,19 +503,16 @@ Relationship Types:
 - upgrades: Product A is a premium alternative to Product B (e.g., solid hardwood upgrades engineered hardwood)
 `;
 
-  const candidateList = candidates.map(c =>
-    `\n[Product ID: ${c.id}]\nName: ${c.name}\n${c.context}`
-  ).join('\n---\n');
+  const candidateList = candidates.map((c) => `\n[Product ID: ${c.id}]\nName: ${c.name}\n${c.context}`).join('\n---\n');
 
-  const similarList = similarProducts.length > 0
-    ? `\nAlready identified as similar:\n${similarProducts.map(s =>
-        `- ${s.product.name} (${s.similarity}% similar): ${s.matchReasons.join(', ')}`
-      ).join('\n')}`
-    : '';
+  const similarList =
+    similarProducts.length > 0
+      ? `\nAlready identified as similar:\n${similarProducts
+          .map((s) => `- ${s.product.name} (${s.similarity}% similar): ${s.matchReasons.join(', ')}`)
+          .join('\n')}`
+      : '';
 
-  const kbSection = kbContext
-    ? `\nKnowledge Base Context:\n${kbContext}\n`
-    : '';
+  const kbSection = kbContext ? `\nKnowledge Base Context:\n${kbContext}\n` : '';
 
   return `You are a product relationship expert for a flooring and home improvement retailer. Analyze the source product and suggest relationships with candidate products.
 
@@ -568,7 +557,7 @@ function buildRelationshipAnalysisPrompt(
   sourceContext: string,
   targetName: string,
   targetContext: string,
-  kbContext: string | null
+  kbContext: string | null,
 ): string {
   const relationshipDefinitions = `
 Relationship Types (choose the most appropriate):
@@ -581,9 +570,7 @@ Relationship Types (choose the most appropriate):
 - none: No meaningful relationship exists
 `;
 
-  const kbSection = kbContext
-    ? `\nKnowledge Base Context:\n${kbContext}\n`
-    : '';
+  const kbSection = kbContext ? `\nKnowledge Base Context:\n${kbContext}\n` : '';
 
   return `You are a product relationship expert. Analyze the relationship between these two products.
 
@@ -627,7 +614,7 @@ function parseRelationshipSuggestions(
   responseText: string,
   candidates: Array<{ id: string; name: string; context: string }>,
   existingTargetIds: Set<string>,
-  includeExisting: boolean
+  includeExisting: boolean,
 ): RelationshipSuggestion[] {
   try {
     // Extract JSON from response
@@ -641,7 +628,7 @@ function parseRelationshipSuggestions(
     const suggestions: RelationshipSuggestion[] = [];
 
     // Create lookup for candidate names
-    const candidateMap = new Map(candidates.map(c => [c.id, c.name]));
+    const candidateMap = new Map(candidates.map((c) => [c.id, c.name]));
 
     for (const suggestion of parsed.suggestions || []) {
       const targetId = suggestion.productId;
@@ -663,12 +650,11 @@ function parseRelationshipSuggestions(
         score: Math.min(100, Math.max(0, suggestion.score || 0)),
         reasoning: suggestion.reasoning || '',
         alreadyExists,
-        source: 'ai_inference'
+        source: 'ai_inference',
       });
     }
 
     return suggestions;
-
   } catch (error) {
     logger.error({ module: 'RelationshipRAG', err: error }, 'Failed to parse suggestions');
     return [];
@@ -687,8 +673,8 @@ function parseRelationshipAnalysis(responseText: string): RelationshipAnalysisRe
     metadata: {
       analyzedAt: new Date(),
       modelVersion: TEXT_MODEL,
-      kbContextUsed: false
-    }
+      kbContextUsed: false,
+    },
   };
 
   try {
@@ -702,8 +688,7 @@ function parseRelationshipAnalysis(responseText: string): RelationshipAnalysisRe
 
     // Validate primary relationship type
     let primaryRelationship: RelationshipType | null = null;
-    if (parsed.primaryRelationship &&
-        RELATIONSHIP_TYPES.includes(parsed.primaryRelationship)) {
+    if (parsed.primaryRelationship && RELATIONSHIP_TYPES.includes(parsed.primaryRelationship)) {
       primaryRelationship = parsed.primaryRelationship;
     }
 
@@ -714,7 +699,7 @@ function parseRelationshipAnalysis(responseText: string): RelationshipAnalysisRe
         alternativeRelationships.push({
           type: alt.type,
           confidence: Math.min(100, Math.max(0, alt.confidence || 0)),
-          reasoning: alt.reasoning || ''
+          reasoning: alt.reasoning || '',
         });
       }
     }
@@ -727,10 +712,9 @@ function parseRelationshipAnalysis(responseText: string): RelationshipAnalysisRe
       metadata: {
         analyzedAt: new Date(),
         modelVersion: TEXT_MODEL,
-        kbContextUsed: responseText.includes('Knowledge Base') || responseText.includes('knowledge base')
-      }
+        kbContextUsed: responseText.includes('Knowledge Base') || responseText.includes('knowledge base'),
+      },
     };
-
   } catch (error) {
     logger.error({ module: 'RelationshipRAG', err: error }, 'Failed to parse analysis');
     return defaultResult;
@@ -746,7 +730,7 @@ export async function batchSuggestRelationships(
   options?: {
     maxSuggestionsPerProduct?: number;
     minScore?: number;
-  }
+  },
 ): Promise<Map<string, RelationshipSuggestion[]>> {
   const results = new Map<string, RelationshipSuggestion[]>();
 
@@ -755,14 +739,14 @@ export async function batchSuggestRelationships(
   for (let i = 0; i < productIds.length; i += batchSize) {
     const batch = productIds.slice(i, i + batchSize);
     const batchResults = await Promise.all(
-      batch.map(productId =>
+      batch.map((productId) =>
         suggestRelationships(productId, userId, options)
-          .then(suggestions => ({ productId, suggestions }))
-          .catch(error => {
+          .then((suggestions) => ({ productId, suggestions }))
+          .catch((error) => {
             logger.error({ module: 'RelationshipRAG', productId, err: error }, 'Batch suggestion failed for product');
             return { productId, suggestions: [] };
-          })
-      )
+          }),
+      ),
     );
 
     for (const { productId, suggestions } of batchResults) {
@@ -784,7 +768,7 @@ export async function autoCreateRelationships(
     relationshipTypes?: RelationshipType[];
     maxToCreate?: number;
     dryRun?: boolean;
-  }
+  },
 ): Promise<{
   created: ProductRelationship[];
   skipped: RelationshipSuggestion[];
@@ -803,12 +787,12 @@ export async function autoCreateRelationships(
   const suggestions = await suggestRelationships(productId, userId, {
     maxSuggestions: maxToCreate * 2, // Get extra in case some fail
     minScore,
-    includeExisting: false
+    includeExisting: false,
   });
 
   // Filter by relationship types if specified
   const filtered = relationshipTypes
-    ? suggestions.filter(s => relationshipTypes.includes(s.relationshipType))
+    ? suggestions.filter((s) => relationshipTypes.includes(s.relationshipType))
     : suggestions;
 
   // Create relationships
@@ -830,7 +814,7 @@ export async function autoCreateRelationships(
         description: suggestion.reasoning,
         isRequired: suggestion.relationshipType === 'requires',
         displayOrder: createdCount,
-        createdAt: new Date()
+        createdAt: new Date(),
       });
       createdCount++;
       continue;
@@ -844,14 +828,14 @@ export async function autoCreateRelationships(
         relationshipType: suggestion.relationshipType,
         description: suggestion.reasoning,
         isRequired: suggestion.relationshipType === 'requires',
-        displayOrder: createdCount
+        displayOrder: createdCount,
       });
       created.push(relationship);
       createdCount++;
     } catch (error) {
       errors.push({
         suggestion,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   }

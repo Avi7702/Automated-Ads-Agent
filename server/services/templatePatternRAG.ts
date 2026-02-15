@@ -99,20 +99,20 @@ export interface CustomizationSuggestion {
 // =============================================================================
 
 const MATCH_WEIGHTS = {
-  industry: 25,        // Industry match is very important
-  objective: 20,       // Campaign objective alignment
-  platform: 15,        // Platform compatibility
-  aspectRatio: 10,     // Aspect ratio match
-  mood: 10,            // Mood alignment
-  style: 10,           // Style alignment
-  performance: 10,     // Performance tier bonus
+  industry: 25, // Industry match is very important
+  objective: 20, // Campaign objective alignment
+  platform: 15, // Platform compatibility
+  aspectRatio: 10, // Aspect ratio match
+  mood: 10, // Mood alignment
+  style: 10, // Style alignment
+  performance: 10, // Performance tier bonus
 };
 
 const ENGAGEMENT_TIER_SCORES: Record<string, number> = {
   'top-5': 100,
   'top-10': 80,
   'top-25': 60,
-  'unranked': 40,
+  unranked: 40,
 };
 
 // MODEL RECENCY RULE: Before changing any model ID, verify today's date and confirm the model is current within the last 3-4 weeks.
@@ -127,9 +127,7 @@ const ENGAGEMENT_TIER_SCORES: Record<string, number> = {
  * @param context - The matching context including industry, objective, platform, etc.
  * @returns Array of matching templates with scores and suggestions
  */
-export async function matchTemplateForContext(
-  context: TemplateMatchContext
-): Promise<TemplateMatchResult> {
+export async function matchTemplateForContext(context: TemplateMatchContext): Promise<TemplateMatchResult> {
   const startTime = Date.now();
   let success = false;
   let errorType: string | undefined;
@@ -154,7 +152,7 @@ export async function matchTemplateForContext(
     }
 
     // Score each candidate
-    const scoredTemplates = candidates.map(template => scoreTemplate(template, context));
+    const scoredTemplates = candidates.map((template) => scoreTemplate(template, context));
 
     // Sort by score descending and take top results
     scoredTemplates.sort((a, b) => b.matchScore - a.matchScore);
@@ -162,13 +160,13 @@ export async function matchTemplateForContext(
 
     // Generate customization suggestions for top matches
     const enrichedMatches = await Promise.all(
-      topMatches.map(async match => ({
+      topMatches.map(async (match) => ({
         ...match,
         suggestedCustomizations: await generateQuickCustomizations(
-          candidates.find(t => t.id === match.templateId)!,
-          context
+          candidates.find((t) => t.id === match.templateId)!,
+          context,
         ),
-      }))
+      })),
     );
 
     success = true;
@@ -207,9 +205,7 @@ export async function matchTemplateForContext(
  * @param template - The template to analyze
  * @returns Pattern analysis including visual patterns, colors, layout, etc.
  */
-export async function analyzeTemplatePatterns(
-  template: PerformingAdTemplate
-): Promise<PatternAnalysis> {
+export async function analyzeTemplatePatterns(template: PerformingAdTemplate): Promise<PatternAnalysis> {
   const startTime = Date.now();
   let success = false;
   let errorType: string | undefined;
@@ -293,7 +289,7 @@ export async function suggestTemplateCustomizations(
     industry?: string;
     targetAudience?: string;
     preferredStyles?: string[];
-  }
+  },
 ): Promise<CustomizationSuggestion> {
   const startTime = Date.now();
   let success = false;
@@ -311,11 +307,7 @@ export async function suggestTemplateCustomizations(
     const currentPatterns = await analyzeTemplatePatterns(template);
 
     // Generate customization suggestions using AI
-    const suggestions = await generateCustomizationSuggestions(
-      template,
-      currentPatterns,
-      brandGuidelines
-    );
+    const suggestions = await generateCustomizationSuggestions(template, currentPatterns, brandGuidelines);
 
     success = true;
 
@@ -362,10 +354,7 @@ async function getCandidateTemplates(context: TemplateMatchContext): Promise<Per
 /**
  * Score a template against the matching context
  */
-function scoreTemplate(
-  template: PerformingAdTemplate,
-  context: TemplateMatchContext
-): TemplateMatch {
+function scoreTemplate(template: PerformingAdTemplate, context: TemplateMatchContext): TemplateMatch {
   let score = 0;
   const matchReasons: string[] = [];
 
@@ -373,10 +362,13 @@ function scoreTemplate(
   if (template.bestForIndustries?.includes(context.industry)) {
     score += MATCH_WEIGHTS.industry;
     matchReasons.push(`Industry match: ${context.industry}`);
-  } else if (template.bestForIndustries?.some(ind =>
-    ind.toLowerCase().includes(context.industry.toLowerCase()) ||
-    context.industry.toLowerCase().includes(ind.toLowerCase())
-  )) {
+  } else if (
+    template.bestForIndustries?.some(
+      (ind) =>
+        ind.toLowerCase().includes(context.industry.toLowerCase()) ||
+        context.industry.toLowerCase().includes(ind.toLowerCase()),
+    )
+  ) {
     score += MATCH_WEIGHTS.industry * 0.5;
     matchReasons.push(`Related industry: ${context.industry}`);
   }
@@ -438,7 +430,7 @@ function scoreTemplate(
  */
 async function generateQuickCustomizations(
   template: PerformingAdTemplate,
-  context: TemplateMatchContext
+  context: TemplateMatchContext,
 ): Promise<string[]> {
   const suggestions: string[] = [];
 
@@ -482,7 +474,7 @@ async function generateQuickCustomizations(
  */
 async function analyzeTemplateWithVision(
   imageUrl: string,
-  template: PerformingAdTemplate
+  template: PerformingAdTemplate,
 ): Promise<{
   detectedPatterns: string[];
   dominantColors: string[];
@@ -518,23 +510,26 @@ Context about this template:
 Respond ONLY with valid JSON.`;
 
   try {
-    const response = await generateContentWithRetry({
-      model: 'gemini-2.0-flash',
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            { text: prompt },
-            {
-              inlineData: {
-                mimeType: 'image/jpeg',
-                data: '', // Would need actual image data
+    const response = await generateContentWithRetry(
+      {
+        model: 'gemini-3-flash',
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              { text: prompt },
+              {
+                inlineData: {
+                  mimeType: 'image/jpeg',
+                  data: '', // Would need actual image data
+                },
               },
-            },
-          ],
-        },
-      ],
-    }, { operation: 'template_matching' });
+            ],
+          },
+        ],
+      },
+      { operation: 'template_matching' },
+    );
 
     const text = response.text || '';
     const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -573,7 +568,7 @@ async function generateCustomizationSuggestions(
     industry?: string;
     targetAudience?: string;
     preferredStyles?: string[];
-  }
+  },
 ): Promise<CustomizationSuggestion> {
   const prompt = `You are an expert ad designer. Suggest customizations to align this template with the brand guidelines.
 
@@ -612,10 +607,13 @@ Provide suggestions as JSON:
 Respond ONLY with valid JSON.`;
 
   try {
-    const response = await generateContentWithRetry({
-      model: 'gemini-2.0-flash',
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    }, { operation: 'template_matching' });
+    const response = await generateContentWithRetry(
+      {
+        model: 'gemini-3-flash',
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      },
+      { operation: 'template_matching' },
+    );
 
     const text = response.text || '';
     const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -653,7 +651,7 @@ function generateBasicSuggestions(
     colors?: string[];
     typography?: { primary?: string; secondary?: string };
     preferredStyles?: string[];
-  }
+  },
 ): CustomizationSuggestion['suggestions'] {
   const suggestions: CustomizationSuggestion['suggestions'] = [];
 
@@ -704,7 +702,7 @@ function extractColorsFromPalette(colorPalette: unknown): string[] {
   }
 
   const palette = colorPalette as Record<string, string>;
-  return Object.values(palette).filter(v => typeof v === 'string' && v.length > 0);
+  return Object.values(palette).filter((v) => typeof v === 'string' && v.length > 0);
 }
 
 /**

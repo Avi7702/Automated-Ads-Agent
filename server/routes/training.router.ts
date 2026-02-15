@@ -68,7 +68,7 @@ export const trainingRouter: RouterFactory = (ctx: RouterContext): Router => {
           userId,
           name: name.trim(),
           description: description || null,
-          baseModel: baseModel || 'gemini-2.5-flash',
+          baseModel: baseModel || 'gemini-3-flash',
           status: 'draft',
         });
 

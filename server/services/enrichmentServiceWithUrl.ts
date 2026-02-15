@@ -10,19 +10,13 @@
  * single user-provided URL instead of auto-discovering sources.
  */
 
-import { logger } from "../lib/logger";
-import { storage } from "../storage";
-import { generateContentWithRetry } from "../lib/geminiClient";
-import type { Product } from "@shared/schema";
-import {
-  extractFromSource,
-  extractFeatures,
-  extractBenefits,
-  extractTags,
-} from "./enrichment/dataExtraction";
-import { verifyExtraction } from "./enrichment/gate2-extraction";
-import { SOURCE_TRUST_LEVELS, type ExtractedData } from "./enrichment/types";
-
+import { logger } from '../lib/logger';
+import { storage } from '../storage';
+import { generateContentWithRetry } from '../lib/geminiClient';
+import type { Product } from '@shared/schema';
+import { extractFromSource, extractFeatures, extractBenefits, extractTags } from './enrichment/dataExtraction';
+import { verifyExtraction } from './enrichment/gate2-extraction';
+import { SOURCE_TRUST_LEVELS, type ExtractedData } from './enrichment/types';
 
 // ============================================
 // TYPES
@@ -48,7 +42,7 @@ export interface EnrichmentDraft {
   tags: string[];
   confidence: number;
   sources: Array<{
-    type: "vision" | "web_search" | "kb" | "url";
+    type: 'vision' | 'web_search' | 'kb' | 'url';
     detail: string;
   }>;
   generatedAt: string;
@@ -64,30 +58,33 @@ export interface EnrichmentDraft {
 async function fetchUrlContent(url: string): Promise<string> {
   try {
     // Use Gemini to fetch and summarize the page content
-    const response = await generateContentWithRetry({
-      model: "gemini-2.0-flash",
-      contents: [
-        {
-          role: "user",
-          parts: [
-            {
-              text: `Fetch the content from this URL and extract all product-related information in a structured format. Include product name, description, specifications, features, benefits, materials, dimensions, and any other relevant details.
+    const response = await generateContentWithRetry(
+      {
+        model: 'gemini-3-flash',
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              {
+                text: `Fetch the content from this URL and extract all product-related information in a structured format. Include product name, description, specifications, features, benefits, materials, dimensions, and any other relevant details.
 
 URL: ${url}
 
 Return the extracted content as plain text with clear sections.`,
-            },
-          ],
+              },
+            ],
+          },
+        ],
+        config: {
+          tools: [{ urlContext: {} }],
         },
-      ],
-      config: {
-        tools: [{ urlContext: {} }],
       },
-    }, { operation: 'enrichment_url' });
+      { operation: 'enrichment_url' },
+    );
 
-    const text = response.text || "";
+    const text = response.text || '';
     if (!text || text.length < 50) {
-      throw new Error("Failed to extract meaningful content from URL");
+      throw new Error('Failed to extract meaningful content from URL');
     }
 
     return text;
@@ -124,9 +121,9 @@ function getTrustLevel(url: string): number {
 function getSourceName(url: string): string {
   try {
     const hostname = new URL(url).hostname;
-    return hostname.replace("www.", "");
+    return hostname.replace('www.', '');
   } catch {
-    return "Unknown Source";
+    return 'Unknown Source';
   }
 }
 
@@ -139,7 +136,7 @@ function getSourceName(url: string): string {
  */
 async function extractProductData(
   content: string,
-  productName: string
+  productName: string,
 ): Promise<{
   description: string;
   specifications: Record<string, string>;
@@ -168,19 +165,22 @@ Return a JSON object with these fields:
 Only include fields you can confidently extract from the content. Return valid JSON only.`;
 
   try {
-    const response = await generateContentWithRetry({
-      model: "gemini-2.0-flash",
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      config: {
-        responseMimeType: "application/json",
+    const response = await generateContentWithRetry(
+      {
+        model: 'gemini-3-flash',
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: {
+          responseMimeType: 'application/json',
+        },
       },
-    }, { operation: 'enrichment_url' });
+      { operation: 'enrichment_url' },
+    );
 
-    const text = response.text || "{}";
+    const text = response.text || '{}';
     const parsed = JSON.parse(text);
 
     return {
-      description: parsed.description || "",
+      description: parsed.description || '',
       specifications: parsed.specifications || {},
       features: parsed.features || {},
       benefits: Array.isArray(parsed.benefits) ? parsed.benefits : [],
@@ -191,12 +191,12 @@ Only include fields you can confidently extract from the content. Return valid J
 
     // Fallback: use existing extraction methods
     const extractedData: ExtractedData = {
-      sourceUrl: "",
+      sourceUrl: '',
       productName,
-      description: "",
+      description: '',
       specifications: {},
       relatedProducts: [],
-      installationInfo: "",
+      installationInfo: '',
       certifications: [],
       rawExtract: content,
     };
@@ -204,7 +204,7 @@ Only include fields you can confidently extract from the content. Return valid J
     // Cast empty specifications to Record<string, string> for extraction functions
     const specsAsRecord: Record<string, string> = {};
     return {
-      description: "",
+      description: '',
       specifications: {},
       features: extractFeatures(specsAsRecord, content),
       benefits: extractBenefits(content),
@@ -220,9 +220,7 @@ Only include fields you can confidently extract from the content. Return valid J
 /**
  * Enrich a product from a user-provided URL
  */
-export async function enrichFromUrl(
-  input: UrlEnrichmentInput
-): Promise<UrlEnrichmentOutput> {
+export async function enrichFromUrl(input: UrlEnrichmentInput): Promise<UrlEnrichmentOutput> {
   const { productId, productUrl } = input;
 
   logger.info({ module: 'UrlEnrichment', productId, productUrl }, 'Starting enrichment');
@@ -235,7 +233,7 @@ export async function enrichFromUrl(
         success: false,
         productId,
         enrichmentDraft: null,
-        error: "Product not found",
+        error: 'Product not found',
       };
     }
 
@@ -247,7 +245,7 @@ export async function enrichFromUrl(
           success: false,
           productId,
           enrichmentDraft: null,
-          error: "URL must use HTTP or HTTPS protocol",
+          error: 'URL must use HTTP or HTTPS protocol',
         };
       }
     } catch {
@@ -255,7 +253,7 @@ export async function enrichFromUrl(
         success: false,
         productId,
         enrichmentDraft: null,
-        error: "Invalid URL provided",
+        error: 'Invalid URL provided',
       };
     }
 
@@ -300,7 +298,7 @@ export async function enrichFromUrl(
       confidence: Math.round(confidence),
       sources: [
         {
-          type: "url",
+          type: 'url',
           detail: getSourceName(productUrl),
         },
       ],
@@ -329,14 +327,11 @@ export async function enrichFromUrl(
  * Update product with enrichment draft data
  * This saves the draft to the product's enrichmentDraft field
  */
-export async function saveEnrichmentDraft(
-  productId: string,
-  draft: EnrichmentDraft
-): Promise<boolean> {
+export async function saveEnrichmentDraft(productId: string, draft: EnrichmentDraft): Promise<boolean> {
   try {
     await storage.updateProduct(productId, {
       enrichmentDraft: draft as any,
-      enrichmentStatus: "draft",
+      enrichmentStatus: 'draft',
     });
     return true;
   } catch (error: any) {

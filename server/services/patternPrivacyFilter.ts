@@ -15,20 +15,20 @@ import { generateContentWithRetry } from '../lib/geminiClient';
 import { logger } from '../lib/logger';
 
 // Model for privacy scanning (use flash for speed/cost)
-const PRIVACY_SCAN_MODEL = process.env.GEMINI_PRIVACY_MODEL || 'gemini-2.5-flash';
+const PRIVACY_SCAN_MODEL = process.env.GEMINI_PRIVACY_MODEL || 'gemini-3-flash';
 
 /**
  * Privacy scan result returned by the service
  */
 export interface PrivacyScanResult {
-  textDensity: number;          // 0-100 percentage of image covered by text
-  detectedBrands: string[];     // Brand names detected (even partial matches)
-  hasLogos: boolean;            // Whether company logos are detected
-  hasFaces: boolean;            // Whether human faces are detected
-  hasContactInfo: boolean;      // Email, phone, website detected
-  isSafeToProcess: boolean;     // Final verdict
-  rejectionReason?: string;     // Why it was rejected (if applicable)
-  warnings: string[];           // Non-blocking warnings
+  textDensity: number; // 0-100 percentage of image covered by text
+  detectedBrands: string[]; // Brand names detected (even partial matches)
+  hasLogos: boolean; // Whether company logos are detected
+  hasFaces: boolean; // Whether human faces are detected
+  hasContactInfo: boolean; // Email, phone, website detected
+  isSafeToProcess: boolean; // Final verdict
+  rejectionReason?: string; // Why it was rejected (if applicable)
+  warnings: string[]; // Non-blocking warnings
 }
 
 /**
@@ -66,18 +66,76 @@ export interface ExtractedPatternData {
 // Common brand names blocklist (top brands that could cause issues)
 const BRAND_BLOCKLIST = new Set([
   // Tech
-  'apple', 'google', 'microsoft', 'amazon', 'meta', 'facebook', 'instagram', 'twitter',
-  'tiktok', 'snapchat', 'netflix', 'spotify', 'adobe', 'salesforce', 'oracle', 'ibm',
-  'intel', 'nvidia', 'amd', 'dell', 'hp', 'lenovo', 'samsung', 'sony', 'lg', 'huawei',
+  'apple',
+  'google',
+  'microsoft',
+  'amazon',
+  'meta',
+  'facebook',
+  'instagram',
+  'twitter',
+  'tiktok',
+  'snapchat',
+  'netflix',
+  'spotify',
+  'adobe',
+  'salesforce',
+  'oracle',
+  'ibm',
+  'intel',
+  'nvidia',
+  'amd',
+  'dell',
+  'hp',
+  'lenovo',
+  'samsung',
+  'sony',
+  'lg',
+  'huawei',
   // Consumer
-  'nike', 'adidas', 'puma', 'reebok', 'coca-cola', 'pepsi', 'mcdonalds', 'starbucks',
-  'burger king', 'kfc', 'subway', 'walmart', 'target', 'costco', 'ikea', 'home depot',
+  'nike',
+  'adidas',
+  'puma',
+  'reebok',
+  'coca-cola',
+  'pepsi',
+  'mcdonalds',
+  'starbucks',
+  'burger king',
+  'kfc',
+  'subway',
+  'walmart',
+  'target',
+  'costco',
+  'ikea',
+  'home depot',
   // Automotive
-  'tesla', 'ford', 'chevrolet', 'toyota', 'honda', 'bmw', 'mercedes', 'audi', 'porsche',
+  'tesla',
+  'ford',
+  'chevrolet',
+  'toyota',
+  'honda',
+  'bmw',
+  'mercedes',
+  'audi',
+  'porsche',
   // Finance
-  'visa', 'mastercard', 'paypal', 'stripe', 'square', 'american express', 'chase',
+  'visa',
+  'mastercard',
+  'paypal',
+  'stripe',
+  'square',
+  'american express',
+  'chase',
   // Other major
-  'disney', 'warner', 'paramount', 'universal', 'nbc', 'cbs', 'fox', 'hbo',
+  'disney',
+  'warner',
+  'paramount',
+  'universal',
+  'nbc',
+  'cbs',
+  'fox',
+  'hbo',
 ]);
 
 // Patterns that indicate contact information
@@ -94,10 +152,7 @@ const CONTACT_PATTERNS = [
  * @param mimeType - MIME type of the image
  * @returns Privacy scan result
  */
-export async function scanForPrivateContent(
-  imageBuffer: Buffer,
-  mimeType: string
-): Promise<PrivacyScanResult> {
+export async function scanForPrivateContent(imageBuffer: Buffer, mimeType: string): Promise<PrivacyScanResult> {
   const warnings: string[] = [];
 
   try {
@@ -120,26 +175,29 @@ export async function scanForPrivateContent(
 Be thorough - detect ALL text, logos, and faces. This is for privacy compliance.
 Do NOT describe the ad content or products - ONLY report privacy-relevant elements.`;
 
-    const response = await generateContentWithRetry({
-      model: PRIVACY_SCAN_MODEL,
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            { text: prompt },
-            {
-              inlineData: {
-                mimeType,
-                data: base64Image,
+    const response = await generateContentWithRetry(
+      {
+        model: PRIVACY_SCAN_MODEL,
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              { text: prompt },
+              {
+                inlineData: {
+                  mimeType,
+                  data: base64Image,
+                },
               },
-            },
-          ],
+            ],
+          },
+        ],
+        config: {
+          temperature: 0.1, // Low temperature for consistent detection
         },
-      ],
-      config: {
-        temperature: 0.1, // Low temperature for consistent detection
       },
-    }, { operation: 'privacy_scan' });
+      { operation: 'privacy_scan' },
+    );
 
     const text = response.text || '';
 
@@ -221,7 +279,6 @@ Do NOT describe the ad content or products - ONLY report privacy-relevant elemen
       rejectionReason,
       warnings,
     };
-
   } catch (error) {
     logger.error({ err: error }, 'Privacy scan failed');
     return {
@@ -260,14 +317,14 @@ export function sanitizeExtractedPattern(pattern: ExtractedPatternData): Extract
     // - Exclamation marks (common in ad copy)
     // - Brand-like capitalization
     const adCopyPatterns = [
-      /\$\d+/,           // Dollar amounts
-      /\d+%/,            // Percentages
-      /"[^"]+"/,         // Quoted text
-      /!/,               // Exclamation marks
+      /\$\d+/, // Dollar amounts
+      /\d+%/, // Percentages
+      /"[^"]+"/, // Quoted text
+      /!/, // Exclamation marks
       /[A-Z]{2,}(?:\s[A-Z]{2,})+/, // ALL CAPS phrases
     ];
 
-    return adCopyPatterns.some(p => p.test(text));
+    return adCopyPatterns.some((p) => p.test(text));
   }
 
   // Sanitize a string field
@@ -286,7 +343,7 @@ export function sanitizeExtractedPattern(pattern: ExtractedPatternData): Extract
   if (pattern.layoutPattern) {
     sanitized.layoutPattern = {
       structure: sanitize(pattern.layoutPattern.structure),
-      visualHierarchy: pattern.layoutPattern.visualHierarchy?.map(v => sanitize(v)).filter((v): v is string => !!v),
+      visualHierarchy: pattern.layoutPattern.visualHierarchy?.map((v) => sanitize(v)).filter((v): v is string => !!v),
       whitespaceUsage: pattern.layoutPattern.whitespaceUsage,
       focalPointPosition: sanitize(pattern.layoutPattern.focalPointPosition),
     };
@@ -328,7 +385,7 @@ export function sanitizeExtractedPattern(pattern: ExtractedPatternData): Extract
  */
 export async function isImageSafeForExtraction(
   imageBuffer: Buffer,
-  mimeType: string
+  mimeType: string,
 ): Promise<{ safe: boolean; reason?: string }> {
   const result = await scanForPrivateContent(imageBuffer, mimeType);
   return {

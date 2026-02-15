@@ -1999,7 +1999,7 @@ export const trainingDatasets = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     name: varchar('name', { length: 255 }).notNull(),
     description: text('description'),
-    baseModel: varchar('base_model', { length: 100 }).default('gemini-2.5-flash'),
+    baseModel: varchar('base_model', { length: 100 }).default('gemini-3-flash'),
     status: varchar('status', { length: 30 }).default('draft'), // draft, ready, training, completed, failed
     exampleCount: integer('example_count').default(0),
     tunedModelName: text('tuned_model_name'), // Returned after tuning completes

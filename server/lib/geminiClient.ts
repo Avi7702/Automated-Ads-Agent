@@ -175,9 +175,8 @@ function classifyError(error: unknown): 'quota' | 'unavailable' | 'unknown' {
  * Model fallback chain — tries primary model, falls back to secondary on non-retryable errors.
  */
 const MODEL_FALLBACK: Record<string, string> = {
-  'gemini-2.0-flash': 'gemini-1.5-pro',
-  'gemini-2.5-flash-preview-05-20': 'gemini-2.0-flash',
-  'gemini-2.5-pro-preview-05-06': 'gemini-2.0-flash',
+  'gemini-3-flash': 'gemini-3-pro',
+  'gemini-3-pro': 'gemini-3-flash',
 };
 
 /**

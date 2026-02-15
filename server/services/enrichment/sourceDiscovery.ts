@@ -14,8 +14,8 @@
  * - General web results - trustLevel: 4
  */
 
-import { logger } from "../../lib/logger";
-import { generateContentWithRetry } from "../../lib/geminiClient";
+import { logger } from '../../lib/logger';
+import { generateContentWithRetry } from '../../lib/geminiClient';
 import {
   SOURCE_TRUST_LEVELS,
   DEFAULT_PIPELINE_CONFIG,
@@ -23,7 +23,7 @@ import {
   type SourceType,
   type VisionResult,
   type PipelineConfig,
-} from "./types";
+} from './types';
 
 // ============================================
 // CONSTANTS
@@ -31,20 +31,20 @@ import {
 
 // Search model - uses Google Search grounding
 // MODEL RECENCY RULE: Before changing any model ID, verify today's date and confirm the model is current within the last 3-4 weeks.
-const SEARCH_MODEL = process.env.GEMINI_SEARCH_MODEL || "gemini-2.5-flash";
+const SEARCH_MODEL = process.env.GEMINI_SEARCH_MODEL || 'gemini-3-flash';
 
 // Known trusted domains for construction products
 const TRUSTED_DOMAINS = [
-  "ndspro.com",
-  "nds.com",
-  "ferguson.com",
-  "hdsupply.com",
-  "homedepot.com",
-  "lowes.com",
-  "menards.com",
-  "grainger.com",
-  "sweets.construction.com",
-  "arcat.com",
+  'ndspro.com',
+  'nds.com',
+  'ferguson.com',
+  'hdsupply.com',
+  'homedepot.com',
+  'lowes.com',
+  'menards.com',
+  'grainger.com',
+  'sweets.construction.com',
+  'arcat.com',
 ];
 
 // ============================================
@@ -57,7 +57,7 @@ const TRUSTED_DOMAINS = [
 export async function discoverSources(
   productName: string,
   vision: VisionResult,
-  config: PipelineConfig = { ...DEFAULT_PIPELINE_CONFIG }
+  config: PipelineConfig = { ...DEFAULT_PIPELINE_CONFIG },
 ): Promise<SourceSearchResult[]> {
   const sources: SourceSearchResult[] = [];
 
@@ -99,10 +99,7 @@ export async function discoverSources(
 /**
  * Build search queries from product info
  */
-function buildSearchQueries(
-  productName: string,
-  vision: VisionResult
-): string[] {
+function buildSearchQueries(productName: string, vision: VisionResult): string[] {
   const queries: string[] = [];
 
   // Primary query: exact product name
@@ -125,7 +122,7 @@ function buildSearchQueries(
 
   // Material-specific query
   if (vision.materials && vision.materials.length > 0) {
-    const materialStr = vision.materials.slice(0, 2).join(" ");
+    const materialStr = vision.materials.slice(0, 2).join(' ');
     queries.push(`${materialStr} ${productName} specifications`);
   }
 
@@ -181,33 +178,38 @@ Focus on:
 Return only the JSON array, no additional text.`;
 
   try {
-    const response = await generateContentWithRetry({
-      model: SEARCH_MODEL,
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      config: {
-        temperature: 0.1,
-        maxOutputTokens: 2000,
-        // Enable Google Search grounding
-        tools: [{ googleSearch: {} }],
+    const response = await generateContentWithRetry(
+      {
+        model: SEARCH_MODEL,
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: {
+          temperature: 0.1,
+          maxOutputTokens: 2000,
+          // Enable Google Search grounding
+          tools: [{ googleSearch: {} }],
+        },
       },
-    }, { operation: 'enrichment_source_discovery' });
+      { operation: 'enrichment_source_discovery' },
+    );
 
-    const text = response.text || "";
+    const text = response.text || '';
 
     // Extract grounding metadata for additional source info
-    const groundingMeta = (response as unknown as {
-      candidates?: Array<{
-        groundingMetadata?: {
-          webSearchQueries?: string[];
-          groundingChunks?: Array<{
-            web?: {
-              uri?: string;
-              title?: string;
-            };
-          }>;
-        };
-      }>;
-    })?.candidates?.[0]?.groundingMetadata;
+    const groundingMeta = (
+      response as unknown as {
+        candidates?: Array<{
+          groundingMetadata?: {
+            webSearchQueries?: string[];
+            groundingChunks?: Array<{
+              web?: {
+                uri?: string;
+                title?: string;
+              };
+            }>;
+          };
+        }>;
+      }
+    )?.candidates?.[0]?.groundingMetadata;
 
     const sources: SourceSearchResult[] = [];
 
@@ -234,9 +236,9 @@ Return only the JSON array, no additional text.`;
             sourceType: sourceInfo.type,
             sourceName: sourceInfo.name,
             trustLevel: sourceInfo.trustLevel,
-            pageTitle: result.pageTitle || "",
-            pageContent: result.summary || "",
-            extractedProductName: result.productName || "",
+            pageTitle: result.pageTitle || '',
+            pageContent: result.summary || '',
+            extractedProductName: result.productName || '',
             extractedSKU: result.sku || null,
             extractedImages: Array.isArray(result.imageUrls) ? result.imageUrls : [],
           });
@@ -251,7 +253,7 @@ Return only the JSON array, no additional text.`;
       for (const chunk of groundingMeta.groundingChunks) {
         if (chunk.web?.uri) {
           // Check if we already have this URL
-          const exists = sources.some(s => s.url === chunk.web?.uri);
+          const exists = sources.some((s) => s.url === chunk.web?.uri);
           if (!exists) {
             const sourceInfo = analyzeSourceUrl(chunk.web.uri);
 
@@ -260,9 +262,9 @@ Return only the JSON array, no additional text.`;
               sourceType: sourceInfo.type,
               sourceName: sourceInfo.name,
               trustLevel: sourceInfo.trustLevel,
-              pageTitle: chunk.web.title || "",
-              pageContent: "", // Will be fetched later
-              extractedProductName: "",
+              pageTitle: chunk.web.title || '',
+              pageContent: '', // Will be fetched later
+              extractedProductName: '',
               extractedSKU: null,
               extractedImages: [],
             });
@@ -294,7 +296,7 @@ interface SourceInfo {
 function analyzeSourceUrl(url: string): SourceInfo {
   try {
     const parsedUrl = new URL(url);
-    const domain = parsedUrl.hostname.replace(/^www\./, "").toLowerCase();
+    const domain = parsedUrl.hostname.replace(/^www\./, '').toLowerCase();
 
     // Check for known trusted domains
     for (const trustedDomain of TRUSTED_DOMAINS) {
@@ -304,11 +306,11 @@ function analyzeSourceUrl(url: string): SourceInfo {
         // Determine type based on trust level
         let type: SourceType;
         if (trustLevel >= 9) {
-          type = "primary";
+          type = 'primary';
         } else if (trustLevel >= 7) {
-          type = "secondary";
+          type = 'secondary';
         } else {
-          type = "tertiary";
+          type = 'tertiary';
         }
 
         // Format source name
@@ -320,11 +322,11 @@ function analyzeSourceUrl(url: string): SourceInfo {
 
     // Check if it looks like a manufacturer site
     if (
-      domain.includes("manufacturer") ||
-      domain.endsWith(".com") && !domain.includes("amazon") && !domain.includes("ebay")
+      domain.includes('manufacturer') ||
+      (domain.endsWith('.com') && !domain.includes('amazon') && !domain.includes('ebay'))
     ) {
       return {
-        type: "secondary",
+        type: 'secondary',
         name: formatSourceName(domain),
         trustLevel: 6,
       };
@@ -332,15 +334,15 @@ function analyzeSourceUrl(url: string): SourceInfo {
 
     // Default: general web result
     return {
-      type: "tertiary",
+      type: 'tertiary',
       name: formatSourceName(domain),
-      trustLevel: SOURCE_TRUST_LEVELS["default"],
+      trustLevel: SOURCE_TRUST_LEVELS['default'],
     };
   } catch {
     return {
-      type: "tertiary",
-      name: "Unknown Source",
-      trustLevel: SOURCE_TRUST_LEVELS["default"],
+      type: 'tertiary',
+      name: 'Unknown Source',
+      trustLevel: SOURCE_TRUST_LEVELS['default'],
     };
   }
 }
@@ -350,15 +352,13 @@ function analyzeSourceUrl(url: string): SourceInfo {
  */
 function formatSourceName(domain: string): string {
   // Remove common prefixes and TLDs
-  const cleaned = domain
-    .replace(/^www\./, "")
-    .replace(/\.(com|org|net|io|co)$/, "");
+  const cleaned = domain.replace(/^www\./, '').replace(/\.(com|org|net|io|co)$/, '');
 
   // Capitalize words
   return cleaned
     .split(/[\.\-_]/)
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
 }
 
 // ============================================
@@ -392,15 +392,15 @@ function normalizeUrl(url: string): string {
   try {
     const parsed = new URL(url);
     // Remove tracking parameters
-    parsed.searchParams.delete("utm_source");
-    parsed.searchParams.delete("utm_medium");
-    parsed.searchParams.delete("utm_campaign");
-    parsed.searchParams.delete("ref");
-    parsed.searchParams.delete("source");
+    parsed.searchParams.delete('utm_source');
+    parsed.searchParams.delete('utm_medium');
+    parsed.searchParams.delete('utm_campaign');
+    parsed.searchParams.delete('ref');
+    parsed.searchParams.delete('source');
 
     // Normalize path
     let path = parsed.pathname.toLowerCase();
-    if (path.endsWith("/")) {
+    if (path.endsWith('/')) {
       path = path.slice(0, -1);
     }
 
@@ -441,9 +441,7 @@ function rankSources(sources: SourceSearchResult[]): SourceSearchResult[] {
 /**
  * Fetch full page content for a source
  */
-export async function fetchSourceContent(
-  source: SourceSearchResult
-): Promise<SourceSearchResult> {
+export async function fetchSourceContent(source: SourceSearchResult): Promise<SourceSearchResult> {
   // Skip if we already have content
   if (source.pageContent && source.pageContent.length > 500) {
     return source;
@@ -452,8 +450,8 @@ export async function fetchSourceContent(
   try {
     const response = await fetch(source.url, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; ProductEnrichmentBot/1.0)",
-        "Accept": "text/html,application/xhtml+xml",
+        'User-Agent': 'Mozilla/5.0 (compatible; ProductEnrichmentBot/1.0)',
+        Accept: 'text/html,application/xhtml+xml',
       },
       signal: AbortSignal.timeout(10000), // 10 second timeout
     });
@@ -485,14 +483,8 @@ export async function fetchSourceContent(
 /**
  * Fetch content for multiple sources in parallel
  */
-export async function fetchSourceContentsBatch(
-  sources: SourceSearchResult[]
-): Promise<SourceSearchResult[]> {
-  const results = await Promise.all(
-    sources.map(source =>
-      fetchSourceContent(source).catch(() => source)
-    )
-  );
+export async function fetchSourceContentsBatch(sources: SourceSearchResult[]): Promise<SourceSearchResult[]> {
+  const results = await Promise.all(sources.map((source) => fetchSourceContent(source).catch(() => source)));
 
   return results;
 }
@@ -507,24 +499,24 @@ export async function fetchSourceContentsBatch(
 function extractTextFromHtml(html: string): string {
   // Remove script and style elements
   let text = html
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-    .replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, "");
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, '');
 
   // Replace HTML tags with spaces
-  text = text.replace(/<[^>]+>/g, " ");
+  text = text.replace(/<[^>]+>/g, ' ');
 
   // Decode HTML entities
   text = text
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'");
 
   // Clean up whitespace
-  text = text.replace(/\s+/g, " ").trim();
+  text = text.replace(/\s+/g, ' ').trim();
 
   // Limit length
   return text.substring(0, 20000);
@@ -544,8 +536,8 @@ function extractImagesFromHtml(html: string, baseUrl: string): string[] {
     let imgUrl = match[1];
 
     // Skip data URIs and tiny images
-    if (imgUrl.startsWith("data:")) continue;
-    if (imgUrl.includes("1x1") || imgUrl.includes("pixel")) continue;
+    if (imgUrl.startsWith('data:')) continue;
+    if (imgUrl.includes('1x1') || imgUrl.includes('pixel')) continue;
 
     // Convert relative URLs to absolute
     try {

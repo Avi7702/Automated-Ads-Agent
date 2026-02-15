@@ -4,15 +4,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  History,
-  Star,
-  Clock,
-  List,
-  ChevronLeft,
-  ChevronRight,
-  ImageIcon,
-} from 'lucide-react';
+import { History, Clock, List, ChevronLeft, ChevronRight, ImageIcon } from 'lucide-react';
 import { useHistoryPanelUrl } from '@/hooks/useUrlState';
 
 interface HistoryPanelProps {
@@ -33,7 +25,6 @@ interface Generation {
 
 const tabs = [
   { id: 'recent', label: 'Recent', icon: Clock },
-  { id: 'favorites', label: 'Favorites', icon: Star },
   { id: 'all', label: 'All', icon: List },
 ] as const;
 
@@ -45,12 +36,7 @@ type TabId = (typeof tabs)[number]['id'];
  * Replaces Gallery and GenerationDetail pages with inline panel.
  * URL state: /?view=history&generation=:id
  */
-export function HistoryPanel({
-  isOpen,
-  onToggle,
-  onSelectGeneration,
-  className,
-}: HistoryPanelProps) {
+export function HistoryPanel({ isOpen, onToggle, onSelectGeneration, className }: HistoryPanelProps) {
   const [activeTab, setActiveTab] = useState<TabId>('all');
   const { selectedGenerationId, selectGeneration } = useHistoryPanelUrl();
 
@@ -72,12 +58,7 @@ export function HistoryPanel({
 
     switch (activeTab) {
       case 'recent':
-        return generations.filter(
-          (g) => new Date(g.createdAt) > oneDayAgo
-        );
-      case 'favorites':
-        // TODO: Filter by isFavorite when schema is updated
-        return [];
+        return generations.filter((g) => new Date(g.createdAt) > oneDayAgo);
       case 'all':
       default:
         return generations;
@@ -94,38 +75,21 @@ export function HistoryPanel({
       className={cn(
         'flex flex-col bg-card border-l border-border transition-all duration-300',
         isOpen ? 'w-80' : 'w-12',
-        className
+        className,
       )}
     >
       {/* Header with toggle */}
       <div className="flex items-center justify-between p-3 border-b border-border">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onToggle}
-          className={cn('h-8 w-8', !isOpen && 'mx-auto')}
-        >
-          {isOpen ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
+        <Button variant="ghost" size="icon" onClick={onToggle} className={cn('h-8 w-8', !isOpen && 'mx-auto')}>
+          {isOpen ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </Button>
-        {isOpen && (
-          <h2 className="text-sm font-medium text-foreground">History</h2>
-        )}
+        {isOpen && <h2 className="text-sm font-medium text-foreground">History</h2>}
       </div>
 
       {/* Collapsed state - just icon */}
       {!isOpen && (
         <div className="flex flex-col items-center gap-2 py-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onToggle}
-            title="Open History"
-            className="h-8 w-8"
-          >
+          <Button variant="ghost" size="icon" onClick={onToggle} title="Open History" className="h-8 w-8">
             <History className="h-4 w-4" />
           </Button>
         </div>
@@ -169,7 +133,7 @@ export function HistoryPanel({
                       'relative aspect-square rounded-lg overflow-hidden border-2 transition-all',
                       selectedGenerationId === gen.id
                         ? 'border-primary ring-2 ring-primary/20'
-                        : 'border-border hover:border-primary/50'
+                        : 'border-border hover:border-primary/50',
                     )}
                   >
                     <img
@@ -178,9 +142,7 @@ export function HistoryPanel({
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-1">
-                      <p className="text-white text-[10px] truncate">
-                        {new Date(gen.createdAt).toLocaleDateString()}
-                      </p>
+                      <p className="text-white text-[10px] truncate">{new Date(gen.createdAt).toLocaleDateString()}</p>
                     </div>
                   </button>
                 ))}
@@ -188,13 +150,7 @@ export function HistoryPanel({
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 <ImageIcon className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p className="text-xs">
-                  {activeTab === 'recent'
-                    ? 'No recent generations'
-                    : activeTab === 'favorites'
-                    ? 'No favorites yet'
-                    : 'No generations yet'}
-                </p>
+                <p className="text-xs">{activeTab === 'recent' ? 'No recent generations' : 'No generations yet'}</p>
               </div>
             )}
           </ScrollArea>

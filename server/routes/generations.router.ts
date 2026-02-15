@@ -314,7 +314,7 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
         }
 
         // Build multimodal prompt
-        const model = getGlobalGeminiClient().getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+        const model = getGlobalGeminiClient().getGenerativeModel({ model: 'gemini-3-flash' });
 
         const parts: any[] = [
           {
