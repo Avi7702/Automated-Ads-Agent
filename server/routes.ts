@@ -259,11 +259,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
   // Apply rate limiting to API routes
+  // Exempt lightweight read-only endpoints from the global rate limiter
+  const rateLimitExemptPaths = new Set(['/api/pricing/estimate']);
   const rateLimiter = createRateLimiter({
     windowMs: 15 * 60 * 1000, // 15 minutes
     maxRequests: 100,
   });
-  app.use('/api/', rateLimiter);
+  app.use('/api/', (req, res, next) => {
+    if (rateLimitExemptPaths.has(req.originalUrl.split('?')[0] as string)) {
+      return next();
+    }
+    return rateLimiter(req, res, next);
+  });
 
   // ===== AUTH ROUTES =====
 
