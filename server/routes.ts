@@ -78,6 +78,7 @@ import {
   saveN8nConfigSchema,
   n8nCallbackSchema,
   syncAccountSchema,
+  performanceWebhookSchema,
 } from './validation/schemas';
 import { logger } from './lib/logger';
 import { validateFileType, uploadPatternLimiter, checkPatternQuota } from './middleware/uploadValidation';
@@ -4621,6 +4622,54 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.status(500).json({
         success: false,
         error: 'Failed to process callback',
+      });
+    }
+  });
+
+  // ===== GENERATION PERFORMANCE WEBHOOK (Phase 5) =====
+
+  /**
+   * POST /api/webhooks/performance
+   * Webhook for n8n to POST social media engagement data for a generation.
+   * Requires webhook signature validation (same secret as n8n callbacks).
+   */
+  app.post('/api/webhooks/performance', validateN8nWebhook, validate(performanceWebhookSchema), async (req, res) => {
+    try {
+      const { generationId, platform, impressions, engagementRate, clicks, conversions } = req.body;
+
+      logger.info({ module: 'PerformanceWebhook', generationId, platform }, 'Performance data received');
+
+      // Verify generation exists
+      const generation = await storage.getGenerationById(generationId);
+      if (!generation) {
+        return res.status(404).json({
+          success: false,
+          error: 'Generation not found',
+        });
+      }
+
+      // Save performance data
+      const performanceRecord = await storage.saveGenerationPerformance({
+        generationId,
+        platform,
+        impressions: impressions ?? 0,
+        engagementRate: engagementRate ?? 0,
+        clicks: clicks ?? 0,
+        conversions: conversions ?? 0,
+        fetchedAt: new Date(),
+      });
+
+      res.json({
+        success: true,
+        data: { id: performanceRecord.id },
+        message: 'Performance data saved',
+      });
+    } catch (error) {
+      logger.error({ module: 'PerformanceWebhook', err: error }, 'Failed to save performance data');
+
+      res.status(500).json({
+        success: false,
+        error: 'Failed to save performance data',
       });
     }
   });

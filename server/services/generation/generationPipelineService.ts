@@ -40,6 +40,7 @@ import { evaluatePreGenGate, BLOCK_THRESHOLD, WARN_THRESHOLD } from './preGenGat
 import type { PreGenGateResult } from './preGenGate';
 import { captureException } from '../../lib/sentry';
 import { notify } from '../notificationService';
+import { getBrandDNAContext } from '../brandDNAService';
 
 import type { GenerationContext, GenerationInput, GenerationResult } from '../../types/generationPipeline';
 
@@ -320,9 +321,25 @@ async function stageProductContext(ctx: GenerationContext) {
 /**
  * Stage 3: Brand Context
  * Fetch brand profile for the current user.
+ * Also fetches Brand DNA context for enrichment.
  */
 async function stageBrandContext(ctx: GenerationContext) {
   const brandProfile = await storage.getBrandProfileByUserId(ctx.input.userId);
+
+  // Fetch Brand DNA context (Phase 5) — runs in parallel, fault-tolerant
+  try {
+    const dnaContext = await getBrandDNAContext(ctx.input.userId, storage);
+    if (dnaContext) {
+      ctx.brandDNA = {
+        visualSignature: undefined,
+        toneGuidance: undefined,
+        contentRules: dnaContext,
+      };
+    }
+  } catch (err) {
+    logger.warn({ module: 'GenerationPipeline', err }, 'Brand DNA fetch failed — continuing without it');
+  }
+
   if (!brandProfile) return undefined;
 
   return {

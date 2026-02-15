@@ -70,6 +70,11 @@ import {
   type InsertTrainingDataset,
   type TrainingExample,
   type InsertTrainingExample,
+  // Phase 5: Intelligence Layer types
+  type BrandDNA,
+  type InsertBrandDNA,
+  type GenerationPerformance,
+  type InsertGenerationPerformance,
 } from '@shared/schema';
 
 // Repository imports
@@ -88,6 +93,7 @@ import {
   socialRepo,
   styleReferenceRepo,
   trainingRepo,
+  intelligenceRepo,
 } from './repositories';
 
 export interface IStorage {
@@ -394,6 +400,18 @@ export interface IStorage {
   createTrainingExample(data: InsertTrainingExample): Promise<TrainingExample>;
   getTrainingExamples(datasetId: string): Promise<TrainingExample[]>;
   deleteTrainingExample(id: string): Promise<void>;
+
+  // ============================================
+  // BRAND DNA OPERATIONS (Phase 5)
+  // ============================================
+  getBrandDNA(userId: string): Promise<BrandDNA | null>;
+  upsertBrandDNA(userId: string, data: Partial<InsertBrandDNA>): Promise<BrandDNA>;
+
+  // ============================================
+  // GENERATION PERFORMANCE OPERATIONS (Phase 5)
+  // ============================================
+  getGenerationPerformance(generationId: string): Promise<GenerationPerformance[]>;
+  saveGenerationPerformance(data: InsertGenerationPerformance): Promise<GenerationPerformance>;
 }
 
 export class DbStorage implements IStorage {
@@ -1009,6 +1027,26 @@ export class DbStorage implements IStorage {
   }
   async deleteTrainingExample(id: string): Promise<void> {
     return trainingRepo.deleteTrainingExample(id);
+  }
+
+  // ============================================
+  // BRAND DNA OPERATIONS (Phase 5)
+  // ============================================
+  async getBrandDNA(userId: string): Promise<BrandDNA | null> {
+    return intelligenceRepo.getBrandDNA(userId);
+  }
+  async upsertBrandDNA(userId: string, data: Partial<InsertBrandDNA>): Promise<BrandDNA> {
+    return intelligenceRepo.upsertBrandDNA(userId, data);
+  }
+
+  // ============================================
+  // GENERATION PERFORMANCE OPERATIONS (Phase 5)
+  // ============================================
+  async getGenerationPerformance(generationId: string): Promise<GenerationPerformance[]> {
+    return intelligenceRepo.getGenerationPerformance(generationId);
+  }
+  async saveGenerationPerformance(data: InsertGenerationPerformance): Promise<GenerationPerformance> {
+    return intelligenceRepo.saveGenerationPerformance(data);
   }
 }
 

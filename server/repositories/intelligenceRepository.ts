@@ -3,11 +3,17 @@ import {
   type InsertProductPriority,
   type BusinessIntelligence,
   type InsertBusinessIntelligence,
+  type BrandDNA,
+  type InsertBrandDNA,
+  type GenerationPerformance,
+  type InsertGenerationPerformance,
   productPriorities,
   businessIntelligence,
+  brandDNA,
+  generationPerformance,
 } from '@shared/schema';
 import { db } from '../db';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, sql, desc } from 'drizzle-orm';
 
 // ============================================
 // PRODUCT PRIORITY OPERATIONS
@@ -123,4 +129,63 @@ export async function upsertBusinessIntelligence(
 
 export async function deleteBusinessIntelligence(userId: string): Promise<void> {
   await db.delete(businessIntelligence).where(eq(businessIntelligence.userId, userId));
+}
+
+// ============================================
+// BRAND DNA OPERATIONS (Phase 5)
+// ============================================
+
+export async function getBrandDNA(userId: string): Promise<BrandDNA | null> {
+  const [result] = await db.select().from(brandDNA).where(eq(brandDNA.userId, userId));
+  return result ?? null;
+}
+
+export async function upsertBrandDNA(userId: string, data: Partial<InsertBrandDNA>): Promise<BrandDNA> {
+  const rows = await db
+    .insert(brandDNA)
+    .values({
+      userId,
+      visualSignature: data.visualSignature ?? null,
+      toneAnalysis: data.toneAnalysis ?? null,
+      audienceProfile: data.audienceProfile ?? null,
+      competitorDiff: data.competitorDiff ?? null,
+      contentRules: data.contentRules ?? null,
+      version: data.version ?? 1,
+      analyzedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: [brandDNA.userId],
+      set: {
+        visualSignature: data.visualSignature ?? sql`${brandDNA.visualSignature}`,
+        toneAnalysis: data.toneAnalysis ?? sql`${brandDNA.toneAnalysis}`,
+        audienceProfile: data.audienceProfile ?? sql`${brandDNA.audienceProfile}`,
+        competitorDiff: data.competitorDiff ?? sql`${brandDNA.competitorDiff}`,
+        contentRules: data.contentRules ?? sql`${brandDNA.contentRules}`,
+        version: sql`${brandDNA.version} + 1`,
+        analyzedAt: new Date(),
+      },
+    })
+    .returning();
+  const result = rows[0];
+  if (!result) throw new Error('Failed to upsert brand DNA');
+  return result;
+}
+
+// ============================================
+// GENERATION PERFORMANCE OPERATIONS (Phase 5)
+// ============================================
+
+export async function getGenerationPerformance(generationId: string): Promise<GenerationPerformance[]> {
+  return db
+    .select()
+    .from(generationPerformance)
+    .where(eq(generationPerformance.generationId, generationId))
+    .orderBy(desc(generationPerformance.fetchedAt));
+}
+
+export async function saveGenerationPerformance(data: InsertGenerationPerformance): Promise<GenerationPerformance> {
+  const rows = await db.insert(generationPerformance).values(data).returning();
+  const result = rows[0];
+  if (!result) throw new Error('Failed to save generation performance');
+  return result;
 }

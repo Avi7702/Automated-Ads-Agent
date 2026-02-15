@@ -33,6 +33,7 @@ export interface GenerationInput {
   resolution: '1K' | '2K' | '4K';
   userId: string;
   aspectRatio?: string; // e.g. '1:1', '4:5', '16:9'
+  platform?: string; // Target platform: instagram, linkedin, tiktok, facebook, twitter
   productIds?: string[]; // Product IDs for Stage 2 context
 }
 
@@ -110,10 +111,17 @@ export interface TemplateContext {
 // MAIN CONTEXT OBJECT
 // ============================================
 
+export interface BrandDNAContext {
+  visualSignature?: string;
+  toneGuidance?: string;
+  contentRules?: string;
+}
+
 export interface GenerationContext {
   input: GenerationInput;
   product?: ProductContext;
   brand?: BrandContext;
+  brandDNA?: BrandDNAContext;
   style?: StyleContext;
   vision?: VisionContext;
   kb?: KBContext;
