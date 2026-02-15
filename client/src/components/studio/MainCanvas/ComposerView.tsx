@@ -36,8 +36,6 @@ import {
   Wand2,
   FileImage,
   Palette,
-  Video,
-  Image,
   Mic,
   MicOff,
 } from 'lucide-react';
@@ -97,15 +95,6 @@ interface ComposerViewProps {
 export const ComposerView = memo(function ComposerView({ orch }: ComposerViewProps) {
   const { createRipple } = useRipple();
 
-  // Voice input for Quick Start prompt
-  const quickStartVoice = useVoiceInput({
-    onTranscript: (text, isFinal) => {
-      if (isFinal) {
-        orch.setQuickStartPrompt((prev) => (prev ? prev + ' ' + text : text));
-      }
-    },
-  });
-
   // Voice input for main prompt
   const mainPromptVoice = useVoiceInput({
     onTranscript: (text, isFinal) => {
@@ -137,57 +126,6 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
           </div>
         </motion.div>
       )}
-
-      {/* Quick Start */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="p-6 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-purple-500/5"
-      >
-        <div className="flex items-center gap-2 mb-4">
-          <Zap className="w-5 h-5 text-primary" />
-          <h3 className="font-medium">Quick Start</h3>
-          <span className="text-xs text-muted-foreground">Skip the setup</span>
-        </div>
-        <div className="flex flex-col gap-3">
-          <Textarea
-            id="prompt-textarea"
-            value={orch.quickStartPrompt}
-            onChange={(e) => orch.setQuickStartPrompt(e.target.value)}
-            placeholder="Describe what you want to create..."
-            className="flex-1 min-h-[100px] resize-none text-base"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                if (orch.quickStartPrompt.trim()) orch.handleGenerate();
-              }
-            }}
-          />
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">Press Enter to generate, Shift+Enter for new line</span>
-              {quickStartVoice.isSupported && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={quickStartVoice.toggleListening}
-                  className={cn(
-                    'h-8 w-8 p-0 rounded-full',
-                    quickStartVoice.isListening && 'bg-red-500/20 text-red-500 animate-pulse',
-                  )}
-                  aria-label={quickStartVoice.isListening ? 'Stop listening' : 'Voice input'}
-                >
-                  {quickStartVoice.isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                </Button>
-              )}
-            </div>
-            <Button onClick={orch.handleGenerate} disabled={!orch.quickStartPrompt.trim()}>
-              <Sparkles className="w-4 h-4 mr-2" />
-              Generate Now
-            </Button>
-          </div>
-        </div>
-      </motion.div>
 
       {/* Path Selection */}
       <motion.div
@@ -590,50 +528,6 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
           />
         </ErrorBoundary>
 
-        {/* Output Type: Image vs Video */}
-        <div className="flex items-center gap-3 pb-2 border-b border-border/50">
-          <span className="text-sm text-muted-foreground">Output:</span>
-          <div className="flex rounded-lg border border-border overflow-hidden">
-            <button
-              onClick={() => orch.setMediaMode('image')}
-              className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors',
-                orch.mediaMode === 'image' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted',
-              )}
-            >
-              <Image className="w-3.5 h-3.5" />
-              Image
-            </button>
-            <button
-              onClick={() => orch.setMediaMode('video')}
-              className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 text-sm transition-colors',
-                orch.mediaMode === 'video' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted',
-              )}
-            >
-              <Video className="w-3.5 h-3.5" />
-              Video
-            </button>
-          </div>
-          {orch.mediaMode === 'video' && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Duration:</span>
-              <Select value={orch.videoDuration} onValueChange={orch.setVideoDuration}>
-                <SelectTrigger className="w-20">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {['4', '6', '8'].map((d) => (
-                    <SelectItem key={d} value={d}>
-                      {d}s
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-        </div>
-
         {/* Platform, Size, Quality */}
         <div className="flex flex-col sm:flex-row flex-wrap gap-4">
           <div className="flex items-center gap-2">
@@ -727,36 +621,14 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
 
       {/* Generate Button */}
       <motion.div ref={orch.generateButtonRef} id="generate" className="py-4">
-        <Button
-          size="lg"
-          onClick={orch.mediaMode === 'video' ? orch.handleGenerateVideo : orch.handleGenerate}
-          disabled={!orch.canGenerate}
-          className="w-full h-16 text-lg"
-        >
-          {orch.mediaMode === 'video' ? (
-            <>
-              <Video className="w-5 h-5 mr-2" />
-              Generate Video ({orch.videoDuration}s)
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-5 h-5 mr-2" />
-              Generate Image
-            </>
-          )}
+        <Button size="lg" onClick={orch.handleGenerate} disabled={!orch.canGenerate} className="w-full h-16 text-lg">
+          <Sparkles className="w-5 h-5 mr-2" />
+          Generate Image
         </Button>
         <p className="text-center text-sm text-muted-foreground mt-3">
-          {orch.mediaMode === 'video' ? (
-            <>
-              Video • {orch.videoDuration}s • {orch.platform} • ~2-10 min
-            </>
-          ) : (
-            <>
-              {orch.selectedProducts.length + orch.tempUploads.length} image
-              {orch.selectedProducts.length + orch.tempUploads.length !== 1 ? 's' : ''} • {orch.platform} •{' '}
-              {orch.resolution}
-            </>
-          )}
+          {orch.selectedProducts.length + orch.tempUploads.length} image
+          {orch.selectedProducts.length + orch.tempUploads.length !== 1 ? 's' : ''} • {orch.platform} •{' '}
+          {orch.resolution}
         </p>
       </motion.div>
     </div>
