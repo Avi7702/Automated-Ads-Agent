@@ -134,11 +134,11 @@ test.describe('Library — Gen Templates Tab', { tag: '@library' }, () => {
       await adminButton.click();
       await page.waitForTimeout(1000);
 
-      // Admin view should have template items or a "Create New" option
-      const createButton = page.getByRole('button', { name: /Create|Add|New Template/i });
-      const templateList = page.locator('[class*="Card"], [class*="card"]');
+      // Admin view should have a "New Template" button or template table
+      const createButton = page.getByRole('button', { name: /New Template/i });
+      const templateTable = page.locator('table, thead');
 
-      await expect(createButton.or(templateList.first())).toBeVisible({ timeout: 10000 });
+      await expect(createButton.or(templateTable.first()).first()).toBeVisible({ timeout: 10000 });
     });
 
     test('8 — Admin mode: clicking Exit Admin Mode returns to normal view', async ({ page }) => {
@@ -175,12 +175,12 @@ test.describe('Library — Gen Templates Tab', { tag: '@library' }, () => {
     });
 
     test('10 — Category filter buttons work in template library', async ({ page }) => {
-      // TemplateLibrary has category filter buttons (All Templates, Product Showcase, etc.)
-      const allButton = page.getByRole('button', { name: /All Templates/i });
+      // TemplateLibrary has category filter buttons with data-testid pattern
+      const allButton = page.getByTestId('button-category-all');
       await expect(allButton).toBeVisible({ timeout: 10000 });
 
-      // Click a specific category
-      const installationButton = page.getByRole('button', { name: /Installation/i });
+      // Click a specific category using data-testid to avoid matching template cards
+      const installationButton = page.getByTestId('button-category-installation');
       await expect(installationButton).toBeVisible({ timeout: 5000 });
       await installationButton.click();
       await page.waitForTimeout(500);

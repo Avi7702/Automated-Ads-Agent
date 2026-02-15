@@ -24,11 +24,9 @@ export class NotFoundPage {
     this.description = page.getByText("The page you're looking for doesn't exist");
     this.alertIcon = page.locator('svg.text-red-500');
 
-    // Action buttons
-    this.goToStudioButton = page
-      .getByRole('button', { name: /Go to Studio/i })
-      .or(page.getByRole('link', { name: /Go to Studio/i }));
-    this.goHomeButton = page.getByRole('button', { name: /Go Home/i }).or(page.getByRole('link', { name: /Go Home/i }));
+    // Action buttons — each is an <a> wrapping a <button>, so target the <a> link role
+    this.goToStudioButton = page.getByRole('link', { name: /Go to Studio/i });
+    this.goHomeButton = page.getByRole('link', { name: /Go Home/i });
   }
 
   /**

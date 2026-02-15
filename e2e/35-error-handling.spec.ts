@@ -36,8 +36,8 @@ test.describe('Error Handling', { tag: '@errors' }, () => {
     const noProfile = page.getByText(/No brand profile found/i);
     const settingsHeading = page.locator('h1').filter({ hasText: 'Settings' });
 
-    // Page should still be functional even with API error
-    await expect(errorText.or(noProfile).or(settingsHeading)).toBeVisible({ timeout: 10000 });
+    // Page should still be functional even with API error — use .first() to avoid strict mode on multiple matches
+    await expect(errorText.or(noProfile).or(settingsHeading).first()).toBeVisible({ timeout: 10000 });
   });
 
   test('KB section shows fallback when product APIs fail', async ({ page }) => {
@@ -64,7 +64,7 @@ test.describe('Error Handling', { tag: '@errors' }, () => {
     const errorAlert = page.getByText(/Error Loading Keys|Failed to load/i);
     const securityNotice = page.getByText(/encrypted with AES-256-GCM/i);
 
-    await expect(errorAlert.or(securityNotice)).toBeVisible({ timeout: 10000 });
+    await expect(errorAlert.or(securityNotice).first()).toBeVisible({ timeout: 10000 });
   });
 
   test('Gallery page handles API errors without crashing', async ({ page }) => {

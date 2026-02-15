@@ -12,7 +12,7 @@ export async function ensureAuth(page: Page) {
   if (page.url().includes('/login')) {
     // Re-authenticate via demo endpoint
     await page.goto('/api/auth/demo');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   }
 }
 
@@ -26,14 +26,14 @@ export async function gotoWithAuth(page: Page, url: string, retries = 2) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       await page.goto(url);
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // If redirected to login, re-auth and retry
       if (page.url().includes('/login')) {
         await page.goto('/api/auth/demo');
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
         await page.goto(url);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
       }
 
       // Success

@@ -158,7 +158,7 @@ export class StudioWorkflowPage {
     this.productCards = page.locator('[class*="aspect-square"]').filter({ has: page.locator('img') });
     this.selectedProductsBadge = page.locator('text=/\\d+ product/i');
     this.searchProductsInput = page.locator('input[placeholder*="Search"]');
-    this.categoryFilter = page.locator('[class*="Select"]').filter({ hasText: 'Category' });
+    this.categoryFilter = page.locator('button[role="combobox"]').filter({ hasText: /All Categories|Category/i });
 
     // Templates
     this.templatesSection = page.locator('text=Style & Template').locator('..').locator('..');

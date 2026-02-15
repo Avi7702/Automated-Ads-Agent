@@ -52,7 +52,7 @@ test.describe('Cross-Feature Flows', { tag: '@cross-feature' }, () => {
     await gotoWithAuth(page, '/settings');
     await page.waitForTimeout(2000);
 
-    const studioLink = page.getByRole('link', { name: /Studio/i }).or(page.locator('header a[href="/"]'));
+    const studioLink = page.getByRole('link', { name: 'Studio', exact: true });
 
     await expect(studioLink).toBeVisible({ timeout: 10000 });
     await studioLink.click();
