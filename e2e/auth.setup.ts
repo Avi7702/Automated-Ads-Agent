@@ -12,23 +12,25 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const authFile = path.join(__dirname, '.auth', 'user.json');
 
 setup('authenticate as demo user', async ({ page }) => {
-  // Navigate to demo auth endpoint using browser context
-  // This ensures cookies are properly set in the browser
-  await page.goto('/api/auth/demo');
+  // Navigate to login page and sign in via the real browser form
+  await page.goto('/login');
+  await page.waitForLoadState('networkidle');
 
-  // Get the response body (JSON is displayed as text in browser)
-  const content = await page.textContent('body');
-  const data = JSON.parse(content || '{}');
+  // Fill login form
+  await page.locator('input#email').fill('demo@company.com');
+  await page.locator('input#password').fill('demo123');
 
-  // Verify we got a valid user back
-  expect(data).toHaveProperty('id');
-  expect(data).toHaveProperty('email');
-  expect(data.email).toBe('demo@company.com');
+  // Click Sign In and wait for navigation away from /login
+  await page.getByRole('button', { name: 'Sign In', exact: true }).click();
+  await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 15000 });
+
+  // Verify we're authenticated — should be on the app now
+  console.log('Logged in, redirected to:', page.url());
 
   // Save the storage state (cookies, session) for reuse in other tests
   await page.context().storageState({ path: authFile });
 
-  console.log('Demo user authenticated successfully:', data.email);
+  console.log('Demo user authenticated successfully via browser login');
 });
 
 setup('verify auth session is valid', async ({ request }) => {

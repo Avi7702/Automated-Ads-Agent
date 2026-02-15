@@ -16,6 +16,33 @@ export class LibraryPage {
   readonly scenariosTab: Locator;
   readonly patternsTab: Locator;
 
+  // Admin mode toggle (Templates tab)
+  readonly adminModeToggle: Locator;
+
+  // Product management
+  readonly addProductButton: Locator;
+  readonly productCards: Locator;
+  readonly productSearchInput: Locator;
+  readonly deleteProductButton: Locator;
+
+  // Product enrichment form
+  readonly enrichmentForm: Locator;
+  readonly enrichmentUrlInput: Locator;
+  readonly enrichmentSubmitButton: Locator;
+
+  // Scenario CRUD
+  readonly addScenarioButton: Locator;
+  readonly scenarioCards: Locator;
+  readonly editScenarioButton: Locator;
+  readonly deleteScenarioButton: Locator;
+  readonly scenarioDialog: Locator;
+  readonly scenarioNameInput: Locator;
+  readonly scenarioSaveButton: Locator;
+
+  // Generic content area
+  readonly tabContent: Locator;
+  readonly emptyState: Locator;
+
   constructor(page: Page) {
     this.page = page;
     this.header = page.locator('header').first();
@@ -28,6 +55,35 @@ export class LibraryPage {
     this.sceneTemplatesTab = page.getByRole('tab', { name: 'Scenes' });
     this.scenariosTab = page.getByRole('tab', { name: 'Scenarios' });
     this.patternsTab = page.getByRole('tab', { name: 'Patterns' });
+
+    // Admin mode (toggle switch or button in Templates tab)
+    this.adminModeToggle = page
+      .getByRole('button', { name: /Admin|Edit Mode/i })
+      .or(page.locator('[role="switch"]').filter({ hasText: /Admin/i }));
+
+    // Product management
+    this.addProductButton = page.getByRole('button', { name: /Add Product|New Product/i });
+    this.productCards = page.locator('[class*="Card"], [class*="card"]').filter({ has: page.locator('img') });
+    this.productSearchInput = page.getByPlaceholder(/Search products/i);
+    this.deleteProductButton = page.getByRole('button', { name: /Delete/i });
+
+    // Product enrichment
+    this.enrichmentForm = page.locator('form').filter({ hasText: /Enrich|URL/i });
+    this.enrichmentUrlInput = page.getByPlaceholder(/URL|website/i);
+    this.enrichmentSubmitButton = page.getByRole('button', { name: /Enrich|Fetch/i });
+
+    // Scenario CRUD
+    this.addScenarioButton = page.getByRole('button', { name: /Add Scenario|New Scenario|Create/i });
+    this.scenarioCards = page.locator('[class*="Card"]').filter({ hasText: /scenario/i });
+    this.editScenarioButton = page.getByRole('button', { name: /Edit/i });
+    this.deleteScenarioButton = page.getByRole('button', { name: /Delete/i });
+    this.scenarioDialog = page.locator('[role="dialog"]');
+    this.scenarioNameInput = page.locator('[role="dialog"] input').first();
+    this.scenarioSaveButton = page.locator('[role="dialog"]').getByRole('button', { name: /Save|Create/i });
+
+    // Generic
+    this.tabContent = page.locator('[role="tabpanel"]');
+    this.emptyState = page.getByText(/No .* found|Empty|Get started/i);
   }
 
   /**
@@ -71,12 +127,12 @@ export class LibraryPage {
    */
   async clickTab(tabName: 'products' | 'brand-images' | 'templates' | 'scene-templates' | 'scenarios' | 'patterns') {
     const tabMap = {
-      'products': this.productsTab,
+      products: this.productsTab,
       'brand-images': this.brandImagesTab,
-      'templates': this.templatesTab,
+      templates: this.templatesTab,
       'scene-templates': this.sceneTemplatesTab,
-      'scenarios': this.scenariosTab,
-      'patterns': this.patternsTab,
+      scenarios: this.scenariosTab,
+      patterns: this.patternsTab,
     };
     await tabMap[tabName].click();
   }

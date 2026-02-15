@@ -122,6 +122,30 @@ export class StudioWorkflowPage {
   readonly errorMessage: Locator;
   readonly toastNotification: Locator;
 
+  // ─── Asset Drawer (left panel tabs) ─────────────────────
+  readonly assetDrawerProducts: Locator;
+  readonly assetDrawerTemplates: Locator;
+  readonly assetDrawerBrandAssets: Locator;
+  readonly assetDrawerScenarios: Locator;
+  readonly assetDrawerPatterns: Locator;
+
+  // ─── Agent Chat Panel (collapsible at top of Studio) ────
+  readonly agentChatToggle: Locator;
+  readonly agentChatPanel: Locator;
+  readonly agentChatInput: Locator;
+  readonly agentChatSendButton: Locator;
+  readonly agentChatMessages: Locator;
+  readonly agentChatStopButton: Locator;
+  readonly agentChatClearButton: Locator;
+  readonly agentChatStreaming: Locator;
+
+  // ─── Canvas Editor ──────────────────────────────────────
+  readonly canvasEditorOverlay: Locator;
+  readonly canvasEditorClose: Locator;
+  readonly canvasEditorUndo: Locator;
+  readonly canvasEditorRedo: Locator;
+  readonly canvasEditorTools: Locator;
+
   constructor(page: Page) {
     this.page = page;
 
@@ -183,7 +207,9 @@ export class StudioWorkflowPage {
 
     // History (use first() to avoid duplicate — header button + sidebar icon)
     this.historyToggle = page.getByRole('button', { name: /History/i }).first();
-    this.historyPanel = page.locator('[class*="HistoryPanel"], [class*="history"]').filter({ has: page.locator('img') });
+    this.historyPanel = page
+      .locator('[class*="HistoryPanel"], [class*="history"]')
+      .filter({ has: page.locator('img') });
     this.historyItems = page.locator('[class*="history"] [class*="Card"], [class*="HistoryItem"]');
 
     // LinkedIn Preview
@@ -200,7 +226,9 @@ export class StudioWorkflowPage {
 
     // InspectorPanel — Edit tab content (use .first() to avoid duplicate with inline edit)
     this.editTabTextarea = page.locator('textarea[placeholder*="Describe what changes"]').first();
-    this.editTabPresets = page.locator('button').filter({ hasText: /Warmer lighting|Cooler tones|More contrast|Softer look/i });
+    this.editTabPresets = page
+      .locator('button')
+      .filter({ hasText: /Warmer lighting|Cooler tones|More contrast|Softer look/i });
     this.editTabApplyButton = page.getByRole('button', { name: /Apply Changes/i }).first();
 
     // InspectorPanel — Copy tab content
@@ -212,13 +240,21 @@ export class StudioWorkflowPage {
 
     // InspectorPanel — Ask AI tab content
     this.askAIInput = page.locator('input[placeholder*="Ask about this generation"]');
-    this.askAISendButton = page.locator('.flex.gap-2 button[class*="icon"], button').filter({ has: page.locator('svg') }).last();
+    this.askAISendButton = page
+      .locator('.flex.gap-2 button[class*="icon"], button')
+      .filter({ has: page.locator('svg') })
+      .last();
     this.askAIResponse = page.locator('.rounded-lg.bg-muted\\/50');
-    this.askAIQuickChips = page.locator('button').filter({ hasText: /What makes this image|Suggest improvements|What audience|Rate this/i });
+    this.askAIQuickChips = page
+      .locator('button')
+      .filter({ hasText: /What makes this image|Suggest improvements|What audience|Rate this/i });
 
     // InspectorPanel — Details tab content
     this.detailsPromptText = page.locator('text=/Prompt/i').locator('..').locator('p');
-    this.detailsCopyPrompt = page.locator('button').filter({ hasText: /^Copy$/i }).first();
+    this.detailsCopyPrompt = page
+      .locator('button')
+      .filter({ hasText: /^Copy$/i })
+      .first();
     this.detailsMetadataBadges = page.locator('.flex.flex-wrap.gap-2 [class*="Badge"]');
     this.detailsGenerationId = page.locator('.font-mono.text-foreground\\/60');
     this.detailsDownloadButton = page.getByRole('button', { name: /Download Image/i });
@@ -227,19 +263,61 @@ export class StudioWorkflowPage {
 
     // IdeaBankBar (bottom horizontal bar)
     this.ideaBankBar = page.locator('.mt-6.hidden.lg\\:block').first();
-    this.ideaBankBarChips = page.locator('.scrollbar-hide button.rounded-full').filter({ has: page.locator('span.truncate, span.text-xs') });
-    this.ideaBankBarRefresh = page.locator('.mt-6 button').filter({ has: page.locator('svg') }).first();
+    this.ideaBankBarChips = page
+      .locator('.scrollbar-hide button.rounded-full')
+      .filter({ has: page.locator('span.truncate, span.text-xs') });
+    this.ideaBankBarRefresh = page
+      .locator('.mt-6 button')
+      .filter({ has: page.locator('svg') })
+      .first();
     this.ideaBankBarEmptyChip = page.locator('button').filter({ hasText: /Get AI suggestions/i });
     this.ideaBankBarLoading = page.locator('text=/Generating ideas/i');
 
     // Upload zone
-    this.uploadZone = page.locator('[class*="UploadZone"], [class*="upload-zone"], label').filter({ hasText: /Upload|Drop|drag/i }).first();
+    this.uploadZone = page
+      .locator('[class*="UploadZone"], [class*="upload-zone"], label')
+      .filter({ hasText: /Upload|Drop|drag/i })
+      .first();
     this.uploadInput = page.locator('input[type="file"]').first();
 
     // Loading/error
     this.loadingSpinner = page.locator('[class*="animate-spin"]');
     this.errorMessage = page.locator('.text-destructive, [class*="error"]');
     this.toastNotification = page.locator('[class*="toast"], [data-sonner-toast]');
+
+    // Asset Drawer tab buttons (left panel)
+    this.assetDrawerProducts = page
+      .getByRole('button', { name: /Products/i })
+      .or(page.getByRole('tab', { name: /Products/i }));
+    this.assetDrawerTemplates = page
+      .getByRole('button', { name: /Templates/i })
+      .or(page.getByRole('tab', { name: /Templates/i }));
+    this.assetDrawerBrandAssets = page
+      .getByRole('button', { name: /Brand Assets/i })
+      .or(page.getByRole('tab', { name: /Brand/i }));
+    this.assetDrawerScenarios = page
+      .getByRole('button', { name: /Scenarios/i })
+      .or(page.getByRole('tab', { name: /Scenarios/i }));
+    this.assetDrawerPatterns = page
+      .getByRole('button', { name: /Patterns/i })
+      .or(page.getByRole('tab', { name: /Patterns/i }));
+
+    // Agent Chat Panel (collapsible panel at top of Studio — AgentChatPanel.tsx)
+    this.agentChatToggle = page.locator('button').filter({ hasText: /Studio Assistant/i });
+    this.agentChatPanel = page.locator('.border.border-t-0.border-border.rounded-b-xl');
+    this.agentChatInput = page.locator('.rounded-b-xl input[placeholder*="Type a message"]');
+    this.agentChatSendButton = page.locator('.rounded-b-xl button[type="submit"]');
+    this.agentChatMessages = page.locator('.rounded-b-xl .max-h-\\[350px\\] .space-y-3');
+    this.agentChatStopButton = page.locator('.rounded-b-xl button.text-destructive');
+    this.agentChatClearButton = page.locator('.rounded-b-xl button[title="Clear chat"]');
+    this.agentChatStreaming = page.locator('.rounded-b-xl').getByText('Thinking...');
+
+    // Canvas Editor overlay
+    this.canvasEditorOverlay = page.locator('[class*="canvas-editor"], [class*="CanvasEditor"]');
+    this.canvasEditorClose = page.getByRole('button', { name: /Close Editor/i });
+    this.canvasEditorUndo = page.getByRole('button', { name: /Undo/i });
+    this.canvasEditorRedo = page.getByRole('button', { name: /Redo/i });
+    this.canvasEditorTools = page.locator('[class*="toolbar"] button, [class*="ToolBar"] button');
   }
 
   /**
@@ -282,7 +360,10 @@ export class StudioWorkflowPage {
    * Wait for products to load
    */
   async waitForProductsLoaded() {
-    await this.productCards.first().waitFor({ state: 'visible', timeout: 15000 }).catch(() => {});
+    await this.productCards
+      .first()
+      .waitFor({ state: 'visible', timeout: 15000 })
+      .catch(() => {});
   }
 
   /**
@@ -435,7 +516,9 @@ export class StudioWorkflowPage {
    */
   async openEditMode() {
     await this.editButton.click();
-    await expect(this.editPromptInput).toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(this.editPromptInput)
+      .toBeVisible({ timeout: 5000 })
+      .catch(() => {});
   }
 
   /**
@@ -499,7 +582,9 @@ export class StudioWorkflowPage {
   async openHistory() {
     if (await this.historyToggle.isVisible()) {
       await this.historyToggle.click();
-      await expect(this.historyPanel).toBeVisible({ timeout: 5000 }).catch(() => {});
+      await expect(this.historyPanel)
+        .toBeVisible({ timeout: 5000 })
+        .catch(() => {});
     }
   }
 
@@ -523,7 +608,9 @@ export class StudioWorkflowPage {
    * Use an Idea Bank suggestion
    */
   async useIdeaBankSuggestion(index: number = 0) {
-    await expect(this.ideaBankPanel).toBeVisible({ timeout: 10000 }).catch(() => {});
+    await expect(this.ideaBankPanel)
+      .toBeVisible({ timeout: 10000 })
+      .catch(() => {});
     await this.useSuggestionButton.nth(index).click();
     await this.page.waitForTimeout(300);
   }
@@ -532,7 +619,9 @@ export class StudioWorkflowPage {
    * Generate directly from Idea Bank suggestion
    */
   async generateFromIdeaBankSuggestion(index: number = 0) {
-    await expect(this.ideaBankPanel).toBeVisible({ timeout: 10000 }).catch(() => {});
+    await expect(this.ideaBankPanel)
+      .toBeVisible({ timeout: 10000 })
+      .catch(() => {});
     await this.generateFromSuggestionButton.nth(index).click();
     await this.waitForGenerationComplete();
   }
@@ -567,12 +656,14 @@ export class StudioWorkflowPage {
   /**
    * Run the full generation workflow
    */
-  async runFullGenerationWorkflow(options: {
-    productIndex?: number;
-    templateIndex?: number;
-    prompt?: string;
-    quickStart?: boolean;
-  } = {}) {
+  async runFullGenerationWorkflow(
+    options: {
+      productIndex?: number;
+      templateIndex?: number;
+      prompt?: string;
+      quickStart?: boolean;
+    } = {},
+  ) {
     const { productIndex = 0, templateIndex, prompt, quickStart = false } = options;
 
     // Select product
@@ -627,10 +718,10 @@ export class StudioWorkflowPage {
    */
   async switchInspectorTab(tab: 'edit' | 'copy' | 'ask-ai' | 'details') {
     const tabMap = {
-      'edit': this.inspectorEditTab,
-      'copy': this.inspectorCopyTab,
+      edit: this.inspectorEditTab,
+      copy: this.inspectorCopyTab,
       'ask-ai': this.inspectorAskAITab,
-      'details': this.inspectorDetailsTab,
+      details: this.inspectorDetailsTab,
     };
     await tabMap[tab].click();
     await this.page.waitForTimeout(300);
@@ -641,7 +732,10 @@ export class StudioWorkflowPage {
    */
   async clickEditPreset(presetText: string) {
     await this.switchInspectorTab('edit');
-    await this.page.locator('button').filter({ hasText: new RegExp(presetText, 'i') }).click();
+    await this.page
+      .locator('button')
+      .filter({ hasText: new RegExp(presetText, 'i') })
+      .click();
   }
 
   /**
@@ -696,5 +790,76 @@ export class StudioWorkflowPage {
     await this.waitForProductsLoaded();
     const count = await this.productCards.count();
     return count > 0;
+  }
+
+  // ─── Asset Drawer helpers ──────────────────────────────
+
+  /**
+   * Switch between Asset Drawer tabs
+   */
+  async switchAssetDrawerTab(tab: 'products' | 'templates' | 'brand-assets' | 'scenarios' | 'patterns') {
+    const tabMap = {
+      products: this.assetDrawerProducts,
+      templates: this.assetDrawerTemplates,
+      'brand-assets': this.assetDrawerBrandAssets,
+      scenarios: this.assetDrawerScenarios,
+      patterns: this.assetDrawerPatterns,
+    };
+    await tabMap[tab].click();
+    await this.page.waitForTimeout(500);
+  }
+
+  // ─── Agent Chat helpers ────────────────────────────────
+
+  /**
+   * Open the Agent Chat panel
+   */
+  async openAgentChat() {
+    const isOpen = await this.agentChatPanel.isVisible().catch(() => false);
+    if (!isOpen) {
+      await this.agentChatToggle.click();
+      await this.agentChatPanel.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+    }
+  }
+
+  /**
+   * Close the Agent Chat panel
+   */
+  async closeAgentChat() {
+    const isOpen = await this.agentChatPanel.isVisible().catch(() => false);
+    if (isOpen) {
+      await this.agentChatToggle.click();
+      await this.agentChatPanel.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
+    }
+  }
+
+  /**
+   * Send a message in the Agent Chat
+   */
+  async sendAgentChatMessage(text: string) {
+    await this.openAgentChat();
+    await this.agentChatInput.fill(text);
+    await this.agentChatSendButton.click();
+    await this.page.waitForTimeout(300);
+  }
+
+  /**
+   * Wait for Agent Chat response to complete
+   */
+  async waitForAgentChatResponse(timeout: number = 30000) {
+    await this.agentChatStreaming.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+    await this.agentChatStreaming.waitFor({ state: 'hidden', timeout }).catch(() => {});
+    await this.page.waitForTimeout(300);
+  }
+
+  /**
+   * Clear the Agent Chat messages
+   */
+  async clearAgentChat() {
+    await this.openAgentChat();
+    if (await this.agentChatClearButton.isVisible().catch(() => false)) {
+      await this.agentChatClearButton.click();
+      await this.page.waitForTimeout(300);
+    }
   }
 }

@@ -34,6 +34,9 @@ node_modules/
 .claude/*.local.*
 .claude/railway.env
 
+# Test coverage
+coverage/
+
 # Playwright
 e2e/.auth/user.json
 e2e/test-results/
