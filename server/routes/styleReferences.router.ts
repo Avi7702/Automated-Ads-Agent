@@ -143,15 +143,12 @@ export const styleReferencesRouter: RouterFactory = (ctx: RouterContext): Router
 
         res.json(refs);
       } catch (error: any) {
-        if (isTableMissingError(error)) {
-          logger.warn(
-            { module: 'StyleReferences' },
-            'style_references table not found — returning empty list. Run migrations to create it.',
-          );
-          return res.json([]);
-        }
-        logger.error({ module: 'StyleReferences', err: error }, 'List error');
-        res.status(500).json({ error: 'Failed to list style references' });
+        // Non-critical feature — return empty list on any error instead of 500
+        logger.warn(
+          { module: 'StyleReferences', err: error?.message || error },
+          'Failed to list style references — returning empty list',
+        );
+        return res.json([]);
       }
     }),
   );
