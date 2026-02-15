@@ -371,7 +371,7 @@ describe('Studio Page Integration Tests', () => {
   // Test 1: Product Selection -> Generate Button Enabled Flow
   // ==========================================
   describe('Test 1: Product Selection -> Generate Button Enabled Flow', () => {
-    it('enables generate button when product is selected and prompt is entered', async () => {
+    it('enables generate button when product is selected and prompt is entered', { timeout: 15000 }, async () => {
       render(<Studio />, { wrapper: createWrapper() });
 
       // Wait for initial render

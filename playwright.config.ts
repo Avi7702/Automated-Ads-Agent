@@ -21,15 +21,12 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
 
   // Reporter configuration - HTML reporter with list for console output
-  reporter: [
-    ['html', { open: 'never' }],
-    ['list'],
-  ],
+  reporter: [['html', { open: 'never' }], ['list']],
 
   // Shared settings for all projects
   use: {
-    // Base URL for all tests
-    baseURL: 'http://localhost:3000',
+    // Base URL - defaults to production, override with BASE_URL env var for local dev
+    baseURL: process.env.BASE_URL || 'https://automated-ads-agent-production.up.railway.app',
 
     // Bypass rate limiting for E2E tests
     extraHTTPHeaders: {
@@ -70,15 +67,30 @@ export default defineConfig({
       },
       dependencies: ['setup'],
     },
+
+    // Mobile viewport project for responsive tests
+    {
+      name: 'mobile',
+      use: {
+        ...devices['iPhone 13'],
+        storageState: 'e2e/.auth/user.json',
+      },
+      dependencies: ['setup'],
+      testMatch: /34-mobile-responsive\.spec\.ts/,
+    },
   ],
 
-  // Web server configuration
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120000,
-  },
+  // Web server configuration - only start local dev server when BASE_URL is localhost
+  ...(process.env.BASE_URL?.includes('localhost')
+    ? {
+        webServer: {
+          command: 'npm run dev',
+          url: process.env.BASE_URL,
+          reuseExistingServer: !process.env.CI,
+          timeout: 120000,
+        },
+      }
+    : {}),
 
   // Output directory for test artifacts
   outputDir: 'e2e/test-results',

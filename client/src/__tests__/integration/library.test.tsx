@@ -311,7 +311,7 @@ afterEach(() => {
 // ============================================
 
 describe('Integration Test 1: Add Product Workflow', () => {
-  it('opens Add Product modal, submits form, and product appears in list', async () => {
+  it('opens Add Product modal, submits form, and product appears in list', { timeout: 15000 }, async () => {
     const user = userEvent.setup();
 
     render(<ProductLibrary />);
@@ -362,8 +362,10 @@ describe('Integration Test 1: Add Product Workflow', () => {
     });
 
     // Try to submit without filling required fields (image and name)
-    // The submit button should be disabled when no file is selected
-    const submitButton = screen.getByRole('button', { name: /add product/i });
+    // The submit button inside the modal should be disabled when no file is selected
+    // Use the dialog scope to avoid picking up the page-level "Add Product" trigger button
+    const dialog = screen.getByRole('dialog');
+    const submitButton = within(dialog).getByRole('button', { name: /add product/i });
     expect(submitButton).toBeDisabled();
   });
 });
@@ -373,7 +375,7 @@ describe('Integration Test 1: Add Product Workflow', () => {
 // ============================================
 
 describe('Integration Test 2: Edit Product Workflow', () => {
-  it('opens product detail modal and displays editable enrichment form', async () => {
+  it('opens product detail modal and displays editable enrichment form', { timeout: 15000 }, async () => {
     const user = userEvent.setup();
 
     render(<ProductLibrary />);

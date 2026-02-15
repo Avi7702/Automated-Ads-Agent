@@ -1,5 +1,3 @@
-
-
 // ============================================
 // MOCK SETUP
 // ============================================
@@ -13,9 +11,9 @@ const { mockGenerateContent } = vi.hoisted(() => {
 vi.mock('../lib/gemini', () => ({
   genAI: {
     models: {
-      generateContent: mockGenerateContent
-    }
-  }
+      generateContent: mockGenerateContent,
+    },
+  },
 }));
 
 // Mock storage
@@ -29,7 +27,7 @@ const mockStorage = vi.hoisted(() => ({
 }));
 
 vi.mock('../storage', () => ({
-  storage: mockStorage
+  storage: mockStorage,
 }));
 
 // Mock fetch for web requests
@@ -50,8 +48,17 @@ import {
 import { verifySourceMatch, verifySourcesBatch } from '../services/enrichment/gate1-sourceMatch';
 import { verifyExtraction, getVerifiedFields } from '../services/enrichment/gate2-extraction';
 import { verifyDatabaseWrite, buildWritePayload } from '../services/enrichment/gate3-dbWrite';
-import { verifyCrossSourceTruth, resolveConflicts, filterContradictedClaims } from '../services/enrichment/gate4-crossSource';
-import { aggregateExtractions, extractFeatures, extractBenefits, extractTags } from '../services/enrichment/dataExtraction';
+import {
+  verifyCrossSourceTruth,
+  resolveConflicts,
+  filterContradictedClaims,
+} from '../services/enrichment/gate4-crossSource';
+import {
+  aggregateExtractions,
+  extractFeatures,
+  extractBenefits,
+  extractTags,
+} from '../services/enrichment/dataExtraction';
 import {
   DEFAULT_PIPELINE_CONFIG,
   type VisionResult,
@@ -66,42 +73,43 @@ import {
 // ============================================
 
 const mockVisionResult: VisionResult = {
-  category: "Construction",
-  subcategory: "Reinforcement",
-  materials: ["Galvanized Steel", "Metal"],
-  colors: ["Silver", "Grey"],
-  style: "Industrial",
-  usageContext: "Construction site reinforcement",
-  targetDemographic: "Contractors",
+  category: 'Construction',
+  subcategory: 'Reinforcement',
+  materials: ['Galvanized Steel', 'Metal'],
+  colors: ['Silver', 'Grey'],
+  style: 'Industrial',
+  usageContext: 'Construction site reinforcement',
+  targetDemographic: 'Contractors',
   confidence: 85,
-  detectedText: ["NDS-50MM", "50mm"],
+  detectedText: ['NDS-50MM', '50mm'],
 };
 
 const mockSourceResult: SourceSearchResult = {
-  url: "https://ndspro.com/products/spacer-50mm",
-  sourceType: "primary",
-  sourceName: "NDS Pro",
+  url: 'https://ndspro.com/products/spacer-50mm',
+  sourceType: 'primary',
+  sourceName: 'NDS Pro',
   trustLevel: 10,
-  pageTitle: "50mm Spacer Bar - NDS Pro",
-  pageContent: "The NDS 50mm Spacer Bar is made of galvanized steel. Dimensions: 50mm x 10mm. Used for concrete reinforcement. Load capacity: 500kg. Certifications: ISO 9001.",
-  extractedProductName: "50mm Spacer Bar",
-  extractedSKU: "NDS-50MM",
-  extractedImages: ["https://ndspro.com/images/spacer-50mm.jpg"],
+  pageTitle: '50mm Spacer Bar - NDS Pro',
+  pageContent:
+    'The NDS 50mm Spacer Bar is made of galvanized steel. Dimensions: 50mm x 10mm. Used for concrete reinforcement. Load capacity: 500kg. Certifications: ISO 9001.',
+  extractedProductName: '50mm Spacer Bar',
+  extractedSKU: 'NDS-50MM',
+  extractedImages: ['https://ndspro.com/images/spacer-50mm.jpg'],
 };
 
 const mockExtractedData: ExtractedData = {
-  sourceUrl: "https://ndspro.com/products/spacer-50mm",
-  productName: "50mm Spacer Bar",
-  description: "Industrial galvanized steel spacer bar for concrete reinforcement applications.",
+  sourceUrl: 'https://ndspro.com/products/spacer-50mm',
+  productName: '50mm Spacer Bar',
+  description: 'Industrial galvanized steel spacer bar for concrete reinforcement applications.',
   specifications: {
-    material: "Galvanized Steel",
-    dimensions: "50mm x 10mm",
-    loadCapacity: "500kg",
+    material: 'Galvanized Steel',
+    dimensions: '50mm x 10mm',
+    loadCapacity: '500kg',
   },
-  relatedProducts: ["Rebar Mesh", "Concrete Cover"],
-  installationInfo: "Place spacers at 500mm intervals",
-  certifications: ["ISO 9001"],
-  rawExtract: "The NDS 50mm Spacer Bar is made of galvanized steel...",
+  relatedProducts: ['Rebar Mesh', 'Concrete Cover'],
+  installationInfo: 'Place spacers at 500mm intervals',
+  certifications: ['ISO 9001'],
+  rawExtract: 'The NDS 50mm Spacer Bar is made of galvanized steel...',
 };
 
 const mockConfig: PipelineConfig = {
@@ -185,20 +193,20 @@ describe('AI Helpers', () => {
         text: JSON.stringify({
           similar: true,
           confidence: 90,
-          reasoning: "Materials and category match"
-        })
+          reasoning: 'Materials and category match',
+        }),
       });
 
       const result = await aiCompareDescriptions({
         ourProduct: {
-          category: "Construction",
-          materials: ["Steel"],
-          colors: ["Silver"],
-          style: "Industrial",
+          category: 'Construction',
+          materials: ['Steel'],
+          colors: ['Silver'],
+          style: 'Industrial',
         },
         sourceProduct: {
-          title: "Steel Spacer",
-          content: "Industrial steel spacer for construction",
+          title: 'Steel Spacer',
+          content: 'Industrial steel spacer for construction',
         },
       });
 
@@ -211,8 +219,8 @@ describe('AI Helpers', () => {
       mockGenerateContent.mockRejectedValueOnce(new Error('API Error'));
 
       const result = await aiCompareDescriptions({
-        ourProduct: { category: "Test", materials: [], colors: [], style: "Test" },
-        sourceProduct: { title: "Test", content: "Test" },
+        ourProduct: { category: 'Test', materials: [], colors: [], style: 'Test' },
+        sourceProduct: { title: 'Test', content: 'Test' },
       });
 
       expect(result.similar).toBe(false);
@@ -224,28 +232,28 @@ describe('AI Helpers', () => {
     it('extracts structured data from page content', async () => {
       mockGenerateContent.mockResolvedValueOnce({
         text: JSON.stringify({
-          productName: "50mm Spacer",
-          description: "Steel spacer for concrete",
-          specifications: { material: "Steel", dimensions: "50mm" },
-          relatedProducts: ["Rebar"],
-          installationInfo: "Place at intervals",
-          certifications: ["ISO 9001"],
-        })
+          productName: '50mm Spacer',
+          description: 'Steel spacer for concrete',
+          specifications: { material: 'Steel', dimensions: '50mm' },
+          relatedProducts: ['Rebar'],
+          installationInfo: 'Place at intervals',
+          certifications: ['ISO 9001'],
+        }),
       });
 
-      const result = await aiExtractProductData("Product page content...", "Spacer");
+      const result = await aiExtractProductData('Product page content...', 'Spacer');
 
-      expect(result.productName).toBe("50mm Spacer");
-      expect(result.specifications.material).toBe("Steel");
-      expect(result.certifications).toContain("ISO 9001");
+      expect(result.productName).toBe('50mm Spacer');
+      expect(result.specifications.material).toBe('Steel');
+      expect(result.certifications).toContain('ISO 9001');
     });
 
     it('returns empty data on parse failure', async () => {
-      mockGenerateContent.mockResolvedValueOnce({ text: "Invalid response" });
+      mockGenerateContent.mockResolvedValueOnce({ text: 'Invalid response' });
 
-      const result = await aiExtractProductData("Content", "Product");
+      const result = await aiExtractProductData('Content', 'Product');
 
-      expect(result.productName).toBe("");
+      expect(result.productName).toBe('');
       expect(result.specifications).toEqual({});
     });
   });
@@ -257,13 +265,13 @@ describe('AI Helpers', () => {
           supports: true,
           contradicts: false,
           neutral: false,
-          reasoning: "Source explicitly states this"
-        })
+          reasoning: 'Source explicitly states this',
+        }),
       });
 
       const result = await aiVerifyClaim({
-        claim: "The material is steel",
-        source: "Made of high-quality steel",
+        claim: 'The material is steel',
+        source: 'Made of high-quality steel',
       });
 
       expect(result.supports).toBe(true);
@@ -276,13 +284,13 @@ describe('AI Helpers', () => {
           supports: false,
           contradicts: true,
           neutral: false,
-          reasoning: "Source says aluminum, not steel"
-        })
+          reasoning: 'Source says aluminum, not steel',
+        }),
       });
 
       const result = await aiVerifyClaim({
-        claim: "The material is steel",
-        source: "Made of aluminum",
+        claim: 'The material is steel',
+        source: 'Made of aluminum',
       });
 
       expect(result.supports).toBe(false);
@@ -296,15 +304,15 @@ describe('AI Helpers', () => {
         text: JSON.stringify({
           allEquivalent: true,
           compatible: true,
-          resolvedValue: "50mm",
-          reasoning: "50mm equals approximately 2 inches"
-        })
+          resolvedValue: '50mm',
+          reasoning: '50mm equals approximately 2 inches',
+        }),
       });
 
-      const result = await aiCheckEquivalence(["50mm", "2 inch"]);
+      const result = await aiCheckEquivalence(['50mm', '2 inch']);
 
       expect(result.allEquivalent).toBe(true);
-      expect(result.resolvedValue).toBe("50mm");
+      expect(result.resolvedValue).toBe('50mm');
     });
 
     it('detects conflicting values', async () => {
@@ -313,11 +321,11 @@ describe('AI Helpers', () => {
           allEquivalent: false,
           compatible: false,
           resolvedValue: null,
-          reasoning: "25mm and 50mm are different sizes"
-        })
+          reasoning: '25mm and 50mm are different sizes',
+        }),
       });
 
-      const result = await aiCheckEquivalence(["25mm", "50mm"]);
+      const result = await aiCheckEquivalence(['25mm', '50mm']);
 
       expect(result.allEquivalent).toBe(false);
       expect(result.resolvedValue).toBeNull();
@@ -329,24 +337,24 @@ describe('AI Helpers', () => {
       mockGenerateContent.mockResolvedValueOnce({
         text: JSON.stringify({
           claims: [
-            { claim: "Material is galvanized steel", importance: "high" },
-            { claim: "Load capacity is 500kg", importance: "high" },
-            { claim: "Certified to ISO 9001", importance: "medium" },
-          ]
-        })
+            { claim: 'Material is galvanized steel', importance: 'high' },
+            { claim: 'Load capacity is 500kg', importance: 'high' },
+            { claim: 'Certified to ISO 9001', importance: 'medium' },
+          ],
+        }),
       });
 
-      const result = await aiExtractClaims("Galvanized steel spacer with 500kg load capacity. ISO 9001 certified.");
+      const result = await aiExtractClaims('Galvanized steel spacer with 500kg load capacity. ISO 9001 certified.');
 
       expect(result.length).toBe(3);
-      expect(result[0].claim).toContain("galvanized steel");
-      expect(result[1].importance).toBe("high");
+      expect(result[0].claim).toContain('galvanized steel');
+      expect(result[1].importance).toBe('high');
     });
 
     it('returns empty array on failure', async () => {
       mockGenerateContent.mockRejectedValueOnce(new Error('API Error'));
 
-      const result = await aiExtractClaims("Some description");
+      const result = await aiExtractClaims('Some description');
 
       expect(result).toEqual([]);
     });
@@ -371,7 +379,7 @@ describe('Gate 1: Source Match Verification', () => {
       // Disable visual comparison for this test to isolate SKU + semantic scoring
       const configNoVisual: PipelineConfig = {
         ...mockConfig,
-        enableVisualComparison: false,  // Disable visual comparison
+        enableVisualComparison: false, // Disable visual comparison
       };
 
       // Mock semantic comparison
@@ -379,15 +387,15 @@ describe('Gate 1: Source Match Verification', () => {
         text: JSON.stringify({
           similar: true,
           confidence: 100,
-          reasoning: "Materials and category match exactly"
-        })
+          reasoning: 'Materials and category match exactly',
+        }),
       });
 
       const result = await verifySourceMatch(
         mockVisionResult,
         mockSourceResult,
-        "https://example.com/product.jpg",
-        configNoVisual
+        'https://example.com/product.jpg',
+        configNoVisual,
       );
 
       // SKU match: 100 * 0.4 = 40
@@ -405,27 +413,27 @@ describe('Gate 1: Source Match Verification', () => {
     it('fails with low confidence when nothing matches', async () => {
       const noMatchSource: SourceSearchResult = {
         ...mockSourceResult,
-        extractedSKU: "DIFFERENT-SKU",
-        pageContent: "Completely different product made of plastic",
+        extractedSKU: 'DIFFERENT-SKU',
+        pageContent: 'Completely different product made of plastic',
       };
 
       mockGenerateContent.mockResolvedValueOnce({
         text: JSON.stringify({
           similar: false,
           confidence: 10,
-          reasoning: "No match found"
-        })
+          reasoning: 'No match found',
+        }),
       });
 
       const result = await verifySourceMatch(
         mockVisionResult,
         noMatchSource,
-        "https://example.com/product.jpg",
-        mockConfig
+        'https://example.com/product.jpg',
+        mockConfig,
       );
 
       expect(result.passed).toBe(false);
-      expect(result.recommendation).toBe("SKIP");
+      expect(result.recommendation).toBe('SKIP');
     });
 
     it('returns USE_WITH_CAUTION for medium confidence', async () => {
@@ -433,8 +441,8 @@ describe('Gate 1: Source Match Verification', () => {
         text: JSON.stringify({
           similar: true,
           confidence: 70,
-          reasoning: "Partial match"
-        })
+          reasoning: 'Partial match',
+        }),
       });
 
       const partialSource: SourceSearchResult = {
@@ -445,8 +453,8 @@ describe('Gate 1: Source Match Verification', () => {
       const result = await verifySourceMatch(
         { ...mockVisionResult, detectedText: [] },
         partialSource,
-        "https://example.com/product.jpg",
-        mockConfig
+        'https://example.com/product.jpg',
+        mockConfig,
       );
 
       // With only semantic match at 70%, weighted score would be ~18
@@ -457,7 +465,7 @@ describe('Gate 1: Source Match Verification', () => {
 
   describe('verifySourcesBatch', () => {
     it('verifies multiple sources in parallel', async () => {
-      const sources = [mockSourceResult, { ...mockSourceResult, url: "https://other.com" }];
+      const sources = [mockSourceResult, { ...mockSourceResult, url: 'https://other.com' }];
 
       mockGenerateContent
         .mockResolvedValueOnce({ text: JSON.stringify({ similar: true, confidence: 90, reasoning: '' }) })
@@ -466,8 +474,8 @@ describe('Gate 1: Source Match Verification', () => {
       const results = await verifySourcesBatch(
         mockVisionResult,
         sources,
-        "https://example.com/product.jpg",
-        mockConfig
+        'https://example.com/product.jpg',
+        mockConfig,
       );
 
       expect(results.length).toBe(2);
@@ -483,8 +491,8 @@ describe('Gate 1: Source Match Verification', () => {
       // Second source has no SKU to force failure
       const failingSource: SourceSearchResult = {
         ...mockSourceResult,
-        url: "https://failing.com",
-        extractedSKU: null,  // No SKU match
+        url: 'https://failing.com',
+        extractedSKU: null, // No SKU match
       };
 
       const sources = [mockSourceResult, failingSource];
@@ -498,8 +506,8 @@ describe('Gate 1: Source Match Verification', () => {
       const results = await verifySourcesBatch(
         mockVisionResult,
         sources,
-        "https://example.com/product.jpg",
-        configNoVisual
+        'https://example.com/product.jpg',
+        configNoVisual,
       );
 
       expect(results.length).toBe(2);
@@ -524,22 +532,23 @@ describe('Gate 2: Extraction Verification', () => {
     it('passes when fields are found in source', async () => {
       // Create extracted data with content that will match via direct match
       const simpleExtractedData: ExtractedData = {
-        sourceUrl: "https://ndspro.com/products/spacer-50mm",
-        productName: "50mm Spacer Bar",
-        description: "galvanized steel spacer bar",
+        sourceUrl: 'https://ndspro.com/products/spacer-50mm',
+        productName: '50mm Spacer Bar',
+        description: 'galvanized steel spacer bar',
         specifications: {
-          material: "Galvanized Steel",
-          dimensions: "50mm x 10mm",
+          material: 'Galvanized Steel',
+          dimensions: '50mm x 10mm',
         },
         relatedProducts: [],
-        installationInfo: "",
+        installationInfo: '',
         certifications: [],
-        rawExtract: "",
+        rawExtract: '',
       };
 
       const sourceWithMatchingContent: SourceSearchResult = {
         ...mockSourceResult,
-        pageContent: "50mm Spacer Bar - Industrial galvanized steel spacer bar. Material: Galvanized Steel. Dimensions: 50mm x 10mm.",
+        pageContent:
+          '50mm Spacer Bar - Industrial galvanized steel spacer bar. Material: Galvanized Steel. Dimensions: 50mm x 10mm.',
       };
 
       const result = await verifyExtraction(sourceWithMatchingContent, simpleExtractedData, mockConfig);
@@ -552,11 +561,11 @@ describe('Gate 2: Extraction Verification', () => {
     it('fails when extracted data not found in source', async () => {
       const sourceWithDifferentContent: SourceSearchResult = {
         ...mockSourceResult,
-        pageContent: "This is a completely different product with no matching information.",
+        pageContent: 'This is a completely different product with no matching information.',
       };
 
       mockGenerateContent.mockResolvedValue({
-        text: "NOT_FOUND"
+        text: 'NOT_FOUND',
       });
 
       const result = await verifyExtraction(sourceWithDifferentContent, mockExtractedData, mockConfig);
@@ -568,7 +577,7 @@ describe('Gate 2: Extraction Verification', () => {
     it('tracks verification method for each field', async () => {
       const source: SourceSearchResult = {
         ...mockSourceResult,
-        pageContent: "50mm Spacer Bar made of Galvanized Steel",
+        pageContent: '50mm Spacer Bar made of Galvanized Steel',
       };
 
       const result = await verifyExtraction(source, mockExtractedData, mockConfig);
@@ -583,21 +592,39 @@ describe('Gate 2: Extraction Verification', () => {
   describe('getVerifiedFields', () => {
     it('filters to only verified fields', () => {
       const gate2Result: Gate2Result = {
-        sourceUrl: "https://example.com",
+        sourceUrl: 'https://example.com',
         passed: true,
         verifiedFields: [
-          { field: "productName", extracted: "Spacer", verified: true, verificationMethod: "DIRECT_MATCH", confidence: 100 },
-          { field: "description", extracted: "Test", verified: false, verificationMethod: "NOT_VERIFIED", confidence: 0 },
-          { field: "specifications.material", extracted: "Steel", verified: true, verificationMethod: "AI_REEXTRACT", confidence: 85 },
+          {
+            field: 'productName',
+            extracted: 'Spacer',
+            verified: true,
+            verificationMethod: 'DIRECT_MATCH',
+            confidence: 100,
+          },
+          {
+            field: 'description',
+            extracted: 'Test',
+            verified: false,
+            verificationMethod: 'NOT_VERIFIED',
+            confidence: 0,
+          },
+          {
+            field: 'specifications.material',
+            extracted: 'Steel',
+            verified: true,
+            verificationMethod: 'AI_REEXTRACT',
+            confidence: 85,
+          },
         ],
         overallAccuracy: 67,
       };
 
       const filtered = getVerifiedFields(mockExtractedData, gate2Result);
 
-      expect(filtered.productName).toBe("50mm Spacer Bar");
-      expect(filtered.description).toBe(""); // Not verified, should be empty
-      expect(filtered.specifications.material).toBe("Galvanized Steel");
+      expect(filtered.productName).toBe('50mm Spacer Bar');
+      expect(filtered.description).toBe(''); // Not verified, should be empty
+      expect(filtered.specifications.material).toBe('Galvanized Steel');
     });
   });
 });
@@ -614,43 +641,43 @@ describe('Gate 3: Database Write Verification', () => {
   describe('buildWritePayload', () => {
     it('builds a clean payload', () => {
       const payload = buildWritePayload(
-        "prod-123",
-        "  Test description  ",
-        { material: "Steel", empty: "" },
-        { finish: "Matte" },
-        ["Durable", "", "Easy to install"],
-        ["tag1", "tag1", "tag2", ""], // Duplicates and empty
-        ["https://source1.com"]
+        'prod-123',
+        '  Test description  ',
+        { material: 'Steel', empty: '' },
+        { finish: 'Matte' },
+        ['Durable', '', 'Easy to install'],
+        ['tag1', 'tag1', 'tag2', ''], // Duplicates and empty
+        ['https://source1.com'],
       );
 
-      expect(payload.productId).toBe("prod-123");
-      expect(payload.description).toBe("Test description");
-      expect(payload.specifications).not.toHaveProperty("empty");
-      expect(payload.benefits).toEqual(["Durable", "Easy to install"]);
-      expect(payload.tags).toEqual(["tag1", "tag2"]); // Deduped
+      expect(payload.productId).toBe('prod-123');
+      expect(payload.description).toBe('Test description');
+      expect(payload.specifications).not.toHaveProperty('empty');
+      expect(payload.benefits).toEqual(['Durable', 'Easy to install']);
+      expect(payload.tags).toEqual(['tag1', 'tag2']); // Deduped
     });
   });
 
   describe('verifyDatabaseWrite', () => {
     it('passes when data is saved correctly', async () => {
       const payload = buildWritePayload(
-        "prod-123",
-        "Test description",
-        { material: "Steel" },
-        { finish: "Matte" },
-        ["Durable"],
-        ["construction"],
-        ["https://source.com"]
+        'prod-123',
+        'Test description',
+        { material: 'Steel' },
+        { finish: 'Matte' },
+        ['Durable'],
+        ['construction'],
+        ['https://source.com'],
       );
 
       mockStorage.updateProduct.mockResolvedValue(undefined);
       mockStorage.getProductById.mockResolvedValue({
-        id: "prod-123",
-        description: "Test description",
-        specifications: { material: "Steel" },
-        features: { finish: "Matte" },
-        benefits: ["Durable"],
-        tags: ["construction"],
+        id: 'prod-123',
+        description: 'Test description',
+        specifications: { material: 'Steel' },
+        features: { finish: 'Matte' },
+        benefits: ['Durable'],
+        tags: ['construction'],
       });
 
       const result = await verifyDatabaseWrite(payload, { ...mockConfig, retryDelayMs: 10 });
@@ -661,20 +688,20 @@ describe('Gate 3: Database Write Verification', () => {
 
     it('fails when data differs after write', async () => {
       const payload = buildWritePayload(
-        "prod-123",
-        "Test description that is long enough",
-        { material: "Steel" },
+        'prod-123',
+        'Test description that is long enough',
+        { material: 'Steel' },
         {},
         [],
         [],
-        []
+        [],
       );
 
       mockStorage.updateProduct.mockResolvedValue(undefined);
       mockStorage.getProductById.mockResolvedValue({
-        id: "prod-123",
-        description: "Different description", // Mismatch
-        specifications: { material: "Steel" },
+        id: 'prod-123',
+        description: 'Different description', // Mismatch
+        specifications: { material: 'Steel' },
         features: null,
         benefits: null,
         tags: null,
@@ -684,17 +711,16 @@ describe('Gate 3: Database Write Verification', () => {
 
       expect(result.passed).toBe(false);
       expect(result.discrepancies.length).toBeGreaterThan(0);
-      expect(result.discrepancies[0].field).toBe("description");
+      expect(result.discrepancies[0].field).toBe('description');
     });
 
     it('retries on failure', async () => {
-      const payload = buildWritePayload("prod-123", "Test", {}, {}, [], [], []);
+      const payload = buildWritePayload('prod-123', 'Test', {}, {}, [], [], []);
 
-      mockStorage.updateProduct.mockRejectedValueOnce(new Error("DB Error"))
-        .mockResolvedValue(undefined);
+      mockStorage.updateProduct.mockRejectedValueOnce(new Error('DB Error')).mockResolvedValue(undefined);
       mockStorage.getProductById.mockResolvedValue({
-        id: "prod-123",
-        description: "Test",
+        id: 'prod-123',
+        description: 'Test',
         specifications: null,
         features: null,
         benefits: null,
@@ -721,42 +747,48 @@ describe('Gate 4: Cross-Source Truth Verification', () => {
   describe('verifyCrossSourceTruth', () => {
     it('passes when sources agree', async () => {
       const extractions: ExtractedData[] = [
-        { ...mockExtractedData, sourceUrl: "https://source1.com" },
-        { ...mockExtractedData, sourceUrl: "https://source2.com" },
+        { ...mockExtractedData, sourceUrl: 'https://source1.com' },
+        { ...mockExtractedData, sourceUrl: 'https://source2.com' },
       ];
 
       const aggregated = {
-        productName: "50mm Spacer Bar",
-        description: "Industrial steel spacer",
-        specifications: { material: "Galvanized Steel" },
-        sources: ["https://source1.com", "https://source2.com"],
+        productName: '50mm Spacer Bar',
+        description: 'Industrial steel spacer',
+        specifications: { material: 'Galvanized Steel' },
+        sources: ['https://source1.com', 'https://source2.com'],
         fieldSources: {},
       };
 
       // Mock claim extraction and verification
       mockGenerateContent
-        .mockResolvedValueOnce({ text: JSON.stringify({ claims: [{ claim: "Material is steel", importance: "high" }] }) })
-        .mockResolvedValueOnce({ text: JSON.stringify({ supports: true, contradicts: false, neutral: false, reasoning: '' }) })
-        .mockResolvedValueOnce({ text: JSON.stringify({ supports: true, contradicts: false, neutral: false, reasoning: '' }) });
+        .mockResolvedValueOnce({
+          text: JSON.stringify({ claims: [{ claim: 'Material is steel', importance: 'high' }] }),
+        })
+        .mockResolvedValueOnce({
+          text: JSON.stringify({ supports: true, contradicts: false, neutral: false, reasoning: '' }),
+        })
+        .mockResolvedValueOnce({
+          text: JSON.stringify({ supports: true, contradicts: false, neutral: false, reasoning: '' }),
+        });
 
       const result = await verifyCrossSourceTruth(extractions, aggregated);
 
       expect(result.passed).toBe(true);
-      expect(result.overallVerdict).toBe("ALL_VERIFIED");
+      expect(result.overallVerdict).toBe('ALL_VERIFIED');
     });
 
     it('detects conflicts between sources', async () => {
       const extractions: ExtractedData[] = [
-        { ...mockExtractedData, specifications: { material: "Steel" }, sourceUrl: "https://source1.com" },
-        { ...mockExtractedData, specifications: { material: "Aluminum" }, sourceUrl: "https://source2.com" },
+        { ...mockExtractedData, specifications: { material: 'Steel' }, sourceUrl: 'https://source1.com' },
+        { ...mockExtractedData, specifications: { material: 'Aluminum' }, sourceUrl: 'https://source2.com' },
       ];
 
       const aggregated = {
-        productName: "50mm Spacer Bar",
-        description: "Industrial spacer",
-        specifications: { material: "Steel" },
-        sources: ["https://source1.com", "https://source2.com"],
-        fieldSources: { material: { value: "Steel", agreedBy: ["https://source1.com"], confidence: "LOW" as const } },
+        productName: '50mm Spacer Bar',
+        description: 'Industrial spacer',
+        specifications: { material: 'Steel' },
+        sources: ['https://source1.com', 'https://source2.com'],
+        fieldSources: { material: { value: 'Steel', agreedBy: ['https://source1.com'], confidence: 'LOW' as const } },
       };
 
       // Mock equivalence check as conflict
@@ -765,81 +797,96 @@ describe('Gate 4: Cross-Source Truth Verification', () => {
           allEquivalent: false,
           compatible: false,
           resolvedValue: null,
-          reasoning: "Steel and Aluminum are different materials"
-        })
+          reasoning: 'Steel and Aluminum are different materials',
+        }),
       });
 
       const result = await verifyCrossSourceTruth(extractions, aggregated);
 
       expect(result.conflicts.length).toBeGreaterThan(0);
-      expect(result.conflicts[0].resolution).toBe("CONFLICT");
+      expect(result.conflicts[0].resolution).toBe('CONFLICT');
     });
 
     it('detects contradicted claims', async () => {
       const extractions: ExtractedData[] = [
-        { ...mockExtractedData, rawExtract: "Load capacity: 500kg" },
-        { ...mockExtractedData, rawExtract: "Load capacity: 200kg", sourceUrl: "https://source2.com" },
+        { ...mockExtractedData, rawExtract: 'Load capacity: 500kg' },
+        { ...mockExtractedData, rawExtract: 'Load capacity: 200kg', sourceUrl: 'https://source2.com' },
       ];
 
       const aggregated = {
-        productName: "Spacer",
-        description: "Load capacity is 500kg",
+        productName: 'Spacer',
+        description: 'Load capacity is 500kg',
         specifications: {},
-        sources: ["https://source1.com", "https://source2.com"],
+        sources: ['https://source1.com', 'https://source2.com'],
         fieldSources: {},
       };
 
       mockGenerateContent
-        .mockResolvedValueOnce({ text: JSON.stringify({ claims: [{ claim: "Load capacity is 500kg", importance: "high" }] }) })
-        .mockResolvedValueOnce({ text: JSON.stringify({ supports: true, contradicts: false, neutral: false, reasoning: '' }) })
-        .mockResolvedValueOnce({ text: JSON.stringify({ supports: false, contradicts: true, neutral: false, reasoning: 'Says 200kg not 500kg' }) });
+        .mockResolvedValueOnce({
+          text: JSON.stringify({ claims: [{ claim: 'Load capacity is 500kg', importance: 'high' }] }),
+        })
+        .mockResolvedValueOnce({
+          text: JSON.stringify({ supports: true, contradicts: false, neutral: false, reasoning: '' }),
+        })
+        .mockResolvedValueOnce({
+          text: JSON.stringify({
+            supports: false,
+            contradicts: true,
+            neutral: false,
+            reasoning: 'Says 200kg not 500kg',
+          }),
+        });
 
       const result = await verifyCrossSourceTruth(extractions, aggregated);
 
-      expect(result.truthChecks.some(t => t.verdict === "CONTRADICTED")).toBe(true);
+      expect(result.truthChecks.some((t) => t.verdict === 'CONTRADICTED')).toBe(true);
     });
   });
 
   describe('resolveConflicts', () => {
     it('uses highest trust source for conflicts', () => {
-      const conflicts = [{
-        field: "material",
-        values: [
-          { source: "https://ndspro.com", value: "Steel" },
-          { source: "https://random.com", value: "Plastic" },
-        ],
-        resolution: "CONFLICT" as const,
-        resolvedValue: null,
-        reasoning: "Different materials",
-      }];
+      const conflicts = [
+        {
+          field: 'material',
+          values: [
+            { source: 'https://ndspro.com', value: 'Steel' },
+            { source: 'https://random.com', value: 'Plastic' },
+          ],
+          resolution: 'CONFLICT' as const,
+          resolvedValue: null,
+          reasoning: 'Different materials',
+        },
+      ];
 
       const extractions: ExtractedData[] = [
-        { ...mockExtractedData, sourceUrl: "https://ndspro.com" },
-        { ...mockExtractedData, sourceUrl: "https://random.com" },
+        { ...mockExtractedData, sourceUrl: 'https://ndspro.com' },
+        { ...mockExtractedData, sourceUrl: 'https://random.com' },
       ];
 
       const { resolved, unresolved } = resolveConflicts(conflicts, extractions);
 
-      expect(resolved.material).toBe("Steel"); // Higher trust source
+      expect(resolved.material).toBe('Steel'); // Higher trust source
       expect(unresolved.length).toBe(0);
     });
   });
 
   describe('filterContradictedClaims', () => {
     it('removes sentences with contradicted claims', () => {
-      const description = "The product is made of steel. It has a load capacity of 500kg. Very durable.";
-      const truthChecks = [{
-        claim: "load capacity of 500kg",
-        supportedBy: [],
-        contradictedBy: ["https://source.com"],
-        verdict: "CONTRADICTED" as const,
-      }];
+      const description = 'The product is made of steel. It has a load capacity of 500kg. Very durable.';
+      const truthChecks = [
+        {
+          claim: 'load capacity of 500kg',
+          supportedBy: [],
+          contradictedBy: ['https://source.com'],
+          verdict: 'CONTRADICTED' as const,
+        },
+      ];
 
       const filtered = filterContradictedClaims(description, truthChecks);
 
-      expect(filtered).not.toContain("500kg");
-      expect(filtered).toContain("steel");
-      expect(filtered).toContain("durable");
+      expect(filtered).not.toContain('500kg');
+      expect(filtered).toContain('steel');
+      expect(filtered).toContain('durable');
     });
   });
 });
@@ -853,114 +900,115 @@ describe('Data Extraction', () => {
     it('aggregates data from multiple sources', () => {
       const extractions: ExtractedData[] = [
         {
-          sourceUrl: "https://source1.com",
-          productName: "Spacer Bar",
-          description: "Steel spacer",
-          specifications: { material: "Steel", dimensions: "50mm" },
+          sourceUrl: 'https://source1.com',
+          productName: 'Spacer Bar',
+          description: 'Steel spacer',
+          specifications: { material: 'Steel', dimensions: '50mm' },
           relatedProducts: [],
-          installationInfo: "",
-          certifications: ["ISO 9001"],
-          rawExtract: "",
+          installationInfo: '',
+          certifications: ['ISO 9001'],
+          rawExtract: '',
         },
         {
-          sourceUrl: "https://source2.com",
-          productName: "Spacer Bar",
-          description: "Industrial spacer bar",
-          specifications: { material: "Steel", finish: "Galvanized" },
+          sourceUrl: 'https://source2.com',
+          productName: 'Spacer Bar',
+          description: 'Industrial spacer bar',
+          specifications: { material: 'Steel', finish: 'Galvanized' },
           relatedProducts: [],
-          installationInfo: "",
-          certifications: ["CE"],
-          rawExtract: "",
+          installationInfo: '',
+          certifications: ['CE'],
+          rawExtract: '',
         },
       ];
 
       const trustLevels = new Map([
-        ["https://source1.com", 10],
-        ["https://source2.com", 8],
+        ['https://source1.com', 10],
+        ['https://source2.com', 8],
       ]);
 
       const result = aggregateExtractions(extractions, trustLevels);
 
-      expect(result.productName).toBe("Spacer Bar");
-      expect(result.specifications.material).toBe("Steel");
-      expect(result.specifications.dimensions).toBe("50mm");
-      expect(result.specifications.finish).toBe("Galvanized");
+      expect(result.productName).toBe('Spacer Bar');
+      expect(result.specifications.material).toBe('Steel');
+      expect(result.specifications.dimensions).toBe('50mm');
+      expect(result.specifications.finish).toBe('Galvanized');
       expect(result.sources).toHaveLength(2);
     });
 
     it('prefers higher trust sources', () => {
       const extractions: ExtractedData[] = [
         {
-          sourceUrl: "https://official.com",
-          productName: "Official Name",
-          description: "Official description",
+          sourceUrl: 'https://official.com',
+          productName: 'Official Name',
+          description: 'Official description',
           specifications: {},
           relatedProducts: [],
-          installationInfo: "",
+          installationInfo: '',
           certifications: [],
-          rawExtract: "",
+          rawExtract: '',
         },
         {
-          sourceUrl: "https://random.com",
-          productName: "Wrong Name",
-          description: "Random description",
+          sourceUrl: 'https://random.com',
+          productName: 'Wrong Name',
+          description: 'Random description',
           specifications: {},
           relatedProducts: [],
-          installationInfo: "",
+          installationInfo: '',
           certifications: [],
-          rawExtract: "",
+          rawExtract: '',
         },
       ];
 
       const trustLevels = new Map([
-        ["https://official.com", 10],
-        ["https://random.com", 4],
+        ['https://official.com', 10],
+        ['https://random.com', 4],
       ]);
 
       const result = aggregateExtractions(extractions, trustLevels);
 
-      expect(result.productName).toBe("Official Name");
+      expect(result.productName).toBe('Official Name');
     });
   });
 
   describe('extractFeatures', () => {
     it('extracts features from specifications', () => {
-      const specs = { material: "Steel", dimensions: "50mm", finish: "Matte" };
-      const description = "Can be installed with nail or glue";
+      const specs = { material: 'Steel', dimensions: '50mm', finish: 'Matte' };
+      const description = 'Can be installed with nail or glue';
 
       const features = extractFeatures(specs, description);
 
-      expect(features.material).toBe("Steel");
-      expect(features.finish).toBe("Matte");
-      expect((features.installation as string[])).toContain("nail");
-      expect((features.installation as string[])).toContain("glue");
+      expect(features.material).toBe('Steel');
+      expect(features.finish).toBe('Matte');
+      expect(features.installation as string[]).toContain('nail');
+      expect(features.installation as string[]).toContain('glue');
     });
   });
 
   describe('extractBenefits', () => {
     it('extracts benefits from description', () => {
-      const description = "This durable product is easy to install and water-resistant. It is eco-friendly and long-lasting.";
+      const description =
+        'This durable product is easy to install and water-resistant. It is eco-friendly and long-lasting.';
 
       const benefits = extractBenefits(description);
 
-      expect(benefits).toContain("Durable");
-      expect(benefits.some(b => b.toLowerCase().includes("water"))).toBe(true);
-      expect(benefits.some(b => b.toLowerCase().includes("eco"))).toBe(true);
+      expect(benefits).toContain('Durable');
+      expect(benefits.some((b) => b.toLowerCase().includes('water'))).toBe(true);
+      expect(benefits.some((b) => b.toLowerCase().includes('eco'))).toBe(true);
     });
   });
 
   describe('extractTags', () => {
     it('extracts tags from various sources', () => {
-      const specs = { material: "steel", style: "industrial" };
-      const description = "Perfect for construction and outdoor use";
-      const productName = "Heavy Duty Spacer";
+      const specs = { material: 'steel', style: 'industrial' };
+      const description = 'Perfect for construction and outdoor use';
+      const productName = 'Heavy Duty Spacer';
 
       const tags = extractTags(specs, description, productName);
 
-      expect(tags).toContain("steel");
-      expect(tags).toContain("industrial");
-      expect(tags).toContain("construction");
-      expect(tags).toContain("outdoor");
+      expect(tags).toContain('steel');
+      expect(tags).toContain('industrial');
+      expect(tags).toContain('construction');
+      expect(tags).toContain('outdoor');
     });
   });
 });
@@ -975,27 +1023,27 @@ describe('Pipeline Integration (Mocked)', () => {
     mockFetch.mockResolvedValue({
       ok: true,
       arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
-      text: () => Promise.resolve("<html>Product page</html>"),
+      text: () => Promise.resolve('<html>Product page</html>'),
     });
   });
 
-  it('processes a product through all gates', async () => {
+  it('processes a product through all gates', { timeout: 15000 }, async () => {
     // Setup mocks for full pipeline
     mockStorage.getProductById.mockResolvedValue({
-      id: "prod-123",
-      name: "50mm Spacer Bar",
-      cloudinaryUrl: "https://cloudinary.com/image.jpg",
-      cloudinaryPublicId: "image",
+      id: 'prod-123',
+      name: '50mm Spacer Bar',
+      cloudinaryUrl: 'https://cloudinary.com/image.jpg',
+      cloudinaryPublicId: 'image',
     });
 
     mockStorage.getProductAnalysisByProductId.mockResolvedValue({
-      category: "Construction",
-      subcategory: "Reinforcement",
-      materials: ["Steel"],
-      colors: ["Silver"],
-      style: "Industrial",
-      usageContext: "Construction",
-      targetDemographic: "Contractors",
+      category: 'Construction',
+      subcategory: 'Reinforcement',
+      materials: ['Steel'],
+      colors: ['Silver'],
+      style: 'Industrial',
+      usageContext: 'Construction',
+      targetDemographic: 'Contractors',
       confidence: 85,
     });
 
@@ -1004,32 +1052,32 @@ describe('Pipeline Integration (Mocked)', () => {
       text: JSON.stringify({
         similar: true,
         confidence: 90,
-        reasoning: "Match",
+        reasoning: 'Match',
         allEquivalent: true,
         compatible: true,
-        resolvedValue: "Steel",
+        resolvedValue: 'Steel',
         supports: true,
         contradicts: false,
         neutral: false,
-        productName: "50mm Spacer",
-        description: "Steel spacer",
-        specifications: { material: "Steel" },
+        productName: '50mm Spacer',
+        description: 'Steel spacer',
+        specifications: { material: 'Steel' },
         claims: [],
-      })
+      }),
     });
 
     mockStorage.updateProduct.mockResolvedValue(undefined);
     mockStorage.getProductById
       .mockResolvedValueOnce({
-        id: "prod-123",
-        name: "50mm Spacer Bar",
-        cloudinaryUrl: "https://cloudinary.com/image.jpg",
-        cloudinaryPublicId: "image",
+        id: 'prod-123',
+        name: '50mm Spacer Bar',
+        cloudinaryUrl: 'https://cloudinary.com/image.jpg',
+        cloudinaryPublicId: 'image',
       })
       .mockResolvedValue({
-        id: "prod-123",
-        description: "Steel spacer",
-        specifications: { material: "Steel" },
+        id: 'prod-123',
+        description: 'Steel spacer',
+        specifications: { material: 'Steel' },
         features: null,
         benefits: null,
         tags: null,
@@ -1039,12 +1087,12 @@ describe('Pipeline Integration (Mocked)', () => {
     const { runEnrichmentPipeline } = await import('../services/enrichment/pipeline');
 
     const result = await runEnrichmentPipeline({
-      productId: "prod-123",
+      productId: 'prod-123',
       config: mockConfig,
     });
 
     expect(result.success).toBeDefined();
     expect(result.report).toBeDefined();
-    expect(result.report.productId).toBe("prod-123");
+    expect(result.report.productId).toBe('prod-123');
   });
 });

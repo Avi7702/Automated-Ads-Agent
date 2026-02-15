@@ -2,30 +2,92 @@ import { Page, Locator, expect } from '@playwright/test';
 
 /**
  * Page Object for the consolidated Settings page (/settings)
- * Handles all interactions with the settings interface
+ * Handles all interactions with the settings interface.
+ *
+ * Sections: Brand Profile, Knowledge Base, API Keys, Strategy, Usage & Quotas
  */
 export class SettingsPage {
   readonly page: Page;
   readonly header: Locator;
   readonly pageTitle: Locator;
-  readonly brandSection: Locator;
-  readonly apiKeysSection: Locator;
-  readonly usageSection: Locator;
+  readonly pageDescription: Locator;
+
+  // Section navigation buttons (sidebar)
   readonly brandNav: Locator;
+  readonly knowledgeBaseNav: Locator;
   readonly apiKeysNav: Locator;
+  readonly strategyNav: Locator;
   readonly usageNav: Locator;
+
+  // Content area
+  readonly contentArea: Locator;
+  readonly sectionLoading: Locator;
+
+  // Brand Profile form locators
+  readonly brandCompanyNameInput: Locator;
+  readonly brandIndustryInput: Locator;
+  readonly brandVoiceTextarea: Locator;
+  readonly brandSaveButton: Locator;
+
+  // API Keys section locators
+  readonly addApiKeyButton: Locator;
+  readonly apiKeyDialog: Locator;
+  readonly apiKeyNameInput: Locator;
+  readonly apiKeyValueInput: Locator;
+  readonly apiKeySaveButton: Locator;
+
+  // Strategy section locators
+  readonly strategyContent: Locator;
+
+  // Knowledge Base section locators
+  readonly knowledgeBaseContent: Locator;
+
+  // Usage section locators
+  readonly usageContent: Locator;
 
   constructor(page: Page) {
     this.page = page;
     this.header = page.locator('header').first();
-    this.pageTitle = page.locator('h1').filter({ hasText: /Settings|Brand Profile/i });
-    this.brandSection = page.locator('[data-section="brand"]');
-    this.apiKeysSection = page.locator('[data-section="api-keys"]');
-    this.usageSection = page.locator('[data-section="usage"]');
-    // Navigation buttons/links
-    this.brandNav = page.getByRole('button', { name: /Brand/i }).or(page.getByRole('tab', { name: /Brand/i }));
-    this.apiKeysNav = page.getByRole('button', { name: /API Keys/i }).or(page.getByRole('tab', { name: /API Keys/i }));
-    this.usageNav = page.getByRole('button', { name: /Usage/i }).or(page.getByRole('tab', { name: /Usage/i }));
+    this.pageTitle = page.locator('h1').filter({ hasText: /Settings/i });
+    this.pageDescription = page.getByText('Configure your account and preferences');
+
+    // Navigation sidebar buttons — match the Settings.tsx sections array
+    this.brandNav = page.getByRole('button', { name: /Brand Profile/i });
+    this.knowledgeBaseNav = page.getByRole('button', { name: /Knowledge Base/i });
+    this.apiKeysNav = page.getByRole('button', { name: /API Keys/i });
+    this.strategyNav = page.getByRole('button', { name: /Strategy/i });
+    this.usageNav = page.getByRole('button', { name: /Usage/i });
+
+    // Content area (right side)
+    this.contentArea = page.locator('.bg-card.rounded-lg.border');
+    this.sectionLoading = page.locator('.animate-spin');
+
+    // Brand Profile form fields (rendered inside BrandProfile component)
+    this.brandCompanyNameInput = page
+      .getByLabel(/Company Name/i)
+      .or(page.locator('input[name="companyName"]'))
+      .or(page.getByPlaceholder(/company name/i));
+    this.brandIndustryInput = page
+      .getByLabel(/Industry/i)
+      .or(page.locator('input[name="industry"]'))
+      .or(page.getByPlaceholder(/industry/i));
+    this.brandVoiceTextarea = page
+      .getByLabel(/Brand Voice/i)
+      .or(page.locator('textarea[name="brandVoice"]'))
+      .or(page.getByPlaceholder(/brand voice/i));
+    this.brandSaveButton = page.getByRole('button', { name: /Save|Update/i });
+
+    // API Keys section
+    this.addApiKeyButton = page.getByRole('button', { name: /Add|New/i }).filter({ hasText: /Key|API/i });
+    this.apiKeyDialog = page.locator('[role="dialog"]').filter({ hasText: /API Key/i });
+    this.apiKeyNameInput = page.locator('[role="dialog"] input').first();
+    this.apiKeyValueInput = page.locator('[role="dialog"] input').last();
+    this.apiKeySaveButton = page.locator('[role="dialog"]').getByRole('button', { name: /Save|Add/i });
+
+    // Section content areas
+    this.strategyContent = this.contentArea;
+    this.knowledgeBaseContent = this.contentArea;
+    this.usageContent = this.contentArea;
   }
 
   /**
@@ -52,7 +114,11 @@ export class SettingsPage {
       await this.page.waitForSelector('h1', { timeout: 10000 });
       const titleVisible = await this.pageTitle.isVisible().catch(() => false);
       // Also check for Brand Profile content which is the default section
-      const brandFormVisible = await this.page.locator('form').first().isVisible().catch(() => false);
+      const brandFormVisible = await this.page
+        .locator('form')
+        .first()
+        .isVisible()
+        .catch(() => false);
       return titleVisible || brandFormVisible;
     } catch {
       return false;
@@ -68,16 +134,19 @@ export class SettingsPage {
   }
 
   /**
-   * Click on a specific section
+   * Click on a specific section in the sidebar
    */
-  async clickSection(section: 'brand' | 'api-keys' | 'usage') {
+  async clickSection(section: 'brand' | 'knowledge-base' | 'api-keys' | 'strategy' | 'usage') {
     const sectionMap = {
-      'brand': this.brandNav,
+      brand: this.brandNav,
+      'knowledge-base': this.knowledgeBaseNav,
       'api-keys': this.apiKeysNav,
-      'usage': this.usageNav,
+      strategy: this.strategyNav,
+      usage: this.usageNav,
     };
     if (await sectionMap[section].isVisible().catch(() => false)) {
       await sectionMap[section].click();
+      await this.waitForSectionContent();
     }
   }
 

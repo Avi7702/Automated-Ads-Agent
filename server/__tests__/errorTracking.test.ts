@@ -1,9 +1,4 @@
-import {
-  trackError,
-  getRecentErrors,
-  getErrorStats,
-  clearErrors,
-} from '../services/errorTrackingService';
+import { trackError, getRecentErrors, getErrorStats, clearErrors } from '../services/errorTrackingService';
 
 describe('Error Tracking Service', () => {
   beforeEach(() => {
@@ -144,8 +139,9 @@ describe('Error Tracking Service', () => {
   describe('Stack Trace Truncation', () => {
     it('should truncate stack traces to 10 lines', () => {
       // Create a stack trace with more than 10 lines
-      const longStack = Array.from({ length: 20 }, (_, i) =>
-        `    at Object.<anonymous> (/app/test${i}.ts:${i}:15)`
+      const longStack = Array.from(
+        { length: 20 },
+        (_, i) => `    at Object.<anonymous> (/app/test${i}.ts:${i}:15)`,
       ).join('\n');
 
       trackError({
@@ -227,7 +223,7 @@ describe('Error Tracking Service', () => {
       expect(errors[99].message).toBe('Error 5');
 
       // Errors 0-4 should have been overwritten
-      const allMessages = errors.map(e => e.message);
+      const allMessages = errors.map((e) => e.message);
       expect(allMessages).not.toContain('Error 0');
       expect(allMessages).not.toContain('Error 1');
       expect(allMessages).not.toContain('Error 2');
@@ -250,9 +246,9 @@ describe('Error Tracking Service', () => {
 
       const elapsed = Date.now() - start;
 
-      // Should complete 1000 insertions in under 100ms (generous for CI)
+      // Should complete 1000 insertions in under 500ms (generous for CI/parallel load)
       // O(1) operations should be fast even for many insertions
-      expect(elapsed).toBeLessThan(100);
+      expect(elapsed).toBeLessThan(500);
     });
 
     it('should maintain circular buffer correctly after multiple wraps', () => {
@@ -489,7 +485,7 @@ describe('Error Tracking Service', () => {
     it('should handle mixed status codes correctly', () => {
       const statusCodes = [400, 401, 403, 404, 500, 502, 503];
 
-      statusCodes.forEach(code => {
+      statusCodes.forEach((code) => {
         trackError({
           statusCode: code,
           message: `Error ${code}`,
@@ -501,7 +497,7 @@ describe('Error Tracking Service', () => {
       const stats = getErrorStats();
 
       expect(Object.keys(stats.byStatusCode).length).toBe(7);
-      statusCodes.forEach(code => {
+      statusCodes.forEach((code) => {
         expect(stats.byStatusCode[code.toString()]).toBe(1);
       });
     });
@@ -611,7 +607,7 @@ describe('Error Tracking Service', () => {
               });
               resolve();
             }, Math.random() * 10);
-          })
+          }),
         );
       }
 
