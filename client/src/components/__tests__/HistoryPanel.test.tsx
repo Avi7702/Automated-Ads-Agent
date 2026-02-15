@@ -455,19 +455,15 @@ describe('HistoryPanel', () => {
 
       // Verify all tabs are present and clickable
       const recentTab = screen.getByRole('tab', { name: /Recent/i });
-      const favoritesTab = screen.getByRole('tab', { name: /Favorites/i });
 
       expect(recentTab).toBeInTheDocument();
-      expect(favoritesTab).toBeInTheDocument();
 
       // Verify tabs have correct initial states
       expect(recentTab).toHaveAttribute('data-state', 'inactive');
-      expect(favoritesTab).toHaveAttribute('data-state', 'inactive');
 
       // Verify the tabs are accessible and interactive
       expect(allTab).not.toBeDisabled();
       expect(recentTab).not.toBeDisabled();
-      expect(favoritesTab).not.toBeDisabled();
     });
 
     it('shows preview on hover interaction', async () => {

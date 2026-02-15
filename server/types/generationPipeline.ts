@@ -32,6 +32,8 @@ export interface GenerationInput {
   styleReferenceIds?: string[];
   resolution: '1K' | '2K' | '4K';
   userId: string;
+  aspectRatio?: string; // e.g. '1:1', '4:5', '16:9'
+  productIds?: string[]; // Product IDs for Stage 2 context
 }
 
 // ============================================
