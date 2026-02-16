@@ -1,7 +1,8 @@
-
 import request from 'supertest';
 import bcrypt from 'bcrypt';
+import argon2 from '@node-rs/argon2';
 import { app } from '../app';
+import { authService } from '../services/authService';
 import { storage } from '../storage';
 
 // Helper function to get cookies from response
@@ -14,7 +15,7 @@ function getCookies(res: request.Response): string[] {
 
 function getSessionCookie(res: request.Response): string | undefined {
   const cookies = getCookies(res);
-  return cookies.find(c => c.startsWith('sessionId='));
+  return cookies.find((c) => c.startsWith('sessionId='));
 }
 
 function extractSessionId(cookie: string): string | undefined {
@@ -23,24 +24,28 @@ function extractSessionId(cookie: string): string | undefined {
 
 describe('Authentication System', () => {
   describe('Password Security', () => {
-    it('should hash passwords with bcrypt cost factor 12+', async () => {
+    it('should hash passwords with argon2id', async () => {
       const password = 'TestPassword123!';
-      const hash = await bcrypt.hash(password, 12);
-      const rounds = bcrypt.getRounds(hash);
+      const hash = await argon2.hash(password, { memoryCost: 19456, timeCost: 2, parallelism: 1 });
+      expect(hash).toMatch(/^\$argon2id\$/);
+      const valid = await argon2.verify(hash, password);
+      expect(valid).toBe(true);
+    });
+
+    it('should still verify legacy bcrypt hashes', async () => {
+      const password = 'TestPassword123!';
+      const bcryptHash = await bcrypt.hash(password, 12);
+      const rounds = bcrypt.getRounds(bcryptHash);
       expect(rounds).toBeGreaterThanOrEqual(12);
+      const valid = await bcrypt.compare(password, bcryptHash);
+      expect(valid).toBe(true);
     });
 
     it('should reject passwords shorter than 8 characters', async () => {
-      const res = await request(app)
-        .post('/api/auth/register')
-        .send({ email: 'test@test.com', password: 'short' });
+      const res = await request(app).post('/api/auth/register').send({ email: 'test@test.com', password: 'short' });
       expect(res.status).toBe(400);
       expect(res.body.error).toBe('Validation failed');
-      expect(res.body.details).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ field: 'password' })
-        ])
-      );
+      expect(res.body.details).toEqual(expect.arrayContaining([expect.objectContaining({ field: 'password' })]));
     });
 
     it('should never expose password hash in responses', async () => {
@@ -59,6 +64,29 @@ describe('Authentication System', () => {
       expect(loginRes.body.passwordHash).toBeUndefined();
       expect(loginRes.body.user?.passwordHash).toBeUndefined();
     });
+
+    it('should verify bcrypt hash and return argon2 re-hash via comparePasswordWithRehash', async () => {
+      const password = 'TestPassword123!';
+      const bcryptHash = await bcrypt.hash(password, 12);
+
+      // Verify hybrid detection works with bcrypt hash
+      const result = await authService.comparePasswordWithRehash(password, bcryptHash);
+      expect(result.valid).toBe(true);
+      expect(result.newHash).toBeDefined();
+      expect(result.newHash).toMatch(/^\$argon2id\$/);
+
+      // Verify the new argon2 hash is valid
+      const argon2Result = await authService.comparePasswordWithRehash(password, result.newHash!);
+      expect(argon2Result.valid).toBe(true);
+      expect(argon2Result.newHash).toBeUndefined();
+    });
+
+    it('should reject wrong password for bcrypt hash via comparePasswordWithRehash', async () => {
+      const bcryptHash = await bcrypt.hash('CorrectPassword123!', 12);
+      const result = await authService.comparePasswordWithRehash('WrongPassword123!', bcryptHash);
+      expect(result.valid).toBe(false);
+      expect(result.newHash).toBeUndefined();
+    });
   });
 
   describe('Registration', () => {
@@ -75,13 +103,13 @@ describe('Authentication System', () => {
       const user = await storage.getUserByEmail('new@test.com');
       expect(user).toBeDefined();
       expect(user!.passwordHash).not.toBe('ValidPassword123!');
-      expect(await bcrypt.compare('ValidPassword123!', user!.passwordHash)).toBe(true);
+      // New registrations use argon2, verify with argon2
+      expect(user!.passwordHash).toMatch(/^\$argon2/);
+      expect(await argon2.verify(user!.passwordHash, 'ValidPassword123!')).toBe(true);
     });
 
     it('should reject duplicate email', async () => {
-      await request(app)
-        .post('/api/auth/register')
-        .send({ email: 'dupe@test.com', password: 'ValidPassword123!' });
+      await request(app).post('/api/auth/register').send({ email: 'dupe@test.com', password: 'ValidPassword123!' });
 
       const res = await request(app)
         .post('/api/auth/register')
@@ -98,19 +126,13 @@ describe('Authentication System', () => {
 
       expect(res.status).toBe(400);
       expect(res.body.error).toBe('Validation failed');
-      expect(res.body.details).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ field: 'email' })
-        ])
-      );
+      expect(res.body.details).toEqual(expect.arrayContaining([expect.objectContaining({ field: 'email' })]));
     });
   });
 
   describe('Login', () => {
     beforeEach(async () => {
-      await request(app)
-        .post('/api/auth/register')
-        .send({ email: 'login@test.com', password: 'ValidPassword123!' });
+      await request(app).post('/api/auth/register').send({ email: 'login@test.com', password: 'ValidPassword123!' });
     });
 
     it('should succeed with correct credentials', async () => {
@@ -147,9 +169,7 @@ describe('Authentication System', () => {
     it('should lock account after 5 failed attempts', async () => {
       // Make 5 failed attempts
       for (let i = 0; i < 5; i++) {
-        await request(app)
-          .post('/api/auth/login')
-          .send({ email: 'login@test.com', password: 'WrongPassword!' });
+        await request(app).post('/api/auth/login').send({ email: 'login@test.com', password: 'WrongPassword!' });
       }
 
       // 6th attempt with correct password should be locked
@@ -163,17 +183,11 @@ describe('Authentication System', () => {
 
     it('should reset failed attempts on successful login', async () => {
       // Make 2 failed attempts
-      await request(app)
-        .post('/api/auth/login')
-        .send({ email: 'login@test.com', password: 'WrongPassword!' });
-      await request(app)
-        .post('/api/auth/login')
-        .send({ email: 'login@test.com', password: 'WrongPassword!' });
+      await request(app).post('/api/auth/login').send({ email: 'login@test.com', password: 'WrongPassword!' });
+      await request(app).post('/api/auth/login').send({ email: 'login@test.com', password: 'WrongPassword!' });
 
       // Successful login should reset counter
-      await request(app)
-        .post('/api/auth/login')
-        .send({ email: 'login@test.com', password: 'ValidPassword123!' });
+      await request(app).post('/api/auth/login').send({ email: 'login@test.com', password: 'ValidPassword123!' });
 
       const user = await storage.getUserByEmail('login@test.com');
       expect(user!.failedLoginAttempts).toBe(0);
@@ -182,9 +196,7 @@ describe('Authentication System', () => {
 
   describe('Session Management', () => {
     it('should store session in database', async () => {
-      await request(app)
-        .post('/api/auth/register')
-        .send({ email: 'session@test.com', password: 'ValidPassword123!' });
+      await request(app).post('/api/auth/register').send({ email: 'session@test.com', password: 'ValidPassword123!' });
 
       const loginRes = await request(app)
         .post('/api/auth/login')
@@ -203,9 +215,7 @@ describe('Authentication System', () => {
 
     it('should invalidate session on logout', async () => {
       // Register and login
-      await request(app)
-        .post('/api/auth/register')
-        .send({ email: 'logout@test.com', password: 'ValidPassword123!' });
+      await request(app).post('/api/auth/register').send({ email: 'logout@test.com', password: 'ValidPassword123!' });
 
       const loginRes = await request(app)
         .post('/api/auth/login')
@@ -214,22 +224,16 @@ describe('Authentication System', () => {
       const sessionCookie = getSessionCookie(loginRes);
 
       // Logout
-      await request(app)
-        .post('/api/auth/logout')
-        .set('Cookie', sessionCookie!);
+      await request(app).post('/api/auth/logout').set('Cookie', sessionCookie!);
 
       // Try to access protected route
-      const res = await request(app)
-        .get('/api/auth/me')
-        .set('Cookie', sessionCookie!);
+      const res = await request(app).get('/api/auth/me').set('Cookie', sessionCookie!);
 
       expect(res.status).toBe(401);
     });
 
     it('should reject expired sessions', async () => {
-      await request(app)
-        .post('/api/auth/register')
-        .send({ email: 'expire@test.com', password: 'ValidPassword123!' });
+      await request(app).post('/api/auth/register').send({ email: 'expire@test.com', password: 'ValidPassword123!' });
 
       const loginRes = await request(app)
         .post('/api/auth/login')
@@ -241,9 +245,7 @@ describe('Authentication System', () => {
       // Manually expire the session
       await storage.expireSession(sessionId!);
 
-      const res = await request(app)
-        .get('/api/auth/me')
-        .set('Cookie', sessionCookie!);
+      const res = await request(app).get('/api/auth/me').set('Cookie', sessionCookie!);
 
       expect(res.status).toBe(401);
     });
@@ -267,9 +269,7 @@ describe('Authentication System', () => {
 
       const sessionCookie = getSessionCookie(loginRes);
 
-      const res = await request(app)
-        .get('/api/auth/me')
-        .set('Cookie', sessionCookie!);
+      const res = await request(app).get('/api/auth/me').set('Cookie', sessionCookie!);
 
       expect(res.status).toBe(200);
       expect(res.body.user.email).toBe('protected@test.com');
@@ -277,9 +277,7 @@ describe('Authentication System', () => {
     });
 
     it('should return 401 with invalid session cookie', async () => {
-      const res = await request(app)
-        .get('/api/auth/me')
-        .set('Cookie', 'sessionId=invalid-session-id');
+      const res = await request(app).get('/api/auth/me').set('Cookie', 'sessionId=invalid-session-id');
 
       expect(res.status).toBe(401);
     });
@@ -287,9 +285,7 @@ describe('Authentication System', () => {
 
   describe('Cookie Security', () => {
     it('should set httpOnly cookie', async () => {
-      await request(app)
-        .post('/api/auth/register')
-        .send({ email: 'cookie@test.com', password: 'ValidPassword123!' });
+      await request(app).post('/api/auth/register').send({ email: 'cookie@test.com', password: 'ValidPassword123!' });
 
       const res = await request(app)
         .post('/api/auth/login')
@@ -312,9 +308,7 @@ describe('Authentication System', () => {
 
       const sessionCookie = getSessionCookie(loginRes);
 
-      const logoutRes = await request(app)
-        .post('/api/auth/logout')
-        .set('Cookie', sessionCookie!);
+      const logoutRes = await request(app).post('/api/auth/logout').set('Cookie', sessionCookie!);
 
       const clearedCookie = getSessionCookie(logoutRes);
 
@@ -341,9 +335,7 @@ describe('Authentication System', () => {
     });
 
     it('should protect POST /api/products without auth', async () => {
-      const res = await request(app)
-        .post('/api/products')
-        .send({ name: 'Test Product' });
+      const res = await request(app).post('/api/products').send({ name: 'Test Product' });
 
       expect(res.status).toBe(401);
     });
@@ -359,8 +351,7 @@ describe('Authentication System', () => {
     });
 
     it('should protect DELETE /api/products without auth', async () => {
-      const res = await request(app)
-        .delete('/api/products');
+      const res = await request(app).delete('/api/products');
 
       expect(res.status).toBe(401);
     });
