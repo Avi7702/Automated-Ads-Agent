@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Generations Router
  * Generation CRUD, job management, and SSE streaming
@@ -18,11 +18,12 @@ import type { Router, Request, Response } from 'express';
 import type { RouterContext, RouterFactory, RouterModule } from '../types/router';
 import { createRouter, asyncHandler } from './utils/createRouter';
 import { JobType, JobProgress, VIDEO_JOB_OPTIONS } from '../jobs/types';
+import type { EditJobData, VideoGenerateJobData } from '../jobs/types';
 import { getGlobalGeminiClient } from '../lib/geminiClient';
 
 export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => {
   const router = createRouter();
-  const { storage, logger, generationQueue, generationQueueEvents, genAIText, telemetry } = ctx.services;
+  const { storage, logger, generationQueue, telemetry } = ctx.services;
   const { requireAuth } = ctx.middleware;
   const { toGenerationDTO, toGenerationDTOArray, deleteFile } = ctx.utils;
 
@@ -34,7 +35,9 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const limit = parseInt(req.query.limit as string) || 50;
+        const limitQuery = req.query['limit'];
+        const limitValue = Array.isArray(limitQuery) ? limitQuery[0] : limitQuery;
+        const limit = Number.parseInt(typeof limitValue === 'string' ? limitValue : '', 10) || 50;
         const allGenerations = await storage.getGenerations(limit);
         res.json(toGenerationDTOArray(allGenerations));
       } catch (error: any) {
@@ -52,7 +55,12 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const generation = await storage.getGenerationById(req.params.id);
+        const generationId = req.params['id'];
+        if (typeof generationId !== 'string') {
+          return res.status(400).json({ error: 'Generation ID is required' });
+        }
+
+        const generation = await storage.getGenerationById(generationId);
         if (!generation) {
           return res.status(404).json({ error: 'Generation not found' });
         }
@@ -72,7 +80,10 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const { id } = req.params;
+        const id = req.params['id'];
+        if (typeof id !== 'string') {
+          return res.status(400).json({ error: 'Generation ID is required' });
+        }
 
         const generation = await storage.getGenerationById(id);
         if (!generation) {
@@ -102,7 +113,12 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const generation = await storage.getGenerationById(req.params.id);
+        const generationId = req.params['id'];
+        if (typeof generationId !== 'string') {
+          return res.status(400).json({ error: 'Generation ID is required' });
+        }
+
+        const generation = await storage.getGenerationById(generationId);
         if (!generation) {
           return res.status(404).json({ error: 'Generation not found' });
         }
@@ -114,7 +130,7 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
         }
 
         // Delete from database
-        await storage.deleteGeneration(req.params.id);
+        await storage.deleteGeneration(generationId);
 
         res.json({ success: true });
       } catch (error: any) {
@@ -135,9 +151,14 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
       const userId = (req as any).session?.userId;
 
       try {
-        const { id } = req.params;
+        const id = req.params['id'];
         const { editPrompt } = req.body;
-        const generationId = id;
+        if (typeof id !== 'string') {
+          return res.status(400).json({
+            success: false,
+            error: 'Generation ID is required',
+          });
+        }
 
         // Validate input
         if (!editPrompt || editPrompt.trim().length === 0) {
@@ -184,14 +205,16 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
         );
 
         // Enqueue job for background processing
-        const job = await generationQueue.add('edit-generation', {
+        const editJobName = JobType.EDIT as Parameters<typeof generationQueue.add>[0];
+        const editJobData: EditJobData = {
           jobType: JobType.EDIT,
-          userId: userId || 'anonymous',
+          userId: typeof userId === 'string' && userId.length > 0 ? userId : 'anonymous',
           generationId: newGeneration.id,
-          editPrompt: editPrompt.trim(),
+          editPrompt: String(editPrompt).trim(),
           originalImageUrl: parentGeneration.generatedImagePath,
           createdAt: new Date().toISOString(),
-        });
+        };
+        const job = await generationQueue.add(editJobName, editJobData as Parameters<typeof generationQueue.add>[1]);
 
         logger.info({ module: 'Edit', jobId: job.id, generationId: newGeneration.id }, 'Edit job enqueued');
 
@@ -230,8 +253,14 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const { id } = req.params;
+        const id = req.params['id'];
         const { question } = req.body;
+        if (typeof id !== 'string') {
+          return res.status(400).json({
+            success: false,
+            error: 'Generation ID is required',
+          });
+        }
 
         if (!question || question.trim().length === 0) {
           return res.status(400).json({
@@ -314,8 +343,6 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
         }
 
         // Build multimodal prompt
-        const model = getGlobalGeminiClient().getGenerativeModel({ model: 'gemini-3-flash' });
-
         const parts: any[] = [
           {
             text: `You are an AI assistant analyzing an image transformation.
@@ -351,9 +378,17 @@ Please analyze the transformation and answer the user's question.`,
           parts.push({ text: '[Generated/transformed image]' });
         }
 
-        const result = await model.generateContent(parts);
-        const response = await result.response;
-        const answer = response.text();
+        const result = await getGlobalGeminiClient().models.generateContent({
+          model: 'gemini-3-flash',
+          contents: [{ role: 'user', parts }],
+        });
+        const answer = result.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!answer) {
+          return res.status(500).json({
+            success: false,
+            error: 'AI did not return a response',
+          });
+        }
 
         res.json({
           success: true,
@@ -383,29 +418,41 @@ Please analyze the transformation and answer the user's question.`,
 
       try {
         const { prompt, duration, aspectRatio, videoResolution, sourceImageUrl } = req.body;
+        const promptText = typeof prompt === 'string' ? prompt.trim() : '';
 
-        if (!prompt || prompt.trim().length === 0) {
+        if (!promptText) {
           return res.status(400).json({ error: 'Prompt is required for video generation' });
         }
 
         // Validate duration
-        const validDurations = ['4', '6', '8'];
-        const finalDuration = validDurations.includes(duration) ? duration : '8';
+        const validDurations = ['4', '6', '8'] as const;
+        const durationValue = typeof duration === 'string' ? duration : '';
+        const finalDuration = (validDurations as readonly string[]).includes(durationValue)
+          ? (durationValue as (typeof validDurations)[number])
+          : '8';
 
         // Validate aspect ratio
-        const validAspectRatios = ['16:9', '9:16'];
-        const finalAspectRatio = validAspectRatios.includes(aspectRatio) ? aspectRatio : '16:9';
+        const validAspectRatios = ['16:9', '9:16'] as const;
+        const aspectRatioValue = typeof aspectRatio === 'string' ? aspectRatio : '';
+        const finalAspectRatio = (validAspectRatios as readonly string[]).includes(aspectRatioValue)
+          ? (aspectRatioValue as (typeof validAspectRatios)[number])
+          : '16:9';
 
         // Validate resolution
-        const validResolutions = ['720p', '1080p', '4k'];
-        const finalResolution = validResolutions.includes(videoResolution) ? videoResolution : '720p';
+        const validResolutions = ['720p', '1080p', '4k'] as const;
+        const resolutionValue = typeof videoResolution === 'string' ? videoResolution : '';
+        const finalResolution = (validResolutions as readonly string[]).includes(resolutionValue)
+          ? (resolutionValue as (typeof validResolutions)[number])
+          : '720p';
+        const normalizedSourceImageUrl =
+          typeof sourceImageUrl === 'string' && sourceImageUrl.length > 0 ? sourceImageUrl : undefined;
 
         // Create generation record (status: pending, mediaType: video)
         const generation = await storage.saveGeneration({
           userId: userId || undefined,
-          prompt: prompt.trim(),
+          prompt: promptText,
           generatedImagePath: '', // Placeholder — updated by worker
-          originalImagePaths: sourceImageUrl ? [sourceImageUrl] : [],
+          originalImagePaths: normalizedSourceImageUrl ? [normalizedSourceImageUrl] : [],
           resolution: finalResolution,
           status: 'pending',
           mediaType: 'video',
@@ -413,23 +460,21 @@ Please analyze the transformation and answer the user's question.`,
         });
 
         // Enqueue video generation job with longer timeout
-        const job = await generationQueue.add(
-          'video-generation',
-          {
-            jobType: JobType.GENERATE_VIDEO,
-            userId: userId || 'anonymous',
-            generationId: generation.id,
-            prompt: prompt.trim(),
-            duration: finalDuration,
-            aspectRatio: finalAspectRatio,
-            videoResolution: finalResolution,
-            sourceImageUrl: sourceImageUrl || undefined,
-            createdAt: new Date().toISOString(),
-          },
-          {
-            ...VIDEO_JOB_OPTIONS,
-          },
-        );
+        const videoJobName = JobType.GENERATE_VIDEO as Parameters<typeof generationQueue.add>[0];
+        const videoJobData: VideoGenerateJobData = {
+          jobType: JobType.GENERATE_VIDEO,
+          userId: typeof userId === 'string' && userId.length > 0 ? userId : 'anonymous',
+          generationId: generation.id,
+          prompt: promptText,
+          duration: finalDuration,
+          aspectRatio: finalAspectRatio,
+          videoResolution: finalResolution,
+          ...(normalizedSourceImageUrl ? { sourceImageUrl: normalizedSourceImageUrl } : {}),
+          createdAt: new Date().toISOString(),
+        };
+        const job = await generationQueue.add(videoJobName, videoJobData as Parameters<typeof generationQueue.add>[1], {
+          ...VIDEO_JOB_OPTIONS,
+        });
 
         logger.info({ jobId: job.id, generationId: generation.id }, 'Video generation job enqueued');
 
@@ -467,7 +512,13 @@ export const jobsRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/:jobId',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const { jobId } = req.params;
+        const jobId = req.params['jobId'];
+        if (typeof jobId !== 'string') {
+          return res.status(400).json({
+            success: false,
+            error: 'Job ID is required',
+          });
+        }
 
         const job = await generationQueue.getJob(jobId);
 
@@ -530,7 +581,11 @@ export const jobsRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/:jobId/stream',
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
-      const jobId = req.params.jobId;
+      const jobId = req.params['jobId'];
+      if (typeof jobId !== 'string') {
+        res.write(`data: ${JSON.stringify({ type: 'error', message: 'Job ID is required' })}\n\n`);
+        return res.end();
+      }
 
       // Set SSE headers
       res.setHeader('Content-Type', 'text/event-stream');
@@ -577,13 +632,13 @@ export const jobsRouter: RouterFactory = (ctx: RouterContext): Router => {
       }
 
       // Listen for job events
-      const progressListener = async ({ jobId: eventJobId, data }: { jobId: string; data: JobProgress }) => {
+      const progressListener = ({ jobId: eventJobId, data }: { jobId: string; data: JobProgress }) => {
         if (eventJobId === jobId) {
           res.write(`data: ${JSON.stringify({ type: 'progress', progress: data })}\n\n`);
         }
       };
 
-      const completedListener = async ({ jobId: eventJobId, returnvalue }: { jobId: string; returnvalue: any }) => {
+      const completedListener = ({ jobId: eventJobId, returnvalue }: { jobId: string; returnvalue: any }) => {
         if (eventJobId === jobId) {
           res.write(
             `data: ${JSON.stringify({
@@ -596,7 +651,7 @@ export const jobsRouter: RouterFactory = (ctx: RouterContext): Router => {
         }
       };
 
-      const failedListener = async ({ jobId: eventJobId, failedReason }: { jobId: string; failedReason: string }) => {
+      const failedListener = ({ jobId: eventJobId, failedReason }: { jobId: string; failedReason: string }) => {
         if (eventJobId === jobId) {
           res.write(
             `data: ${JSON.stringify({
@@ -611,14 +666,14 @@ export const jobsRouter: RouterFactory = (ctx: RouterContext): Router => {
 
       // Cleanup function to remove all listeners
       const cleanup = () => {
-        generationQueueEvents.off('progress', progressListener);
-        generationQueueEvents.off('completed', completedListener);
-        generationQueueEvents.off('failed', failedListener);
+        generationQueueEvents.off('progress', progressListener as (...args: unknown[]) => void);
+        generationQueueEvents.off('completed', completedListener as (...args: unknown[]) => void);
+        generationQueueEvents.off('failed', failedListener as (...args: unknown[]) => void);
       };
 
-      generationQueueEvents.on('progress', progressListener);
-      generationQueueEvents.on('completed', completedListener);
-      generationQueueEvents.on('failed', failedListener);
+      generationQueueEvents.on('progress', progressListener as (...args: unknown[]) => void);
+      generationQueueEvents.on('completed', completedListener as (...args: unknown[]) => void);
+      generationQueueEvents.on('failed', failedListener as (...args: unknown[]) => void);
 
       // Cleanup on connection close (client disconnects)
       req.on('close', () => {
