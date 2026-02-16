@@ -66,6 +66,12 @@ export const generations = pgTable(
     editCount: integer('edit_count').default(0),
     mediaType: varchar('media_type', { length: 10 }).default('image'), // 'image' | 'video'
     videoDurationSec: integer('video_duration_sec'), // Video duration in seconds (4, 6, 8)
+
+    // Wave 3: Generation context metadata
+    productIds: text('product_ids').array(), // Product IDs used in this generation
+    templateId: varchar('template_id', { length: 50 }), // Which ad scene template was used
+    generationMode: varchar('generation_mode', { length: 20 }), // 'exact_insert' | 'inspiration' | 'standard'
+
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },

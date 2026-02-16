@@ -249,6 +249,24 @@ export default function GalleryPage() {
                     v{(gen.editCount ?? 0) + 1}
                   </span>
                 )}
+
+                {/* Wave 3: Mode badge + product count */}
+                <div className="absolute bottom-2 left-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {(gen as any).generationMode && (
+                    <span className="bg-black/70 text-white text-[9px] px-1.5 py-0.5 rounded">
+                      {(gen as any).generationMode === 'exact_insert'
+                        ? 'Exact'
+                        : (gen as any).generationMode === 'inspiration'
+                          ? 'Inspiration'
+                          : 'Standard'}
+                    </span>
+                  )}
+                  {(gen as any).productIds && (gen as any).productIds.length > 0 && (
+                    <span className="bg-black/70 text-white text-[9px] px-1.5 py-0.5 rounded">
+                      {(gen as any).productIds.length} product{(gen as any).productIds.length !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
               </div>
             ))}
           </div>
