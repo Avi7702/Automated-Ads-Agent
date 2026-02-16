@@ -3,11 +3,7 @@ import { useStudioState } from '@/hooks/useStudioState';
 import { Button } from '@/components/ui/button';
 import { SimplifiedCopyPanel } from '@/components/SimplifiedCopyPanel';
 import { LinkedInPostPreview } from '@/components/LinkedInPostPreview';
-import {
-  Download,
-  RefreshCw,
-  Eye,
-} from 'lucide-react';
+import { Download, RefreshCw, Eye } from 'lucide-react';
 
 /**
  * ResultView - Generated image display with actions
@@ -47,11 +43,7 @@ export function ResultView() {
     <div className="space-y-6">
       {/* Generated Image */}
       <div className="relative rounded-xl overflow-hidden border border-border bg-card">
-        <img
-          src={generatedImage}
-          alt="Generated ad"
-          className="w-full h-auto"
-        />
+        <img src={generatedImage} alt="Generated ad" className="w-full h-auto" />
 
         {/* Action overlay */}
         <div className="absolute top-3 right-3 flex gap-2">
@@ -87,11 +79,7 @@ export function ResultView() {
             <Eye className="w-4 h-4" />
             LinkedIn Post Preview
           </h3>
-          <LinkedInPostPreview
-            authorName="Your Brand"
-            postText={generatedCopy}
-            imageUrl={generatedImage}
-          />
+          <LinkedInPostPreview authorName="Your Brand" postText={generatedCopy} imageUrl={generatedImage} />
         </div>
       )}
 
@@ -101,7 +89,7 @@ export function ResultView() {
           <h3 className="font-medium text-sm">Ad Copy</h3>
           <SimplifiedCopyPanel
             generationId={generationId}
-            platform={platform.toLowerCase() as any}
+            platform={platform.toLowerCase() as 'linkedin' | 'instagram' | 'facebook' | 'twitter' | 'tiktok'}
             onCopyGenerated={setGeneratedCopy}
           />
         </div>

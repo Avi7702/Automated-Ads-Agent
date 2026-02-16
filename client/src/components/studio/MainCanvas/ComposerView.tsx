@@ -31,7 +31,6 @@ import {
   X,
   Search,
   Package,
-  Zap,
   TrendingUp,
   Wand2,
   FileImage,
@@ -55,7 +54,7 @@ function Section({
 }: {
   id: string;
   title: string;
-  icon?: any;
+  icon?: React.ElementType;
   isOpen: boolean;
   onToggle: () => void;
   badge?: string;

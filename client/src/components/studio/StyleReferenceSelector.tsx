@@ -12,13 +12,8 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import {
-  useStyleReferences,
-  useUploadStyleReference,
-  useDeleteStyleReference,
-  type StyleReference,
-} from '@/hooks/useStyleReferences';
-import { Palette, User, Mountain, Plus, X, Check, Loader2, Trash2, Image } from 'lucide-react';
+import { useStyleReferences, useUploadStyleReference, useDeleteStyleReference } from '@/hooks/useStyleReferences';
+import { Palette, User, Mountain, Plus, X, Check, Loader2, Image } from 'lucide-react';
 
 const CATEGORY_ICONS = {
   character: User,

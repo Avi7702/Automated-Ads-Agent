@@ -14,9 +14,10 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { ChatMessage } from './ChatMessage';
 import { useAgentChat } from './useAgentChat';
+import type { StudioOrchestrator } from '@/hooks/useStudioOrchestrator';
 
 interface AgentChatPanelProps {
-  orch: any;
+  orch: StudioOrchestrator;
 }
 
 export function AgentChatPanel({ orch }: AgentChatPanelProps) {
@@ -32,7 +33,7 @@ export function AgentChatPanel({ orch }: AgentChatPanelProps) {
   const [isListening, setIsListening] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   // Handle UI actions from the agent
   const handleUiAction = useCallback(
@@ -40,7 +41,7 @@ export function AgentChatPanel({ orch }: AgentChatPanelProps) {
       try {
         switch (action) {
           case 'select_products': {
-            const products = payload.products as any[];
+            const products = payload.products as Record<string, unknown>[];
             if (products && orch.setSelectedProducts) {
               orch.setSelectedProducts(products);
               toast({
@@ -90,7 +91,7 @@ export function AgentChatPanel({ orch }: AgentChatPanelProps) {
             break;
           }
           case 'copy_generated': {
-            const copies = payload.copies as any[];
+            const copies = payload.copies as Record<string, unknown>[];
             if (copies?.length > 0) {
               // setGeneratedCopy expects a string — use the first copy's caption
               const firstCopy = copies[0];
@@ -111,7 +112,7 @@ export function AgentChatPanel({ orch }: AgentChatPanelProps) {
         // UI action dispatch should never crash the chat panel
       }
     },
-    [orch],
+    [orch, toast],
   );
 
   const { messages, isStreaming, error, sendMessage, stopStreaming, clearMessages } = useAgentChat({
@@ -170,13 +171,15 @@ export function AgentChatPanel({ orch }: AgentChatPanelProps) {
       return;
     }
 
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
+    const SpeechRecognitionCtor =
+      window.SpeechRecognition ||
+      (window as unknown as { webkitSpeechRecognition: typeof SpeechRecognition }).webkitSpeechRecognition;
+    const recognition = new SpeechRecognitionCtor();
     recognition.continuous = false;
     recognition.interimResults = false;
     recognition.lang = 'en-US';
 
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
       const transcript = event.results[0]?.[0]?.transcript;
       if (transcript) {
         setInput(transcript);
