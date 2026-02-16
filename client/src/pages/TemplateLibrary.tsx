@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
   Search,
   Plus,
   Trash2,
@@ -587,7 +588,7 @@ export default function TemplateLibrary({ embedded = false, selectedId: _selecte
         <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-pink-500/5 dark:bg-pink-500/10 blur-[120px] rounded-full" />
       </div>
 
-      <Header currentPage="template-library" />
+      <Header currentPage="library" />
 
       {/* Content */}
       <main className="container max-w-7xl mx-auto px-4 sm:px-6 pt-24 pb-20 relative z-10">{mainContent}</main>
