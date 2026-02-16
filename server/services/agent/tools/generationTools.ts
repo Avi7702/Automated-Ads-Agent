@@ -56,124 +56,132 @@ export function createGenerationTools(storage: IStorage) {
     },
   });
 
-  const generateImage = new FunctionTool({
-    name: 'generate_image',
-    description:
-      'Generate an ad image using the current prompt and selected products. IMPORTANT: Always confirm with the user before calling this tool, as it uses API credits. Make sure products are selected and a prompt is set first.',
-    parameters: z.object({
-      prompt: z.string().describe('The generation prompt'),
-      productIds: z.array(z.string()).min(1).max(6).describe('Product IDs to include'),
-      resolution: z.enum(['1K', '2K', '4K']).optional().describe('Output resolution (default 1K)'),
-      mode: z
-        .enum(['exact_insert', 'inspiration', 'standard'])
-        .optional()
-        .describe('Generation mode (default standard)'),
-    }),
-    execute: async (input, tool_context?: ToolContext) => {
-      const userId = tool_context?.state?.get<string>('authenticatedUserId');
-      if (!userId) {
-        return { status: 'error', message: 'Authentication required. Please refresh the page and try again.' };
-      }
-
-      // Collect product images and metadata for the generation recipe
-      const images: Array<{ buffer: Buffer; mimetype: string; originalname: string }> = [];
-      const recipeProducts: Array<{
-        id: string;
-        name: string;
-        category?: string;
-        description?: string;
-        imageUrls: string[];
-      }> = [];
-      for (const id of input.productIds) {
-        try {
-          const product = await storage.getProductById(id);
-          if (!product) continue;
-
-          // Track product metadata for the generation recipe
-          recipeProducts.push({
-            id: String(product.id),
-            name: product.name ?? id,
-            category: product.category ?? undefined,
-            description: product.description?.slice(0, 500) ?? undefined,
-            imageUrls: product.cloudinaryUrl ? [product.cloudinaryUrl] : [],
-          });
-
-          if (product.cloudinaryUrl) {
-            // SSRF protection: only allow Cloudinary URLs
-            let urlObj: URL;
-            try {
-              urlObj = new URL(product.cloudinaryUrl);
-            } catch {
-              logger.warn({ module: 'AgentTools', productId: id }, 'Invalid product image URL');
-              continue;
-            }
-            if (!urlObj.hostname.endsWith('.cloudinary.com')) {
-              logger.warn(
-                { module: 'AgentTools', productId: id, hostname: urlObj.hostname },
-                'Blocked non-Cloudinary image URL',
-              );
-              continue;
-            }
-
-            const resp = await fetch(product.cloudinaryUrl);
-            if (resp.ok) {
-              const buffer = Buffer.from(await resp.arrayBuffer());
-              const contentType = resp.headers.get('content-type') ?? 'image/jpeg';
-              images.push({
-                buffer,
-                mimetype: contentType,
-                originalname: `${product.name}.${contentType.split('/')[1] ?? 'jpg'}`,
-              });
-            } else {
-              logger.warn(
-                { module: 'AgentTools', productId: id, status: resp.status },
-                'Failed to fetch product image',
-              );
-            }
-          }
-        } catch (err: unknown) {
-          logger.warn({ module: 'AgentTools', productId: id, err }, 'Error fetching product image');
-        }
-      }
-
-      if (images.length === 0) {
-        return {
-          status: 'error',
-          message: 'No product images could be loaded. Ensure selected products have uploaded images.',
-        };
-      }
-
-      try {
-        const { executeGenerationPipeline } = await import('../../generation');
-        const result = await executeGenerationPipeline({
-          userId,
-          prompt: input.prompt,
-          images,
-          mode: input.mode ?? 'standard',
-          resolution: input.resolution ?? '1K',
-          recipe: {
-            version: '1.0',
-            products: recipeProducts,
-            relationships: [],
-            scenarios: [],
-          },
-        });
-
-        return {
-          status: 'success',
-          uiActions: [
-            { type: 'generation_complete', payload: { imageUrl: result.imageUrl, generationId: result.generationId } },
-          ],
-          message: `Image generated successfully! Generation ID: ${result.generationId}`,
-          generationId: result.generationId,
-          imageUrl: result.imageUrl,
-        };
-      } catch (err: unknown) {
-        logger.error({ module: 'AgentTools', err, userId }, 'Generation pipeline error');
-        return { status: 'error', message: 'Image generation failed. Please try again.' };
-      }
-    },
+  const generatePostImageParameters = z.object({
+    prompt: z.string().describe('The generation prompt'),
+    productIds: z.array(z.string()).min(1).max(6).describe('Product IDs to include'),
+    resolution: z.enum(['1K', '2K', '4K']).optional().describe('Output resolution (default 1K)'),
+    mode: z.enum(['exact_insert', 'inspiration', 'standard']).optional().describe('Generation mode (default standard)'),
   });
 
-  return [setPrompt, setOutputSettings, generateImage];
+  const executeGeneratePostImage = async (
+    input: z.infer<typeof generatePostImageParameters>,
+    tool_context?: ToolContext,
+  ) => {
+    const userId = tool_context?.state?.get<string>('authenticatedUserId');
+    if (!userId) {
+      return { status: 'error', message: 'Authentication required. Please refresh the page and try again.' };
+    }
+
+    // Collect product images and metadata for the generation recipe
+    const images: Array<{ buffer: Buffer; mimetype: string; originalname: string }> = [];
+    const recipeProducts: Array<{
+      id: string;
+      name: string;
+      category?: string;
+      description?: string;
+      imageUrls: string[];
+    }> = [];
+    for (const id of input.productIds) {
+      try {
+        const product = await storage.getProductById(id);
+        if (!product) continue;
+
+        // Track product metadata for the generation recipe
+        recipeProducts.push({
+          id: String(product.id),
+          name: product.name ?? id,
+          category: product.category ?? undefined,
+          description: product.description?.slice(0, 500) ?? undefined,
+          imageUrls: product.cloudinaryUrl ? [product.cloudinaryUrl] : [],
+        });
+
+        if (product.cloudinaryUrl) {
+          // SSRF protection: only allow Cloudinary URLs
+          let urlObj: URL;
+          try {
+            urlObj = new URL(product.cloudinaryUrl);
+          } catch {
+            logger.warn({ module: 'AgentTools', productId: id }, 'Invalid product image URL');
+            continue;
+          }
+          if (!urlObj.hostname.endsWith('.cloudinary.com')) {
+            logger.warn(
+              { module: 'AgentTools', productId: id, hostname: urlObj.hostname },
+              'Blocked non-Cloudinary image URL',
+            );
+            continue;
+          }
+
+          const resp = await fetch(product.cloudinaryUrl);
+          if (resp.ok) {
+            const buffer = Buffer.from(await resp.arrayBuffer());
+            const contentType = resp.headers.get('content-type') ?? 'image/jpeg';
+            images.push({
+              buffer,
+              mimetype: contentType,
+              originalname: `${product.name}.${contentType.split('/')[1] ?? 'jpg'}`,
+            });
+          } else {
+            logger.warn({ module: 'AgentTools', productId: id, status: resp.status }, 'Failed to fetch product image');
+          }
+        }
+      } catch (err: unknown) {
+        logger.warn({ module: 'AgentTools', productId: id, err }, 'Error fetching product image');
+      }
+    }
+
+    if (images.length === 0) {
+      return {
+        status: 'error',
+        message: 'No product images could be loaded. Ensure selected products have uploaded images.',
+      };
+    }
+
+    try {
+      const { executeGenerationPipeline } = await import('../../generation');
+      const result = await executeGenerationPipeline({
+        userId,
+        prompt: input.prompt,
+        images,
+        mode: input.mode ?? 'standard',
+        resolution: input.resolution ?? '1K',
+        recipe: {
+          version: '1.0',
+          products: recipeProducts,
+          relationships: [],
+          scenarios: [],
+        },
+      });
+
+      return {
+        status: 'success',
+        uiActions: [
+          { type: 'generation_complete', payload: { imageUrl: result.imageUrl, generationId: result.generationId } },
+        ],
+        message: `Image generated successfully! Generation ID: ${result.generationId}`,
+        generationId: result.generationId,
+        imageUrl: result.imageUrl,
+      };
+    } catch (err: unknown) {
+      logger.error({ module: 'AgentTools', err, userId }, 'Generation pipeline error');
+      return { status: 'error', message: 'Image generation failed. Please try again.' };
+    }
+  };
+
+  const generatePostImage = new FunctionTool({
+    name: 'generate_post_image',
+    description:
+      'Generate an ad image using the current prompt and selected products. IMPORTANT: Always confirm with the user before calling this tool, as it uses API credits. Make sure products are selected and a prompt is set first.',
+    parameters: generatePostImageParameters,
+    execute: executeGeneratePostImage,
+  });
+
+  const generateImage = new FunctionTool({
+    name: 'generate_image',
+    description: 'Legacy alias for generate_post_image.',
+    parameters: generatePostImageParameters,
+    execute: executeGeneratePostImage,
+  });
+
+  return [setPrompt, setOutputSettings, generatePostImage, generateImage];
 }

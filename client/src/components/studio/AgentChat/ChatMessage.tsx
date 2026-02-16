@@ -13,9 +13,14 @@ const TOOL_LABELS: Record<string, string> = {
   select_products: 'Selecting products',
   set_prompt: 'Setting prompt',
   set_output_settings: 'Configuring output',
+  generate_post_image: 'Generating image',
   generate_image: 'Generating image',
+  generate_post_copy: 'Writing ad copy',
   generate_ad_copy: 'Writing ad copy',
+  suggest_ideas: 'Getting ideas',
   get_idea_suggestions: 'Getting ideas',
+  vault_search: 'Searching knowledge base',
+  search_knowledge_base: 'Searching knowledge base',
 };
 
 export function ChatMessage({ message }: { message: ChatMessageType }) {
