@@ -3,16 +3,16 @@
  * Tracks Gemini API usage, provides real-time quota status, and manages alerts
  */
 
-import { storage } from "../storage";
-import type { InsertGeminiQuotaMetrics, InsertGeminiRateLimitEvent, GeminiQuotaAlert } from "@shared/schema";
-import { createQuotaMetricsMap } from "../utils/memoryManager";
+import { storage } from '../storage';
+import type { InsertGeminiQuotaMetrics, InsertGeminiRateLimitEvent, GeminiQuotaAlert } from '@shared/schema';
+import { createQuotaMetricsMap } from '../utils/memoryManager';
 
 // Gemini Free Tier Limits (December 2025)
 export const GEMINI_FREE_TIER_LIMITS = {
-  rpm: 15,          // Requests per minute
-  rpd: 50,          // Requests per day (for image generation)
-  tpm: 1_000_000,   // Tokens per minute
-  tpd: 1_000_000,   // Tokens per day
+  rpm: 15, // Requests per minute
+  rpd: 50, // Requests per day (for image generation)
+  tpm: 1_000_000, // Tokens per minute
+  tpd: 1_000_000, // Tokens per day
 };
 
 export interface QuotaStatus {
@@ -84,7 +84,11 @@ function getDayWindowStart(): Date {
 /**
  * Get or create in-memory metrics for a brand
  */
-function getInMemoryMetrics(brandId: string): { requestsThisMinute: number; tokensThisMinute: number; windowStart: number } {
+function getInMemoryMetrics(brandId: string): {
+  requestsThisMinute: number;
+  tokensThisMinute: number;
+  windowStart: number;
+} {
   const now = Date.now();
   const currentMinute = Math.floor(now / 60000) * 60000;
 
@@ -113,7 +117,7 @@ export const quotaMonitoringService = {
       operation,
       model,
       success,
-      durationMs,
+      durationMs: _durationMs,
       inputTokens = 0,
       outputTokens = 0,
       costMicros,
@@ -242,25 +246,38 @@ export const quotaMonitoringService = {
       endDate: monthEnd,
     });
 
-    const monthAggregate = monthMetrics.reduce((acc, m) => ({
-      requestCount: acc.requestCount + m.requestCount,
-      estimatedCostMicros: acc.estimatedCostMicros + m.estimatedCostMicros,
-    }), { requestCount: 0, estimatedCostMicros: 0 });
+    const monthAggregate = monthMetrics.reduce(
+      (acc, m) => ({
+        requestCount: acc.requestCount + m.requestCount,
+        estimatedCostMicros: acc.estimatedCostMicros + m.estimatedCostMicros,
+      }),
+      { requestCount: 0, estimatedCostMicros: 0 },
+    );
 
     // Check for recent rate limit events
     const recentRateLimits = await storage.getRecentRateLimitEvents(brandId, 5);
-    const isRateLimited = recentRateLimits.length > 0 &&
-      recentRateLimits[0].retryAfterSeconds &&
-      (new Date(recentRateLimits[0].createdAt).getTime() + recentRateLimits[0].retryAfterSeconds * 1000) > Date.now();
+    const latestRateLimit = recentRateLimits[0];
+    const isRateLimited =
+      !!latestRateLimit &&
+      !!latestRateLimit.retryAfterSeconds &&
+      new Date(latestRateLimit.createdAt).getTime() + latestRateLimit.retryAfterSeconds * 1000 > Date.now();
 
-    const retryAfter = isRateLimited && recentRateLimits[0].retryAfterSeconds
-      ? Math.max(0, Math.ceil((new Date(recentRateLimits[0].createdAt).getTime() + recentRateLimits[0].retryAfterSeconds * 1000 - Date.now()) / 1000))
-      : undefined;
+    const retryAfter =
+      isRateLimited && latestRateLimit && latestRateLimit.retryAfterSeconds
+        ? Math.max(
+            0,
+            Math.ceil(
+              (new Date(latestRateLimit.createdAt).getTime() + latestRateLimit.retryAfterSeconds * 1000 - Date.now()) /
+                1000,
+            ),
+          )
+        : undefined;
 
     // Calculate percentages
     const rpmPercentage = (memMetrics.requestsThisMinute / GEMINI_FREE_TIER_LIMITS.rpm) * 100;
     const rpdPercentage = (todayAggregate.requestCount / GEMINI_FREE_TIER_LIMITS.rpd) * 100;
-    const tokensPercentage = ((todayAggregate.inputTokensTotal + todayAggregate.outputTokensTotal) / GEMINI_FREE_TIER_LIMITS.tpd) * 100;
+    const tokensPercentage =
+      ((todayAggregate.inputTokensTotal + todayAggregate.outputTokensTotal) / GEMINI_FREE_TIER_LIMITS.tpd) * 100;
 
     // Calculate reset times
     const minuteReset = new Date(Math.ceil(Date.now() / 60000) * 60000);
@@ -268,21 +285,31 @@ export const quotaMonitoringService = {
 
     // Generate warnings with issue + solution
     if (rpmPercentage >= 100) {
-      warnings.push(`⛔ RATE LIMITED: Minute limit exceeded (${Math.round(rpmPercentage)}%) | Solution: Wait ${60 - new Date().getSeconds()}s for reset, or upgrade to paid tier at https://aistudio.google.com`);
+      warnings.push(
+        `⛔ RATE LIMITED: Minute limit exceeded (${Math.round(rpmPercentage)}%) | Solution: Wait ${60 - new Date().getSeconds()}s for reset, or upgrade to paid tier at https://aistudio.google.com`,
+      );
     } else if (rpmPercentage >= 80) {
-      warnings.push(`⚠️ Approaching minute rate limit (${Math.round(rpmPercentage)}%) | Solution: Slow down requests or wait for reset in ${60 - new Date().getSeconds()}s`);
+      warnings.push(
+        `⚠️ Approaching minute rate limit (${Math.round(rpmPercentage)}%) | Solution: Slow down requests or wait for reset in ${60 - new Date().getSeconds()}s`,
+      );
     }
 
     if (rpdPercentage >= 100) {
-      warnings.push(`⛔ DAILY LIMIT EXCEEDED: ${todayAggregate.requestCount}/${GEMINI_FREE_TIER_LIMITS.rpd} requests | Solution: Wait until midnight UTC for reset, or upgrade to paid tier`);
+      warnings.push(
+        `⛔ DAILY LIMIT EXCEEDED: ${todayAggregate.requestCount}/${GEMINI_FREE_TIER_LIMITS.rpd} requests | Solution: Wait until midnight UTC for reset, or upgrade to paid tier`,
+      );
     } else if (rpdPercentage >= 80) {
-      warnings.push(`⚠️ Approaching daily request limit (${Math.round(rpdPercentage)}%) | Solution: ${GEMINI_FREE_TIER_LIMITS.rpd - todayAggregate.requestCount} requests remaining today. Resets at midnight UTC`);
+      warnings.push(
+        `⚠️ Approaching daily request limit (${Math.round(rpdPercentage)}%) | Solution: ${GEMINI_FREE_TIER_LIMITS.rpd - todayAggregate.requestCount} requests remaining today. Resets at midnight UTC`,
+      );
     }
 
     if (tokensPercentage >= 100) {
       warnings.push(`⛔ TOKEN LIMIT EXCEEDED | Solution: Wait until midnight UTC for reset, or upgrade to paid tier`);
     } else if (tokensPercentage >= 80) {
-      warnings.push(`⚠️ Approaching daily token limit (${Math.round(tokensPercentage)}%) | Solution: Reduce prompt sizes or wait until midnight UTC`);
+      warnings.push(
+        `⚠️ Approaching daily token limit (${Math.round(tokensPercentage)}%) | Solution: Reduce prompt sizes or wait until midnight UTC`,
+      );
     }
 
     // Determine overall status
@@ -328,7 +355,7 @@ export const quotaMonitoringService = {
       },
       status,
       warnings,
-      retryAfter,
+      ...(retryAfter !== undefined ? { retryAfter } : {}),
     };
   },
 
@@ -340,16 +367,18 @@ export const quotaMonitoringService = {
     windowType: 'minute' | 'hour' | 'day';
     startDate: Date;
     endDate: Date;
-  }): Promise<Array<{
-    timestamp: string;
-    requests: number;
-    tokens: number;
-    cost: number;
-    successRate: number;
-  }>> {
+  }): Promise<
+    Array<{
+      timestamp: string;
+      requests: number;
+      tokens: number;
+      cost: number;
+      successRate: number;
+    }>
+  > {
     const metrics = await storage.getQuotaMetrics(params);
 
-    return metrics.map(m => ({
+    return metrics.map((m) => ({
       timestamp: m.windowStart.toISOString(),
       requests: m.requestCount,
       tokens: m.inputTokensTotal + m.outputTokensTotal,
@@ -361,10 +390,7 @@ export const quotaMonitoringService = {
   /**
    * Get usage breakdown for the dashboard
    */
-  async getUsageBreakdown(params: {
-    brandId: string;
-    period: 'today' | 'week' | 'month';
-  }): Promise<UsageBreakdown> {
+  async getUsageBreakdown(params: { brandId: string; period: 'today' | 'week' | 'month' }): Promise<UsageBreakdown> {
     const now = new Date();
     let startDate: Date;
 
@@ -388,23 +414,26 @@ export const quotaMonitoringService = {
     });
 
     // Aggregate all metrics
-    const aggregate = metrics.reduce((acc, m) => ({
-      generate: acc.generate + m.generateCount,
-      edit: acc.edit + m.editCount,
-      analyze: acc.analyze + m.analyzeCount,
-      totalRequests: acc.totalRequests + m.requestCount,
-      totalTokens: acc.totalTokens + m.inputTokensTotal + m.outputTokensTotal,
-      totalCost: acc.totalCost + m.estimatedCostMicros,
-      modelBreakdown: mergeModelBreakdown(acc.modelBreakdown, m.modelBreakdown as Record<string, number> | null),
-    }), {
-      generate: 0,
-      edit: 0,
-      analyze: 0,
-      totalRequests: 0,
-      totalTokens: 0,
-      totalCost: 0,
-      modelBreakdown: {} as Record<string, number>,
-    });
+    const aggregate = metrics.reduce(
+      (acc, m) => ({
+        generate: acc.generate + m.generateCount,
+        edit: acc.edit + m.editCount,
+        analyze: acc.analyze + m.analyzeCount,
+        totalRequests: acc.totalRequests + m.requestCount,
+        totalTokens: acc.totalTokens + m.inputTokensTotal + m.outputTokensTotal,
+        totalCost: acc.totalCost + m.estimatedCostMicros,
+        modelBreakdown: mergeModelBreakdown(acc.modelBreakdown, m.modelBreakdown as Record<string, number> | null),
+      }),
+      {
+        generate: 0,
+        edit: 0,
+        analyze: 0,
+        totalRequests: 0,
+        totalTokens: 0,
+        totalCost: 0,
+        modelBreakdown: {} as Record<string, number>,
+      },
+    );
 
     return {
       byOperation: {
@@ -439,6 +468,10 @@ export const quotaMonitoringService = {
     }
 
     const latest = recentEvents[0];
+    if (!latest) {
+      return { isLimited: false, recentEvents: [] };
+    }
+
     const expiresAt = latest.retryAfterSeconds
       ? new Date(latest.createdAt).getTime() + latest.retryAfterSeconds * 1000
       : 0;
@@ -446,12 +479,12 @@ export const quotaMonitoringService = {
 
     return {
       isLimited,
-      limitType: isLimited ? latest.limitType : undefined,
-      retryAfterSeconds: isLimited ? Math.ceil((expiresAt - Date.now()) / 1000) : undefined,
-      recentEvents: recentEvents.map(e => ({
+      ...(isLimited ? { limitType: latest.limitType } : {}),
+      ...(isLimited ? { retryAfterSeconds: Math.ceil((expiresAt - Date.now()) / 1000) } : {}),
+      recentEvents: recentEvents.map((e) => ({
         limitType: e.limitType,
         createdAt: e.createdAt,
-        retryAfterSeconds: e.retryAfterSeconds || undefined,
+        ...(e.retryAfterSeconds ? { retryAfterSeconds: e.retryAfterSeconds } : {}),
       })),
     };
   },
@@ -480,12 +513,14 @@ export const quotaMonitoringService = {
   /**
    * Check alert thresholds and return triggered alerts
    */
-  async checkAlerts(brandId: string): Promise<Array<{
-    alertType: string;
-    currentValue: number;
-    threshold: number;
-    message: string;
-  }>> {
+  async checkAlerts(brandId: string): Promise<
+    Array<{
+      alertType: string;
+      currentValue: number;
+      threshold: number;
+      message: string;
+    }>
+  > {
     const alerts = await storage.getQuotaAlerts(brandId);
     const status = await this.getQuotaStatus(brandId);
     const triggered: Array<{
@@ -542,7 +577,7 @@ export const quotaMonitoringService = {
  */
 function mergeModelBreakdown(
   acc: Record<string, number>,
-  breakdown: Record<string, number> | null
+  breakdown: Record<string, number> | null,
 ): Record<string, number> {
   if (!breakdown) return acc;
 
@@ -562,16 +597,18 @@ export function parseRetryDelay(error: unknown): number | undefined {
   const err = error as Record<string, unknown>;
 
   // Check structured error details
-  const details = (err.response as Record<string, unknown>)?.data as Record<string, unknown>;
-  const errorDetails = (details?.error as Record<string, unknown>)?.details as Array<Record<string, unknown>>;
+  const response = err['response'] as Record<string, unknown> | undefined;
+  const details = response?.['data'] as Record<string, unknown> | undefined;
+  const errorObj = details?.['error'] as Record<string, unknown> | undefined;
+  const errorDetails = errorObj?.['details'] as Array<Record<string, unknown>> | undefined;
 
   if (Array.isArray(errorDetails)) {
     for (const detail of errorDetails) {
       if (detail['@type'] === 'type.googleapis.com/google.rpc.RetryInfo') {
-        const retryDelay = detail.retryDelay as Record<string, number> | undefined;
+        const retryDelay = detail['retryDelay'] as Record<string, number> | undefined;
         if (retryDelay) {
-          const seconds = retryDelay.seconds || 0;
-          const nanos = retryDelay.nanos || 0;
+          const seconds = retryDelay['seconds'] || 0;
+          const nanos = retryDelay['nanos'] || 0;
           return seconds + nanos / 1_000_000_000;
         }
       }
@@ -579,10 +616,14 @@ export function parseRetryDelay(error: unknown): number | undefined {
   }
 
   // Check error message for retry timing
-  const message = (err.message as string) || (details?.error as Record<string, unknown>)?.message as string;
+  const messageFromErr = err['message'] as string | undefined;
+  const messageFromDetails = (details?.['error'] as Record<string, unknown> | undefined)?.['message'] as
+    | string
+    | undefined;
+  const message = messageFromErr ?? messageFromDetails ?? '';
   if (message) {
     const match = message.match(/retry in (\d+\.?\d*)\s*s/i);
-    if (match) {
+    if (match && match[1]) {
       return parseFloat(match[1]);
     }
   }
@@ -597,7 +638,7 @@ export function parseLimitType(error: unknown): 'rpm' | 'rpd' | 'tpm' | 'tpd' {
   if (!error || typeof error !== 'object') return 'rpm';
 
   const err = error as Record<string, unknown>;
-  const message = (err.message as string) || '';
+  const message = (err['message'] as string) || '';
 
   if (message.includes('requests') && message.includes('day')) return 'rpd';
   if (message.includes('tokens') && message.includes('day')) return 'tpd';

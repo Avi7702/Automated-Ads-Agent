@@ -6,6 +6,17 @@ import { sanitizeForPrompt } from '../lib/promptSanitizer';
 import { safeParseLLMResponse, generatedCopySchema } from '../validation/llmResponseSchemas';
 import { productKnowledgeService, type EnhancedProductContext } from './productKnowledgeService';
 
+/**
+ * Look up platform limits, throwing if the platform is unknown.
+ */
+function getPlatformLimitsOrThrow(platform: string): PlatformLimits {
+  const limits = PLATFORM_LIMITS[platform];
+  if (!limits) {
+    throw new Error(`Unknown platform: ${platform}. Supported: ${Object.keys(PLATFORM_LIMITS).join(', ')}`);
+  }
+  return limits;
+}
+
 // Platform character limits (2025 standards)
 interface PlatformLimits {
   headline: { optimal: number; max: number };
@@ -75,6 +86,52 @@ interface GeneratedCopy {
   };
 }
 
+function getDefaultQualityScore(): GeneratedCopy['qualityScore'] {
+  return {
+    clarity: 5,
+    persuasiveness: 5,
+    platformFit: 5,
+    brandAlignment: 5,
+    overallScore: 5,
+    reasoning: 'Quality score not provided by LLM',
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function parseNumberInRange(value: unknown, min: number, max: number, fallback: number): number {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return fallback;
+  }
+  return Math.min(max, Math.max(min, value));
+}
+
+function parseQualityScore(value: unknown): GeneratedCopy['qualityScore'] {
+  const defaults = getDefaultQualityScore();
+  if (!isRecord(value)) {
+    return defaults;
+  }
+
+  // Accept both legacy 0-100 and newer 1-10 scales without crashing.
+  const clarity = parseNumberInRange(value['clarity'], 0, 100, defaults.clarity);
+  const persuasiveness = parseNumberInRange(value['persuasiveness'], 0, 100, defaults.persuasiveness);
+  const platformFit = parseNumberInRange(value['platformFit'], 0, 100, defaults.platformFit);
+  const brandAlignment = parseNumberInRange(value['brandAlignment'], 0, 100, defaults.brandAlignment);
+  const overallScore = parseNumberInRange(value['overallScore'], 0, 100, defaults.overallScore);
+  const reasoning = typeof value['reasoning'] === 'string' ? value['reasoning'] : defaults.reasoning;
+
+  return {
+    clarity,
+    persuasiveness,
+    platformFit,
+    brandAlignment,
+    overallScore,
+    reasoning,
+  };
+}
+
 class CopywritingService {
   // No constructor needed - uses shared client
 
@@ -124,10 +181,10 @@ class CopywritingService {
   ): Promise<GeneratedCopy> {
     // STEP 1: Retrieve relevant context from File Search Store (RAG)
     let ragContext = '';
-    let citations: any[] = [];
+    let citations: string[] = [];
 
     try {
-      const fileSearchStore = await getFileSearchStoreForGeneration();
+      await getFileSearchStoreForGeneration();
 
       // Query for ad examples matching the product/platform
       const contextQuery = `${request.platform} ad examples for ${request.productName} ${request.industry} ${request.productDescription}`;
@@ -208,98 +265,27 @@ class CopywritingService {
         generatedCopy.caption.length,
     };
 
+    // generatedCopy may not include qualityScore (not in the Zod schema).
+    // Parse best-effort from raw JSON without allowing malformed payloads to crash.
+    let rawParsed: Record<string, unknown> = {};
+    try {
+      const parsed = JSON.parse(text);
+      if (isRecord(parsed)) {
+        rawParsed = parsed;
+      }
+    } catch {
+      // safeParseLLMResponse already validated core copy fields; keep defaults for quality score.
+    }
+    const qualityScore = parseQualityScore(rawParsed['qualityScore']);
+
     return {
       ...generatedCopy,
+      framework: generatedCopy.framework ?? 'AIDA',
+      cta: generatedCopy.cta ?? '',
+      hashtags: generatedCopy.hashtags ?? [],
+      qualityScore,
       characterCounts,
     };
-  }
-
-  /**
-   * Build PTCF (Persona, Task, Context, Format) prompt
-   */
-  private buildPTCFPrompt(request: GenerateCopyInput, variationNumber: number): string {
-    const limits = PLATFORM_LIMITS[request.platform];
-
-    // PERSONA
-    const persona = `You are an expert social media ad copywriter specializing in ${request.platform} advertising. You have 10+ years of experience writing conversion-focused copy for ${request.industry} brands. You understand platform algorithms, user behavior, and what drives engagement.`;
-
-    // TASK
-    const framework =
-      request.framework === 'auto' || !request.framework
-        ? 'the most effective copywriting framework for this campaign'
-        : request.framework.toUpperCase();
-
-    const task = `Write compelling ad copy variation #${variationNumber} for a ${request.platform} advertisement using ${framework} framework. This copy must grab attention in 3-8 seconds, resonate with the target audience, and drive them to take action.`;
-
-    const s = (v: string) => sanitizeForPrompt(v, { maxLength: 500, context: 'copy_ptcf' });
-
-    // CONTEXT
-    const context = `
-PRODUCT INFORMATION:
-- Name: ${s(request.productName)}
-- Description: ${s(request.productDescription)}
-${request.productBenefits ? `- Key Benefits: ${request.productBenefits.map(s).join(', ')}` : ''}
-${request.uniqueValueProp ? `- Unique Value: ${s(request.uniqueValueProp)}` : ''}
-- Industry: ${s(request.industry)}
-
-${request.campaignObjective ? `CAMPAIGN GOAL: ${s(request.campaignObjective).toUpperCase()}` : ''}
-
-TARGET AUDIENCE:
-${
-  request.targetAudience
-    ? `
-- Demographics: ${s(request.targetAudience.demographics)}
-- Psychographics: ${s(request.targetAudience.psychographics)}
-- Pain Points: ${request.targetAudience.painPoints.map(s).join(', ')}
-`
-    : 'General audience - use broad appeal messaging'
-}
-
-BRAND VOICE & TONE:
-${
-  request.brandVoice
-    ? `
-- Core Principles: ${request.brandVoice.principles.map(s).join(', ')}
-- Words to USE: ${request.brandVoice.wordsToUse?.map(s).join(', ') || 'N/A'}
-- Words to AVOID: ${request.brandVoice.wordsToAvoid?.map(s).join(', ') || 'N/A'}
-`
-    : `Tone: ${s(request.tone.charAt(0).toUpperCase() + request.tone.slice(1))}`
-}
-
-${
-  request.socialProof
-    ? `
-SOCIAL PROOF (incorporate if relevant):
-${request.socialProof.testimonial ? s(request.socialProof.testimonial) : ''}
-${request.socialProof.stats ? s(request.socialProof.stats) : ''}
-`
-    : ''
-}
-
-PLATFORM REQUIREMENTS (${request.platform.toUpperCase()}):
-${this.getPlatformRequirements(request.platform)}
-
-CHARACTER LIMITS (STRICT):
-- Headline: max ${limits.headline.max} characters (optimal: ${limits.headline.optimal})
-- Hook: max ${limits.hook.max} characters (optimal: ${limits.hook.optimal})
-- Body Text: max ${limits.primaryText.max} characters (optimal: ${limits.primaryText.optimal})
-- Caption: max ${limits.caption.max} characters (optimal: ${limits.caption.optimal})
-
-COPYWRITING FRAMEWORK:
-${this.getFrameworkGuidance(request.framework || 'auto', request.campaignObjective)}
-
-HOOK REQUIREMENTS:
-${this.getHookGuidance(request.platform, request.campaignObjective)}
-
-VARIATION REQUIREMENTS:
-This is variation #${variationNumber}. Make it distinct from other variations while maintaining brand consistency.
-${variationNumber === 1 ? '- Focus on emotional appeal' : ''}
-${variationNumber === 2 ? '- Focus on logical benefits and proof' : ''}
-${variationNumber === 3 ? '- Focus on urgency and scarcity' : ''}
-`;
-
-    // FORMAT
-    return `${persona}\n\n${task}\n\n${context}\n\nIMPORTANT: Return ONLY valid JSON matching the schema. No markdown, no explanations.`;
   }
 
   /**
@@ -311,7 +297,7 @@ ${variationNumber === 3 ? '- Focus on urgency and scarcity' : ''}
     ragContext: string,
     enhancedContext?: EnhancedProductContext | null,
   ): string {
-    const limits = PLATFORM_LIMITS[request.platform];
+    const limits = getPlatformLimitsOrThrow(request.platform);
 
     // PERSONA
     const persona = `You are an expert social media ad copywriter specializing in ${request.platform} advertising. You have 10+ years of experience writing conversion-focused copy for ${request.industry} brands. You understand platform algorithms, user behavior, and what drives engagement.`;
@@ -537,7 +523,7 @@ ${variationNumber === 3 ? '- Focus on urgency and scarcity' : ''}
   /**
    * Copywriting framework guidance
    */
-  private getFrameworkGuidance(framework: string, objective?: string): string {
+  private getFrameworkGuidance(framework: string, _objective?: string): string {
     if (framework === 'auto') {
       return `
 AUTO-SELECT FRAMEWORK:
@@ -587,7 +573,7 @@ Example: "Multi-platform posting [F] = reach all audiences at once [A] = 3x more
 `,
     };
 
-    return frameworks[framework.toLowerCase()] || frameworks.aida;
+    return frameworks[framework.toLowerCase()] || frameworks['aida'] || '';
   }
 
   /**
@@ -627,7 +613,7 @@ ${objective === 'conversion' ? '- Use Benefit Promise or Even If for urgency' : 
    * Response schema for Gemini (ensures structured JSON output)
    */
   private getResponseSchema(platform: string) {
-    const limits = PLATFORM_LIMITS[platform];
+    const limits = getPlatformLimitsOrThrow(platform);
 
     return {
       type: 'object',

@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Express } from 'express';
 import { createServer, type Server } from 'http';
 import { storage } from './storage';
@@ -11,20 +11,14 @@ import { routerModules } from './routes/index';
 import { registerRouters } from './routes/utils/registerRouters';
 import { buildRouterContext } from './routes/utils/buildContext';
 
-import { saveOriginalFile, saveGeneratedImage, deleteFile } from './fileStorage';
-import {
-  insertGenerationSchema,
-  insertProductSchema,
-  insertPromptTemplateSchema,
-  insertInstallationScenarioSchema,
-  insertProductRelationshipSchema,
-} from '@shared/schema';
+import { deleteFile } from './fileStorage';
+import { insertInstallationScenarioSchema, insertProductRelationshipSchema } from '@shared/schema';
 import { validate } from './middleware/validate';
 import express from 'express';
 import path from 'path';
 import { v2 as cloudinary } from 'cloudinary';
 import { authService } from './services/authService';
-import { requireAuth, optionalAuth } from './middleware/auth';
+import { requireAuth } from './middleware/auth';
 import { validateN8nWebhook } from './middleware/webhookAuth';
 import { extendedTimeout, haltOnTimeout } from './middleware/timeout';
 import { isServerShuttingDown } from './utils/gracefulShutdown';
@@ -35,7 +29,7 @@ import {
   estimateGenerationCostMicros,
   normalizeResolution,
 } from './services/pricingEstimator';
-import { quotaMonitoringService, parseRetryDelay, parseLimitType } from './services/quotaMonitoringService';
+import { quotaMonitoringService } from './services/quotaMonitoringService';
 import {
   installationScenarioRAG,
   getRoomInstallationContext,
@@ -55,12 +49,7 @@ import {
   analyzeTemplatePatterns,
   suggestTemplateCustomizations,
 } from './services/templatePatternRAG';
-import {
-  encryptApiKey,
-  generateKeyPreview,
-  validateMasterKeyConfigured,
-  EncryptionConfigError,
-} from './services/encryptionService';
+import { encryptApiKey, generateKeyPreview, validateMasterKeyConfigured } from './services/encryptionService';
 import {
   validateApiKey,
   isValidService,
@@ -84,27 +73,40 @@ import { logger } from './lib/logger';
 import { validateFileType, uploadPatternLimiter, checkPatternQuota } from './middleware/uploadValidation';
 import { promptInjectionGuard } from './middleware/promptInjectionGuard';
 import { toGenerationDTO, toGenerationDTOArray } from './dto/generationDTO';
-import {
-  extractPatterns,
-  processUploadForPatterns,
-  getRelevantPatterns,
-  formatPatternsForPrompt,
-} from './services/patternExtractionService';
+import { processUploadForPatterns, formatPatternsForPrompt } from './services/patternExtractionService';
 import { startPatternCleanupScheduler } from './jobs/patternCleanupJob';
 import { startPostingJobScheduler } from './jobs/postingJob';
 import { generationQueue, generationQueueEvents } from './lib/queue';
 import { JobType, JobProgress } from './jobs/types';
 import { visionAnalysisService } from './services/visionAnalysisService';
-import { ideaBankService } from './services/ideaBankService';
 import { productKnowledgeService } from './services/productKnowledgeService';
 
-// Lazy-load Google Cloud Monitoring to prevent any import-time errors
-let googleCloudMonitoringService: any = null;
-async function getGoogleCloudService() {
+// Lazy-load Google Cloud Monitoring to prevent import-time errors
+interface GoogleCloudService {
+  getSyncStatus(): Record<string, unknown>;
+  getLastSync(): {
+    quotas: unknown[];
+    projectId: string;
+    service: string;
+    syncStatus: string;
+    errorMessage?: string;
+  } | null;
+  isConfigured(): boolean;
+  triggerManualSync(): Promise<{
+    quotas: unknown[];
+    projectId: string;
+    service: string;
+    syncStatus: string;
+    errorMessage?: string;
+  }>;
+  startAutoSync(): void;
+}
+let googleCloudMonitoringService: GoogleCloudService | null = null;
+async function getGoogleCloudService(): Promise<GoogleCloudService | null> {
   if (!googleCloudMonitoringService) {
     try {
       const module = await import('./services/googleCloudMonitoringService');
-      googleCloudMonitoringService = module.googleCloudMonitoringService;
+      googleCloudMonitoringService = module.googleCloudMonitoringService as GoogleCloudService;
     } catch (error) {
       logger.error({ module: 'GoogleCloudMonitoring', err: error }, 'Failed to load module');
     }
@@ -121,21 +123,25 @@ const upload = multer({
 });
 
 // Validate and initialize Cloudinary
-if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+if (
+  !process.env['CLOUDINARY_CLOUD_NAME'] ||
+  !process.env['CLOUDINARY_API_KEY'] ||
+  !process.env['CLOUDINARY_API_SECRET']
+) {
   logger.warn({ module: 'Cloudinary' }, 'Missing credentials - product library features disabled');
 }
 
 const isCloudinaryConfigured = !!(
-  process.env.CLOUDINARY_CLOUD_NAME &&
-  process.env.CLOUDINARY_API_KEY &&
-  process.env.CLOUDINARY_API_SECRET
+  process.env['CLOUDINARY_CLOUD_NAME'] &&
+  process.env['CLOUDINARY_API_KEY'] &&
+  process.env['CLOUDINARY_API_SECRET']
 );
 
 if (isCloudinaryConfigured) {
   cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
+    cloud_name: process.env['CLOUDINARY_CLOUD_NAME'] ?? '',
+    api_key: process.env['CLOUDINARY_API_KEY'] ?? '',
+    api_secret: process.env['CLOUDINARY_API_SECRET'] ?? '',
   });
 }
 
@@ -198,12 +204,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // LEGACY: Liveness probe - keeping for backwards compatibility during migration
   // Will be removed once migration is complete and verified
-  app.get('/api/health/live', (req, res) => {
+  app.get('/api/health/live', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
   // Readiness probe - can we handle traffic?
-  app.get('/api/health/ready', async (req, res) => {
+  app.get('/api/health/ready', async (_req, res) => {
     if (isServerShuttingDown()) {
       return res.status(503).json({
         status: 'shutting_down',
@@ -234,7 +240,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Legacy health endpoint for backwards compatibility
-  app.get('/api/health', (req, res) => {
+  app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
@@ -479,10 +485,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/auth/account', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
       await storage.deleteUser(userId);
-      req.session.destroy(() => {
-        res.json({ message: 'Account deleted successfully' });
+
+      req.session.destroy((destroyError) => {
+        if (destroyError) {
+          logger.warn(
+            { module: 'Auth', action: 'delete-account', err: destroyError },
+            'Session destroy failed after account deletion',
+          );
+        }
       });
+
+      res.clearCookie('connect.sid');
+      res.json({ message: 'Account deleted successfully' });
     } catch (error: any) {
       logger.error({ module: 'Auth', action: 'delete-account', err: error }, 'Account deletion error');
       res.status(500).json({ error: 'Failed to delete account' });
@@ -515,10 +534,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const brandId = (req as any).session?.userId || 'anonymous';
 
-      const resolution = normalizeResolution(req.query.resolution) || '2K';
-      const operation = (req.query.operation === 'edit' ? 'edit' : 'generate') as 'generate' | 'edit';
-      const inputImagesCount = Math.max(0, Math.min(6, parseInt(String(req.query.inputImagesCount || '0'), 10) || 0));
-      const promptChars = Math.max(0, Math.min(20000, parseInt(String(req.query.promptChars || '0'), 10) || 0));
+      const resolution = normalizeResolution(String(req.query['resolution'] ?? '')) || '2K';
+      const operation = (req.query['operation'] === 'edit' ? 'edit' : 'generate') as 'generate' | 'edit';
+      const inputImagesCount = Math.max(
+        0,
+        Math.min(6, parseInt(String(req.query['inputImagesCount'] ?? '0'), 10) || 0),
+      );
+      const promptChars = Math.max(0, Math.min(20000, parseInt(String(req.query['promptChars'] ?? '0'), 10) || 0));
 
       const prior = estimateGenerationCostMicros({
         resolution,
@@ -657,14 +679,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           prompt,
           mode: generationMode as 'standard' | 'exact_insert' | 'inspiration',
           images: imageInputs,
-          templateId: templateId || undefined,
-          templateReferenceUrls: parsedTemplateReferenceUrls,
-          recipe: parsedRecipe || undefined,
-          styleReferenceIds: req.body.styleReferenceIds || undefined,
           resolution: selectedResolution as '1K' | '2K' | '4K',
           userId: userId!,
-          aspectRatio: req.body.aspectRatio || undefined,
-          productIds: req.body.productIds || undefined,
+          ...(templateId ? { templateId } : {}),
+          ...(parsedTemplateReferenceUrls ? { templateReferenceUrls: parsedTemplateReferenceUrls } : {}),
+          ...(parsedRecipe ? { recipe: parsedRecipe as import('@shared/types/ideaBank').GenerationRecipe } : {}),
+          ...(req.body.styleReferenceIds ? { styleReferenceIds: req.body.styleReferenceIds } : {}),
+          ...(req.body.aspectRatio ? { aspectRatio: req.body.aspectRatio } : {}),
+          ...(req.body.productIds ? { productIds: req.body.productIds } : {}),
         });
 
         success = true;
@@ -690,7 +712,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             endpoint: '/api/transform',
             errorType: 'pre_gen_gate_blocked',
             statusCode: 400,
-            userId,
+            ...(userId != null && { userId }),
           });
 
           return res.status(400).json({
@@ -706,7 +728,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           endpoint: '/api/transform',
           errorType: errorType || 'unknown',
           statusCode: 500,
-          userId,
+          ...(userId != null && { userId }),
         });
 
         res.status(500).json({
@@ -724,9 +746,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           inputTokens: inputTokensEstimate,
           outputTokens: 0,
           durationMs,
-          userId,
           success,
-          errorType,
+          ...(userId != null && { userId }),
+          ...(errorType != null && { errorType }),
         });
 
         // Track for quota monitoring dashboard
@@ -746,7 +768,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   promptChars: String(req.body.prompt || '').length,
                 }).estimatedCostMicros
               : 0,
-            errorType,
+            ...(errorType != null && { errorType }),
             isRateLimited: errorType === 'RESOURCE_EXHAUSTED' || errorType === 'rate_limit',
           });
         } catch (trackError) {
@@ -759,8 +781,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all generations (gallery)
   app.get('/api/generations', async (req, res) => {
     try {
-      const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
-      const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+      const limit = Math.min(parseInt(String(req.query['limit'] ?? '50')) || 50, 200);
+      const offset = Math.max(parseInt(String(req.query['offset'] ?? '0')) || 0, 0);
       const allGenerations = await storage.getGenerations(limit, offset);
       res.json(toGenerationDTOArray(allGenerations));
     } catch (error: any) {
@@ -772,7 +794,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get single generation by ID
   app.get('/api/generations/:id', async (req, res) => {
     try {
-      const generation = await storage.getGenerationById(req.params.id);
+      const generation = await storage.getGenerationById(String(req.params['id']));
       if (!generation) {
         return res.status(404).json({ error: 'Generation not found' });
       }
@@ -786,7 +808,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get edit history for a generation
   app.get('/api/generations/:id/history', async (req, res) => {
     try {
-      const { id } = req.params;
+      const id = String(req.params['id']);
 
       const generation = await storage.getGenerationById(id);
       if (!generation) {
@@ -810,7 +832,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete generation
   app.delete('/api/generations/:id', async (req, res) => {
     try {
-      const generation = await storage.getGenerationById(req.params.id);
+      const generation = await storage.getGenerationById(String(req.params['id']));
       if (!generation) {
         return res.status(404).json({ error: 'Generation not found' });
       }
@@ -822,7 +844,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Delete from database
-      await storage.deleteGeneration(req.params.id);
+      await storage.deleteGeneration(String(req.params['id']));
 
       res.json({ success: true });
     } catch (error: any) {
@@ -837,9 +859,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const userId = (req as any).session?.userId;
 
     try {
-      const { id } = req.params;
+      const id = String(req.params['id']);
       const { editPrompt } = req.body;
-      const generationId = id;
 
       // Validate input
       if (!editPrompt || editPrompt.trim().length === 0) {
@@ -886,14 +907,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
       // Enqueue job for background processing
-      const job = await generationQueue.add('edit-generation', {
+      const editJobData: import('./jobs/types').EditJobData = {
         jobType: JobType.EDIT,
         userId: userId || 'anonymous',
         generationId: newGeneration.id,
         editPrompt: editPrompt.trim(),
         originalImageUrl: parentGeneration.generatedImagePath,
         createdAt: new Date().toISOString(),
-      });
+      };
+      const job = await (generationQueue as import('bullmq').Queue).add('edit-generation', editJobData);
 
       logger.info({ module: 'Edit', jobId: job.id, generationId: newGeneration.id }, 'Edit job enqueued');
 
@@ -926,7 +948,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Job status endpoint - Poll this to check job progress
   app.get('/api/jobs/:jobId', async (req, res) => {
     try {
-      const { jobId } = req.params;
+      const jobId = String(req.params['jobId']);
 
       const job = await generationQueue.getJob(jobId);
 
@@ -984,7 +1006,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // SSE endpoint for real-time job status updates
   // Clients connect once and receive push updates instead of polling
   app.get('/api/jobs/:jobId/stream', requireAuth, async (req, res) => {
-    const jobId = req.params.jobId;
+    const jobId = req.params['jobId'];
 
     // Set SSE headers
     res.setHeader('Content-Type', 'text/event-stream');
@@ -993,7 +1015,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
 
     // Send initial status
-    const job = await generationQueue.getJob(jobId);
+    const job = await generationQueue.getJob(String(jobId ?? ''));
     if (!job) {
       res.write(`data: ${JSON.stringify({ type: 'error', message: 'Job not found' })}\n\n`);
       return res.end();
@@ -1065,14 +1087,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Cleanup function to remove all listeners
     const cleanup = () => {
-      generationQueueEvents.off('progress', progressListener);
-      generationQueueEvents.off('completed', completedListener);
-      generationQueueEvents.off('failed', failedListener);
+      generationQueueEvents.off('progress', progressListener as (...args: unknown[]) => void);
+      generationQueueEvents.off('completed', completedListener as (...args: unknown[]) => void);
+      generationQueueEvents.off('failed', failedListener as (...args: unknown[]) => void);
     };
 
-    generationQueueEvents.on('progress', progressListener);
-    generationQueueEvents.on('completed', completedListener);
-    generationQueueEvents.on('failed', failedListener);
+    generationQueueEvents.on('progress', progressListener as (...args: unknown[]) => void);
+    generationQueueEvents.on('completed', completedListener as (...args: unknown[]) => void);
+    generationQueueEvents.on('failed', failedListener as (...args: unknown[]) => void);
 
     // Cleanup on connection close (client disconnects)
     req.on('close', () => {
@@ -1084,7 +1106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Analyze generation - Ask AI about the transformation
   app.post('/api/generations/:id/analyze', async (req, res) => {
     try {
-      const { id } = req.params;
+      const id = String(req.params['id']);
       const { question } = req.body;
 
       if (!question || question.trim().length === 0) {
@@ -1274,8 +1296,8 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // Get all products
   app.get('/api/products', async (req, res) => {
     try {
-      const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
-      const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+      const limit = Math.min(parseInt(String(req.query['limit'] ?? '50')) || 50, 200);
+      const offset = Math.max(parseInt(String(req.query['offset'] ?? '0')) || 0, 0);
       const products = await storage.getProducts(limit, offset);
       res.json(products);
     } catch (error: any) {
@@ -1287,7 +1309,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // Get single product by ID
   app.get('/api/products/:id', async (req, res) => {
     try {
-      const product = await storage.getProductById(req.params.id);
+      const product = await storage.getProductById(String(req.params['id']));
       if (!product) {
         return res.status(404).json({ error: 'Product not found' });
       }
@@ -1301,12 +1323,12 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // Delete product
   app.delete('/api/products/:id', async (req, res) => {
     try {
-      const product = await storage.getProductById(req.params.id);
+      const product = await storage.getProductById(String(req.params['id']));
       if (!product) {
         return res.status(404).json({ error: 'Product not found' });
       }
 
-      const productId = req.params.id;
+      const productId = String(req.params['id']);
 
       // Delete from Cloudinary
       await cloudinary.uploader.destroy(product.cloudinaryPublicId);
@@ -1329,7 +1351,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   });
 
   // Clear all products from database
-  app.delete('/api/products', async (req, res) => {
+  app.delete('/api/products', async (_req, res) => {
     try {
       const products = await storage.getProducts();
       const productIds = products.map((p) => p.id);
@@ -1443,7 +1465,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // Get prompt templates (optionally filtered by category)
   app.get('/api/prompt-templates', async (req, res) => {
     try {
-      const category = req.query.category as string | undefined;
+      const category = req.query['category'] as string | undefined;
       const templates = await storage.getPromptTemplates(category);
       res.json(templates);
     } catch (error: any) {
@@ -1455,7 +1477,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // Delete prompt template
   app.delete('/api/prompt-templates/:id', async (req, res) => {
     try {
-      await storage.deletePromptTemplate(req.params.id);
+      await storage.deletePromptTemplate(String(req.params['id']));
       res.json({ success: true });
     } catch (error: any) {
       logger.error({ module: 'DeletePromptTemplate', err: error }, 'Error deleting template');
@@ -1521,7 +1543,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // GET /api/ad-templates/:id - Get single template
   app.get('/api/ad-templates/:id', async (req, res) => {
     try {
-      const template = await storage.getAdSceneTemplateById(req.params.id);
+      const template = await storage.getAdSceneTemplateById(String(req.params['id']));
       if (!template) {
         return res.status(404).json({ error: 'Template not found' });
       }
@@ -1558,7 +1580,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // PUT /api/ad-templates/:id - Update template
   app.put('/api/ad-templates/:id', requireAuth, async (req, res) => {
     try {
-      const existing = await storage.getAdSceneTemplateById(req.params.id);
+      const existing = await storage.getAdSceneTemplateById(String(req.params['id']));
       if (!existing) {
         return res.status(404).json({ error: 'Template not found' });
       }
@@ -1568,7 +1590,9 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       const updateSchema = insertAdSceneTemplateSchema.partial();
       const validatedData = updateSchema.parse(req.body);
 
-      const template = await storage.updateAdSceneTemplate(req.params.id, validatedData);
+      // Strip undefined values for exactOptionalPropertyTypes compatibility
+      const cleanData = Object.fromEntries(Object.entries(validatedData).filter(([, v]) => v !== undefined));
+      const template = await storage.updateAdSceneTemplate(String(req.params['id']), cleanData);
       res.json(template);
     } catch (error: any) {
       if (error.name === 'ZodError') {
@@ -1582,12 +1606,12 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // DELETE /api/ad-templates/:id - Delete template (admin)
   app.delete('/api/ad-templates/:id', requireAuth, async (req, res) => {
     try {
-      const existing = await storage.getAdSceneTemplateById(req.params.id);
+      const existing = await storage.getAdSceneTemplateById(String(req.params['id']));
       if (!existing) {
         return res.status(404).json({ error: 'Template not found' });
       }
 
-      await storage.deleteAdSceneTemplate(req.params.id);
+      await storage.deleteAdSceneTemplate(String(req.params['id']));
       res.json({ success: true });
     } catch (error: any) {
       logger.error({ module: 'DeleteAdTemplate', err: error }, 'Error deleting ad template');
@@ -1697,7 +1721,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // Get copy by generation ID
   app.get('/api/copy/generation/:generationId', async (req, res) => {
     try {
-      const copies = await storage.getAdCopyByGenerationId(req.params.generationId);
+      const copies = await storage.getAdCopyByGenerationId(String(req.params['generationId']));
       res.json({ copies });
     } catch (error: any) {
       logger.error({ module: 'GetCopyByGeneration', err: error }, 'Error fetching copy');
@@ -1708,7 +1732,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // Get specific copy by ID
   app.get('/api/copy/:id', async (req, res) => {
     try {
-      const copy = await storage.getAdCopyById(req.params.id);
+      const copy = await storage.getAdCopyById(String(req.params['id']));
       if (!copy) {
         return res.status(404).json({ error: 'Copy not found' });
       }
@@ -1722,7 +1746,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // Delete copy
   app.delete('/api/copy/:id', async (req, res) => {
     try {
-      await storage.deleteAdCopy(req.params.id);
+      await storage.deleteAdCopy(String(req.params['id']));
       res.json({ success: true });
     } catch (error: any) {
       logger.error({ module: 'DeleteCopy', err: error }, 'Error deleting copy');
@@ -1817,7 +1841,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   });
 
   // Admin: Force verification of Brand Profile Seed
-  app.post('/api/admin/seed-brand', requireAuth, async (req, res) => {
+  app.post('/api/admin/seed-brand', requireAuth, async (_req, res) => {
     try {
       logger.info({ module: 'Admin' }, 'Force seeding brand profile');
       await seedBrandProfile();
@@ -1843,7 +1867,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   });
 
   // Admin: Seed Installation Scenarios
-  app.post('/api/admin/seed-installation-scenarios', requireAuth, async (req, res) => {
+  app.post('/api/admin/seed-installation-scenarios', requireAuth, async (_req, res) => {
     try {
       logger.info({ module: 'Admin' }, 'Seeding installation scenarios');
       const { seedInstallationScenarios } = await import('./seeds/seedInstallationScenarios');
@@ -1856,7 +1880,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   });
 
   // Admin: Seed Product Relationships
-  app.post('/api/admin/seed-relationships', requireAuth, async (req, res) => {
+  app.post('/api/admin/seed-relationships', requireAuth, async (_req, res) => {
     try {
       logger.info({ module: 'Admin' }, 'Seeding product relationships');
       const { seedProductRelationships } = await import('./seeds/seedRelationships');
@@ -1883,7 +1907,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   });
 
   // Admin: Seed Performing Templates
-  app.post('/api/admin/seed-templates', requireAuth, async (req, res) => {
+  app.post('/api/admin/seed-templates', requireAuth, async (_req, res) => {
     try {
       logger.info({ module: 'Admin' }, 'Seeding performing templates');
       const { seedPerformingTemplates } = await import('./seeds/seedTemplates');
@@ -1896,7 +1920,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   });
 
   // Admin: Seed Ad Scene Templates
-  app.post('/api/admin/seed-ad-scene-templates', requireAuth, async (req, res) => {
+  app.post('/api/admin/seed-ad-scene-templates', requireAuth, async (_req, res) => {
     try {
       logger.info({ module: 'Admin' }, 'Seeding ad scene templates');
       const { seedAdSceneTemplates } = await import('./seeds/seedAdSceneTemplates');
@@ -1927,7 +1951,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // =============================================================================
 
   // Get available categories for scraping
-  app.get('/api/admin/scraper/categories', requireAuth, async (req, res) => {
+  app.get('/api/admin/scraper/categories', requireAuth, async (_req, res) => {
     try {
       const { getAvailableCategories } = await import('./services/ndsWebsiteScraper');
       const categories = getAvailableCategories();
@@ -1955,7 +1979,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // Scrape a single category
   app.post('/api/admin/scraper/scrape-category/:category', requireAuth, async (req, res) => {
     try {
-      const { category } = req.params;
+      const category = String(req.params['category']);
       logger.info({ module: 'Scraper', category }, 'Scraping category');
       const { scrapeSingleCategory } = await import('./services/ndsWebsiteScraper');
       const results = await scrapeSingleCategory(category);
@@ -1971,7 +1995,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // =============================================================================
 
   // Initialize File Search Store
-  app.post('/api/file-search/initialize', requireAuth, async (req, res) => {
+  app.post('/api/file-search/initialize', requireAuth, async (_req, res) => {
     try {
       const { initializeFileSearchStore } = await import('./services/fileSearchService');
       const store = await initializeFileSearchStore();
@@ -2045,7 +2069,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   app.get('/api/file-search/files', requireAuth, async (req, res) => {
     try {
       const { category } = req.query;
-      const { listReferenceFiles, FileCategory } = await import('./services/fileSearchService');
+      const { listReferenceFiles } = await import('./services/fileSearchService');
 
       const files = await listReferenceFiles(category as any);
       res.json({ success: true, files, count: files.length });
@@ -2058,7 +2082,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // Delete reference file
   app.delete('/api/file-search/files/:fileId', requireAuth, async (req, res) => {
     try {
-      const { fileId } = req.params;
+      const fileId = String(req.params['fileId']);
       const { deleteReferenceFile } = await import('./services/fileSearchService');
 
       await deleteReferenceFile(fileId);
@@ -2070,7 +2094,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   });
 
   // Seed File Search Store with initial structure
-  app.post('/api/file-search/seed', requireAuth, async (req, res) => {
+  app.post('/api/file-search/seed', requireAuth, async (_req, res) => {
     try {
       const { seedFileSearchStore } = await import('./services/fileSearchService');
       const result = await seedFileSearchStore();
@@ -2088,7 +2112,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // Analyze a product image (vision analysis)
   app.post('/api/products/:productId/analyze', requireAuth, async (req, res) => {
     try {
-      const { productId } = req.params;
+      const productId = String(req.params['productId']);
       const userId = (req.session as any).userId;
       const { forceRefresh } = req.body || {};
 
@@ -2119,7 +2143,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // Get cached analysis for a product
   app.get('/api/products/:productId/analysis', requireAuth, async (req, res) => {
     try {
-      const { productId } = req.params;
+      const productId = String(req.params['productId']);
       const { visionAnalysisService } = await import('./services/visionAnalysisService');
 
       const analysis = await visionAnalysisService.getCachedAnalysis(productId);
@@ -2178,7 +2202,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // Generate enrichment draft for a product (AI analyzes image + searches web)
   app.post('/api/products/:productId/enrich', requireAuth, async (req, res) => {
     try {
-      const { productId } = req.params;
+      const productId = String(req.params['productId']);
       const userId = (req.session as any)?.userId;
 
       const { productEnrichmentService } = await import('./services/productEnrichmentService');
@@ -2202,7 +2226,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // Enrich product from a user-provided URL
   app.post('/api/products/:productId/enrich-from-url', requireAuth, async (req, res) => {
     try {
-      const { productId } = req.params;
+      const productId = String(req.params['productId']);
       const { productUrl } = req.body;
 
       if (!productUrl || typeof productUrl !== 'string') {
@@ -2217,7 +2241,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       }
 
       const { enrichFromUrl, saveEnrichmentDraft } = await import('./services/enrichmentServiceWithUrl');
-      const result = await enrichFromUrl({ productId, productUrl });
+      const result = await enrichFromUrl({ productId: String(productId), productUrl });
 
       if (!result.success || !result.enrichmentDraft) {
         return res.status(400).json({ error: result.error || 'Failed to enrich from URL' });
@@ -2240,7 +2264,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // Get enrichment draft for a product
   app.get('/api/products/:productId/enrichment', requireAuth, async (req, res) => {
     try {
-      const { productId } = req.params;
+      const productId = String(req.params['productId']);
       const product = await storage.getProductById(productId);
 
       if (!product) {
@@ -2268,7 +2292,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // Verify/approve enrichment data (human-in-the-loop)
   app.post('/api/products/:productId/enrichment/verify', requireAuth, async (req, res) => {
     try {
-      const { productId } = req.params;
+      const productId = String(req.params['productId']);
       const userId = (req.session as any)?.userId;
       const { description, features, benefits, specifications, tags, sku, approvedAsIs } = req.body;
 
@@ -2345,7 +2369,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // Get scenarios by room type (MUST be before :id catch-all)
   app.get('/api/installation-scenarios/room-type/:roomType', requireAuth, async (req, res) => {
     try {
-      const scenarios = await storage.getScenariosByRoomType(req.params.roomType);
+      const scenarios = await storage.getScenariosByRoomType(String(req.params['roomType']));
       res.json(scenarios);
     } catch (error: any) {
       logger.error({ module: 'InstallationScenarios', err: error }, 'Room type query error');
@@ -2371,7 +2395,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // Get single installation scenario (catch-all - must be after specific routes)
   app.get('/api/installation-scenarios/:id', requireAuth, async (req, res) => {
     try {
-      const scenario = await storage.getInstallationScenarioById(req.params.id);
+      const scenario = await storage.getInstallationScenarioById(String(req.params['id']));
       if (!scenario) {
         return res.status(404).json({ error: 'Installation scenario not found' });
       }
@@ -2386,14 +2410,14 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   app.put('/api/installation-scenarios/:id', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
-      const existing = await storage.getInstallationScenarioById(req.params.id);
+      const existing = await storage.getInstallationScenarioById(String(req.params['id']));
       if (!existing) {
         return res.status(404).json({ error: 'Installation scenario not found' });
       }
       if (existing.userId !== userId) {
         return res.status(403).json({ error: 'Not authorized to update this scenario' });
       }
-      const scenario = await storage.updateInstallationScenario(req.params.id, req.body);
+      const scenario = await storage.updateInstallationScenario(String(req.params['id']), req.body);
       res.json(scenario);
     } catch (error: any) {
       logger.error({ module: 'InstallationScenarios', err: error }, 'Update error');
@@ -2405,14 +2429,14 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   app.delete('/api/installation-scenarios/:id', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
-      const existing = await storage.getInstallationScenarioById(req.params.id);
+      const existing = await storage.getInstallationScenarioById(String(req.params['id']));
       if (!existing) {
         return res.status(404).json({ error: 'Installation scenario not found' });
       }
       if (existing.userId !== userId) {
         return res.status(403).json({ error: 'Not authorized to delete this scenario' });
       }
-      await storage.deleteInstallationScenario(req.params.id);
+      await storage.deleteInstallationScenario(String(req.params['id']));
       res.json({ success: true });
     } catch (error: any) {
       logger.error({ module: 'InstallationScenarios', err: error }, 'Delete error');
@@ -2453,7 +2477,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // Get relationships for a product
   app.get('/api/products/:productId/relationships', requireAuth, async (req, res) => {
     try {
-      const relationships = await storage.getProductRelationships([req.params.productId]);
+      const relationships = await storage.getProductRelationships([String(req.params['productId'])]);
       res.json(relationships);
     } catch (error: any) {
       logger.error({ module: 'ProductRelationships', err: error }, 'Get error');
@@ -2465,8 +2489,8 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   app.get('/api/products/:productId/relationships/:relationshipType', requireAuth, async (req, res) => {
     try {
       const relationships = await storage.getProductRelationshipsByType(
-        req.params.productId,
-        req.params.relationshipType,
+        String(req.params['productId']),
+        String(req.params['relationshipType']),
       );
       res.json(relationships);
     } catch (error: any) {
@@ -2478,7 +2502,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // Delete product relationship
   app.delete('/api/product-relationships/:id', requireAuth, async (req, res) => {
     try {
-      await storage.deleteProductRelationship(req.params.id);
+      await storage.deleteProductRelationship(String(req.params['id']));
       res.json({ success: true });
     } catch (error: any) {
       logger.error({ module: 'ProductRelationships', err: error }, 'Delete error');
@@ -2518,9 +2542,9 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       // Upload to Cloudinary
       const cloudinary = (await import('cloudinary')).v2;
       cloudinary.config({
-        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-        api_key: process.env.CLOUDINARY_API_KEY,
-        api_secret: process.env.CLOUDINARY_API_SECRET,
+        cloud_name: process.env['CLOUDINARY_CLOUD_NAME'] ?? '',
+        api_key: process.env['CLOUDINARY_API_KEY'] ?? '',
+        api_secret: process.env['CLOUDINARY_API_SECRET'] ?? '',
       });
 
       const uploadResult = await new Promise<any>((resolve, reject) => {
@@ -2571,8 +2595,8 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   app.get('/api/brand-images', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
-      const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
-      const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+      const limit = Math.min(parseInt(String(req.query['limit'] ?? '')) || 50, 200);
+      const offset = Math.max(parseInt(String(req.query['offset'] ?? '')) || 0, 0);
       const images = await storage.getBrandImagesByUser(userId, limit, offset);
       res.json(images);
     } catch (error: any) {
@@ -2585,7 +2609,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   app.get('/api/brand-images/category/:category', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
-      const images = await storage.getBrandImagesByCategory(userId, req.params.category);
+      const images = await storage.getBrandImagesByCategory(userId, String(req.params['category']));
       res.json(images);
     } catch (error: any) {
       logger.error({ module: 'BrandImages', err: error }, 'Category query error');
@@ -2612,7 +2636,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // Update brand image
   app.put('/api/brand-images/:id', requireAuth, async (req, res) => {
     try {
-      const image = await storage.updateBrandImage(req.params.id, req.body);
+      const image = await storage.updateBrandImage(String(req.params['id']), req.body);
       res.json(image);
     } catch (error: any) {
       logger.error({ module: 'BrandImages', err: error }, 'Update error');
@@ -2625,15 +2649,15 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
     try {
       // Get the image to delete from Cloudinary
       const images = await storage.getBrandImagesByUser((req.session as any).userId);
-      const imageToDelete = images.find((img) => img.id === req.params.id);
+      const imageToDelete = images.find((img) => img.id === String(req.params['id']));
 
       if (imageToDelete) {
         // Delete from Cloudinary
         const cloudinary = (await import('cloudinary')).v2;
         cloudinary.config({
-          cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-          api_key: process.env.CLOUDINARY_API_KEY,
-          api_secret: process.env.CLOUDINARY_API_SECRET,
+          cloud_name: process.env['CLOUDINARY_CLOUD_NAME'] ?? '',
+          api_key: process.env['CLOUDINARY_API_KEY'] ?? '',
+          api_secret: process.env['CLOUDINARY_API_SECRET'] ?? '',
         });
 
         try {
@@ -2644,7 +2668,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         }
       }
 
-      await storage.deleteBrandImage(req.params.id);
+      await storage.deleteBrandImage(String(req.params['id']));
       res.json({ success: true });
     } catch (error: any) {
       logger.error({ module: 'BrandImages', err: error }, 'Delete error');
@@ -2667,9 +2691,9 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       if (req.file) {
         const cloudinary = (await import('cloudinary')).v2;
         cloudinary.config({
-          cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-          api_key: process.env.CLOUDINARY_API_KEY,
-          api_secret: process.env.CLOUDINARY_API_SECRET,
+          cloud_name: process.env['CLOUDINARY_CLOUD_NAME'] ?? '',
+          api_key: process.env['CLOUDINARY_API_KEY'] ?? '',
+          api_secret: process.env['CLOUDINARY_API_SECRET'] ?? '',
         });
 
         const result = await new Promise<any>((resolve, reject) => {
@@ -2763,7 +2787,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   app.get('/api/performing-ad-templates/top', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
-      const limit = parseInt(req.query.limit as string) || 10;
+      const limit = parseInt(String(req.query['limit'] ?? '')) || 10;
       const templates = await storage.getTopPerformingAdTemplates(userId, limit);
       res.json(templates);
     } catch (error: any) {
@@ -2789,7 +2813,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   app.get('/api/performing-ad-templates/category/:category', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
-      const templates = await storage.getPerformingAdTemplatesByCategory(userId, req.params.category);
+      const templates = await storage.getPerformingAdTemplatesByCategory(userId, String(req.params['category']));
       res.json(templates);
     } catch (error: any) {
       logger.error({ module: 'PerformingTemplates', err: error }, 'Get by category error');
@@ -2801,7 +2825,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   app.get('/api/performing-ad-templates/platform/:platform', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
-      const templates = await storage.getPerformingAdTemplatesByPlatform(userId, req.params.platform);
+      const templates = await storage.getPerformingAdTemplatesByPlatform(userId, String(req.params['platform']));
       res.json(templates);
     } catch (error: any) {
       logger.error({ module: 'PerformingTemplates', err: error }, 'Get by platform error');
@@ -2812,7 +2836,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // Get single performing ad template (catch-all - must be after specific routes)
   app.get('/api/performing-ad-templates/:id', requireAuth, async (req, res) => {
     try {
-      const template = await storage.getPerformingAdTemplate(req.params.id);
+      const template = await storage.getPerformingAdTemplate(String(req.params['id']));
       if (!template) {
         return res.status(404).json({ error: 'Template not found' });
       }
@@ -2826,7 +2850,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // Update performing ad template
   app.put('/api/performing-ad-templates/:id', requireAuth, async (req, res) => {
     try {
-      const template = await storage.updatePerformingAdTemplate(req.params.id, req.body);
+      const template = await storage.updatePerformingAdTemplate(String(req.params['id']), req.body);
       res.json(template);
     } catch (error: any) {
       logger.error({ module: 'PerformingTemplates', err: error }, 'Update error');
@@ -2838,14 +2862,14 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   app.delete('/api/performing-ad-templates/:id', requireAuth, async (req, res) => {
     try {
       // Get the template to delete preview from Cloudinary
-      const template = await storage.getPerformingAdTemplate(req.params.id);
+      const template = await storage.getPerformingAdTemplate(String(req.params['id']));
 
       if (template?.previewPublicId) {
         const cloudinary = (await import('cloudinary')).v2;
         cloudinary.config({
-          cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-          api_key: process.env.CLOUDINARY_API_KEY,
-          api_secret: process.env.CLOUDINARY_API_SECRET,
+          cloud_name: process.env['CLOUDINARY_CLOUD_NAME'] ?? '',
+          api_key: process.env['CLOUDINARY_API_KEY'] ?? '',
+          api_secret: process.env['CLOUDINARY_API_SECRET'] ?? '',
         });
 
         try {
@@ -2855,7 +2879,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         }
       }
 
-      await storage.deletePerformingAdTemplate(req.params.id);
+      await storage.deletePerformingAdTemplate(String(req.params['id']));
       res.json({ success: true });
     } catch (error: any) {
       logger.error({ module: 'PerformingTemplates', err: error }, 'Delete error');
@@ -3023,7 +3047,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // Get matched templates for a product
   app.get('/api/idea-bank/templates/:productId', requireAuth, async (req, res) => {
     try {
-      const { productId } = req.params;
+      const productId = String(req.params['productId']);
       const userId = (req.session as any).userId;
 
       const { ideaBankService } = await import('./services/ideaBankService');
@@ -3053,14 +3077,15 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
     try {
       const { category, isGlobal } = req.query;
 
-      const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
-      const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
-      const templates = await storage.getAdSceneTemplates({
-        category: category as string | undefined,
-        isGlobal: isGlobal === 'true' ? true : isGlobal === 'false' ? false : undefined,
-        limit,
-        offset,
+      const limit = Math.min(parseInt(String(req.query['limit'] ?? '')) || 50, 200);
+      const offset = Math.max(parseInt(String(req.query['offset'] ?? '')) || 0, 0);
+      const categoryFilter = category as string | undefined;
+      const isGlobalFilter = isGlobal === 'true' ? true : isGlobal === 'false' ? false : undefined;
+      const allTemplates = await storage.getAdSceneTemplates({
+        ...(categoryFilter != null && { category: categoryFilter }),
+        ...(isGlobalFilter != null && { isGlobal: isGlobalFilter }),
       });
+      const templates = allTemplates.slice(offset, offset + limit);
 
       res.json({ templates, total: templates.length });
     } catch (error: any) {
@@ -3072,7 +3097,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // Get a single template - Public endpoint
   app.get('/api/templates/:id', async (req, res) => {
     try {
-      const template = await storage.getAdSceneTemplateById(req.params.id);
+      const template = await storage.getAdSceneTemplateById(String(req.params['id']));
 
       if (!template) {
         return res.status(404).json({ error: 'Template not found' });
@@ -3130,7 +3155,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   app.patch('/api/templates/:id', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
-      const template = await storage.getAdSceneTemplateById(req.params.id);
+      const template = await storage.getAdSceneTemplateById(String(req.params['id']));
 
       if (!template) {
         return res.status(404).json({ error: 'Template not found' });
@@ -3142,7 +3167,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         return res.status(403).json({ error: 'Not authorized to update this template' });
       }
 
-      const updated = await storage.updateAdSceneTemplate(req.params.id, req.body);
+      const updated = await storage.updateAdSceneTemplate(String(req.params['id']), req.body);
       res.json(updated);
     } catch (error: any) {
       logger.error({ module: 'TemplateUpdate', err: error }, 'Error updating template');
@@ -3154,7 +3179,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   app.delete('/api/templates/:id', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
-      const template = await storage.getAdSceneTemplateById(req.params.id);
+      const template = await storage.getAdSceneTemplateById(String(req.params['id']));
 
       if (!template) {
         return res.status(404).json({ error: 'Template not found' });
@@ -3166,7 +3191,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         return res.status(403).json({ error: 'Not authorized to delete this template' });
       }
 
-      await storage.deleteAdSceneTemplate(req.params.id);
+      await storage.deleteAdSceneTemplate(String(req.params['id']));
       res.json({ success: true });
     } catch (error: any) {
       logger.error({ module: 'TemplateDelete', err: error }, 'Error deleting template');
@@ -3349,7 +3374,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // ============================================
 
   // GET /api/quota/google/status - Get Google Cloud sync status
-  app.get('/api/quota/google/status', async (req, res) => {
+  app.get('/api/quota/google/status', async (_req, res) => {
     try {
       const service = await getGoogleCloudService();
       if (!service) {
@@ -3375,7 +3400,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   });
 
   // GET /api/quota/google/snapshot - Get latest Google quota snapshot
-  app.get('/api/quota/google/snapshot', async (req, res) => {
+  app.get('/api/quota/google/snapshot', async (_req, res) => {
     try {
       const service = await getGoogleCloudService();
       const snapshot = service?.getLastSync();
@@ -3398,7 +3423,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   });
 
   // POST /api/quota/google/sync - Trigger manual sync
-  app.post('/api/quota/google/sync', async (req, res) => {
+  app.post('/api/quota/google/sync', async (_req, res) => {
     try {
       const service = await getGoogleCloudService();
       if (!service) {
@@ -3447,7 +3472,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // GET /api/quota/google/history - Get sync history
   app.get('/api/quota/google/history', async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 20;
+      const limit = parseInt(String(req.query['limit'] ?? '')) || 20;
       const history = await storage.getRecentSyncHistory(limit);
       res.json({ history });
     } catch (error: any) {
@@ -3459,13 +3484,13 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // GET /api/quota/google/snapshots - Get historical snapshots
   app.get('/api/quota/google/snapshots', async (req, res) => {
     try {
-      const brandId = req.query.brandId as string | undefined;
-      const startDate = new Date((req.query.startDate as string) || Date.now() - 7 * 24 * 60 * 60 * 1000);
-      const endDate = new Date((req.query.endDate as string) || Date.now());
-      const limit = parseInt(req.query.limit as string) || 100;
+      const brandIdParam = req.query['brandId'] as string | undefined;
+      const startDate = new Date((req.query['startDate'] as string) || Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const endDate = new Date((req.query['endDate'] as string) || Date.now());
+      const limit = parseInt(String(req.query['limit'] ?? '')) || 100;
 
       const snapshots = await storage.getGoogleQuotaSnapshotHistory({
-        brandId,
+        ...(brandIdParam != null && { brandId: brandIdParam }),
         startDate,
         endDate,
         limit,
@@ -3507,10 +3532,10 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // GET /api/monitoring/errors - Error tracking
   app.get('/api/monitoring/errors', requireAuth, async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 50;
-      const { getRecentErrors, getErrorStats } = await import('./services/errorTrackingService');
-      const errors = getRecentErrors(limit);
-      const stats = getErrorStats();
+      const limit = parseInt(String(req.query['limit'] ?? '')) || 50;
+      const errorTrackingModule = await import('./services/errorTrackingService');
+      const errors = errorTrackingModule.getRecentErrors(limit);
+      const stats = errorTrackingModule.getErrorStats();
 
       res.json({ errors, stats });
     } catch (error: any) {
@@ -3524,7 +3549,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
     try {
       const { getSystemHealth } = await import('./services/systemHealthService');
       const { getPerformanceMetrics } = await import('./middleware/performanceMetrics');
-      const { getRecentErrors, getErrorStats } = await import('./services/errorTrackingService');
+      const { getErrorStats } = await import('./services/errorTrackingService');
 
       const health = await getSystemHealth();
       const perfMetrics = getPerformanceMetrics();
@@ -3624,7 +3649,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // GET /api/installation/room-context/:roomType - Get room-specific installation context
   app.get('/api/installation/room-context/:roomType', requireAuth, async (req, res) => {
     try {
-      const roomType = req.params.roomType as RoomType;
+      const roomType = String(req.params['roomType']) as RoomType;
 
       if (!ROOM_TYPES.includes(roomType)) {
         return res.status(400).json({
@@ -3684,7 +3709,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   app.post('/api/products/:productId/suggest-relationships', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
-      const { productId } = req.params;
+      const productId = String(req.params['productId']);
       const { maxSuggestions, minScore, includeExisting } = req.body;
 
       const suggestions = await suggestRelationships(productId, userId, {
@@ -3819,7 +3844,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   app.post('/api/brand-images/match-product/:productId', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
-      const { productId } = req.params;
+      const productId = String(req.params['productId']);
       const { maxResults, categoryFilter } = req.body;
 
       const matches = await brandImageRecommendationRAG.matchImagesForProduct(productId, userId, {
@@ -3886,7 +3911,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // GET /api/templates/analyze-patterns/:templateId - Analyze visual patterns of a template
   app.get('/api/templates/analyze-patterns/:templateId', requireAuth, async (req, res) => {
     try {
-      const { templateId } = req.params;
+      const templateId = String(req.params['templateId']);
 
       const template = await storage.getPerformingAdTemplate(templateId);
       if (!template) {
@@ -3944,10 +3969,10 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
 
       // Environment variable mapping for checking fallbacks
       const envVarMap: Record<string, string | undefined> = {
-        gemini: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY,
-        cloudinary: process.env.CLOUDINARY_API_KEY,
-        firecrawl: process.env.FIRECRAWL_API_KEY,
-        redis: process.env.REDIS_URL,
+        gemini: process.env['GEMINI_API_KEY'] || process.env['GOOGLE_API_KEY'],
+        cloudinary: process.env['CLOUDINARY_API_KEY'],
+        firecrawl: process.env['FIRECRAWL_API_KEY'],
+        redis: process.env['REDIS_URL'],
       };
 
       const keys = supportedServices.map((service) => {
@@ -3998,8 +4023,8 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    */
   app.post('/api/settings/api-keys/:service', requireAuth, async (req, res) => {
     const userId = (req as any).session.userId;
-    const { service } = req.params;
-    const ipAddress = (req.ip || (req.headers['x-forwarded-for'] as string) || '').split(',')[0].trim();
+    const service = String(req.params['service']);
+    const ipAddress = (req.ip ?? (req.headers['x-forwarded-for'] as string) ?? '').split(',')[0]?.trim() ?? '';
     const userAgent = req.headers['user-agent'] || '';
 
     try {
@@ -4063,7 +4088,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
           ipAddress,
           userAgent,
           success: false,
-          errorMessage: validationResult.error,
+          ...(validationResult.error != null && { errorMessage: validationResult.error }),
         });
 
         return res.status(400).json({
@@ -4161,8 +4186,8 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    */
   app.delete('/api/settings/api-keys/:service', requireAuth, async (req, res) => {
     const userId = (req as any).session.userId;
-    const { service } = req.params;
-    const ipAddress = (req.ip || (req.headers['x-forwarded-for'] as string) || '').split(',')[0].trim();
+    const service = String(req.params['service']);
+    const ipAddress = (req.ip ?? (req.headers['x-forwarded-for'] as string) ?? '').split(',')[0]?.trim() ?? '';
     const userAgent = req.headers['user-agent'] || '';
 
     try {
@@ -4205,10 +4230,10 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
 
       // Check if environment fallback exists
       const envVarMap: Record<string, string | undefined> = {
-        gemini: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY,
-        cloudinary: process.env.CLOUDINARY_API_KEY,
-        firecrawl: process.env.FIRECRAWL_API_KEY,
-        redis: process.env.REDIS_URL,
+        gemini: process.env['GEMINI_API_KEY'] || process.env['GOOGLE_API_KEY'],
+        cloudinary: process.env['CLOUDINARY_API_KEY'],
+        firecrawl: process.env['FIRECRAWL_API_KEY'],
+        redis: process.env['REDIS_URL'],
       };
       const hasEnvFallback = !!envVarMap[service];
 
@@ -4247,8 +4272,8 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    */
   app.post('/api/settings/api-keys/:service/validate', requireAuth, async (req, res) => {
     const userId = (req as any).session.userId;
-    const { service } = req.params;
-    const ipAddress = (req.ip || (req.headers['x-forwarded-for'] as string) || '').split(',')[0].trim();
+    const service = String(req.params['service']);
+    const ipAddress = (req.ip ?? (req.headers['x-forwarded-for'] as string) ?? '').split(',')[0]?.trim() ?? '';
     const userAgent = req.headers['user-agent'] || '';
 
     try {
@@ -4289,9 +4314,9 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       } else if (service === 'cloudinary' && resolved.source === 'environment') {
         // For environment Cloudinary, need all env vars
         validationResult = await validateApiKey(service as ServiceName, resolved.key, {
-          cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
+          cloudName: process.env['CLOUDINARY_CLOUD_NAME'] || '',
           apiKey: resolved.key,
-          apiSecret: process.env.CLOUDINARY_API_SECRET || '',
+          apiSecret: process.env['CLOUDINARY_API_SECRET'] || '',
         });
       } else {
         validationResult = await validateApiKey(service as ServiceName, resolved.key);
@@ -4310,7 +4335,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         ipAddress,
         userAgent,
         success: validationResult.valid,
-        errorMessage: validationResult.error,
+        ...(validationResult.error != null && { errorMessage: validationResult.error }),
       });
 
       if (validationResult.valid) {
@@ -4473,7 +4498,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    */
   app.delete('/api/social/accounts/:id', requireAuth, async (req, res) => {
     try {
-      const { id } = req.params;
+      const id = String(req.params['id']);
 
       // Verify ownership
       const connection = await storage.getSocialConnectionById(id);
@@ -4511,7 +4536,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         {
           module: 'SocialAccounts',
           err: error,
-          connectionId: req.params.id,
+          connectionId: String(req.params['id']),
         },
         'Failed to disconnect account',
       );
@@ -4530,7 +4555,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    */
   app.post('/api/social/sync-accounts', requireAuth, validate(syncAccountSchema), async (req, res) => {
     try {
-      const { platform, n8nCredentialId, platformUserId, platformUsername, accountType } = req.body;
+      const { platform, platformUserId, platformUsername, accountType } = req.body;
 
       // Check if connection already exists
       const existing = await storage.getSocialConnectionByPlatform(req.user!.id, platform);
@@ -4597,8 +4622,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    */
   app.post('/api/n8n/callback', validateN8nWebhook, validate(n8nCallbackSchema), async (req, res) => {
     try {
-      const { scheduledPostId, platform, success, platformPostId, platformPostUrl, error, executionId, postedAt } =
-        req.body;
+      const { scheduledPostId, platform, success, executionId } = req.body;
 
       logger.info(
         {
@@ -4760,9 +4784,9 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
           name: metadata.name,
           category: metadata.category,
           platform: metadata.platform,
-          industry: metadata.industry,
-          engagementTier: metadata.engagementTier,
-        }).catch((err) => {
+          ...(metadata.industry != null && { industry: metadata.industry }),
+          ...(metadata.engagementTier != null && { engagementTier: metadata.engagementTier }),
+        }).catch((err: unknown) => {
           logger.error({ err, uploadId: uploadRecord.id }, 'Background pattern extraction failed');
         });
 
@@ -4788,7 +4812,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   app.get('/api/learned-patterns/upload/:uploadId', requireAuth, async (req, res) => {
     try {
       const user = (req as any).user;
-      const { uploadId } = req.params;
+      const uploadId = String(req.params['uploadId']);
 
       const upload = await storage.getUploadById(uploadId);
 
@@ -4840,10 +4864,10 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
 
       // Get all patterns with filters, then apply limit/offset client-side for now
       let patterns = await storage.getLearnedPatterns(user.id, {
-        category: filters.category,
-        platform: filters.platform,
-        industry: filters.industry,
-        isActive: filters.isActive,
+        ...(filters.category != null && { category: filters.category }),
+        ...(filters.platform != null && { platform: filters.platform }),
+        ...(filters.industry != null && { industry: filters.industry }),
+        ...(filters.isActive != null && { isActive: filters.isActive }),
       });
 
       // Apply limit and offset if specified
@@ -4878,7 +4902,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   app.get('/api/learned-patterns/category/:category', requireAuth, async (req, res) => {
     try {
       const user = (req as any).user;
-      const { category } = req.params;
+      const category = String(req.params['category']);
 
       const patterns = await storage.getLearnedPatterns(user.id, {
         category,
@@ -4905,7 +4929,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   app.get('/api/learned-patterns/:patternId', requireAuth, async (req, res) => {
     try {
       const user = (req as any).user;
-      const { patternId } = req.params;
+      const patternId = String(req.params['patternId']);
 
       const pattern = await storage.getLearnedPatternById(patternId);
 
@@ -4934,7 +4958,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   app.put('/api/learned-patterns/:patternId', requireAuth, async (req, res) => {
     try {
       const user = (req as any).user;
-      const { patternId } = req.params;
+      const patternId = String(req.params['patternId']);
 
       // Validate update data
       const parseResult = updatePatternSchema.safeParse(req.body);
@@ -4956,7 +4980,15 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         return res.status(403).json({ error: 'Not authorized to update this pattern' });
       }
 
-      const updatedPattern = await storage.updateLearnedPattern(patternId, parseResult.data);
+      // Strip undefined values to satisfy exactOptionalPropertyTypes
+      const strippedUpdates: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(parseResult.data)) {
+        if (v !== undefined) strippedUpdates[k] = v;
+      }
+      const updatedPattern = await storage.updateLearnedPattern(
+        patternId,
+        strippedUpdates as Parameters<typeof storage.updateLearnedPattern>[1],
+      );
 
       res.json(updatedPattern);
     } catch (error: any) {
@@ -4974,7 +5006,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   app.delete('/api/learned-patterns/:patternId', requireAuth, async (req, res) => {
     try {
       const user = (req as any).user;
-      const { patternId } = req.params;
+      const patternId = String(req.params['patternId']);
 
       const pattern = await storage.getLearnedPatternById(patternId);
 
@@ -5006,7 +5038,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   app.post('/api/learned-patterns/:patternId/apply', requireAuth, async (req, res) => {
     try {
       const user = (req as any).user;
-      const { patternId } = req.params;
+      const patternId = String(req.params['patternId']);
 
       // Validate apply request
       const parseResult = applyPatternSchema.safeParse(req.body);
@@ -5028,7 +5060,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         return res.status(403).json({ error: 'Not authorized to use this pattern' });
       }
 
-      const { productIds, targetPlatform, aspectRatio, customizations } = parseResult.data;
+      const { productIds, targetPlatform } = parseResult.data;
 
       // Increment usage count
       await storage.incrementPatternUsage(patternId);
@@ -5041,7 +5073,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       const history = await storage.createApplicationHistory({
         userId: user.id,
         patternId,
-        productId: productIds[0], // Primary product
+        productId: productIds[0] ?? '', // Primary product
         targetPlatform,
         promptUsed: patternPrompt,
       });
@@ -5075,7 +5107,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   app.post('/api/learned-patterns/:patternId/rate', requireAuth, async (req, res) => {
     try {
       const user = (req as any).user;
-      const { patternId } = req.params;
+      const patternId = String(req.params['patternId']);
 
       // Validate rating request
       const parseResult = ratePatternSchema.safeParse(req.body);
@@ -5103,8 +5135,9 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       const history = await storage.getPatternApplicationHistory(patternId);
       // Filter to this user's history and get the most recent
       const userHistory = history.filter((h) => h.userId === user.id);
-      if (userHistory.length > 0) {
-        await storage.updateApplicationFeedback(userHistory[0].id, rating, wasUsed, feedback);
+      const latestHistory = userHistory[0];
+      if (latestHistory) {
+        await storage.updateApplicationFeedback(latestHistory.id, rating, wasUsed, feedback);
       }
 
       res.json({
@@ -5129,7 +5162,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    * GET /api/content-planner/templates
    * Returns all content templates with research data
    */
-  app.get('/api/content-planner/templates', async (req, res) => {
+  app.get('/api/content-planner/templates', async (_req, res) => {
     try {
       const { contentCategories, getAllTemplates } = await import('@shared/contentTemplates');
       res.json({
@@ -5149,8 +5182,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   app.get('/api/content-planner/balance', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
-      const { contentCategories, calculateWeeklyBalance, suggestNextCategory } =
-        await import('@shared/contentTemplates');
+      const { contentCategories, suggestNextCategory } = await import('@shared/contentTemplates');
 
       // Get posts from this week
       const weeklyPosts = await storage.getWeeklyBalance(userId);
@@ -5193,7 +5225,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   app.get('/api/content-planner/suggestion', requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any).userId;
-      const { suggestNextCategory, getRandomTemplate, contentCategories } = await import('@shared/contentTemplates');
+      const { suggestNextCategory, getRandomTemplate } = await import('@shared/contentTemplates');
 
       // Get posts from this week
       const weeklyPosts = await storage.getWeeklyBalance(userId);
@@ -5298,7 +5330,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
    */
   app.delete('/api/content-planner/posts/:id', requireAuth, async (req, res) => {
     try {
-      const { id } = req.params;
+      const id = String(req.params['id']);
       await storage.deleteContentPlannerPost(id);
       res.json({ message: 'Post deleted' });
     } catch (error: any) {
