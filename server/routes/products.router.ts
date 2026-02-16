@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Products Router
  * Product management including CRUD, Cloudinary uploads, analysis, and enrichment
@@ -25,6 +25,7 @@
 
 import type { Router, Request, Response } from 'express';
 import type { RouterContext, RouterFactory, RouterModule } from '../types/router';
+import type { EnrichmentStatus, VerificationInput } from '../services/productEnrichmentService';
 import { createRouter, asyncHandler } from './utils/createRouter';
 import { validate } from '../middleware/validate';
 import { productsEnrichmentQuerySchema } from '../validation/schemas';
@@ -32,13 +33,17 @@ import { productsEnrichmentQuerySchema } from '../validation/schemas';
 export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
   const router = createRouter();
   const { storage, cloudinary, logger } = ctx.services;
-  const { visionAnalysis, productKnowledge, relationshipRAG } = ctx.domainServices;
+  const { visionAnalysis, productKnowledge } = ctx.domainServices;
   const { requireAuth } = ctx.middleware;
   const { single: uploadSingle } = ctx.uploads;
 
   // Helper to check if Cloudinary is configured
   const isCloudinaryConfigured = (): boolean => {
-    return !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
+    return !!(
+      process.env['CLOUDINARY_CLOUD_NAME'] &&
+      process.env['CLOUDINARY_API_KEY'] &&
+      process.env['CLOUDINARY_API_SECRET']
+    );
   };
 
   /**
@@ -71,7 +76,9 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
           return res.status(400).json({ error: 'File size must be less than 10MB' });
         }
 
-        const { name, category } = req.body;
+        const body = req.body as Record<string, unknown>;
+        const name = body['name'] as string | undefined;
+        const category = body['category'] as string | undefined;
         if (!name) {
           return res.status(400).json({ error: 'Product name is required' });
         }
@@ -83,7 +90,7 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
         }
 
         // Upload to Cloudinary using buffer
-        const uploadResult = await new Promise<any>((resolve, reject) => {
+        const uploadResult = await new Promise<Record<string, unknown>>((resolve, reject) => {
           const uploadStream = cloudinary.uploader.upload_stream(
             {
               folder: 'product-library',
@@ -91,7 +98,7 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
             },
             (error, result) => {
               if (error) reject(error);
-              else resolve(result);
+              else resolve(result as unknown as Record<string, unknown>);
             },
           );
           uploadStream.end(file.buffer);
@@ -100,14 +107,14 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
         // Save product to database
         const product = await storage.saveProduct({
           name,
-          cloudinaryUrl: uploadResult.secure_url,
-          cloudinaryPublicId: uploadResult.public_id,
+          cloudinaryUrl: uploadResult['secure_url'] as string,
+          cloudinaryPublicId: uploadResult['public_id'] as string,
           category: category || null,
         });
 
         logger.info({ module: 'ProductUpload', productId: product.id }, 'Saved product');
         res.json(product);
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error({ module: 'ProductUpload', err: error }, 'Upload error');
         res.status(500).json({ error: 'Failed to upload product' });
       }
@@ -124,7 +131,7 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
       try {
         const products = await storage.getProducts();
         res.json(products);
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error({ module: 'Products', err: error }, 'Error fetching products');
         res.status(500).json({ error: 'Failed to fetch products' });
       }
@@ -140,10 +147,13 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
     validate(productsEnrichmentQuerySchema, 'query'),
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const validated = (req as any).validatedQuery ?? {};
+        const validated =
+          ((req as unknown as Record<string, unknown>)['validatedQuery'] as Record<string, unknown> | undefined) ?? {};
 
         const { productEnrichmentService } = await import('../services/productEnrichmentService');
-        const products = await productEnrichmentService.getProductsNeedingEnrichment(validated.status);
+        const products = await productEnrichmentService.getProductsNeedingEnrichment(
+          validated['status'] as EnrichmentStatus | undefined,
+        );
 
         // Return with completeness info
         const productsWithInfo = products.map((product) => ({
@@ -153,7 +163,7 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
         }));
 
         res.json({ products: productsWithInfo });
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error({ module: 'ProductsPendingEnrichment', err: error }, 'Error fetching products pending enrichment');
         res.status(500).json({ error: 'Failed to get products needing enrichment' });
       }
@@ -174,12 +184,14 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
 
         logger.info({ module: 'CloudinarySync' }, 'Starting sync');
 
+        const body = req.body as Record<string, unknown>;
+
         // Fetch all images from Cloudinary (max 500 for now)
         const result = await cloudinary.api.resources({
           type: 'upload',
           resource_type: 'image',
           max_results: 500,
-          prefix: req.body.folder || '', // Optional folder filter
+          prefix: (body['folder'] as string) || '', // Optional folder filter
         });
 
         logger.info({ module: 'CloudinarySync', imageCount: result.resources.length }, 'Found images');
@@ -222,7 +234,7 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
           skipped,
           total: result.resources.length,
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error({ module: 'CloudinarySync', err: error }, 'Sync error');
         res.status(500).json({ error: 'Failed to sync from Cloudinary' });
       }
@@ -237,7 +249,10 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const { productId, maxResults, minSimilarity } = req.body;
+        const body = req.body as Record<string, unknown>;
+        const productId = body['productId'] as string | undefined;
+        const maxResults = body['maxResults'] as number | undefined;
+        const minSimilarity = body['minSimilarity'] as number | undefined;
 
         if (!productId) {
           return res.status(400).json({ error: 'productId is required' });
@@ -256,7 +271,7 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
         });
 
         res.json(similar);
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error({ module: 'RelationshipRAG', err: error }, 'Error finding similar products');
         res.status(500).json({ error: 'Failed to find similar products' });
       }
@@ -271,12 +286,12 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const product = await storage.getProductById(req.params.id);
+        const product = await storage.getProductById(String(req.params['id'] ?? ''));
         if (!product) {
           return res.status(404).json({ error: 'Product not found' });
         }
         res.json(product);
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error({ module: 'Product', err: error }, 'Error fetching product');
         res.status(500).json({ error: 'Failed to fetch product' });
       }
@@ -291,12 +306,12 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const product = await storage.getProductById(req.params.id);
+        const product = await storage.getProductById(String(req.params['id'] ?? ''));
         if (!product) {
           return res.status(404).json({ error: 'Product not found' });
         }
 
-        const productId = req.params.id;
+        const productId = String(req.params['id'] ?? '');
 
         // Delete from Cloudinary
         if (cloudinary && product.cloudinaryPublicId) {
@@ -314,7 +329,7 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
         await storage.deleteProduct(productId);
 
         res.json({ success: true });
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error({ module: 'DeleteProduct', err: error }, 'Error deleting product');
         res.status(500).json({ error: 'Failed to delete product' });
       }
@@ -347,7 +362,7 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
 
         logger.info({ module: 'Products', clearedCount: products.length }, 'Cleared products from database');
         res.json({ success: true, deleted: products.length });
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error({ module: 'ClearProducts', err: error }, 'Error clearing products');
         res.status(500).json({ error: 'Failed to clear products' });
       }
@@ -362,9 +377,10 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const { productId } = req.params;
-        const userId = (req.session as any).userId;
-        const { forceRefresh } = req.body || {};
+        const productId = String(req.params['productId'] ?? '');
+        const userId = (req.session as unknown as Record<string, unknown>)['userId'] as string;
+        const body = (req.body || {}) as Record<string, unknown>;
+        const forceRefresh = body['forceRefresh'] as boolean | undefined;
 
         const product = await storage.getProductById(productId);
 
@@ -383,7 +399,7 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
           analysis: result.analysis,
           fromCache: !forceRefresh,
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error({ module: 'ProductAnalyze', err: error }, 'Error analyzing product');
         res.status(500).json({ error: 'Failed to analyze product' });
       }
@@ -398,7 +414,7 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const { productId } = req.params;
+        const productId = String(req.params['productId'] ?? '');
 
         const analysis = await visionAnalysis.getCachedAnalysis(productId);
 
@@ -407,7 +423,7 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
         }
 
         res.json({ analysis });
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error({ module: 'ProductAnalysisGet', err: error }, 'Error getting product analysis');
         res.status(500).json({ error: 'Failed to get product analysis' });
       }
@@ -422,8 +438,8 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const { productId } = req.params;
-        const userId = (req.session as any)?.userId;
+        const productId = String(req.params['productId'] ?? '');
+        const userId = ((req.session as unknown as Record<string, unknown>)['userId'] as string) ?? '';
 
         const { productEnrichmentService } = await import('../services/productEnrichmentService');
         const result = await productEnrichmentService.generateEnrichmentDraft(productId, userId);
@@ -437,7 +453,7 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
           productId: result.productId,
           draft: result.draft,
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error({ module: 'ProductEnrichment', err: error }, 'Error enriching product');
         res.status(500).json({ error: 'Failed to generate enrichment draft' });
       }
@@ -452,8 +468,9 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const { productId } = req.params;
-        const { productUrl } = req.body;
+        const productId = String(req.params['productId'] ?? '');
+        const body = req.body as Record<string, unknown>;
+        const productUrl = body['productUrl'];
 
         if (!productUrl || typeof productUrl !== 'string') {
           return res.status(400).json({ error: 'Product URL is required' });
@@ -481,7 +498,7 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
           productId: result.productId,
           draft: result.enrichmentDraft,
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error({ module: 'URLEnrichment', err: error }, 'Error enriching from URL');
         res.status(500).json({ error: 'Failed to enrich product from URL' });
       }
@@ -496,7 +513,7 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const { productId } = req.params;
+        const productId = String(req.params['productId'] ?? '');
         const product = await storage.getProductById(productId);
 
         if (!product) {
@@ -515,7 +532,7 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
           completeness,
           isReady: productEnrichmentService.isProductReady(product),
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error({ module: 'ProductEnrichmentGet', err: error }, 'Error getting product enrichment');
         res.status(500).json({ error: 'Failed to get enrichment data' });
       }
@@ -530,22 +547,30 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const { productId } = req.params;
-        const userId = (req.session as any)?.userId;
-        const { description, features, benefits, specifications, tags, sku, approvedAsIs } = req.body;
+        const productId = String(req.params['productId'] ?? '');
+        const userId = ((req.session as unknown as Record<string, unknown>)['userId'] as string) ?? '';
+        const body = req.body as Record<string, unknown>;
+
+        const verificationInput: VerificationInput = { productId };
+        if (body['description'] != null) verificationInput.description = body['description'] as string;
+        if (body['features'] != null)
+          verificationInput.features = body['features'] as Record<string, string | string[]>;
+        if (body['benefits'] != null) verificationInput.benefits = body['benefits'] as string[];
+        if (body['specifications'] != null)
+          verificationInput.specifications = body['specifications'] as Record<string, string>;
+        if (body['tags'] != null) verificationInput.tags = body['tags'] as string[];
+        if (body['sku'] != null) verificationInput.sku = body['sku'] as string;
+        if (body['approvedAsIs'] != null) verificationInput.approvedAsIs = body['approvedAsIs'] as boolean;
 
         const { productEnrichmentService } = await import('../services/productEnrichmentService');
-        const result = await productEnrichmentService.verifyEnrichment(
-          { productId, description, features, benefits, specifications, tags, sku, approvedAsIs },
-          userId,
-        );
+        const result = await productEnrichmentService.verifyEnrichment(verificationInput, userId);
 
         if (!result.success) {
           return res.status(400).json({ error: result.error });
         }
 
         res.json({ success: true, message: 'Product enrichment verified' });
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error({ module: 'ProductEnrichmentVerify', err: error }, 'Error verifying product enrichment');
         res.status(500).json({ error: 'Failed to verify enrichment' });
       }
@@ -560,9 +585,9 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const relationships = await storage.getProductRelationships([req.params.productId]);
+        const relationships = await storage.getProductRelationships([String(req.params['productId'] ?? '')]);
         res.json(relationships);
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error({ module: 'ProductRelationships', err: error }, 'Get error');
         res.status(500).json({ error: 'Failed to get product relationships' });
       }
@@ -578,11 +603,11 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const relationships = await storage.getProductRelationshipsByType(
-          req.params.productId,
-          req.params.relationshipType,
+          String(req.params['productId'] ?? ''),
+          String(req.params['relationshipType'] ?? ''),
         );
         res.json(relationships);
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error({ module: 'ProductRelationships', err: error }, 'Get by type error');
         res.status(500).json({ error: 'Failed to get product relationships' });
       }
@@ -597,9 +622,12 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
-        const { productId } = req.params;
-        const { maxSuggestions, minScore, includeExisting } = req.body;
+        const userId = (req.session as unknown as Record<string, unknown>)['userId'] as string;
+        const productId = String(req.params['productId'] ?? '');
+        const body = req.body as Record<string, unknown>;
+        const maxSuggestions = body['maxSuggestions'] as number | undefined;
+        const minScore = body['minScore'] as number | undefined;
+        const includeExisting = body['includeExisting'] as boolean | undefined;
 
         const { suggestRelationships } = await import('../services/relationshipDiscoveryRAG');
         const suggestions = await suggestRelationships(productId, userId, {
@@ -609,7 +637,7 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
         });
 
         res.json(suggestions);
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error({ module: 'RelationshipRAG', err: error }, 'Error suggesting relationships');
         res.status(500).json({ error: 'Failed to suggest relationships' });
       }

@@ -121,6 +121,7 @@ export interface IStorage {
   createUser(email: string, passwordHash: string): Promise<User>;
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserById(id: string): Promise<User | undefined>;
+  deleteUser(id: string): Promise<void>;
   updateUserBrandVoice(userId: string, brandVoice: any): Promise<User>;
 
   // AdCopy CRUD operations
@@ -504,6 +505,9 @@ export class DbStorage implements IStorage {
   }
   async getUserById(id: string): Promise<User | undefined> {
     return userRepo.getUserById(id);
+  }
+  async deleteUser(id: string): Promise<void> {
+    return userRepo.deleteUser(id);
   }
   async updateUserBrandVoice(userId: string, brandVoice: any): Promise<User> {
     return userRepo.updateUserBrandVoice(userId, brandVoice);
