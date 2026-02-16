@@ -102,6 +102,40 @@ export const DetailsTab = memo(function DetailsTab({ orch }: DetailsTabProps) {
               <Clock className="w-3.5 h-3.5" />
               <span>Generated {new Date().toLocaleString()}</span>
             </div>
+
+            {/* Wave 3: Generation context metadata */}
+            {(orch as any).generationMode && (
+              <div className="space-y-1">
+                <span className="text-xs text-muted-foreground uppercase tracking-wider">Generation Mode</span>
+                <div>
+                  <Badge variant="secondary" className="text-xs">
+                    {(orch as any).generationMode === 'exact_insert'
+                      ? 'Exact Insert'
+                      : (orch as any).generationMode === 'inspiration'
+                        ? 'Inspiration'
+                        : 'Standard'}
+                  </Badge>
+                </div>
+              </div>
+            )}
+            {(orch as any).productIds && (orch as any).productIds.length > 0 && (
+              <div className="space-y-1">
+                <span className="text-xs text-muted-foreground uppercase tracking-wider">Products Used</span>
+                <div className="flex flex-wrap gap-1">
+                  {(orch as any).productIds.map((pid: string) => (
+                    <Badge key={pid} variant="outline" className="text-[10px] font-mono">
+                      {pid.slice(0, 8)}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            {(orch as any).templateId && (
+              <div className="space-y-1">
+                <span className="text-xs text-muted-foreground uppercase tracking-wider">Template ID</span>
+                <p className="text-xs font-mono text-foreground/60 break-all">{(orch as any).templateId}</p>
+              </div>
+            )}
           </div>
 
           {/* Action buttons */}
