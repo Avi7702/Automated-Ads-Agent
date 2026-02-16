@@ -1,4 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+process.env.GEMINI_API_KEY ??= 'test-gemini-key';
+process.env.GOOGLE_API_KEY ??= 'test-google-key';
+
 import request from 'supertest';
 import { app } from '../app';
 import { pool } from '../db';

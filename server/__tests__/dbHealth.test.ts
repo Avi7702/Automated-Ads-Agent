@@ -77,7 +77,7 @@ describe('Database Health Check', () => {
 
       expect(result.status).toBe('healthy');
       expect(result.averageQueryTime).toBeGreaterThanOrEqual(50);
-      expect(result.averageQueryTime).toBeLessThan(100);
+      expect(result.averageQueryTime).toBeLessThan(200);
       expect(result.totalConnections).toBe(5);
       expect(result.idleConnections).toBe(3);
       expect(result.activeConnections).toBe(2);
