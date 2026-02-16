@@ -1,10 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
-import { cn } from "@/lib/utils";
-import { History, Star, Clock, ChevronLeft, ChevronRight } from "lucide-react";
-import { useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import type { GenerationDTO } from "@shared/types/api";
-import { useHaptic } from "@/hooks/useHaptic";
+import { useQuery } from '@tanstack/react-query';
+import { cn } from '@/lib/utils';
+import { History, Star, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import type { GenerationDTO } from '@shared/types/api';
+import { useHaptic } from '@/hooks/useHaptic';
+import { typedGet } from '@/lib/typedFetch';
+import { ListGenerationsResponse } from '@shared/contracts/generations.contract';
 
 interface HistoryTimelineProps {
   currentGenerationId?: string | null;
@@ -12,25 +14,17 @@ interface HistoryTimelineProps {
   className?: string;
 }
 
-export function HistoryTimeline({
-  currentGenerationId,
-  onSelect,
-  className,
-}: HistoryTimelineProps) {
+export function HistoryTimeline({ currentGenerationId, onSelect, className }: HistoryTimelineProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const [clickedId, setClickedId] = useState<string | null>(null);
   const { haptic } = useHaptic();
 
-  // Fetch recent generations
+  // Fetch recent generations (typed with Zod contract)
   const { data: generations = [], isLoading } = useQuery<GenerationDTO[]>({
-    queryKey: ["generations"],
-    queryFn: async () => {
-      const res = await fetch("/api/generations?limit=20");
-      if (!res.ok) return [];
-      return res.json();
-    },
+    queryKey: ['generations'],
+    queryFn: () => typedGet('/api/generations?limit=20', ListGenerationsResponse) as Promise<GenerationDTO[]>,
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
@@ -45,12 +39,12 @@ export function HistoryTimeline({
   // Scroll handlers
   const scrollLeft = () => {
     if (!scrollRef.current) return;
-    scrollRef.current.scrollBy({ left: -200, behavior: "smooth" });
+    scrollRef.current.scrollBy({ left: -200, behavior: 'smooth' });
   };
 
   const scrollRight = () => {
     if (!scrollRef.current) return;
-    scrollRef.current.scrollBy({ left: 200, behavior: "smooth" });
+    scrollRef.current.scrollBy({ left: 200, behavior: 'smooth' });
   };
 
   // Format relative time
@@ -62,7 +56,7 @@ export function HistoryTimeline({
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
 
-    if (diffMins < 1) return "Just now";
+    if (diffMins < 1) return 'Just now';
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
@@ -71,17 +65,14 @@ export function HistoryTimeline({
 
   if (isLoading) {
     return (
-      <div className={cn("p-4 rounded-xl border border-border bg-card/30", className)}>
+      <div className={cn('p-4 rounded-xl border border-border bg-card/30', className)}>
         <div className="flex items-center gap-2 mb-3">
           <History className="w-4 h-4 text-muted-foreground" />
           <span className="text-sm font-medium">Recent Generations</span>
         </div>
         <div className="flex gap-3 overflow-hidden">
           {[1, 2, 3, 4].map((i) => (
-            <div
-              key={i}
-              className="w-20 h-20 rounded-lg bg-muted/30 animate-pulse flex-shrink-0"
-            />
+            <div key={i} className="w-20 h-20 rounded-lg bg-muted/30 animate-pulse flex-shrink-0" />
           ))}
         </div>
       </div>
@@ -90,7 +81,7 @@ export function HistoryTimeline({
 
   if (generations.length === 0) {
     return (
-      <div className={cn("p-4 rounded-xl border border-border bg-card/30", className)}>
+      <div className={cn('p-4 rounded-xl border border-border bg-card/30', className)}>
         <div className="flex items-center gap-2 mb-3">
           <History className="w-4 h-4 text-muted-foreground" />
           <span className="text-sm font-medium">Recent Generations</span>
@@ -103,7 +94,7 @@ export function HistoryTimeline({
   }
 
   return (
-    <div className={cn("p-4 rounded-xl border border-border bg-card/30", className)}>
+    <div className={cn('p-4 rounded-xl border border-border bg-card/30', className)}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <History className="w-4 h-4 text-muted-foreground" />
@@ -117,10 +108,8 @@ export function HistoryTimeline({
             onClick={scrollLeft}
             disabled={!canScrollLeft}
             className={cn(
-              "p-1 rounded-md transition-colors",
-              canScrollLeft
-                ? "hover:bg-muted/50 text-foreground"
-                : "text-muted-foreground/30 cursor-not-allowed"
+              'p-1 rounded-md transition-colors',
+              canScrollLeft ? 'hover:bg-muted/50 text-foreground' : 'text-muted-foreground/30 cursor-not-allowed',
             )}
           >
             <ChevronLeft className="w-4 h-4" />
@@ -129,10 +118,8 @@ export function HistoryTimeline({
             onClick={scrollRight}
             disabled={!canScrollRight}
             className={cn(
-              "p-1 rounded-md transition-colors",
-              canScrollRight
-                ? "hover:bg-muted/50 text-foreground"
-                : "text-muted-foreground/30 cursor-not-allowed"
+              'p-1 rounded-md transition-colors',
+              canScrollRight ? 'hover:bg-muted/50 text-foreground' : 'text-muted-foreground/30 cursor-not-allowed',
             )}
           >
             <ChevronRight className="w-4 h-4" />
@@ -145,7 +132,7 @@ export function HistoryTimeline({
         ref={scrollRef}
         onScroll={updateScrollState}
         className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent"
-        style={{ scrollbarWidth: "thin" }}
+        style={{ scrollbarWidth: 'thin' }}
       >
         <AnimatePresence mode="popLayout">
           {generations.map((generation, index) => {
@@ -167,19 +154,17 @@ export function HistoryTimeline({
                   onSelect(generation);
                 }}
                 className={cn(
-                  "relative flex-shrink-0 group",
-                  "w-20 h-20 rounded-lg overflow-hidden",
-                  "border-2 transition-all",
-                  isCurrent
-                    ? "border-primary ring-2 ring-primary/30"
-                    : "border-border hover:border-primary/50",
-                  clickedId === generation.id && "ring-4 ring-primary/50"
+                  'relative flex-shrink-0 group',
+                  'w-20 h-20 rounded-lg overflow-hidden',
+                  'border-2 transition-all',
+                  isCurrent ? 'border-primary ring-2 ring-primary/30' : 'border-border hover:border-primary/50',
+                  clickedId === generation.id && 'ring-4 ring-primary/50',
                 )}
               >
                 {/* Thumbnail */}
                 <img
                   src={generation.imageUrl}
-                  alt={generation.prompt?.slice(0, 30) || "Generated"}
+                  alt={generation.prompt?.slice(0, 30) || 'Generated'}
                   className="w-full h-full object-cover"
                   loading="lazy"
                 />
@@ -220,9 +205,7 @@ export function HistoryTimeline({
       </div>
 
       {/* Hint Text */}
-      <p className="text-xs text-muted-foreground mt-2">
-        Click any version to load it. Starred = current.
-      </p>
+      <p className="text-xs text-muted-foreground mt-2">Click any version to load it. Starred = current.</p>
     </div>
   );
 }

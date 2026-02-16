@@ -21,6 +21,9 @@ import { toast } from 'sonner';
 import { useHistoryPanelUrl } from '@/hooks/useUrlState';
 import { useHaptic } from '@/hooks/useHaptic';
 import { useKeyboardShortcuts, type ShortcutConfig } from '@/hooks/useKeyboardShortcuts';
+import { typedGet, typedPostFormData } from '@/lib/typedFetch';
+import { ListProductsResponse } from '@shared/contracts/products.contract';
+import { TransformResponse } from '@shared/contracts/generations.contract';
 
 // Types
 export type GenerationState = 'idle' | 'generating' | 'result';
@@ -199,10 +202,8 @@ export function useStudioOrchestrator() {
   const { data: products = [] } = useQuery<Product[]>({
     queryKey: ['products'],
     queryFn: async () => {
-      const res = await fetch('/api/products');
-      if (!res.ok) return [];
-      const data = await res.json();
-      return Array.isArray(data) ? data : data?.products || [];
+      const data = await typedGet('/api/products', ListProductsResponse);
+      return Array.isArray(data) ? data : [];
     },
   });
 
@@ -579,21 +580,9 @@ export function useStudioOrchestrator() {
         formData.append('styleReferenceIds', JSON.stringify(selectedStyleRefIds));
       }
 
-      const token = await getCsrfToken().catch(() => '');
-      const response = await fetch('/api/transform', {
-        method: 'POST',
-        headers: { 'x-csrf-token': token },
-        credentials: 'include',
-        body: formData,
+      const data = await typedPostFormData('/api/transform', formData, TransformResponse, {
         signal: controller.signal,
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to transform image');
-      }
-
-      const data = await response.json();
       setGeneratedImage(data.imageUrl);
       setGenerationId(data.generationId);
       setState('result');
