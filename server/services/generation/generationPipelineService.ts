@@ -627,6 +627,10 @@ async function stagePersistence(
     conversationHistory: result.conversationHistory,
     parentGenerationId: null,
     editPrompt: null,
+    // Wave 3: Persist generation context metadata
+    productIds: ctx.input.productIds ?? ctx.input.recipe?.products?.map((p) => p.id) ?? null,
+    templateId: ctx.input.templateId ?? null,
+    generationMode: ctx.input.mode ?? null,
   });
 
   // Persist usage/cost estimate
