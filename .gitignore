@@ -49,3 +49,11 @@ cookies*.txt
 *test_cookies*.txt
 *login_cookies*.txt
 nul
+
+# Local verification/debug artifacts
+.tmp_*.txt
+.tmp_*.json
+C*Usersavibm*eslint_*.txt
+C*Usersavibm*eslint_*.json
+C*Usersavibm*staged_files.txt
+docs/verification-group-*.md
