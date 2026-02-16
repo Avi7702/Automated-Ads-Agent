@@ -31,6 +31,8 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles, History, TrendingUp, Star, Layout, X } from 'lucide-react';
+import type { AdSceneTemplate, Product } from '@shared/schema';
+import type { ShortcutConfig } from '@/hooks/useKeyboardShortcuts';
 
 // Hooks
 import { useStudioOrchestrator } from '@/hooks/useStudioOrchestrator';
@@ -43,8 +45,8 @@ function ContextBar({
   platform,
   visible,
 }: {
-  selectedProducts: any[];
-  selectedTemplate: any;
+  selectedProducts: Product[];
+  selectedTemplate: AdSceneTemplate | null;
   platform: string;
   visible: boolean;
 }) {
@@ -73,7 +75,7 @@ function KeyboardShortcutsPanel({
   haptic,
 }: {
   visible: boolean;
-  shortcuts: any[];
+  shortcuts: ShortcutConfig[];
   onClose: () => void;
   onToggle: () => void;
   haptic: (intensity: string) => void;

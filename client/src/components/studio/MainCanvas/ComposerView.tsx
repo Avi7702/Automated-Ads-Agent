@@ -38,6 +38,7 @@ import {
   Mic,
   MicOff,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useRipple } from '@/hooks/useRipple';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import type { StudioOrchestrator } from '@/hooks/useStudioOrchestrator';
@@ -54,7 +55,7 @@ function Section({
 }: {
   id: string;
   title: string;
-  icon?: any;
+  icon?: LucideIcon;
   isOpen: boolean;
   onToggle: () => void;
   badge?: string;

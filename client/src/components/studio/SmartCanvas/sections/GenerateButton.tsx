@@ -46,7 +46,7 @@ export function GenerateButton() {
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({
-            imageCount: selectedProducts.length + tempUploads.filter(u => u.status === 'confirmed').length,
+            imageCount: selectedProducts.length + tempUploads.filter((u) => u.status === 'confirmed').length,
             resolution,
           }),
         });
@@ -61,19 +61,15 @@ export function GenerateButton() {
     if (canGenerate) {
       fetchEstimate();
     }
-  }, [selectedProducts.length, tempUploads.length, resolution, canGenerate]);
+  }, [selectedProducts.length, tempUploads, resolution, canGenerate]);
 
   // Generation mutation
   const generateMutation = useMutation({
     mutationFn: async () => {
       // Collect all image URLs
-      const productUrls = selectedProducts
-        .map((p) => getProductImageUrl(p.cloudinaryUrl))
-        .filter(Boolean);
+      const productUrls = selectedProducts.map((p) => getProductImageUrl(p.cloudinaryUrl)).filter(Boolean);
 
-      const uploadUrls = tempUploads
-        .filter((u) => u.status === 'confirmed')
-        .map((u) => u.previewUrl);
+      const uploadUrls = tempUploads.filter((u) => u.status === 'confirmed').map((u) => u.previewUrl);
 
       const allImageUrls = [...productUrls, ...uploadUrls];
 
@@ -144,14 +140,11 @@ export function GenerateButton() {
       {/* Price estimate and info */}
       <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
         <span>
-          {selectedProducts.length + tempUploads.filter(u => u.status === 'confirmed').length} image
-          {selectedProducts.length + tempUploads.filter(u => u.status === 'confirmed').length !== 1 ? 's' : ''} selected
+          {selectedProducts.length + tempUploads.filter((u) => u.status === 'confirmed').length} image
+          {selectedProducts.length + tempUploads.filter((u) => u.status === 'confirmed').length !== 1 ? 's' : ''}{' '}
+          selected
         </span>
-        {priceEstimate && (
-          <span>
-            Est. ${priceEstimate.estimatedCost.toFixed(3)}
-          </span>
-        )}
+        {priceEstimate && <span>Est. ${priceEstimate.estimatedCost.toFixed(3)}</span>}
       </div>
     </div>
   );

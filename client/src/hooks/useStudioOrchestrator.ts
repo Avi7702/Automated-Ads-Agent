@@ -279,7 +279,7 @@ export function useStudioOrchestrator() {
   useEffect(() => {
     const savedPrompt = localStorage.getItem('studio-prompt-draft');
     if (savedPrompt && !prompt) setPrompt(savedPrompt);
-  }, []);
+  }, [prompt]);
 
   // Sync history panel URL state
   useEffect(() => {
@@ -613,14 +613,15 @@ export function useStudioOrchestrator() {
       setTimeout(() => {
         document.getElementById('result')?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Don't show error toast if user cancelled
-      if (error.name === 'AbortError') {
+      if (error instanceof Error && error.name === 'AbortError') {
         toast.info('Generation cancelled');
         setState('idle');
         return;
       }
-      toast.error(`Failed to generate image: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to generate image: ${errorMessage}`);
       setState('idle');
     } finally {
       abortControllerRef.current = null;
@@ -637,6 +638,7 @@ export function useStudioOrchestrator() {
     generationMode,
     generationRecipe,
     selectedStyleRefIds,
+    planContext,
   ]);
 
   const handleCancelGeneration = useCallback(() => {
@@ -734,12 +736,13 @@ export function useStudioOrchestrator() {
         setVideoJobId(null);
       }, 720_000);
       videoPollTimeoutRef.current = safetyTimeout;
-    } catch (error: any) {
-      toast.error(`Video generation failed: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Video generation failed: ${errorMessage}`);
       setState('idle');
       setGeneratedMediaType('image');
     }
-  }, [quickStartPrompt, prompt, videoDuration, aspectRatio, resolution, videoJobId]);
+  }, [quickStartPrompt, prompt, videoDuration, aspectRatio, resolution]);
 
   const handleDownload = useCallback(() => {
     if (!generatedImage) return;
@@ -797,9 +800,9 @@ export function useStudioOrchestrator() {
       haptic('medium');
       toast.success('Changes applied!', { duration: 2000 });
       setLocation(`/generation/${data.generationId}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       haptic('heavy');
-      toast.error(error.message || 'Edit failed');
+      toast.error(error instanceof Error ? error.message : 'Edit failed');
     } finally {
       setIsEditing(false);
     }
@@ -867,9 +870,9 @@ export function useStudioOrchestrator() {
         haptic('medium');
         toast.success('Copy generated!', { duration: 2000 });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       haptic('heavy');
-      toast.error(error.message || 'Failed to generate copy');
+      toast.error(error instanceof Error ? error.message : 'Failed to generate copy');
     } finally {
       setIsGeneratingCopy(false);
     }
@@ -910,8 +913,8 @@ export function useStudioOrchestrator() {
       if (!response.ok || !data.success) throw new Error(data.error || 'Failed to get response');
       setAskAIResponse(data.answer);
       setAskAIQuestion('');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to get response');
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to get response');
     } finally {
       setIsAskingAI(false);
     }

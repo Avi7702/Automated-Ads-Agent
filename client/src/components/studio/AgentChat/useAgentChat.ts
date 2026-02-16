@@ -157,10 +157,11 @@ export function useAgentChat(options: UseAgentChatOptions = {}) {
             }
           }
         }
-      } catch (err: any) {
-        if (err.name !== 'AbortError') {
+      } catch (err: unknown) {
+        const errName = err instanceof Error ? err.name : '';
+        if (errName !== 'AbortError') {
           // Sanitize error messages — don't expose raw JS errors to users
-          const raw = err.message || '';
+          const raw = err instanceof Error ? err.message : '';
           const isSafe = raw.startsWith('HTTP ') || raw === 'Request failed' || raw === 'No response stream';
           const msg = isSafe ? raw : 'Something went wrong. Please try again.';
           setError(msg);

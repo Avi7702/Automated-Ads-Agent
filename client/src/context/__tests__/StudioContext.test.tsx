@@ -6,8 +6,12 @@ import {
   useStudioContext,
   studioReducer,
   initialStudioState,
+  StudioAction,
   StudioState,
 } from '../StudioContext';
+import type { Product, AdSceneTemplate } from '@shared/schema';
+import type { GenerationRecipe } from '@shared/types/ideaBank';
+import type { AnalyzedUpload } from '@/types/analyzedUpload';
 
 // ============================================
 // Test Wrapper
@@ -128,7 +132,7 @@ describe('studioReducer', () => {
       id: 'prod-1',
       name: 'Test Product',
       cloudinaryUrl: 'http://example.com/product.jpg',
-    } as any;
+    } as unknown as Product;
 
     it('SELECT_PRODUCT adds product to selection', () => {
       const result = studioReducer(initialStudioState, {
@@ -173,7 +177,7 @@ describe('studioReducer', () => {
     });
 
     it('SET_PRODUCTS replaces entire selection', () => {
-      const products = [mockProduct, { ...mockProduct, id: 'prod-2' }] as any[];
+      const products = [mockProduct, { ...mockProduct, id: 'prod-2' }] as Product[];
       const result = studioReducer(initialStudioState, {
         type: 'SET_PRODUCTS',
         products,
@@ -186,7 +190,7 @@ describe('studioReducer', () => {
     const mockTemplate = {
       id: 'template-1',
       name: 'Test Template',
-    } as any;
+    } as unknown as AdSceneTemplate;
 
     it('SELECT_TEMPLATE sets selected template', () => {
       const result = studioReducer(initialStudioState, {
@@ -211,7 +215,7 @@ describe('studioReducer', () => {
       id: 'upload-1',
       previewUrl: 'http://example.com/upload.jpg',
       status: 'confirmed',
-    } as any;
+    } as unknown as AnalyzedUpload;
 
     it('SET_UPLOADS replaces all uploads', () => {
       const uploads = [mockUpload];
@@ -348,7 +352,7 @@ describe('studioReducer', () => {
     });
 
     it('SET_TEMPLATE_FOR_MODE updates selectedTemplateForMode', () => {
-      const template = { id: 't1', name: 'Template' } as any;
+      const template = { id: 't1', name: 'Template' } as unknown as AdSceneTemplate;
       const result = studioReducer(initialStudioState, {
         type: 'SET_TEMPLATE_FOR_MODE',
         template,
@@ -357,7 +361,7 @@ describe('studioReducer', () => {
     });
 
     it('SET_RECIPE updates generationRecipe', () => {
-      const recipe = { id: 'r1', steps: [] } as any;
+      const recipe = { id: 'r1', steps: [] } as unknown as GenerationRecipe;
       const result = studioReducer(initialStudioState, {
         type: 'SET_RECIPE',
         recipe,
@@ -407,8 +411,8 @@ describe('studioReducer', () => {
   describe('Default case', () => {
     it('returns current state for unknown actions', () => {
       const result = studioReducer(initialStudioState, {
-        type: 'UNKNOWN_ACTION' as any,
-      });
+        type: 'UNKNOWN_ACTION',
+      } as unknown as StudioAction);
       expect(result).toEqual(initialStudioState);
     });
   });
@@ -428,7 +432,7 @@ describe('StudioContext Integration', () => {
     act(() => {
       result.current.dispatch({
         type: 'SELECT_PRODUCT',
-        product: { id: '1', name: 'Product' } as any,
+        product: { id: '1', name: 'Product' } as unknown as Product,
       });
     });
 
@@ -464,7 +468,7 @@ describe('StudioContext Integration', () => {
     act(() => {
       result.current.dispatch({
         type: 'ADD_UPLOAD',
-        upload: { id: 'u1', status: 'pending' } as any,
+        upload: { id: 'u1', status: 'pending' } as unknown as AnalyzedUpload,
       });
     });
 
@@ -522,7 +526,7 @@ describe('StudioContext Integration', () => {
       result.current.dispatch({ type: 'SET_PLATFORM', platform: 'TikTok' });
       result.current.dispatch({
         type: 'SELECT_PRODUCT',
-        product: { id: '1' } as any,
+        product: { id: '1' } as unknown as Product,
       });
     });
 

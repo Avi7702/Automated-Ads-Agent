@@ -223,7 +223,7 @@ export const CanvasEditor = memo(function CanvasEditor({
       isBrushing.current = true;
       handleBrushMove(e);
     },
-    [activeTool, brushSize, imgSize, handleBrushMove],
+    [activeTool, handleBrushMove],
   );
 
   const handleBrushEnd = useCallback(() => {

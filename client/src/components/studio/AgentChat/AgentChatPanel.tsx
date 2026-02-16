@@ -14,9 +14,49 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { ChatMessage } from './ChatMessage';
 import { useAgentChat } from './useAgentChat';
+import type { Product } from '@shared/schema';
+import type { CopyResult, StudioOrchestrator } from '@/hooks/useStudioOrchestrator';
+
+type AgentChatOrchestrator = Pick<
+  StudioOrchestrator,
+  | 'setSelectedProducts'
+  | 'setPrompt'
+  | 'setPlatform'
+  | 'setAspectRatio'
+  | 'setResolution'
+  | 'setGeneratedImage'
+  | 'setState'
+  | 'setGeneratedCopy'
+  | 'setGeneratedCopyFull'
+>;
+
+interface SpeechRecognitionResultLike {
+  0?: { transcript?: string };
+}
+
+interface SpeechRecognitionEventLike {
+  results: SpeechRecognitionResultLike[];
+}
+
+interface SpeechRecognitionLike {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+}
+
+type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
+type SpeechRecognitionWindow = Window & {
+  SpeechRecognition?: SpeechRecognitionCtor;
+  webkitSpeechRecognition?: SpeechRecognitionCtor;
+};
 
 interface AgentChatPanelProps {
-  orch: any;
+  orch: AgentChatOrchestrator;
 }
 
 export function AgentChatPanel({ orch }: AgentChatPanelProps) {
@@ -32,7 +72,7 @@ export function AgentChatPanel({ orch }: AgentChatPanelProps) {
   const [isListening, setIsListening] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
   // Handle UI actions from the agent
   const handleUiAction = useCallback(
@@ -40,7 +80,7 @@ export function AgentChatPanel({ orch }: AgentChatPanelProps) {
       try {
         switch (action) {
           case 'select_products': {
-            const products = payload.products as any[];
+            const products = Array.isArray(payload.products) ? (payload.products as Product[]) : [];
             if (products && orch.setSelectedProducts) {
               orch.setSelectedProducts(products);
               toast({
@@ -90,7 +130,7 @@ export function AgentChatPanel({ orch }: AgentChatPanelProps) {
             break;
           }
           case 'copy_generated': {
-            const copies = payload.copies as any[];
+            const copies = Array.isArray(payload.copies) ? (payload.copies as CopyResult[]) : [];
             if (copies?.length > 0) {
               // setGeneratedCopy expects a string — use the first copy's caption
               const firstCopy = copies[0];
@@ -111,7 +151,7 @@ export function AgentChatPanel({ orch }: AgentChatPanelProps) {
         // UI action dispatch should never crash the chat panel
       }
     },
-    [orch],
+    [orch, toast],
   );
 
   const { messages, isStreaming, error, sendMessage, stopStreaming, clearMessages } = useAgentChat({
@@ -160,7 +200,9 @@ export function AgentChatPanel({ orch }: AgentChatPanelProps) {
 
   // Voice input via Web Speech API
   const toggleVoice = useCallback(() => {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    const speechWindow = window as SpeechRecognitionWindow;
+    const speechRecognitionCtor = speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
+    if (!speechRecognitionCtor) {
       return;
     }
 
@@ -170,13 +212,12 @@ export function AgentChatPanel({ orch }: AgentChatPanelProps) {
       return;
     }
 
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
+    const recognition = new speechRecognitionCtor();
     recognition.continuous = false;
     recognition.interimResults = false;
     recognition.lang = 'en-US';
 
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: SpeechRecognitionEventLike) => {
       const transcript = event.results[0]?.[0]?.transcript;
       if (transcript) {
         setInput(transcript);
