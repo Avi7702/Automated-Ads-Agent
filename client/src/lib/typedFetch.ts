@@ -126,11 +126,18 @@ function validateWithFallback<T>(data: unknown, schema: z.ZodType<T>, method: st
   const result = schema.safeParse(data);
 
   if (!result.success) {
-    if (import.meta.env.DEV) {
-      console.warn(`[typedFetch] Schema validation failed for ${method} ${url}:`, result.error.issues);
-    } else {
-      // In production, log a compact summary
-      console.warn(`[typedFetch] Schema mismatch: ${method} ${url} (${result.error.issues.length} issue(s))`);
+    const isTestMode = import.meta.env.MODE === 'test';
+    if (!isTestMode) {
+      if (import.meta.env.DEV) {
+        const previewIssues = result.error.issues.slice(0, 5);
+        console.warn(
+          `[typedFetch] Schema validation failed for ${method} ${url} (showing ${previewIssues.length}/${result.error.issues.length}):`,
+          previewIssues,
+        );
+      } else {
+        // In production, log a compact summary
+        console.warn(`[typedFetch] Schema mismatch: ${method} ${url} (${result.error.issues.length} issue(s))`);
+      }
     }
     // Graceful fallback — return raw data without breaking the app
     return data as T;

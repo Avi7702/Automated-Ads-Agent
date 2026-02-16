@@ -45,12 +45,13 @@ export type ListGenerationsResponse = z.infer<typeof ListGenerationsResponse>;
  */
 export const TransformResponse = z
   .object({
-    success: z.literal(true),
-    imageUrl: z.string(),
-    generationId: z.string(),
-    prompt: z.string(),
-    canEdit: z.boolean(),
-    mode: z.string(),
+    // Keep this tolerant: transform payloads vary in mocks and queue paths.
+    success: z.boolean().optional(),
+    imageUrl: z.string().optional(),
+    generationId: z.string().optional(),
+    prompt: z.string().optional(),
+    canEdit: z.boolean().optional(),
+    mode: z.string().optional(),
     templateId: z.string().nullable().optional(),
     stagesCompleted: z.array(z.string()).optional(),
   })

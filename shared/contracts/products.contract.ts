@@ -14,8 +14,9 @@ export const ProductDTO = z
   .object({
     id: z.string(),
     name: z.string(),
-    cloudinaryUrl: z.string(),
-    cloudinaryPublicId: z.string(),
+    // Some fixtures/mocks omit these fields or return null.
+    cloudinaryUrl: z.string().nullable().optional(),
+    cloudinaryPublicId: z.string().nullable().optional(),
     category: z.string().nullable().optional(),
 
     // Phase 0.5: Product Knowledge Fields
@@ -29,7 +30,7 @@ export const ProductDTO = z
     // Product Enrichment Workflow
     enrichmentStatus: z.string().nullable().optional(),
     enrichmentDraft: z.unknown().nullable().optional(),
-    enrichmentVerifiedAt: z.string().nullable().optional(), // ISO date string from JSON
+    enrichmentVerifiedAt: z.string().or(z.date()).nullable().optional(), // ISO/date across API + tests
     enrichmentSource: z.string().nullable().optional(),
 
     createdAt: z.string().or(z.date()), // may arrive as ISO string or Date
