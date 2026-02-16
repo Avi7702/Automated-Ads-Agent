@@ -1,6 +1,6 @@
 // @ts-nocheck
 /**
- * Agent Tools — Knowledge Base & Templates
+ * Agent Tools - Knowledge Base & Templates
  * Tools for searching the knowledge base and browsing templates
  */
 
@@ -11,47 +11,58 @@ import type { IStorage } from '../../../storage';
 import { logger } from '../../../lib/logger';
 
 export function createKnowledgeTools(storage: IStorage) {
-  const searchKnowledgeBase = new FunctionTool({
-    name: 'search_knowledge_base',
-    description:
-      'Search the brand knowledge base (uploaded PDFs, brand guides, product catalogs) for specific information. Useful for answering questions about the brand, products, or guidelines.',
-    parameters: z.object({
-      query: z.string().min(3).describe('Search query (e.g. "brand color palette", "product warranty terms")'),
-    }),
-    execute: async (input) => {
-      try {
-        const { queryFileSearchStore } = await import('../../fileSearchService');
+  const vaultSearchParameters = z.object({
+    query: z.string().min(3).describe('Search query (e.g. "brand color palette", "product warranty terms")'),
+  });
 
-        const result = await queryFileSearchStore({
-          query: input.query,
-          maxResults: 5,
-        });
+  const executeVaultSearch = async (input: z.infer<typeof vaultSearchParameters>) => {
+    try {
+      const { queryFileSearchStore } = await import('../../fileSearchService');
 
-        if (!result || !result.context) {
-          return {
-            status: 'success',
-            results: [],
-            message:
-              'No knowledge base results found. The knowledge base may be empty or the query did not match any documents.',
-          };
-        }
+      const result = await queryFileSearchStore({
+        query: input.query,
+        maxResults: 5,
+      });
 
-        return {
-          status: 'success',
-          context: result.context,
-          citationCount: result.citations?.length ?? 0,
-          message: `Found relevant information from the knowledge base.`,
-        };
-      } catch (err: unknown) {
-        logger.error({ module: 'AgentTools', err }, 'Knowledge base search error');
-        // Graceful fallback — KB not being available is not a hard failure
+      if (!result || !result.context) {
         return {
           status: 'success',
           results: [],
-          message: 'Knowledge base search is not available at the moment. Continuing without KB context.',
+          message:
+            'No knowledge base results found. The knowledge base may be empty or the query did not match any documents.',
         };
       }
-    },
+
+      return {
+        status: 'success',
+        context: result.context,
+        citationCount: result.citations?.length ?? 0,
+        message: 'Found relevant information from the knowledge base.',
+      };
+    } catch (err: unknown) {
+      logger.error({ module: 'AgentTools', err }, 'Knowledge base search error');
+      // Graceful fallback - KB not being available is not a hard failure
+      return {
+        status: 'success',
+        results: [],
+        message: 'Knowledge base search is not available at the moment. Continuing without KB context.',
+      };
+    }
+  };
+
+  const vaultSearch = new FunctionTool({
+    name: 'vault_search',
+    description:
+      'Search the company vault/knowledge base (uploaded PDFs, brand guides, product catalogs) for specific information.',
+    parameters: vaultSearchParameters,
+    execute: executeVaultSearch,
+  });
+
+  const searchKnowledgeBase = new FunctionTool({
+    name: 'search_knowledge_base',
+    description: 'Legacy alias for vault_search.',
+    parameters: vaultSearchParameters,
+    execute: executeVaultSearch,
   });
 
   const getTemplates = new FunctionTool({
@@ -146,5 +157,5 @@ export function createKnowledgeTools(storage: IStorage) {
     },
   });
 
-  return [searchKnowledgeBase, getTemplates, getProductKnowledge];
+  return [vaultSearch, searchKnowledgeBase, getTemplates, getProductKnowledge];
 }
