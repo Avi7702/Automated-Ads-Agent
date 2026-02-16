@@ -15,24 +15,9 @@
  * @see https://cloud.google.com/monitoring/alerts/using-quota-metrics
  */
 
-import { logger } from "../lib/logger";
-import { storage } from "../storage";
-
-// Lazy-load jsonwebtoken to prevent import errors from crashing the server
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let jwtSign: any = null;
-
-async function ensureJwtLoaded(): Promise<void> {
-  if (!jwtSign) {
-    try {
-      const pkg = await import("jsonwebtoken");
-      jwtSign = pkg.default?.sign || pkg.sign;
-    } catch (error) {
-      logger.error({ module: 'GoogleCloudMonitoring', err: error }, 'Failed to load jsonwebtoken');
-      throw new Error('jsonwebtoken module not available');
-    }
-  }
-}
+import { SignJWT, importPKCS8 } from 'jose';
+import { logger } from '../lib/logger';
+import { storage } from '../storage';
 
 // Types for Cloud Monitoring API responses
 interface TimeSeriesPoint {
@@ -165,7 +150,7 @@ async function getAccessToken(): Promise<string> {
   try {
     const response = await fetch(
       'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token',
-      { headers: { 'Metadata-Flavor': 'Google' } }
+      { headers: { 'Metadata-Flavor': 'Google' } },
     );
     if (response.ok) {
       const data = await response.json();
@@ -175,34 +160,32 @@ async function getAccessToken(): Promise<string> {
     // Not running on GCE, that's fine
   }
 
-  throw new Error('No Google Cloud credentials configured. Set GOOGLE_APPLICATION_CREDENTIALS or GOOGLE_CLOUD_CREDENTIALS_JSON');
+  throw new Error(
+    'No Google Cloud credentials configured. Set GOOGLE_APPLICATION_CREDENTIALS or GOOGLE_CLOUD_CREDENTIALS_JSON',
+  );
 }
 
 /**
- * Get access token from service account credentials using JWT
+ * Get access token from service account credentials using JWT (jose)
  */
 async function getAccessTokenFromServiceAccount(credentials: {
   client_email: string;
   private_key: string;
   token_uri?: string;
 }): Promise<string> {
-  // Ensure jsonwebtoken is loaded
-  await ensureJwtLoaded();
-  if (!jwtSign) {
-    throw new Error('jsonwebtoken not available');
-  }
+  const audience = credentials.token_uri || 'https://oauth2.googleapis.com/token';
 
-  const now = Math.floor(Date.now() / 1000);
-  const payload = {
+  const privateKeyObj = await importPKCS8(credentials.private_key, 'RS256');
+  const token = await new SignJWT({
     iss: credentials.client_email,
     sub: credentials.client_email,
-    aud: credentials.token_uri || 'https://oauth2.googleapis.com/token',
-    iat: now,
-    exp: now + 3600,
+    aud: audience,
     scope: 'https://www.googleapis.com/auth/monitoring.read',
-  };
-
-  const token = jwtSign(payload, credentials.private_key, { algorithm: 'RS256' });
+  })
+    .setProtectedHeader({ alg: 'RS256', typ: 'JWT' })
+    .setIssuedAt()
+    .setExpirationTime('1h')
+    .sign(privateKeyObj);
 
   const response = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
@@ -229,7 +212,7 @@ async function queryTimeSeries(
   projectId: string,
   filter: string,
   startTime: Date,
-  endTime: Date
+  endTime: Date,
 ): Promise<TimeSeries[]> {
   const accessToken = await getAccessToken();
 
@@ -263,10 +246,7 @@ async function queryTimeSeries(
 /**
  * Query quota limit from Cloud Monitoring
  */
-async function queryQuotaLimit(
-  projectId: string,
-  quotaMetric: string
-): Promise<number | null> {
+async function queryQuotaLimit(projectId: string, quotaMetric: string): Promise<number | null> {
   const accessToken = await getAccessToken();
 
   const filter = `metric.type="serviceruntime.googleapis.com/quota/limit" AND resource.type="consumer_quota" AND resource.label.service="generativelanguage.googleapis.com" AND metric.label.quota_metric="${quotaMetric}"`;
@@ -321,7 +301,8 @@ export async function fetchGoogleQuotaSnapshot(): Promise<GoogleQuotaSnapshot> {
       service: 'generativelanguage.googleapis.com',
       quotas: [],
       syncStatus: 'failed',
-      errorMessage: 'Google Cloud credentials not configured. Set GOOGLE_CLOUD_PROJECT and GOOGLE_APPLICATION_CREDENTIALS or GOOGLE_CLOUD_CREDENTIALS_JSON.',
+      errorMessage:
+        'Google Cloud credentials not configured. Set GOOGLE_CLOUD_PROJECT and GOOGLE_APPLICATION_CREDENTIALS or GOOGLE_CLOUD_CREDENTIALS_JSON.',
       nextSyncAt,
     };
   }
@@ -345,13 +326,11 @@ export async function fetchGoogleQuotaSnapshot(): Promise<GoogleQuotaSnapshot> {
         let usage = 0;
         if (timeSeries.length > 0 && timeSeries[0].points?.length > 0) {
           const point = timeSeries[0].points[0];
-          usage = point.value.int64Value
-            ? parseInt(point.value.int64Value, 10)
-            : (point.value.doubleValue || 0);
+          usage = point.value.int64Value ? parseInt(point.value.int64Value, 10) : point.value.doubleValue || 0;
         }
 
         // Query limit
-        const limit = await queryQuotaLimit(projectId, metric.quotaMetric) || 0;
+        const limit = (await queryQuotaLimit(projectId, metric.quotaMetric)) || 0;
 
         quotas.push({
           metricName: metric.quotaMetric,
@@ -362,7 +341,10 @@ export async function fetchGoogleQuotaSnapshot(): Promise<GoogleQuotaSnapshot> {
           unit: metric.unit,
         });
       } catch (error: any) {
-        logger.error({ module: 'GoogleCloudMonitoring', metric: metric.displayName, err: error }, 'Failed to fetch metric');
+        logger.error(
+          { module: 'GoogleCloudMonitoring', metric: metric.displayName, err: error },
+          'Failed to fetch metric',
+        );
         errors.push(`${metric.displayName}: ${error.message}`);
       }
     }
@@ -372,7 +354,7 @@ export async function fetchGoogleQuotaSnapshot(): Promise<GoogleQuotaSnapshot> {
       projectId,
       service: 'generativelanguage.googleapis.com',
       quotas,
-      syncStatus: errors.length === 0 ? 'success' : (quotas.length > 0 ? 'partial' : 'failed'),
+      syncStatus: errors.length === 0 ? 'success' : quotas.length > 0 ? 'partial' : 'failed',
       errorMessage: errors.length > 0 ? errors.join('; ') : undefined,
       nextSyncAt,
     };
@@ -396,7 +378,10 @@ export async function fetchGoogleQuotaSnapshot(): Promise<GoogleQuotaSnapshot> {
       logger.warn({ module: 'GoogleCloudMonitoring', err: dbError }, 'Failed to persist snapshot to database');
     }
 
-    logger.info({ module: 'GoogleCloudMonitoring', metricCount: quotas.length, status: result.syncStatus }, 'Sync completed');
+    logger.info(
+      { module: 'GoogleCloudMonitoring', metricCount: quotas.length, status: result.syncStatus },
+      'Sync completed',
+    );
 
     return result;
   } catch (error: any) {
@@ -473,11 +458,15 @@ export function startAutoSync(): void {
   logger.info({ module: 'GoogleCloudMonitoring', intervalMinutes: SYNC_INTERVAL_MS / 1000 / 60 }, 'Starting auto-sync');
 
   // Initial sync
-  fetchGoogleQuotaSnapshot().catch((err) => logger.error({ module: 'GoogleCloudMonitoring', err }, 'Initial sync failed'));
+  fetchGoogleQuotaSnapshot().catch((err) =>
+    logger.error({ module: 'GoogleCloudMonitoring', err }, 'Initial sync failed'),
+  );
 
   // Schedule recurring syncs
   syncTimer = setInterval(() => {
-    fetchGoogleQuotaSnapshot().catch((err) => logger.error({ module: 'GoogleCloudMonitoring', err }, 'Scheduled sync failed'));
+    fetchGoogleQuotaSnapshot().catch((err) =>
+      logger.error({ module: 'GoogleCloudMonitoring', err }, 'Scheduled sync failed'),
+    );
   }, SYNC_INTERVAL_MS);
 }
 
