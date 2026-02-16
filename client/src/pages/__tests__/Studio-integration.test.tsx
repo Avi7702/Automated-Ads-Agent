@@ -695,12 +695,12 @@ describe('Studio Component - Integration', () => {
       expect(screen.getByText('Your Products')).toBeInTheDocument();
 
       // Step 2: Enter prompt
-      const quickStartTextarea = screen.getByPlaceholderText(/Describe what you want to create/i);
-      fireEvent.change(quickStartTextarea, { target: { value: 'Product showcase prompt' } });
+      const promptTextarea = screen.getByPlaceholderText(/Describe your ideal ad creative/i);
+      fireEvent.change(promptTextarea, { target: { value: 'Product showcase prompt' } });
 
       // Step 3: Generate button should be available
-      const generateNowButton = screen.getByRole('button', { name: /Generate Now/i });
-      expect(generateNowButton).toBeInTheDocument();
+      const generateButton = screen.getByRole('button', { name: /Generate Image/i });
+      expect(generateButton).toBeInTheDocument();
     });
 
     it('flow: use IdeaBank suggestion -> generate', async () => {

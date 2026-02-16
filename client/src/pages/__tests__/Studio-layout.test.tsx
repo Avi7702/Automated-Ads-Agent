@@ -303,12 +303,12 @@ describe('Studio Component - Layout & Structure', () => {
       });
     });
 
-    it('renders the Quick Start section in idle state', async () => {
+    it('renders the path selection section in idle state', async () => {
       render(<Studio />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        expect(screen.getByText('Quick Start')).toBeInTheDocument();
-        expect(screen.getByText(/Skip the setup/)).toBeInTheDocument();
+        expect(screen.getByText('Choose Your Path')).toBeInTheDocument();
+        expect(screen.getByText('Freestyle')).toBeInTheDocument();
       });
     });
 
