@@ -6,6 +6,8 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { History, Clock, List, ChevronLeft, ChevronRight, ImageIcon } from 'lucide-react';
 import { useHistoryPanelUrl } from '@/hooks/useUrlState';
+import { typedGet } from '@/lib/typedFetch';
+import { ListGenerationsResponse } from '@shared/contracts/generations.contract';
 
 interface HistoryPanelProps {
   isOpen: boolean;
@@ -40,14 +42,12 @@ export function HistoryPanel({ isOpen, onToggle, onSelectGeneration, className }
   const [activeTab, setActiveTab] = useState<TabId>('all');
   const { selectedGenerationId, selectGeneration } = useHistoryPanelUrl();
 
-  // Fetch generations
+  // Fetch generations (typed with Zod contract)
   const { data: generations = [], isLoading } = useQuery<Generation[]>({
     queryKey: ['generations'],
     queryFn: async () => {
-      const res = await fetch('/api/generations', { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to fetch generations');
-      const all: Generation[] = await res.json();
-      return all.filter((g) => !g.status || g.status === 'completed');
+      const all = await typedGet('/api/generations', ListGenerationsResponse);
+      return (all as Generation[]).filter((g) => !g.status || g.status === 'completed');
     },
   });
 
