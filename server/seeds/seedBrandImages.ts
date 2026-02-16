@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import "dotenv/config";
 import { v2 as cloudinary } from "cloudinary";
 import { db } from "../db";

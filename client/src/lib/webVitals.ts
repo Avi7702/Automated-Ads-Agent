@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import type { Metric } from 'web-vitals';
 
 /**

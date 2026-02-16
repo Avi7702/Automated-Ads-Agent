@@ -70,7 +70,7 @@ export function sanitizeForPrompt(input: string, options: SanitizeOptions = {}):
   if (!input || typeof input !== 'string') return '';
 
   let sanitized = input;
-  let detections: string[] = [];
+  const detections: string[] = [];
 
   // Strip role override attempts
   for (const pattern of ROLE_OVERRIDE_PATTERNS) {

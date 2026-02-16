@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import "dotenv/config";
 import { storage } from "../storage";
 import { brandProfiles } from "@shared/schema";

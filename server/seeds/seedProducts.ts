@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import "dotenv/config";
 import { v2 as cloudinary } from "cloudinary";
 import { db } from "../db";
@@ -503,7 +504,7 @@ export async function seedProductsFromCloudinary(folder: string = "product-libra
   }
 
   let created = 0;
-  let updated = 0;
+  const updated = 0;
   let errors = 0;
   let skipped = 0;
 

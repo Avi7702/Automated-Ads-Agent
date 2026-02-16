@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import "dotenv/config";
 import { db } from "../db";
 import { adSceneTemplates } from "@shared/schema";
