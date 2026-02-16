@@ -88,7 +88,8 @@ export function useBusinessIntelligence() {
       const res = await fetch('/api/intelligence/business', { credentials: 'include' });
       if (res.status === 404) return null;
       if (!res.ok) throw new Error('Failed to fetch business intelligence');
-      return res.json();
+      const data = await res.json();
+      return data.businessIntelligence ?? data;
     },
     staleTime: 60_000,
   });
@@ -121,7 +122,8 @@ export function useProductPriorities() {
     queryFn: async () => {
       const res = await fetch('/api/intelligence/priorities', { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch product priorities');
-      return res.json();
+      const data = await res.json();
+      return data.priorities ?? data;
     },
     staleTime: 60_000,
   });
@@ -189,7 +191,8 @@ export function useProductStats() {
     queryFn: async () => {
       const res = await fetch('/api/intelligence/stats', { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch product stats');
-      return res.json();
+      const data = await res.json();
+      return data.stats ?? data;
     },
     staleTime: 60_000,
   });
