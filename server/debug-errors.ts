@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * Temporary debugging script to fetch recent errors
  * Run with: npx tsx server/debug-errors.ts

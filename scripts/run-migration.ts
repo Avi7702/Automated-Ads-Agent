@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import pkg from 'pg';

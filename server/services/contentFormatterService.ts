@@ -89,7 +89,7 @@ export async function formatContentForPlatform(
 
     // Step 1: Clean and normalize input
     let processedCaption = caption.trim();
-    let processedHashtags = normalizeHashtags(hashtags, specs);
+    const processedHashtags = normalizeHashtags(hashtags, specs);
 
     // Step 2: Emoji optimization (for professional platforms)
     if (specs.features.professionalPlatform) {

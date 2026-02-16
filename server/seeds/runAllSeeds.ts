@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import "dotenv/config";
 import { seedBrandProfile } from "./seedBrandProfile";
 import { seedProducts, seedProductsFromSampleData, seedProductsFromCloudinary } from "./seedProducts";

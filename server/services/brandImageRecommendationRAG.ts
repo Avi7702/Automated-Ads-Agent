@@ -257,7 +257,7 @@ export async function recommendImages(
   // If we have product IDs, also fetch product-specific images
   let productImages: BrandImage[] = [];
   let products: Product[] = [];
-  let productAnalyses: Map<string, ProductAnalysis> = new Map();
+  const productAnalyses: Map<string, ProductAnalysis> = new Map();
 
   if (productIds.length > 0) {
     [productImages, products] = await Promise.all([

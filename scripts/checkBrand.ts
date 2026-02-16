@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import "dotenv/config";
 import { db } from "../server/db";
 import { brandProfiles } from "@shared/schema";
