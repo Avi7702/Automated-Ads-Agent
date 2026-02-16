@@ -4,15 +4,11 @@ import { cn, getProductImageUrl } from '@/lib/utils';
 import { useStudioState } from '@/hooks/useStudioState';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Filter, Package, Check, X } from 'lucide-react';
 import type { Product } from '@shared/schema';
+import { typedGet } from '@/lib/typedFetch';
+import { ListProductsResponse } from '@shared/contracts/products.contract';
 
 export function ProductsTab() {
   const {
@@ -25,14 +21,10 @@ export function ProductsTab() {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
 
-  // Fetch products
+  // Fetch products (typed with Zod contract)
   const { data: products = [] } = useQuery<Product[]>({
     queryKey: ['products'],
-    queryFn: async () => {
-      const res = await fetch('/api/products', { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to fetch products');
-      return res.json();
-    },
+    queryFn: () => typedGet('/api/products', ListProductsResponse) as Promise<Product[]>,
   });
 
   // Get unique categories
@@ -44,11 +36,8 @@ export function ProductsTab() {
   // Filter products
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
-      const matchesSearch = product.name
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase());
-      const matchesCategory =
-        categoryFilter === 'all' || product.category === categoryFilter;
+      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
       return matchesSearch && matchesCategory;
     });
   }, [products, searchQuery, categoryFilter]);
@@ -86,12 +75,7 @@ export function ProductsTab() {
               </button>
             </div>
           ))}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={clearProducts}
-            className="h-10 text-xs text-muted-foreground"
-          >
+          <Button variant="ghost" size="sm" onClick={clearProducts} className="h-10 text-xs text-muted-foreground">
             Clear
           </Button>
         </div>
@@ -135,10 +119,8 @@ export function ProductsTab() {
                 disabled={!isSelected && selectedProducts.length >= 6}
                 className={cn(
                   'relative aspect-square rounded-lg overflow-hidden border-2 transition-all',
-                  isSelected
-                    ? 'border-primary ring-2 ring-primary/20'
-                    : 'border-border hover:border-primary/50',
-                  !isSelected && selectedProducts.length >= 6 && 'opacity-50'
+                  isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-border hover:border-primary/50',
+                  !isSelected && selectedProducts.length >= 6 && 'opacity-50',
                 )}
               >
                 <img

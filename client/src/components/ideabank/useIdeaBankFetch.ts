@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type {
   IdeaBankSuggestResponse,
   TemplateSlotSuggestion,
@@ -6,11 +6,12 @@ import type {
   GenerationMode,
   GenerationRecipe,
   IdeaBankMode,
-} from "./types";
-import type { IdeaBankTemplateResponse } from "@shared/types/ideaBank";
-import type { Product } from "@shared/schema";
-import type { AnalyzedUpload } from "@/types/analyzedUpload";
-import { getCsrfToken } from "@/lib/queryClient";
+} from './types';
+import type { IdeaBankTemplateResponse } from '@shared/types/ideaBank';
+import type { Product } from '@shared/schema';
+import type { AnalyzedUpload } from '@/types/analyzedUpload';
+import { getCsrfToken } from '@/lib/queryClient';
+import { IdeaBankSuggestResponseDTO } from '@shared/contracts/ideaBank.contract';
 
 interface UseIdeaBankFetchProps {
   selectedProducts: Product[];
@@ -45,30 +46,21 @@ export function useIdeaBankFetch({
   const [error, setError] = useState<string | null>(null);
   const [legacyMode, setLegacyMode] = useState(false);
   const [slotSuggestions, setSlotSuggestions] = useState<TemplateSlotSuggestion[]>([]);
-  const [mergedPrompt, setMergedPrompt] = useState<string>("");
+  const [mergedPrompt, setMergedPrompt] = useState<string>('');
   const [templateContext, setTemplateContext] = useState<TemplateContext | null>(null);
 
   // Memoize filtered uploads
   const selectedUploads = useMemo(
-    () => tempUploads.filter((u) => u.selected && u.status === "confirmed" && u.description),
-    [tempUploads]
+    () => tempUploads.filter((u) => u.selected && u.status === 'confirmed' && u.description),
+    [tempUploads],
   );
 
-  const analyzingCount = useMemo(
-    () => tempUploads.filter((u) => u.status === "analyzing").length,
-    [tempUploads]
-  );
+  const analyzingCount = useMemo(() => tempUploads.filter((u) => u.status === 'analyzing').length, [tempUploads]);
 
   // Stable dependency keys — only these trigger re-fetches
-  const productIdsKey = useMemo(
-    () => selectedProducts.map((p) => p.id).join(","),
-    [selectedProducts]
-  );
+  const productIdsKey = useMemo(() => selectedProducts.map((p) => p.id).join(','), [selectedProducts]);
 
-  const uploadDescriptionsKey = useMemo(
-    () => selectedUploads.map((u) => u.description).join(","),
-    [selectedUploads]
-  );
+  const uploadDescriptionsKey = useMemo(() => selectedUploads.map((u) => u.description).join(','), [selectedUploads]);
 
   // Refs to break the dependency cycle and prevent concurrent/infinite fetches
   const fetchInProgressRef = useRef(false);
@@ -82,10 +74,16 @@ export function useIdeaBankFetch({
 
   // Process API response — reads mode/onRecipeAvailable from ref
   const processResponse = useCallback((data: unknown) => {
+    // Runtime schema validation (warns on mismatch, never breaks)
+    const validationResult = IdeaBankSuggestResponseDTO.safeParse(data);
+    if (!validationResult.success) {
+      console.warn('[useIdeaBankFetch] Schema validation warning:', validationResult.error.issues);
+    }
+
     const typedData = data as Record<string, unknown>;
     const { mode: currentMode, onRecipeAvailable: onRecipe } = latestPropsRef.current;
 
-    if (currentMode === "template" && typedData.slotSuggestions) {
+    if (currentMode === 'template' && typedData.slotSuggestions) {
       const templateResponse = typedData as unknown as IdeaBankTemplateResponse;
       setSlotSuggestions(templateResponse.slotSuggestions);
       setMergedPrompt(templateResponse.mergedPrompt);
@@ -98,7 +96,7 @@ export function useIdeaBankFetch({
     } else if (typedData.suggestions && typedData.analysisStatus) {
       setResponse(typedData as unknown as IdeaBankSuggestResponse);
       setSlotSuggestions([]);
-      setMergedPrompt("");
+      setMergedPrompt('');
       setTemplateContext(null);
       setLegacyMode(false);
     } else if (Array.isArray(typedData)) {
@@ -107,8 +105,8 @@ export function useIdeaBankFetch({
           id: `legacy-${idx}`,
           summary: `Legacy suggestion ${idx + 1}`,
           prompt,
-          mode: "standard" as GenerationMode,
-          reasoning: "Generated from legacy endpoint",
+          mode: 'standard' as GenerationMode,
+          reasoning: 'Generated from legacy endpoint',
           confidence: 0.7,
           sourcesUsed: {
             visionAnalysis: false,
@@ -125,7 +123,7 @@ export function useIdeaBankFetch({
         },
       });
       setSlotSuggestions([]);
-      setMergedPrompt("");
+      setMergedPrompt('');
       setTemplateContext(null);
       setLegacyMode(true);
     }
@@ -138,7 +136,7 @@ export function useIdeaBankFetch({
 
     // Stop after too many consecutive failures
     if (failCountRef.current >= MAX_CONSECUTIVE_FAILURES) {
-      setError("Too many failed attempts. Click refresh to try again.");
+      setError('Too many failed attempts. Click refresh to try again.');
       return;
     }
 
@@ -153,29 +151,27 @@ export function useIdeaBankFetch({
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
-    const uploadDescriptions = uploads
-      .map((u) => u.description)
-      .filter((d): d is string => !!d);
+    const uploadDescriptions = uploads.map((u) => u.description).filter((d): d is string => !!d);
 
     const requestBody = {
       productIds: prods.map((p) => p.id),
       uploadDescriptions: uploadDescriptions.length > 0 ? uploadDescriptions : undefined,
       maxSuggestions: 6,
-      mode: m || "freestyle",
-      templateId: m === "template" ? tId : undefined,
+      mode: m || 'freestyle',
+      templateId: m === 'template' ? tId : undefined,
     };
 
     try {
       const csrfToken = await getCsrfToken();
       const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-        "x-csrf-token": csrfToken,
+        'Content-Type': 'application/json',
+        'x-csrf-token': csrfToken,
       };
 
-      const res = await fetch("/api/idea-bank/suggest", {
-        method: "POST",
+      const res = await fetch('/api/idea-bank/suggest', {
+        method: 'POST',
         headers,
-        credentials: "include",
+        credentials: 'include',
         body: JSON.stringify(requestBody),
         signal: controller.signal,
       });
@@ -189,10 +185,10 @@ export function useIdeaBankFetch({
         if (res.status !== 429 && failCountRef.current < MAX_CONSECUTIVE_FAILURES) {
           await new Promise((resolve) => setTimeout(resolve, 2000));
           const freshToken = await getCsrfToken();
-          const retryRes = await fetch("/api/idea-bank/suggest", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "x-csrf-token": freshToken },
-            credentials: "include",
+          const retryRes = await fetch('/api/idea-bank/suggest', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-csrf-token': freshToken },
+            credentials: 'include',
             body: JSON.stringify(requestBody),
             signal: controller.signal,
           });
@@ -201,22 +197,22 @@ export function useIdeaBankFetch({
             failCountRef.current = 0;
             processResponse(await retryRes.json());
           } else {
-            const errorText = res.status === 429
-              ? "Rate limited — please wait a moment and try again"
-              : "Retry failed - unable to generate suggestions";
+            const errorText =
+              res.status === 429
+                ? 'Rate limited — please wait a moment and try again'
+                : 'Retry failed - unable to generate suggestions';
             throw new Error(errorText);
           }
         } else {
-          const errorText = res.status === 429
-            ? "Rate limited — please wait a moment and try again"
-            : `Server error (${res.status})`;
+          const errorText =
+            res.status === 429 ? 'Rate limited — please wait a moment and try again' : `Server error (${res.status})`;
           throw new Error(errorText);
         }
       }
     } catch (err: unknown) {
-      if (err instanceof DOMException && err.name === "AbortError") return; // Cancelled, not a failure
+      if (err instanceof DOMException && err.name === 'AbortError') return; // Cancelled, not a failure
       failCountRef.current++;
-      setError(err instanceof Error ? err.message : "Failed to load suggestions");
+      setError(err instanceof Error ? err.message : 'Failed to load suggestions');
     } finally {
       fetchInProgressRef.current = false;
       setLoading(false);
@@ -228,9 +224,9 @@ export function useIdeaBankFetch({
     const hasProducts = selectedProducts.length > 0;
     const hasSelectedUploads = selectedUploads.length > 0;
 
-    if (mode === "template" && !templateId) {
+    if (mode === 'template' && !templateId) {
       setSlotSuggestions([]);
-      setMergedPrompt("");
+      setMergedPrompt('');
       setTemplateContext(null);
       return;
     }
@@ -240,7 +236,7 @@ export function useIdeaBankFetch({
     } else {
       setResponse(null);
       setSlotSuggestions([]);
-      setMergedPrompt("");
+      setMergedPrompt('');
       setTemplateContext(null);
       setError(null);
     }

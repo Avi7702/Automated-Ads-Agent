@@ -7,23 +7,14 @@
  * Provides "Generate Copy" and "Generate Image" functionality with template context.
  */
 
-import { useState, useEffect } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { useState, useEffect } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   X,
   ChevronDown,
@@ -42,9 +33,11 @@ import {
   Play,
   Layers,
   Maximize2,
-} from "lucide-react";
-import type { ContentTemplate } from "@shared/contentTemplates";
-import { Checkbox } from "@/components/ui/checkbox";
+} from 'lucide-react';
+import type { ContentTemplate } from '@shared/contentTemplates';
+import { Checkbox } from '@/components/ui/checkbox';
+import { typedPost } from '@/lib/typedFetch';
+import { GenerateCopyResponse } from '@shared/contracts/copywriting.contract';
 
 // Types for unified generation
 interface Product {
@@ -97,12 +90,12 @@ interface ContentPlannerGuidanceProps {
 // Map template category to copywriting campaign objective
 function getCampaignObjective(category: string): string {
   const mapping: Record<string, string> = {
-    'product_showcase': 'conversion',
-    'educational': 'awareness',
-    'industry_insights': 'awareness',
-    'customer_success': 'consideration',
-    'company_updates': 'engagement',
-    'engagement': 'engagement',
+    product_showcase: 'conversion',
+    educational: 'awareness',
+    industry_insights: 'awareness',
+    customer_success: 'consideration',
+    company_updates: 'engagement',
+    engagement: 'engagement',
   };
   return mapping[category] || 'awareness';
 }
@@ -113,13 +106,21 @@ function inferFramework(postStructure: string): string {
   if (lowerStructure.includes('problem') && lowerStructure.includes('agitate')) {
     return 'PAS';
   }
-  if (lowerStructure.includes('attention') && lowerStructure.includes('interest') && lowerStructure.includes('desire')) {
+  if (
+    lowerStructure.includes('attention') &&
+    lowerStructure.includes('interest') &&
+    lowerStructure.includes('desire')
+  ) {
     return 'AIDA';
   }
   if (lowerStructure.includes('before') && lowerStructure.includes('after')) {
     return 'BAB';
   }
-  if (lowerStructure.includes('feature') && lowerStructure.includes('advantage') && lowerStructure.includes('benefit')) {
+  if (
+    lowerStructure.includes('feature') &&
+    lowerStructure.includes('advantage') &&
+    lowerStructure.includes('benefit')
+  ) {
     return 'FAB';
   }
   return 'Auto';
@@ -224,7 +225,7 @@ export function ContentPlannerGuidance({
   const minProducts = template.minProducts || 1;
   const meetsProductRequirement =
     productRequirement === 'none' ||
-    (productRequirement === 'optional') ||
+    productRequirement === 'optional' ||
     (productRequirement === 'recommended' && true) || // Always allow skip for recommended
     (productRequirement === 'required' && selectedProductIds.length >= minProducts);
 
@@ -232,7 +233,7 @@ export function ContentPlannerGuidance({
   const handleProductToggle = (productId: string) => {
     if (!onProductSelectionChange) return;
     const newSelection = selectedProductIds.includes(productId)
-      ? selectedProductIds.filter(id => id !== productId)
+      ? selectedProductIds.filter((id) => id !== productId)
       : [...selectedProductIds, productId];
     onProductSelectionChange(newSelection);
   };
@@ -269,14 +270,12 @@ export function ContentPlannerGuidance({
     },
   });
 
-  // Generate copy mutation (legacy)
+  // Generate copy mutation (typed with Zod contract)
   const generateCopyMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch('/api/copywriting/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
+      const data = await typedPost(
+        '/api/copywriting/generate',
+        {
           platform: platform.toLowerCase(),
           tone: 'professional',
           framework: inferFramework(template.postStructure),
@@ -289,15 +288,14 @@ export function ContentPlannerGuidance({
           },
           context: `Content Type: ${template.title}. Hook style: ${template.hookFormulas[0]}. Post structure: ${template.postStructure}`,
           numVariations: 1,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate copy');
-      }
-
-      const data = await response.json();
-      return data.variations?.[0]?.copy || data.copy || 'Copy generation failed';
+        },
+        GenerateCopyResponse,
+      );
+      // Access copies from the typed response; fallback chain for legacy shapes
+      const firstCopy = data.copies?.[0];
+      return (
+        firstCopy?.caption || (data as any).variations?.[0]?.copy || (data as any).copy || 'Copy generation failed'
+      );
     },
     onSuccess: (copy) => {
       onGenerateCopy(copy);
@@ -316,12 +314,12 @@ export function ContentPlannerGuidance({
 
   // Category display names
   const categoryNames: Record<string, string> = {
-    'product_showcase': 'Product Showcase',
-    'educational': 'Educational',
-    'industry_insights': 'Industry Insights',
-    'customer_success': 'Customer Success',
-    'company_updates': 'Company Updates',
-    'engagement': 'Engagement',
+    product_showcase: 'Product Showcase',
+    educational: 'Educational',
+    industry_insights: 'Industry Insights',
+    customer_success: 'Customer Success',
+    company_updates: 'Company Updates',
+    engagement: 'Engagement',
   };
 
   const displayedHooks = showAllHooks ? template.hookFormulas : template.hookFormulas.slice(0, 2);
@@ -333,16 +331,12 @@ export function ContentPlannerGuidance({
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <BookOpen className="w-4 h-4 text-primary" />
-              <span className="text-xs font-medium text-primary uppercase tracking-wide">
-                Content Planner Template
-              </span>
+              <span className="text-xs font-medium text-primary uppercase tracking-wide">Content Planner Template</span>
             </div>
             <CardTitle className="text-lg">
               {categoryNames[template.category] || template.category} → {template.title}
             </CardTitle>
-            <CardDescription className="text-sm">
-              {template.description}
-            </CardDescription>
+            <CardDescription className="text-sm">{template.description}</CardDescription>
           </div>
           <Button
             variant="ghost"
@@ -359,7 +353,7 @@ export function ContentPlannerGuidance({
           {template.bestPlatforms.map((p, i) => (
             <Badge
               key={i}
-              variant={p.platform.toLowerCase() === platform.toLowerCase() ? "default" : "outline"}
+              variant={p.platform.toLowerCase() === platform.toLowerCase() ? 'default' : 'outline'}
               className="text-xs"
             >
               {p.platform}: {p.format}
@@ -373,9 +367,7 @@ export function ContentPlannerGuidance({
             <div className="flex-1 space-y-2">
               <div className="flex items-center gap-2">
                 <FormatIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <span className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-                  Recommended Format
-                </span>
+                <span className="text-sm font-semibold text-blue-900 dark:text-blue-100">Recommended Format</span>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
@@ -399,9 +391,7 @@ export function ContentPlannerGuidance({
                 )}
               </div>
 
-              <p className="text-xs text-muted-foreground">
-                {visualFormat.description}
-              </p>
+              <p className="text-xs text-muted-foreground">{visualFormat.description}</p>
             </div>
 
             {/* Action Buttons */}
@@ -420,9 +410,7 @@ export function ContentPlannerGuidance({
                         Set Ratio
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>
-                      Set aspect ratio to {visualFormat.aspectRatioLabel}
-                    </TooltipContent>
+                    <TooltipContent>Set aspect ratio to {visualFormat.aspectRatioLabel}</TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               )}
@@ -443,9 +431,7 @@ export function ContentPlannerGuidance({
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      {hasProductsSelected
-                        ? `Generate ${visualFormat.type} image`
-                        : 'Select products first'}
+                      {hasProductsSelected ? `Generate ${visualFormat.type} image` : 'Select products first'}
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -459,9 +445,7 @@ export function ContentPlannerGuidance({
           {/* Product Requirement Badge */}
           <div className="flex items-center gap-2 mb-3">
             <Sparkles className="w-4 h-4 text-green-600 dark:text-green-400" />
-            <span className="text-sm font-semibold text-green-900 dark:text-green-100">
-              AI-Powered Generation
-            </span>
+            <span className="text-sm font-semibold text-green-900 dark:text-green-100">AI-Powered Generation</span>
             {productRequirement === 'required' && (
               <Badge variant="destructive" className="text-xs">
                 Products Required ({minProducts}+)
@@ -486,18 +470,18 @@ export function ContentPlannerGuidance({
                 {productRequirement === 'required'
                   ? `Select at least ${minProducts} product${minProducts > 1 ? 's' : ''} to feature:`
                   : productRequirement === 'recommended'
-                  ? 'Add products for richer content (optional):'
-                  : 'Enhance with products (optional):'}
+                    ? 'Add products for richer content (optional):'
+                    : 'Enhance with products (optional):'}
               </p>
               <div className="flex flex-wrap gap-2">
                 {availableProducts.slice(0, 6).map((product) => (
                   <label
                     key={product.id}
                     className={cn(
-                      "flex items-center gap-2 px-3 py-1.5 rounded-md border cursor-pointer transition-all text-xs",
+                      'flex items-center gap-2 px-3 py-1.5 rounded-md border cursor-pointer transition-all text-xs',
                       selectedProductIds.includes(product.id)
-                        ? "bg-primary/10 border-primary text-primary"
-                        : "bg-background hover:bg-muted border-border"
+                        ? 'bg-primary/10 border-primary text-primary'
+                        : 'bg-background hover:bg-muted border-border',
                     )}
                   >
                     <Checkbox
@@ -513,9 +497,7 @@ export function ContentPlannerGuidance({
                 <p className="text-xs text-muted-foreground">
                   {selectedProductIds.length} selected
                   {productRequirement === 'required' && selectedProductIds.length < minProducts && (
-                    <span className="text-destructive ml-1">
-                      (need {minProducts - selectedProductIds.length} more)
-                    </span>
+                    <span className="text-destructive ml-1">(need {minProducts - selectedProductIds.length} more)</span>
                   )}
                 </p>
               )}
@@ -524,14 +506,12 @@ export function ContentPlannerGuidance({
 
           {/* Topic Input */}
           <div className="mb-3">
-            <label className="text-xs text-muted-foreground block mb-1">
-              Topic/Angle (optional):
-            </label>
+            <label className="text-xs text-muted-foreground block mb-1">Topic/Angle (optional):</label>
             <input
               type="text"
               value={topicInput}
               onChange={(e) => setTopicInput(e.target.value)}
-              placeholder={template.exampleTopics[0] || "e.g., Product durability comparison"}
+              placeholder={template.exampleTopics[0] || 'e.g., Product durability comparison'}
               className="w-full px-3 py-1.5 text-sm rounded-md border bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
@@ -563,9 +543,7 @@ export function ContentPlannerGuidance({
             </p>
           )}
           {generateCompleteMutation.isError && (
-            <p className="text-xs text-destructive mt-2 text-center">
-              Generation failed. Please try again.
-            </p>
+            <p className="text-xs text-destructive mt-2 text-center">Generation failed. Please try again.</p>
           )}
           {generateCompleteMutation.isSuccess && generateCompleteMutation.data && (
             <div className="mt-2 text-xs space-y-1">
@@ -609,12 +587,7 @@ export function ContentPlannerGuidance({
               Copy Only
             </Button>
             {onGenerateImage && template.imageRequirement !== 'none' && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1 text-xs"
-                onClick={onGenerateImage}
-              >
+              <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={onGenerateImage}>
                 <ImageIcon className="w-3 h-3 mr-1" />
                 Image Only
               </Button>
@@ -627,7 +600,7 @@ export function ContentPlannerGuidance({
         <CollapsibleTrigger asChild>
           <Button variant="ghost" size="sm" className="w-full justify-between py-2 px-4 hover:bg-muted/50">
             <span className="text-sm font-medium">
-              {isExpanded ? "Hide Details" : "Show Hook Formulas, Structure & Tips"}
+              {isExpanded ? 'Hide Details' : 'Show Hook Formulas, Structure & Tips'}
             </span>
             {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </Button>
@@ -671,12 +644,7 @@ export function ContentPlannerGuidance({
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() => handleUseHook(hook)}
-                            >
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleUseHook(hook)}>
                               <Wand2 className="w-3 h-3 text-primary" />
                             </Button>
                           </TooltipTrigger>
@@ -693,7 +661,7 @@ export function ContentPlannerGuidance({
                     className="text-xs text-muted-foreground"
                     onClick={() => setShowAllHooks(!showAllHooks)}
                   >
-                    {showAllHooks ? "Show less" : `+${template.hookFormulas.length - 2} more hooks`}
+                    {showAllHooks ? 'Show less' : `+${template.hookFormulas.length - 2} more hooks`}
                   </Button>
                 )}
               </div>
@@ -766,9 +734,7 @@ export function ContentPlannerGuidance({
                 )}
               </Button>
               {generateCopyMutation.isError && (
-                <p className="text-xs text-destructive mt-2 text-center">
-                  Failed to generate copy. Please try again.
-                </p>
+                <p className="text-xs text-destructive mt-2 text-center">Failed to generate copy. Please try again.</p>
               )}
             </div>
           </CardContent>
