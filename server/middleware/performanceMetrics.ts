@@ -5,7 +5,6 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { logger } from '../lib/logger';
 import { BoundedMap } from '../utils/memoryManager';
 
 interface EndpointMetrics {

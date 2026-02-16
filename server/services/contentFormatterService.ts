@@ -62,7 +62,7 @@ export async function formatContentForPlatform(
   caption: string,
   hashtags: string[],
   platform: string,
-  contentType?: ContentType
+  _contentType?: ContentType
 ): Promise<FormattedContent> {
   const startTime = Date.now();
 

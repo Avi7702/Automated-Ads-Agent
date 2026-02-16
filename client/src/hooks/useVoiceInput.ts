@@ -151,7 +151,7 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
 
     try {
       recognition.start();
-    } catch (_err) {
+    } catch {
       setError('Failed to start speech recognition. Please check microphone permissions.');
     }
   }, [lang, onTranscript, resetSilenceTimer]);

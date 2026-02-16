@@ -5,14 +5,14 @@ import { Header } from "@/components/layout/Header";
 interface ApprovalQueueProps {
   embedded?: boolean;
 }
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QueueCard } from "@/components/approval/QueueCard";
 import { ReviewModal } from "@/components/approval/ReviewModal";
 import { BulkActions } from "@/components/approval/BulkActions";
-import { motion } from "framer-motion";
+
 import {
   Filter,
   RefreshCw,

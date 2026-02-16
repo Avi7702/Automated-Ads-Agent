@@ -19,7 +19,6 @@ import {
   type ExtractedData,
   type SourceSearchResult,
   type FieldVerification,
-  type VerificationMethod,
   type PipelineConfig,
 } from "./types";
 
@@ -332,7 +331,7 @@ function checkNumberMatch(
     };
 
     if (unit && conversions[unit]) {
-      for (const [targetUnit, factor] of Object.entries(conversions[unit])) {
+      for (const [_targetUnit, factor] of Object.entries(conversions[unit])) {
         const converted = value / factor;
         if (Math.abs(contentValue - converted) < 0.1) {
           return { found: true, confidence: 85 };

@@ -3,7 +3,7 @@
  * Sprint 2, Week 1, Days 3-5 - Task 2.3
  */
 
-import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
+import { Router, RequestHandler } from 'express';
 import { ZodSchema } from 'zod';
 import type { IStorage } from '../storage';
 import type { GoogleGenerativeAI } from '@google/generative-ai';

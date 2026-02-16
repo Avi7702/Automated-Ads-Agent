@@ -5,7 +5,7 @@ import { LoginPage } from './pages/login.page';
 test.describe('Learn from Winners Page', () => {
   test.describe('Authentication', () => {
     test('redirects unauthenticated users to login', async ({ page }) => {
-      const learnPage = new LearnFromWinnersPage(page);
+      const _learnPage = new LearnFromWinnersPage(page);
 
       await page.goto('/learn-from-winners');
 
@@ -19,7 +19,7 @@ test.describe('Learn from Winners Page', () => {
   });
 
   test.describe('Page Display (Authenticated)', () => {
-    test.beforeEach(async ({ page, request }) => {
+    test.beforeEach(async ({ _page, request }) => {
       // Authenticate via demo user
       const demoResponse = await request.get('/api/auth/demo');
       expect(demoResponse.ok()).toBeTruthy();
@@ -115,7 +115,7 @@ test.describe('Learn from Winners Page', () => {
   });
 
   test.describe('Responsive Design', () => {
-    test.beforeEach(async ({ page, request }) => {
+    test.beforeEach(async ({ _page, request }) => {
       const demoResponse = await request.get('/api/auth/demo');
       expect(demoResponse.ok()).toBeTruthy();
     });
@@ -151,7 +151,7 @@ test.describe('Learn from Winners Page', () => {
   });
 
   test.describe('Navigation', () => {
-    test.beforeEach(async ({ page, request }) => {
+    test.beforeEach(async ({ _page, request }) => {
       const demoResponse = await request.get('/api/auth/demo');
       expect(demoResponse.ok()).toBeTruthy();
     });
@@ -188,7 +188,7 @@ test.describe('Learn from Winners Page', () => {
   });
 
   test.describe('API Response Handling', () => {
-    test.beforeEach(async ({ page, request }) => {
+    test.beforeEach(async ({ _page, request }) => {
       const demoResponse = await request.get('/api/auth/demo');
       expect(demoResponse.ok()).toBeTruthy();
     });
@@ -263,7 +263,7 @@ test.describe('Learn from Winners Page', () => {
       await page.waitForTimeout(2000);
 
       // Should show error message
-      const errorVisible = await learnPage.errorMessage.isVisible().catch(() => false);
+      const _errorVisible = await learnPage.errorMessage.isVisible().catch(() => false);
       // Note: The page might handle errors differently, just ensure no crash
       const isVisible = await learnPage.isVisible();
       expect(isVisible).toBe(true);

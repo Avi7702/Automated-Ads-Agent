@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import { test, expect, Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
 /**
  * E2E Tests for 2026 UX Modernization Features
@@ -81,7 +81,7 @@ test.describe('2026 UX Modernization - Visual Regression', () => {
   test('should display layered shadows on cards', async ({ page }) => {
     // Look for shadow-layered elements
     const shadowedElements = page.locator('.shadow-layered');
-    const count = await shadowedElements.count();
+    const _count = await shadowedElements.count();
 
     // May not be visible on initial load, but CSS should be defined
     // This is more of a CSS validation test
@@ -182,7 +182,7 @@ test.describe('2026 UX Modernization - Phase 2: Interactions', () => {
   test('should have card-interactive class for ripple containers', async ({ page }) => {
     // Look for card-interactive elements (used for ripple effects)
     const interactiveCards = page.locator('.card-interactive');
-    const count = await interactiveCards.count();
+    const _count = await interactiveCards.count();
 
     // Some interactive cards should exist on the Studio page
     // They may be in the products grid
@@ -303,7 +303,7 @@ test.describe('2026 UX Modernization - Keyboard Shortcuts', () => {
     // This test verifies the shortcut is registered
 
     // First, verify we're in idle state
-    const startNewButton = page.locator('text=Start New');
+    const _startNewButton = page.locator('text=Start New');
 
     // If there's a generated image, Ctrl+R should work
     // For now, we just verify the shortcut doesn't cause errors
@@ -421,7 +421,7 @@ test.describe('2026 UX Modernization - Phase 3: Bento Grid Layout', () => {
 
     // Wide products (every 7th) should have col-span-3
     const wideProducts = page.locator('.col-span-3');
-    const count = await wideProducts.count();
+    const _count = await wideProducts.count();
 
     // May or may not have wide products depending on product count
     // Just verify the class pattern works
@@ -438,14 +438,14 @@ test.describe('2026 UX Modernization - Pinch-to-Zoom on Generated Images', () =>
 
     // This test would need a generated image
     // For now, verify the zoom instruction text is in the codebase
-    const zoomHint = page.locator('text=Scroll to zoom');
+    const _zoomHint = page.locator('text=Scroll to zoom');
 
     // The hint only shows when there's a result
     // We verify the page loads without errors
     await expect(page.locator('h1').first()).toBeVisible();
   });
 
-  test('scroll wheel should be captured on result image', async ({ page }) => {
+  test('scroll wheel should be captured on result image', async ({ _page }) => {
     // Test that scroll events are properly handled on result images
     // This requires generating an image first, which is a longer test
 
@@ -463,7 +463,7 @@ test.describe('2026 UX Modernization - Orbital Loader', () => {
     // For now, verify the CSS classes exist
 
     const hasSpinReverseAnimation = await page.evaluate(() => {
-      const style = document.createElement('style');
+      const _style = document.createElement('style');
       const testEl = document.createElement('div');
       testEl.className = 'animate-spin-reverse';
       document.body.appendChild(testEl);

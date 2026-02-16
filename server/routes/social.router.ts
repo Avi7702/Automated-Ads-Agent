@@ -111,7 +111,7 @@ export const socialRouter: RouterFactory = (ctx: RouterContext): Router => {
     try {
       const {
         platform,
-        n8nCredentialId,
+        n8nCredentialId: _n8nCredentialId,
         platformUserId,
         platformUsername,
         accountType

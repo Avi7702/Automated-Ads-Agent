@@ -31,7 +31,6 @@ import {
   X,
   Search,
   Package,
-  Zap,
   TrendingUp,
   Wand2,
   FileImage,

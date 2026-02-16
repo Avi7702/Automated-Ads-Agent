@@ -8,7 +8,6 @@ import {
   ArrowRight,
   Package,
   Loader2,
-  X,
 } from "lucide-react";
 import { cn, getProductImageUrl } from "@/lib/utils";
 import type { ProductRelationship, Product } from "@shared/schema";

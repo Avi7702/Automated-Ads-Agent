@@ -109,7 +109,7 @@ export default function ApiKeySettings({ embedded = false }: ApiKeySettingsProps
         });
       }
     },
-    onError: (error: Error, service) => {
+    onError: (error: Error, _service) => {
       setValidatingService(null);
       toast({
         title: 'Validation Failed',
@@ -134,7 +134,7 @@ export default function ApiKeySettings({ embedded = false }: ApiKeySettingsProps
         description: `Your custom ${service} API key has been removed.`,
       });
     },
-    onError: (error: Error, service) => {
+    onError: (error: Error, _service) => {
       setDeletingService(null);
       toast({
         title: 'Deletion Failed',

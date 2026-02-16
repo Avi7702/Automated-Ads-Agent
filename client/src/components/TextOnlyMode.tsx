@@ -17,13 +17,13 @@
  * part of any post - the hook that determines if users click "See more".
  */
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
@@ -43,11 +43,9 @@ import {
   FileText,
   Sparkles,
   X,
-  AlertCircle,
   CheckCircle2,
   Copy,
   RefreshCw,
-  Lightbulb,
   TrendingUp,
   MessageCircle,
   Eye,
@@ -127,7 +125,7 @@ const HOOK_FORMULAS = [
 ];
 
 export function TextOnlyMode({
-  templateId,
+  templateId: _templateId,
   topic,
   platform,
   onClose,

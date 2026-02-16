@@ -2,10 +2,8 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles,
-  RefreshCw,
   Check,
   AlertCircle,
-  Edit2,
   Eye,
   Globe,
   Database,

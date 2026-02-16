@@ -38,7 +38,7 @@ test.describe('Cross-Page Flow Journey', () => {
 
       // Check if we're actually on the KB section
       const kbContent = page.getByText(/knowledge base|product.*count|image.*count/i).first();
-      const isOnKB = await kbContent.isVisible().catch(() => false);
+      const _isOnKB = await kbContent.isVisible().catch(() => false);
 
       // Settings page loaded without crash — that's the main assertion
       expect(await heading.isVisible()).toBe(true);

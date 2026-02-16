@@ -83,7 +83,7 @@ export const productRelationshipsRouter: RouterFactory = (ctx: RouterContext): R
 
 export const relationshipsRAGRouter: RouterFactory = (ctx: RouterContext): Router => {
   const router = createRouter();
-  const { storage, logger } = ctx.services;
+  const { logger } = ctx.services;
   const { requireAuth } = ctx.middleware;
 
   /**

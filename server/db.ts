@@ -52,7 +52,7 @@ pool.on('connect', (client) => {
 });
 
 // Log pool events for monitoring
-pool.on('error', (err, client) => {
+pool.on('error', (err, _client) => {
     logger.error({ module: 'db', err }, 'Unexpected error on idle client');
 });
 

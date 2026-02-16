@@ -10,9 +10,9 @@
  */
 
 import { db } from '../db';
-import { weeklyPlans, scheduledPosts, products as productsTable } from '@shared/schema';
+import { weeklyPlans, scheduledPosts } from '@shared/schema';
 import type { WeeklyPlanPost, WeeklyPlan, Product } from '@shared/schema';
-import { eq, and, gte, lte, desc } from 'drizzle-orm';
+import { eq, and, gte } from 'drizzle-orm';
 import { logger } from '../lib/logger';
 import { storage } from '../storage';
 
@@ -124,7 +124,7 @@ async function getRecentlyPostedProductIds(userId: string, days: number): Promis
   since.setDate(since.getDate() - days);
 
   try {
-    const recentPosts = await db
+    const _recentPosts = await db
       .select({ generationId: scheduledPosts.generationId })
       .from(scheduledPosts)
       .where(and(eq(scheduledPosts.userId, userId), gte(scheduledPosts.scheduledFor, since)));

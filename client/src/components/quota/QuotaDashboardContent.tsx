@@ -74,13 +74,13 @@ export function QuotaDashboardContent({ className }: { className?: string }) {
     refetchInterval: 10000, // Refresh every 10 seconds
   });
 
-  const { data: history, isLoading: historyLoading } = useQuery({
+  const { data: history } = useQuery({
     queryKey: ['quota-history', windowType],
     queryFn: () => fetchHistory(windowType),
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
-  const { data: breakdown, isLoading: breakdownLoading } = useQuery({
+  const { data: breakdown } = useQuery({
     queryKey: ['quota-breakdown', period],
     queryFn: () => fetchBreakdown(period),
     refetchInterval: 60000, // Refresh every minute

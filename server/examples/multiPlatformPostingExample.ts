@@ -18,7 +18,6 @@ import {
   getPlatformSpecs,
   getAvailablePlatforms,
   isPlatformSupported,
-  getRecommendedAspectRatio,
 } from '../services/platformSpecsService';
 
 import {
@@ -29,13 +28,10 @@ import {
 
 import {
   generatePlatformImages,
-  resizeImageForPlatform,
   validateImageForPlatform,
-  extractPublicId,
 } from '../services/imageSizingService';
 
 import {
-  postToN8n,
   postToMultiplePlatforms,
   validateN8nConfig,
 } from '../services/n8nPostingService';

@@ -8,7 +8,6 @@ import {
   brandImages,
   productAnalyses,
 } from "@shared/schema";
-import { eq, sql, or, isNotNull } from "drizzle-orm";
 import * as fs from "fs";
 import * as path from "path";
 

@@ -48,8 +48,8 @@ async function auditProducts() {
   });
 
   // Stats tracking
-  let totalComplete = 0;
-  let totalMissing = 0;
+  let _totalComplete = 0;
+  let _totalMissing = 0;
 
   for (const [category, prods] of byCategory) {
     console.log(`\n### ${category.toUpperCase()} (${prods.length} products)`);
@@ -68,8 +68,8 @@ async function auditProducts() {
       };
 
       const isComplete = Object.values(checks).every(v => v === "✓");
-      if (isComplete) totalComplete++;
-      else totalMissing++;
+      if (isComplete) _totalComplete++;
+      else _totalMissing++;
 
       const enrichStatus = (p.enrichmentStatus || "pending").padEnd(8);
       const relCount = (relCountByProduct.get(p.id) || 0).toString().padStart(2);

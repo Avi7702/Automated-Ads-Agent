@@ -113,7 +113,7 @@ export const quotaMonitoringService = {
       operation,
       model,
       success,
-      durationMs,
+      durationMs: _durationMs,
       inputTokens = 0,
       outputTokens = 0,
       costMicros,

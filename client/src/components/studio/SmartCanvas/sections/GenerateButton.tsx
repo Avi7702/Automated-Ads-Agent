@@ -111,7 +111,7 @@ export function GenerateButton() {
       setResult(data.imageUrl, data.generationId);
       queryClient.invalidateQueries({ queryKey: ['generations'] });
     },
-    onError: (error) => {
+    onError: (_error) => {
       // Reset to idle on error - error handling could be enhanced
     },
   });

@@ -267,7 +267,7 @@ export async function queryFileSearchStore(params: {
   category?: FileCategory;
   maxResults?: number;
 }): Promise<{ context: string; citations: any[] } | null> {
-  const { query, category, maxResults = 5 } = params;
+  const { query, category, maxResults: _maxResults = 5 } = params;
   const startTime = Date.now();
   let success = false;
   let errorType: string | undefined;

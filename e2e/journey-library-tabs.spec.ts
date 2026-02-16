@@ -115,7 +115,7 @@ test.describe('Library Tabs Journey', () => {
 
       // Look for category filter (select or dropdown)
       const categoryFilter = page.locator('select, [role="combobox"], button').filter({ hasText: /categor|all/i }).first();
-      const exists = await categoryFilter.isVisible().catch(() => false);
+      const _exists = await categoryFilter.isVisible().catch(() => false);
       // Category filter may not be visible if no images exist — that's fine
       expect(true).toBe(true);
     });
@@ -139,7 +139,7 @@ test.describe('Library Tabs Journey', () => {
 
       // Check for search or filter UI elements
       const searchOrFilter = page.locator('input[placeholder*="earch"], select, [role="combobox"]').first();
-      const exists = await searchOrFilter.isVisible().catch(() => false);
+      const _exists = await searchOrFilter.isVisible().catch(() => false);
       // Template page may show empty state with no filters — acceptable
       expect(true).toBe(true);
     });

@@ -512,7 +512,7 @@ export const handlers = [
   }),
 
   http.post('/api/settings/api-keys/:service', async ({ params, request }) => {
-    const body = (await request.json()) as { apiKey: string };
+    const _body = (await request.json()) as { apiKey: string };
     return HttpResponse.json({
       service: params.service,
       configured: true,

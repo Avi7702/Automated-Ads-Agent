@@ -102,7 +102,7 @@ export async function selectProductsForWeek(userId: string, numPosts: number): P
     const tier = priority?.revenueTier ?? 'core';
     const weight = priority?.revenueWeight ?? 5;
     const monthlyTarget = priority?.monthlyTarget ?? 2;
-    const totalPosts = priority?.totalPosts ?? 0;
+    const _totalPosts = priority?.totalPosts ?? 0;
     const lastPostedDate = priority?.lastPostedDate ?? null;
     const seasonal = priority?.seasonalRelevance ?? null;
 
@@ -133,7 +133,7 @@ export async function selectProductsForWeek(userId: string, numPosts: number): P
     // Simple heuristic: if totalPosts < monthlyTarget (per month average across all time)
     // We approximate monthly actuals by checking recent posts from priority tracking
     const monthFraction = daysSinceMonthStart / 30;
-    const expectedByNow = monthlyTarget * monthFraction;
+    const _expectedByNow = monthlyTarget * monthFraction;
     // We don't have per-month granularity here, so use a simpler check:
     // If lastPostedDate is not in current month, they're behind
     const lastPostedInCurrentMonth =

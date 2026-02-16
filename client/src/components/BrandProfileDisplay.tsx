@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Building2,
   Briefcase,
@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { BrandProfileForm } from "@/components/BrandProfileForm";
-import type { BrandProfile, BrandVoice, TargetAudience } from "@shared/types/ideaBank";
+import type { BrandProfile } from "@shared/types/ideaBank";
 
 interface BrandProfileDisplayProps {
   className?: string;
@@ -84,22 +84,6 @@ function BadgeList({
   );
 }
 
-// Text display for single values
-function TextDisplay({
-  value,
-  emptyMessage,
-}: {
-  value: string | null | undefined;
-  emptyMessage?: string;
-}) {
-  if (!value) {
-    return emptyMessage ? (
-      <span className="text-sm text-muted-foreground italic">{emptyMessage}</span>
-    ) : null;
-  }
-
-  return <p className="text-sm text-foreground/80">{value}</p>;
-}
 
 // Key-value pair display for objects
 function ObjectDisplay({

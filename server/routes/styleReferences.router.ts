@@ -14,7 +14,7 @@
 import type { Router, Request, Response } from 'express';
 import type { RouterContext, RouterFactory, RouterModule } from '../types/router';
 import { createRouter, asyncHandler } from './utils/createRouter';
-import { analyzeStyleImage, generateStyleFingerprint, type StyleElements } from '../services/styleAnalysisService';
+import { analyzeStyleImage, generateStyleFingerprint } from '../services/styleAnalysisService';
 
 const VALID_CATEGORIES = ['character', 'style', 'scene'] as const;
 

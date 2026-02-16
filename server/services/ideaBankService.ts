@@ -19,7 +19,6 @@ import { logger } from '../lib/logger';
 import { generateContentWithRetry } from '../lib/geminiClient';
 import { getCacheService, CACHE_TTL } from '../lib/cacheService';
 import { sanitizeForPrompt, sanitizeKBContent, sanitizeOutputString } from '../lib/promptSanitizer';
-import { safeParseLLMResponse, ideaSuggestionArraySchema } from '../validation/llmResponseSchemas';
 import { storage } from '../storage';
 import { visionAnalysisService, type VisionAnalysisResult } from './visionAnalysisService';
 import { queryFileSearchStore } from './fileSearchService';
@@ -428,19 +427,6 @@ function buildSuggestionCacheKey(
 }
 
 /**
- * Build a KB query based on product and analysis
- */
-function buildKBQuery(product: Product, analysis: VisionAnalysisResult, userGoal?: string): string {
-  const parts = [`advertising ideas for ${analysis.category}`, analysis.subcategory, analysis.style, product.name];
-
-  if (userGoal) {
-    parts.push(userGoal);
-  }
-
-  return parts.filter(Boolean).join(' ');
-}
-
-/**
  * Build a KB query that can work with products, uploads, or both
  */
 function buildKBQueryExtended(
@@ -569,7 +555,7 @@ async function generateLLMSuggestions(params: {
     enhancedContext,
     brandProfile,
     kbContext,
-    kbCitations,
+    kbCitations: _kbCitations,
     matchedTemplates,
     learnedPatterns,
     userGoal,

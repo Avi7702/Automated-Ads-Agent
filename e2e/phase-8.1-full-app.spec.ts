@@ -19,7 +19,7 @@ import { test, expect, Page } from '@playwright/test';
 const PRODUCTION_URL = 'https://automated-ads-agent-production.up.railway.app';
 
 // Helper function to measure navigation performance
-async function measureNavigationTime(page: Page, targetUrl: string): Promise<number> {
+async function _measureNavigationTime(page: Page, targetUrl: string): Promise<number> {
   const startTime = Date.now();
   await page.goto(targetUrl);
   await page.waitForLoadState('networkidle');
@@ -131,7 +131,7 @@ test.describe('Phase 8.1: Studio Page - Core Functionality', () => {
       await expect(generateButton).toBeVisible();
 
       // Button should be enabled or disabled based on state
-      const isDisabled = await generateButton.isDisabled();
+      const _isDisabled = await generateButton.isDisabled();
       // We just verify the button exists, not necessarily enabled
     }
   });

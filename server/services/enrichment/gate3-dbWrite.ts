@@ -307,7 +307,7 @@ function compareArrayField(
   // Check for truncation
   if (actualArray.length < intended.length && actualArray.length > 0) {
     // Check if it's a prefix
-    const isPrefix = actualArray.every((v, i) =>
+    const isPrefix = actualArray.every((v, _i) =>
       intended.includes(v)
     );
 

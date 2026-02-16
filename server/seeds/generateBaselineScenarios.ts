@@ -2,7 +2,7 @@
 import "dotenv/config";
 import { db } from "../db";
 import { products, installationScenarios, users } from "@shared/schema";
-import { eq, inArray, and, isNull } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 /**
  * Generate Baseline Installation Scenarios - Phase 1C

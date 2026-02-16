@@ -2,7 +2,7 @@
 import "dotenv/config";
 import { v2 as cloudinary } from "cloudinary";
 import { db } from "../db";
-import { brandImages, users } from "@shared/schema";
+import { brandImages } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 /**

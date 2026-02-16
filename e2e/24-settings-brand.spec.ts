@@ -154,7 +154,7 @@ test.describe('Settings - Brand Profile', { tag: '@settings' }, () => {
 
   // --- Sidebar Navigation ---
 
-  test('all 5 section nav buttons are visible', async ({ page }) => {
+  test('all 5 section nav buttons are visible', async ({ _page }) => {
     await expect(settings.brandNav).toBeVisible();
     await expect(settings.knowledgeBaseNav).toBeVisible();
     await expect(settings.apiKeysNav).toBeVisible();

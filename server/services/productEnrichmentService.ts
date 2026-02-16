@@ -80,7 +80,7 @@ export interface VerificationInput {
 // Vision analysis uses Gemini 3 Pro - #1 on LMArena Vision leaderboard (Dec 2025)
 // Superior spatial reasoning and OCR for understanding product details
 // MODEL RECENCY RULE: Before changing any model ID, verify today's date and confirm the model is current within the last 3-4 weeks.
-const VISION_MODEL = process.env.GEMINI_VISION_MODEL || "gemini-3-pro-preview";
+const _VISION_MODEL = process.env.GEMINI_VISION_MODEL || "gemini-3-pro-preview";
 
 // Enrichment draft also uses Gemini 3 Pro with grounding for better research (Dec 2025)
 // MODEL RECENCY RULE: Before changing any model ID, verify today's date and confirm the model is current within the last 3-4 weeks.
@@ -149,7 +149,7 @@ export async function generateEnrichmentDraft(
  */
 export async function verifyEnrichment(
   input: VerificationInput,
-  userId: string
+  _userId: string
 ): Promise<{ success: boolean; error?: string }> {
   const { productId, approvedAsIs } = input;
 

@@ -13,10 +13,8 @@
 import { logger } from '../lib/logger';
 import { storage } from '../storage';
 import { generateContentWithRetry } from '../lib/geminiClient';
-import type { Product } from '@shared/schema';
-import { extractFromSource, extractFeatures, extractBenefits, extractTags } from './enrichment/dataExtraction';
-import { verifyExtraction } from './enrichment/gate2-extraction';
-import { SOURCE_TRUST_LEVELS, type ExtractedData } from './enrichment/types';
+import { extractFeatures, extractBenefits, extractTags } from './enrichment/dataExtraction';
+import { SOURCE_TRUST_LEVELS } from './enrichment/types';
 
 // ============================================
 // TYPES
@@ -190,17 +188,6 @@ Only include fields you can confidently extract from the content. Return valid J
     logger.error({ module: 'UrlEnrichment', err: error }, 'AI extraction failed');
 
     // Fallback: use existing extraction methods
-    const extractedData: ExtractedData = {
-      sourceUrl: '',
-      productName,
-      description: '',
-      specifications: {},
-      relatedProducts: [],
-      installationInfo: '',
-      certifications: [],
-      rawExtract: content,
-    };
-
     // Cast empty specifications to Record<string, string> for extraction functions
     const specsAsRecord: Record<string, string> = {};
     return {

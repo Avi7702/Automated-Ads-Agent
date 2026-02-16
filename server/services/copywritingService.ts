@@ -127,7 +127,7 @@ class CopywritingService {
     let citations: any[] = [];
 
     try {
-      const fileSearchStore = await getFileSearchStoreForGeneration();
+      const _fileSearchStore = await getFileSearchStoreForGeneration();
 
       // Query for ad examples matching the product/platform
       const contextQuery = `${request.platform} ad examples for ${request.productName} ${request.industry} ${request.productDescription}`;
@@ -169,7 +169,7 @@ class CopywritingService {
           },
         ];
       }
-    } catch (error) {
+    } catch {
       // No File Search available, continue without tools
     }
 
@@ -537,7 +537,7 @@ ${variationNumber === 3 ? '- Focus on urgency and scarcity' : ''}
   /**
    * Copywriting framework guidance
    */
-  private getFrameworkGuidance(framework: string, objective?: string): string {
+  private getFrameworkGuidance(framework: string, _objective?: string): string {
     if (framework === 'auto') {
       return `
 AUTO-SELECT FRAMEWORK:

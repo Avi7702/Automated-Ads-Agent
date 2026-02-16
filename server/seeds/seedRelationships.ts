@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 import "dotenv/config";
 import { db } from "../db";
-import { productRelationships, products, users } from "@shared/schema";
+import { productRelationships } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 
 /**

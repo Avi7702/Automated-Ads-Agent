@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useMemo } from "react";
+import React, { memo, useCallback } from "react";
 import { RefreshCw, Target } from "lucide-react";
 import { SuggestionCard } from "./SuggestionCard";
 import { TemplateSlotCard } from "./TemplateSlotCard";

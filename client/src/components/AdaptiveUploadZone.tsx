@@ -121,7 +121,7 @@ export function AdaptiveUploadZone({
   onUpload,
   isUploading,
   uploadProgress,
-  uploadStatus,
+  uploadStatus: _uploadStatus,
   uploadError,
 }: AdaptiveUploadZoneProps) {
   const isEmpty = patterns.length === 0;

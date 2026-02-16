@@ -7,7 +7,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { format, parseISO, isToday, isTomorrow, isPast } from 'date-fns';
+import { format, parseISO, isToday, isTomorrow } from 'date-fns';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import {
@@ -82,7 +82,7 @@ export function DayPostsSheet({ open, onOpenChange, day, posts }: DayPostsSheetP
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   const handleCancel = useCallback(
-    async (postId: string) => {
+    async (_postId: string) => {
       setCancellingId(postId);
       try {
         await cancelPost.mutateAsync(postId);
@@ -101,7 +101,7 @@ export function DayPostsSheet({ open, onOpenChange, day, posts }: DayPostsSheetP
   );
 
   const handleRetry = useCallback(
-    async (postId: string) => {
+    async (_postId: string) => {
       // Retry = cancel and re-schedule or re-trigger — for now, toast guidance
       toast({
         title: 'Retry requested',
@@ -253,7 +253,7 @@ function TimelinePostCard({
   const platformLabel = PLATFORM_ICONS[platform.toLowerCase()] || '';
 
   // Caption truncation
-  const captionLines = post.caption?.split('\n') || [];
+  const _captionLines = post.caption?.split('\n') || [];
   const isLongCaption = post.caption && post.caption.length > 180;
 
   return (

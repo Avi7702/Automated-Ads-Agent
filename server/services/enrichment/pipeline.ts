@@ -21,7 +21,6 @@
 import { logger } from "../../lib/logger";
 import { storage } from "../../storage";
 import { visionAnalysisService } from "../visionAnalysisService";
-import type { Product } from "@shared/schema";
 
 import {
   discoverSources,
@@ -508,7 +507,7 @@ export async function runEnrichmentForPendingProducts(
 /**
  * Create minimal vision result when analysis fails
  */
-function createMinimalVisionResult(productName: string): VisionResult {
+function createMinimalVisionResult(_productName: string): VisionResult {
   return {
     category: "unknown",
     subcategory: "unknown",

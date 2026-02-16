@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { StudioWorkflowPage } from './pages/studio-workflow.page';
 import * as path from 'path';
 
@@ -45,7 +45,7 @@ test.describe('GROUP 1: Core Generation Paths', () => {
     await studio.goto();
   });
 
-  test('1. Quick Start — text-only generation', async ({ page }) => {
+  test('1. Quick Start — text-only generation', async ({ _page }) => {
     test.slow(); // 3x timeout for AI generation
 
     const errors = await studio.monitorConsoleErrors();
@@ -73,7 +73,7 @@ test.describe('GROUP 1: Core Generation Paths', () => {
     expect(filterCriticalErrors(errors)).toHaveLength(0);
   });
 
-  test('2. Single product + prompt generation', async ({ page }) => {
+  test('2. Single product + prompt generation', async ({ _page }) => {
     test.slow();
 
     const hasProds = await studio.hasProducts();
@@ -95,7 +95,7 @@ test.describe('GROUP 1: Core Generation Paths', () => {
     }
   });
 
-  test('3. Multi-product generation (3 products)', async ({ page }) => {
+  test('3. Multi-product generation (3 products)', async ({ _page }) => {
     test.slow();
 
     const hasProds = await studio.hasProducts();
@@ -191,7 +191,7 @@ test.describe('GROUP 1: Core Generation Paths', () => {
     }
   });
 
-  test('6. Upload-only generation', async ({ page }) => {
+  test('6. Upload-only generation', async ({ _page }) => {
     test.slow();
 
     await studio.uploadFile(TEST_UPLOAD);
@@ -209,7 +209,7 @@ test.describe('GROUP 1: Core Generation Paths', () => {
     }
   });
 
-  test('7. Product + upload mixed', async ({ page }) => {
+  test('7. Product + upload mixed', async ({ _page }) => {
     test.slow();
 
     const hasProds = await studio.hasProducts();
@@ -241,7 +241,7 @@ test.describe('GROUP 2: Idea Bank Flows', () => {
     await studio.goto();
   });
 
-  test('8. IdeaBankBar chip click fills prompt', async ({ page }) => {
+  test('8. IdeaBankBar chip click fills prompt', async ({ _page }) => {
     const hasProds = await studio.hasProducts();
     test.skip(!hasProds, 'No products in database');
 
@@ -307,7 +307,7 @@ test.describe('GROUP 2: Idea Bank Flows', () => {
       .waitFor({ state: 'visible', timeout: 20000 })
       .catch(() => {});
 
-    const initialCount = await studio.ideaBankBarChips.count();
+    const _initialCount = await studio.ideaBankBarChips.count();
 
     // Refresh
     await studio.refreshIdeaBank();
@@ -320,10 +320,10 @@ test.describe('GROUP 2: Idea Bank Flows', () => {
     expect(newCount).toBeGreaterThanOrEqual(0);
   });
 
-  test('11. Idea Bank empty state (no products)', async ({ page }) => {
+  test('11. Idea Bank empty state (no products)', async ({ _page }) => {
     // Without selecting any product, IdeaBankBar should not appear
     // or should show the "Get AI suggestions" dashed chip after product select
-    const barVisible = await studio.ideaBankBar.isVisible().catch(() => false);
+    const _barVisible = await studio.ideaBankBar.isVisible().catch(() => false);
 
     // The bar might be in DOM but with no chips
     const chipCount = await studio.ideaBankBarChips.count();
@@ -349,7 +349,7 @@ test.describe('GROUP 3: Post-Generation Actions', () => {
     return await studio.waitForGenerationComplete();
   }
 
-  test('12. Download generated image', async ({ page }) => {
+  test('12. Download generated image', async ({ _page }) => {
     test.slow();
 
     const ok = await generateFirst(studio);
@@ -769,7 +769,7 @@ test.describe('GROUP 6: Error Handling & Edge Cases', () => {
     }
   });
 
-  test('26. No products + non-quick-start blocks generation', async ({ page }) => {
+  test('26. No products + non-quick-start blocks generation', async ({ _page }) => {
     // Don't select any products, don't use quick start
     // The page should show the Quick Start textarea or the detailed prompt textarea
     const quickStartVisible = await studio.quickStartInput.isVisible().catch(() => false);

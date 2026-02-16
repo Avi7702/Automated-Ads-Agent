@@ -16,9 +16,9 @@ import {
   useStyleReferences,
   useUploadStyleReference,
   useDeleteStyleReference,
-  type StyleReference,
+
 } from '@/hooks/useStyleReferences';
-import { Palette, User, Mountain, Plus, X, Check, Loader2, Trash2, Image } from 'lucide-react';
+import { Palette, User, Mountain, Plus, X, Check, Loader2, Image } from 'lucide-react';
 
 const CATEGORY_ICONS = {
   character: User,

@@ -26,14 +26,13 @@
 import { logger } from '../../lib/logger';
 import { storage } from '../../storage';
 import { genAI, createGeminiClient } from '../../lib/gemini';
-import { telemetry } from '../../instrumentation';
 import { buildStyleDirective } from '../styleAnalysisService';
 import { buildEnhancedContext } from '../productKnowledgeService';
 import { analyzeProductImage } from '../visionAnalysisService';
 import { queryFileSearchStore } from '../fileSearchService';
 import { getRelevantPatterns, formatPatternsForPrompt } from '../patternExtractionService';
 import { saveOriginalFile, saveGeneratedImage } from '../../fileStorage';
-import { normalizeResolution, estimateGenerationCostMicros } from '../pricingEstimator';
+import { estimateGenerationCostMicros } from '../pricingEstimator';
 import { buildPrompt } from './promptBuilder';
 import { runCriticLoop } from './criticStage';
 import { evaluatePreGenGate, BLOCK_THRESHOLD, WARN_THRESHOLD } from './preGenGate';

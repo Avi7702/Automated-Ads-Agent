@@ -7,7 +7,6 @@ import {
   studioReducer,
   initialStudioState,
   StudioState,
-  StudioAction,
 } from '../StudioContext';
 
 // ============================================

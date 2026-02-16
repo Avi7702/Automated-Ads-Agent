@@ -13,7 +13,7 @@ interface TemplatesProps {
 
 type GenerationMode = "exact_insert" | "inspiration";
 
-export default function Templates({ embedded = false, selectedId }: TemplatesProps) {
+export default function Templates({ embedded = false, selectedId: _selectedId }: TemplatesProps) {
   const [, setLocation] = useLocation();
   const [selectedTemplate, setSelectedTemplate] = useState<AdSceneTemplate | null>(null);
   const [selectedMode, setSelectedMode] = useState<GenerationMode>("exact_insert");

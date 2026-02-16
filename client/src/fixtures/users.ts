@@ -8,7 +8,7 @@
  */
 
 import type { User, Session, BrandProfile } from '../../../shared/schema';
-import type { BrandVoice, TargetAudience } from '../../../shared/types/ideaBank';
+import type { BrandVoice } from '../../../shared/types/ideaBank';
 
 // Base date for consistent timestamps in tests
 const BASE_DATE = new Date('2026-01-15T12:00:00Z');

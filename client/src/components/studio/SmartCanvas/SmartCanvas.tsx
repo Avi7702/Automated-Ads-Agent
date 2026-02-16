@@ -19,7 +19,7 @@ interface SmartCanvasProps {
  * 4. Result display with actions (edit, copy, preview, save)
  */
 export function SmartCanvas({ className }: SmartCanvasProps) {
-  const { hasResult, isGenerating } = useStudioState();
+  const { hasResult } = useStudioState();
 
   return (
     <div

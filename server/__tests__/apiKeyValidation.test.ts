@@ -36,7 +36,6 @@ import {
   getSupportedServices,
   isValidService,
   type ServiceName,
-  type ValidationResult,
   type CloudinaryParams,
 } from '../services/apiKeyValidationService';
 

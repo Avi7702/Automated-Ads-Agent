@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 import "dotenv/config";
 import { db } from "../db";
-import { installationScenarios, products, users } from "@shared/schema";
+import { installationScenarios, products } from "@shared/schema";
 import { eq, ilike } from "drizzle-orm";
 
 /**

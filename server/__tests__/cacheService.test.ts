@@ -504,7 +504,7 @@ describe('CacheService', () => {
     });
 
     it('closeCacheService closes the singleton and allows new instance', async () => {
-      const instance1 = getCacheService();
+      const _instance1 = getCacheService();
       await closeCacheService();
 
       // After closing, getting cache service should create new instance

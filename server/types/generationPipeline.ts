@@ -7,8 +7,6 @@
  */
 
 import type { GenerationRecipe } from '@shared/types/ideaBank';
-import type { StyleAnalysisResult, StyleElements } from '../services/styleAnalysisService';
-import type { VisionAnalysisResult } from '../services/visionAnalysisService';
 
 // ============================================
 // INPUT TYPES

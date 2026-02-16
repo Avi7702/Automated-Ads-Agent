@@ -15,17 +15,15 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+
 import {
   Package,
-  Link2,
   MapPin,
   ImageIcon,
   Layout,
   Loader2,
   ExternalLink,
   Database,
-  RefreshCw,
   CheckCircle,
   AlertCircle,
 } from 'lucide-react';

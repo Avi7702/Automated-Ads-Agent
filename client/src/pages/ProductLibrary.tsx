@@ -231,7 +231,7 @@ interface ProductLibraryProps {
   selectedId?: string | null;
 }
 
-export default function ProductLibrary({ embedded = false, selectedId }: ProductLibraryProps) {
+export default function ProductLibrary({ embedded = false, selectedId: _selectedId }: ProductLibraryProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 

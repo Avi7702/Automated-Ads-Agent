@@ -202,7 +202,7 @@ async function verifyDescriptionClaims(
   const truthChecks: TruthCheck[] = [];
 
   // Verify each claim against all sources
-  for (const { claim, importance } of claims) {
+  for (const { claim, importance: _importance } of claims) {
     const supportedBy: string[] = [];
     const contradictedBy: string[] = [];
 

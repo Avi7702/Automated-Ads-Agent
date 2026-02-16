@@ -1,4 +1,4 @@
-import { test, expect, BrowserContext, Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { LoginPage } from './pages/login.page';
 
 /**
@@ -121,7 +121,7 @@ test.describe('Login Page', { tag: '@login' }, () => {
   });
 
   test.describe('Authentication Flow', () => {
-    test('valid demo credentials login and redirect to Studio /', async ({ page, baseURL }) => {
+    test('valid demo credentials login and redirect to Studio /', async ({ page, baseURL: _baseURL }) => {
       // Ensure demo user exists via API
       const loginPage = new LoginPage(page);
       await loginPage.goto();

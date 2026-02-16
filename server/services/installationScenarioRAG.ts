@@ -235,7 +235,7 @@ const ROOM_CONSIDERATIONS: Record<RoomType, string[]> = {
 /**
  * Common accessory categories
  */
-const ACCESSORY_CATEGORIES = [
+const _ACCESSORY_CATEGORIES = [
   'underlayment',
   'trim',
   'transition_strips',
@@ -448,7 +448,7 @@ export async function suggestAccessories(
 export async function getInstallationTips(
   productId: string,
   roomType?: RoomType,
-  userId?: string,
+  _userId?: string,
 ): Promise<InstallationTip[]> {
   const tips: InstallationTip[] = [];
 
@@ -466,7 +466,7 @@ export async function getInstallationTips(
     for (const scenario of scenarios) {
       if (scenario.installationSteps) {
         // Extract tips from installation steps (if they contain tip-like content)
-        scenario.installationSteps.forEach((step, index) => {
+        scenario.installationSteps.forEach((step, _index) => {
           if (step.toLowerCase().includes('tip:') || step.toLowerCase().includes('note:')) {
             tips.push({
               tip: step,

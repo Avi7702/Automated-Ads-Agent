@@ -121,7 +121,7 @@ export interface EvaluateContentParams {
  * - <50: Auto-reject with feedback
  */
 export async function evaluateContent(params: EvaluateContentParams): Promise<ConfidenceScore> {
-  const { caption, platform, imageUrl, hashtags = [], userId } = params;
+  const { caption, platform, imageUrl: _imageUrl, hashtags = [], userId } = params;
 
   logger.info(
     { module: 'ConfidenceScoring', platform, captionLength: caption.length, hashtagCount: hashtags.length },

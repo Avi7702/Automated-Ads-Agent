@@ -7,15 +7,9 @@
  * @file client/src/fixtures/templates.ts
  */
 
-import type { PromptTemplate, AdSceneTemplate } from '../../../shared/schema';
+import type { PromptTemplate } from '../../../shared/schema';
 import type {
   AdSceneTemplate as IdeaBankAdSceneTemplate,
-  TemplateCategory,
-  TemplateIntent,
-  TemplateEnvironment,
-  TemplateMood,
-  PlacementHints,
-  ReferenceImage,
 } from '../../../shared/types/ideaBank';
 
 // === LEGACY PROMPT TEMPLATES ===

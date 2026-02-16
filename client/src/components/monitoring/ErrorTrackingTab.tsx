@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Activity, AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
-import { cn } from "@/lib/utils";
+
 
 interface ErrorEvent {
   id: string;

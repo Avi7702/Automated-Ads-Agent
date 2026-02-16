@@ -10,7 +10,6 @@
  */
 
 import { Router } from 'express';
-import { telemetry } from '../instrumentation';
 import { logger } from '../lib/logger';
 
 const router = Router();

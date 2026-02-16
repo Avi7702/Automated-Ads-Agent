@@ -26,7 +26,7 @@ export function PromptEditor() {
     setPrompt,
     setSuggestion,
     setRecipe,
-    setIdeaBankMode,
+    setIdeaBankMode: _setIdeaBankMode,
   } = useStudioState();
 
   const hasImages = selectedProducts.length > 0 || tempUploads.length > 0;

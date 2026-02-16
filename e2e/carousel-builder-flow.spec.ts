@@ -15,11 +15,11 @@ import { StudioWorkflowPage } from './pages/studio-workflow.page';
  */
 
 test.describe('Carousel Builder Workflow', () => {
-  let carouselPage: CarouselBuilderPage;
+  let _carouselPage: CarouselBuilderPage;
   let studioPage: StudioWorkflowPage;
 
   test.beforeEach(async ({ page }) => {
-    carouselPage = new CarouselBuilderPage(page);
+    _carouselPage = new CarouselBuilderPage(page);
     studioPage = new StudioWorkflowPage(page);
   });
 

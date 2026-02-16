@@ -7,7 +7,7 @@
  * Provides "Generate Copy" and "Generate Image" functionality with template context.
  */
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -38,7 +38,6 @@ import {
   BookOpen,
   Wand2,
   Image as ImageIcon,
-  LayoutGrid,
   Play,
   Layers,
   Maximize2,
@@ -204,7 +203,7 @@ export function ContentPlannerGuidance({
   onSetAspectRatio,
   onGenerateImage,
   onGenerateComplete,
-  productNames = [],
+  productNames: _productNames = [],
   hasProductsSelected = false,
   availableProducts = [],
   selectedProductIds = [],

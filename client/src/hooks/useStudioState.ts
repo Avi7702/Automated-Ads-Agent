@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { useStudioContext, StudioAction, SelectedSuggestion } from '@/context/StudioContext';
+import { useStudioContext, SelectedSuggestion } from '@/context/StudioContext';
 import type { Product, AdSceneTemplate } from '@shared/schema';
 import type { GenerationRecipe, GenerationMode, IdeaBankMode } from '@shared/types/ideaBank';
 import type { AnalyzedUpload } from '@/types/analyzedUpload';

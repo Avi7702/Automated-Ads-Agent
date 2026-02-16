@@ -25,7 +25,7 @@ test.describe('Error Recovery Journey', () => {
 
         // Should show error (toast or inline message)
         const errorMessage = page.getByText(/error|failed|try again/i).first();
-        const hasError = await errorMessage.isVisible().catch(() => false);
+        const _hasError = await errorMessage.isVisible().catch(() => false);
         // Error handling exists but may not show immediately
         expect(true).toBe(true);
       }

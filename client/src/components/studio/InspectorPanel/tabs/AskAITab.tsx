@@ -15,7 +15,6 @@ import {
   Loader2,
   Send,
   Bot,
-  User,
   Lightbulb,
 } from "lucide-react";
 import type { StudioOrchestrator } from "@/hooks/useStudioOrchestrator";

@@ -17,7 +17,6 @@
 import { storage } from "../server/storage";
 import {
   runEnrichmentPipeline,
-  runEnrichmentForPendingProducts,
   type EnrichmentOutput,
   type ConfidenceLevel,
 } from "../server/services/enrichment";

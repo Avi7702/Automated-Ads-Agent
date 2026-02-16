@@ -69,7 +69,7 @@ function validatePassword(password: string): ValidationResult {
 }
 
 function sanitizeUser(user: User): Omit<User, 'password' | 'passwordHash'> {
-  const { password, passwordHash, ...safeUser } = user;
+  const { password: _password, passwordHash: _passwordHash, ...safeUser } = user;
   return safeUser;
 }
 
@@ -187,7 +187,7 @@ export async function isLockedOut(email: string): Promise<boolean> {
   if (isRedisLockoutEnabled()) {
     try {
       return await redisLockout.isLockedOut(email);
-    } catch (_err: unknown) {
+    } catch {
       logger.warn({ module: 'AuthService', email }, 'Redis lockout check failed, falling back to in-memory');
     }
   }
@@ -199,7 +199,7 @@ export async function getLockoutTimeRemaining(email: string): Promise<number> {
   if (isRedisLockoutEnabled()) {
     try {
       return await redisLockout.getLockoutTimeRemaining(email);
-    } catch (_err: unknown) {
+    } catch {
       logger.warn({ module: 'AuthService', email }, 'Redis lockout TTL check failed, falling back to in-memory');
     }
   }
@@ -212,7 +212,7 @@ export async function recordFailedLogin(email: string): Promise<void> {
     try {
       await redisLockout.recordFailedLogin(email);
       return;
-    } catch (_err: unknown) {
+    } catch {
       logger.warn({ module: 'AuthService', email }, 'Redis record failed login failed, falling back to in-memory');
     }
   }
@@ -225,7 +225,7 @@ export async function clearFailedLogins(email: string): Promise<void> {
     try {
       await redisLockout.clearFailedLogins(email);
       return;
-    } catch (_err: unknown) {
+    } catch {
       logger.warn({ module: 'AuthService', email }, 'Redis clear failed logins failed, falling back to in-memory');
     }
   }

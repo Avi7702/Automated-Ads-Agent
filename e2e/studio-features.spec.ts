@@ -20,7 +20,7 @@ test.describe('Studio Features', () => {
 
     test('history timeline loads existing generations', async ({ page }) => {
       // If there are existing generations, the timeline should show them
-      const historySection = page.locator('text=Recent Generations');
+      const _historySection = page.locator('text=Recent Generations');
 
       // Wait a bit for API calls
       await page.waitForTimeout(1000);
@@ -55,7 +55,7 @@ test.describe('Studio Features', () => {
         await page.waitForTimeout(500);
 
         // Check for Idea Bank header
-        const ideaBank = page.locator('text=Intelligent Idea Bank');
+        const _ideaBank = page.locator('text=Intelligent Idea Bank');
         // It may or may not appear depending on products
       }
     });
@@ -110,7 +110,7 @@ test.describe('API Endpoints for New Features', () => {
     expect(Array.isArray(data)).toBeTruthy();
   });
 
-  test('POST /api/products accepts form data', async ({ request }) => {
+  test('POST /api/products accepts form data', async ({ request: _request }) => {
     // This would test the save to catalog endpoint
     // Skipping actual upload to avoid side effects
   });

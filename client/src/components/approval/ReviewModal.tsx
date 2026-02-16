@@ -14,7 +14,6 @@ import { cn } from "@/lib/utils";
 import {
   CheckCircle2,
   XCircle,
-  Edit3,
   Pause,
   TrendingUp,
   Lightbulb,

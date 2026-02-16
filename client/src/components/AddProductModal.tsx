@@ -24,7 +24,7 @@ interface AddProductModalProps {
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const _ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
   const queryClient = useQueryClient();

@@ -180,7 +180,7 @@ export function safeParseLLMResponse<T extends z.ZodType>(
   let raw: unknown;
   try {
     raw = JSON.parse(jsonContent);
-  } catch (parseError) {
+  } catch {
     // Try fixing truncated JSON
     let fixed = jsonContent.replace(/,\s*$/, '');
     const openBraces = (fixed.match(/\{/g) || []).length;

@@ -151,12 +151,11 @@ export async function deleteFile(pathOrUrl: string): Promise<void> {
       // Extract public_id from Cloudinary URL
       // URL format: https://res.cloudinary.com/{cloud}/image/upload/{version}/{folder}/{public_id}.{format}
       const urlParts = pathOrUrl.split("/");
-      const filename = urlParts[urlParts.length - 1];
       const publicIdWithExt = urlParts.slice(-2).join("/"); // e.g., "generations/results/abc123.png"
       const publicId = publicIdWithExt.replace(/\.[^/.]+$/, ""); // Remove extension
 
       await new Promise<void>((resolve, reject) => {
-        cloudinary.uploader.destroy(publicId, { resource_type: "image" }, (error, result) => {
+        cloudinary.uploader.destroy(publicId, { resource_type: "image" }, (error, _result) => {
           if (error) reject(error);
           else {
             logger.info({ module: 'fileStorage', publicId }, 'Deleted from Cloudinary');

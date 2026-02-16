@@ -15,7 +15,7 @@
  * - Mobile-first design with large, readable text
  */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -47,7 +47,6 @@ import {
 import {
   Layers,
   ChevronDown,
-  ChevronUp,
   Loader2,
   Sparkles,
   ImageIcon,
@@ -114,7 +113,7 @@ export function CarouselBuilder({
   productImageUrls = [],
   aspectRatio = '1080x1350',
   onClose,
-  onComplete,
+  onComplete: _onComplete,
 }: CarouselBuilderProps) {
   const [outline, setOutline] = useState<CarouselOutline | null>(null);
   const [slides, setSlides] = useState<CarouselSlide[]>([]);
@@ -193,7 +192,7 @@ export function CarouselBuilder({
       setSlides(prev => prev.map((s, i) =>
         i === slideIndex ? { ...s, isGenerating: false, imageUrl } : s
       ));
-    } catch (error) {
+    } catch {
       setSlides(prev => prev.map((s, i) =>
         i === slideIndex ? { ...s, isGenerating: false, error: 'Failed to generate image' } : s
       ));
@@ -223,7 +222,7 @@ export function CarouselBuilder({
       const response = await fetch(slide.imageUrl);
       const blob = await response.blob();
       saveAs(blob, `slide-${slideIndex + 1}-${slide.purpose}.png`);
-    } catch (error) {
+    } catch {
       console.error('Failed to download slide:', error);
     }
   };
@@ -240,7 +239,7 @@ export function CarouselBuilder({
         const response = await fetch(slide.imageUrl!);
         const blob = await response.blob();
         zip.file(`slide-${slide.slideNumber}-${slide.purpose}.png`, blob);
-      } catch (error) {
+      } catch {
         console.error(`Failed to add slide ${slide.slideNumber} to ZIP:`, error);
       }
     }

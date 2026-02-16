@@ -10,7 +10,7 @@ import { v2 as cloudinary } from 'cloudinary';
 import { logger } from '../../lib/logger';
 import { telemetry } from '../../instrumentation';
 import { generationQueue, generationQueueEvents } from '../../lib/queue';
-import { db, pool } from '../../db';
+import { pool } from '../../db';
 import { requireAuth, optionalAuth } from '../../middleware/auth';
 import { validate } from '../../middleware/validate';
 import { extendedTimeout, haltOnTimeout } from '../../middleware/timeout';

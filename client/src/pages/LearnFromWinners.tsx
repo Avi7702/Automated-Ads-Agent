@@ -9,25 +9,19 @@
  * - Data visualization for extracted patterns
  */
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
-  Upload,
   Sparkles,
   Eye,
   Trash2,
-  Filter,
   Search,
   Grid3X3,
   List,
   TrendingUp,
   Zap,
-  Shield,
-  CheckCircle2,
   AlertTriangle,
-  XCircle,
-  Loader2,
   Brain,
   Palette,
   Layout,
@@ -37,9 +31,6 @@ import {
   Star,
   Clock,
   RefreshCw,
-  ChevronRight,
-  Info,
-  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUploadStatus } from '../hooks/useUploadStatus';
@@ -49,10 +40,9 @@ import { AdaptiveUploadZone } from '../components/AdaptiveUploadZone';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -77,7 +67,7 @@ import { Header } from "@/components/layout/Header";
 import { useToast } from "@/hooks/use-toast";
 
 // Types
-import type { LearnedAdPattern, AdAnalysisUpload } from "@shared/schema";
+import type { LearnedAdPattern } from "@shared/schema";
 
 // ============================================
 // TYPES
@@ -507,7 +497,7 @@ function PatternSkeleton() {
 // MAIN PAGE COMPONENT
 // ============================================
 
-export default function LearnFromWinners({ embedded = false, selectedId }: LearnFromWinnersProps) {
+export default function LearnFromWinners({ embedded = false, selectedId: _selectedId }: LearnFromWinnersProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");

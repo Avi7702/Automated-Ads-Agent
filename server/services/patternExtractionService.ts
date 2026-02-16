@@ -27,7 +27,6 @@ import {
   scanForPrivateContent,
   sanitizeExtractedPattern,
   type PrivacyScanResult,
-  type ExtractedPatternData,
 } from './patternPrivacyFilter';
 import type { LearnedAdPattern } from '../../shared/schema';
 

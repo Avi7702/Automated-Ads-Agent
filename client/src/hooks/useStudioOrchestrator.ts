@@ -10,7 +10,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { cn, getProductImageUrl } from '@/lib/utils';
+import { getProductImageUrl } from '@/lib/utils';
 import { getCsrfToken } from '@/lib/queryClient';
 import type { Product, PerformingAdTemplate, AdSceneTemplate } from '@shared/schema';
 import type { GenerationDTO } from '@shared/types/api';
@@ -70,7 +70,7 @@ function storeCollapsedSections(sections: CollapsedSections) {
 }
 
 export function useStudioOrchestrator() {
-  const queryClient = useQueryClient();
+  const _queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const { haptic } = useHaptic();
 

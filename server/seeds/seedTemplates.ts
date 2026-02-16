@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 import "dotenv/config";
 import { db } from "../db";
-import { performingAdTemplates, users } from "@shared/schema";
+import { performingAdTemplates } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 /**

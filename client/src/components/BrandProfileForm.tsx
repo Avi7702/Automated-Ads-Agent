@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import {
   Building2,
-  Briefcase,
   Heart,
   Palette,
   MessageSquare,
@@ -15,8 +14,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+
+
 import {
   Sheet,
   SheetContent,

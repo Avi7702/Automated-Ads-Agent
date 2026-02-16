@@ -8,9 +8,9 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+
 import { cn } from '@/lib/utils';
-import { Bot, Send, Square, Trash2, Mic, MicOff, RefreshCw, Wrench, User } from 'lucide-react';
+import { Bot, Send, Square, Mic, MicOff, RefreshCw, Wrench, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { useAgentChat, type ChatMessage as ChatMessageType } from '@/components/studio/AgentChat/useAgentChat';

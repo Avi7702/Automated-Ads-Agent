@@ -87,7 +87,7 @@ test.describe('Product Library Workflow', () => {
       expect(criticalErrors).toHaveLength(0);
     });
 
-    test('shows loading state then products or empty state', async ({ page }) => {
+    test('shows loading state then products or empty state', async ({ _page }) => {
       await productLibraryPage.goto();
 
       // Either products load or empty state shows
@@ -97,7 +97,7 @@ test.describe('Product Library Workflow', () => {
   });
 
   test.describe('Product Grid Display', () => {
-    test('displays product cards in grid layout', async ({ page }) => {
+    test('displays product cards in grid layout', async ({ _page }) => {
       await productLibraryPage.waitForProductsLoaded();
 
       const productCount = await productLibraryPage.getProductCount();
@@ -119,7 +119,7 @@ test.describe('Product Library Workflow', () => {
       expect(badgeCount).toBeGreaterThanOrEqual(0);
     });
 
-    test('product cards are clickable', async ({ page }) => {
+    test('product cards are clickable', async ({ _page }) => {
       await productLibraryPage.waitForProductsLoaded();
 
       const productCount = await productLibraryPage.getProductCount();
@@ -131,7 +131,7 @@ test.describe('Product Library Workflow', () => {
   });
 
   test.describe('Search Functionality', () => {
-    test('search input is visible', async ({ page }) => {
+    test('search input is visible', async ({ _page }) => {
       await expect(productLibraryPage.searchInput).toBeVisible();
     });
 
@@ -169,12 +169,12 @@ test.describe('Product Library Workflow', () => {
   });
 
   test.describe('Add Product Modal', () => {
-    test('Add Product button opens modal', async ({ page }) => {
+    test('Add Product button opens modal', async ({ _page }) => {
       await productLibraryPage.openAddProductModal();
       await expect(productLibraryPage.addProductModal).toBeVisible();
     });
 
-    test('modal has all required fields', async ({ page }) => {
+    test('modal has all required fields', async ({ _page }) => {
       await productLibraryPage.openAddProductModal();
 
       await expect(productLibraryPage.dropzone).toBeVisible();
@@ -183,7 +183,7 @@ test.describe('Product Library Workflow', () => {
       await expect(productLibraryPage.descriptionInput).toBeVisible();
     });
 
-    test('modal can be closed', async ({ page }) => {
+    test('modal can be closed', async ({ _page }) => {
       await productLibraryPage.openAddProductModal();
       await productLibraryPage.closeAddProductModal();
       await expect(productLibraryPage.addProductModal).not.toBeVisible();
@@ -200,7 +200,7 @@ test.describe('Product Library Workflow', () => {
       await expect(preview).toBeVisible({ timeout: 5000 });
     });
 
-    test('form validation requires name', async ({ page }) => {
+    test('form validation requires name', async ({ _page }) => {
       await productLibraryPage.openAddProductModal();
       await productLibraryPage.uploadProductImage(TEST_IMAGE_PATH);
 
@@ -246,7 +246,7 @@ test.describe('Product Library Workflow', () => {
   });
 
   test.describe('Product Detail Modal', () => {
-    test('clicking product opens detail modal', async ({ page }) => {
+    test('clicking product opens detail modal', async ({ _page }) => {
       await productLibraryPage.waitForProductsLoaded();
 
       const productCount = await productLibraryPage.getProductCount();
@@ -256,7 +256,7 @@ test.describe('Product Library Workflow', () => {
       await expect(productLibraryPage.detailModal).toBeVisible();
     });
 
-    test('detail modal has tabs', async ({ page }) => {
+    test('detail modal has tabs', async ({ _page }) => {
       await productLibraryPage.waitForProductsLoaded();
 
       const productCount = await productLibraryPage.getProductCount();
@@ -269,7 +269,7 @@ test.describe('Product Library Workflow', () => {
       await expect(productLibraryPage.enrichTab).toBeVisible();
     });
 
-    test('can switch between tabs', async ({ page }) => {
+    test('can switch between tabs', async ({ _page }) => {
       await productLibraryPage.waitForProductsLoaded();
 
       const productCount = await productLibraryPage.getProductCount();
@@ -286,7 +286,7 @@ test.describe('Product Library Workflow', () => {
       await expect(productLibraryPage.enrichTab).toHaveAttribute('data-state', 'active');
     });
 
-    test('Use in Studio button exists', async ({ page }) => {
+    test('Use in Studio button exists', async ({ _page }) => {
       await productLibraryPage.waitForProductsLoaded();
 
       const productCount = await productLibraryPage.getProductCount();
@@ -296,7 +296,7 @@ test.describe('Product Library Workflow', () => {
       await expect(productLibraryPage.useInStudioButton).toBeVisible();
     });
 
-    test('detail modal can be closed', async ({ page }) => {
+    test('detail modal can be closed', async ({ _page }) => {
       await productLibraryPage.waitForProductsLoaded();
 
       const productCount = await productLibraryPage.getProductCount();
@@ -309,7 +309,7 @@ test.describe('Product Library Workflow', () => {
   });
 
   test.describe('Enrichment Flow', () => {
-    test('Enrich tab shows enrichment form', async ({ page }) => {
+    test('Enrich tab shows enrichment form', async ({ _page }) => {
       await productLibraryPage.waitForProductsLoaded();
 
       const productCount = await productLibraryPage.getProductCount();
@@ -350,7 +350,7 @@ test.describe('Product Library Workflow', () => {
       await page.waitForTimeout(10000);
     });
 
-    test('URL enrichment input is available', async ({ page }) => {
+    test('URL enrichment input is available', async ({ _page }) => {
       await productLibraryPage.waitForProductsLoaded();
 
       const productCount = await productLibraryPage.getProductCount();
@@ -363,7 +363,7 @@ test.describe('Product Library Workflow', () => {
       await expect(productLibraryPage.fetchUrlButton).toBeVisible();
     });
 
-    test('can edit enrichment data', async ({ page }) => {
+    test('can edit enrichment data', async ({ _page }) => {
       await productLibraryPage.waitForProductsLoaded();
 
       const productCount = await productLibraryPage.getProductCount();

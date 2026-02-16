@@ -11,7 +11,6 @@ import {
   X,
   Loader2,
   Eye,
-  Package,
   ImageOff,
 } from 'lucide-react';
 import { cn, getProductImageUrl } from '@/lib/utils';
@@ -553,7 +552,7 @@ function ImageDetailModal({
   );
 }
 
-export default function BrandImageLibrary({ embedded = false, selectedId }: BrandImageLibraryProps) {
+export default function BrandImageLibrary({ embedded = false, selectedId: _selectedId }: BrandImageLibraryProps) {
   const queryClient = useQueryClient();
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<BrandImage | null>(null);

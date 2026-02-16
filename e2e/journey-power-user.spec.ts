@@ -52,7 +52,7 @@ test.describe('Power User Journey', () => {
 
       // Idea Bank may appear as bottom bar or section
       const ideaBank = page.getByText(/idea|suggest|inspiration/i).first();
-      const hasIdeaBank = await ideaBank.isVisible().catch(() => false);
+      const _hasIdeaBank = await ideaBank.isVisible().catch(() => false);
 
       // Idea Bank may not be visible without product selection
       expect(true).toBe(true);
@@ -66,7 +66,7 @@ test.describe('Power User Journey', () => {
       // Inspector panel tabs (Edit, Copy, Ask AI, Details)
       // These may only appear after generation
       const inspectorTabs = page.getByRole('tab', { name: /edit|copy|ask ai|details/i }).first();
-      const hasInspector = await inspectorTabs.isVisible().catch(() => false);
+      const _hasInspector = await inspectorTabs.isVisible().catch(() => false);
 
       // Inspector may only show after generation — that's expected
       expect(true).toBe(true);
@@ -79,7 +79,7 @@ test.describe('Power User Journey', () => {
 
       // Look for template/style section, or advanced options, or any Studio content
       const templateSection = page.getByText(/template|style|scene|advanced/i).first();
-      const hasTemplate = await templateSection.isVisible().catch(() => false);
+      const _hasTemplate = await templateSection.isVisible().catch(() => false);
 
       // Template section may be hidden behind advanced options or require product selection
       // The page should at minimum have loaded without crashing
@@ -133,7 +133,7 @@ test.describe('Power User Journey', () => {
 
       // Look for platform selection (LinkedIn, Instagram, etc.)
       const platformSelector = page.getByText(/platform|linkedin|instagram|facebook/i).first();
-      const hasPlatform = await platformSelector.isVisible().catch(() => false);
+      const _hasPlatform = await platformSelector.isVisible().catch(() => false);
 
       // Platform selector may be in advanced options
       expect(true).toBe(true);

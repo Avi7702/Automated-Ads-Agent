@@ -13,7 +13,6 @@ import type {
   ClaimSupportResult,
   ExtractedClaim,
   ExtractedData,
-  VisionResult,
 } from './types';
 
 // ============================================
@@ -465,7 +464,7 @@ Ignore marketing language and subjective statements.
 /**
  * Select the best value from multiple extractions using trust-weighted voting
  */
-export function selectBestValue(extractions: Array<{ value: string; trustLevel: number }>, fieldName: string): string {
+export function selectBestValue(extractions: Array<{ value: string; trustLevel: number }>, _fieldName: string): string {
   if (extractions.length === 0) return '';
 
   // Sort by trust level (highest first)

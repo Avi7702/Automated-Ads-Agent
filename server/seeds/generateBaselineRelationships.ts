@@ -2,7 +2,7 @@
 import "dotenv/config";
 import { db } from "../db";
 import { products, productRelationships, users } from "@shared/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 /**
  * Generate Baseline Relationships - Phase 1C
@@ -211,7 +211,7 @@ async function generateBaselineRelationships() {
 
   // Get unique source products that would have relationships
   const uniqueSourceProducts = new Set(newRelationships.map(p => p.sourceProductId));
-  const uniqueSourceProductsExisting = new Set(skippedRelationships.map(p => p.sourceProductId));
+  const _uniqueSourceProductsExisting = new Set(skippedRelationships.map(p => p.sourceProductId));
 
   // Get current coverage
   const allProducts = await db.select({ id: products.id }).from(products);

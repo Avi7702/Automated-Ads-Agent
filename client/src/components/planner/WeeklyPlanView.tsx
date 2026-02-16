@@ -113,7 +113,7 @@ export default function WeeklyPlanView() {
   const [weekStart, setWeekStart] = useState<string | undefined>(undefined);
 
   const { data: plan, isLoading, error } = useWeeklyPlan(weekStart);
-  const updatePost = useUpdatePlanPost();
+  const _updatePost = useUpdatePlanPost();
   const regenerate = useRegeneratePlan();
 
   // Compute the display week label from plan or fallback
@@ -388,7 +388,7 @@ export default function WeeklyPlanView() {
             <h4 className="text-sm font-medium mb-3">Strategy Balance</h4>
             <div className="space-y-2">
               {strategyBalance.map(({ category, actualPercent, targetPercent }) => {
-                const catColor = CATEGORY_COLORS[category] ?? 'bg-gray-100 text-gray-700';
+                const _catColor = CATEGORY_COLORS[category] ?? 'bg-gray-100 text-gray-700';
                 const overTarget = targetPercent != null && actualPercent > targetPercent + 10;
 
                 return (

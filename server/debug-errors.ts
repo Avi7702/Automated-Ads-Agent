@@ -7,7 +7,7 @@
 import 'dotenv/config';
 import { db } from './db';
 import { generations } from '../shared/schema';
-import { desc, sql } from 'drizzle-orm';
+import { desc } from 'drizzle-orm';
 
 async function findFailedGenerations() {
   console.log('Checking for failed or non-completed generations...\n');

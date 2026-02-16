@@ -90,7 +90,7 @@ test.describe('Pipeline - Dashboard', { tag: '@pipeline' }, () => {
     }
 
     // Strategy Balance is conditionally rendered when strategyBalance.length > 0
-    const strategyHeading = page.getByText('Strategy Balance').first();
+    const _strategyHeading = page.getByText('Strategy Balance').first();
     // It's valid for strategy to not appear if no categories — just verify page is stable
     await expect(page.locator('body')).toBeVisible();
   });

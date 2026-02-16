@@ -16,17 +16,17 @@ import type { Product, BrandProfile } from '@shared/schema';
 import type { GenerateCopyInput } from '../validation/schemas';
 
 // Try to import genaiImage for direct image generation
-let genaiImage: any = null;
+let _genaiImage: any = null;
 try {
   const { genAI } = require('../lib/gemini');
-  genaiImage = genAI;
-} catch (e) {
+  _genaiImage = genAI;
+} catch {
   logger.warn({ module: 'ContentPlannerService' }, 'Image generation not available - gemini client not loaded');
 }
 
 // LLM Configuration
-const COPY_MODEL = process.env.GEMINI_REASONING_MODEL || 'gemini-3-pro-preview';
-const IMAGE_MODEL = 'gemini-3-pro-image-preview';
+const _COPY_MODEL = process.env.GEMINI_REASONING_MODEL || 'gemini-3-pro-preview';
+const _IMAGE_MODEL = 'gemini-3-pro-image-preview';
 
 // Types
 export interface GenerateCompletePostRequest {
@@ -183,7 +183,7 @@ async function fetchProducts(_userId: string, productIds: string[]): Promise<Pro
       if (product) {
         products.push(product);
       }
-    } catch (e) {
+    } catch {
       logger.warn({
         module: 'ContentPlannerService',
         productId

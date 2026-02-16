@@ -55,11 +55,11 @@ vi.mock('../lib/gemini', () => ({
 }));
 
 // Get mock for assertions
-const mockGenerateContent = vi.mocked((await import('../lib/gemini')).genAI.models.generateContent);
+const _mockGenerateContent = vi.mocked((await import('../lib/gemini')).genAI.models.generateContent);
 
 describe('Copywriting Service', () => {
   let testGenerationId: string;
-  let testUserId: string;
+  let _testUserId: string;
 
   beforeEach(() => {
     // Reset call count before each test
@@ -72,7 +72,7 @@ describe('Copywriting Service', () => {
     const testEmail = `copytest-${Date.now()}@test.com`;
     const testPasswordHash = 'hashedpassword123'; // In real code, use bcrypt
     const testUser = await storage.createUser(testEmail, testPasswordHash);
-    testUserId = testUser.id;
+    _testUserId = testUser.id;
 
     // Create test generation
     const testGeneration = await storage.saveGeneration({
