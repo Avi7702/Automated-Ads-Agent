@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import "dotenv/config";
 import pg from "pg";
 

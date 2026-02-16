@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * Test script to verify Axiom integration
  * Run with: npx tsx test-axiom.ts

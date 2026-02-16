@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { test, expect, type Page } from '@playwright/test';
 import { StudioWorkflowPage } from './pages/studio-workflow.page';
 import * as path from 'path';

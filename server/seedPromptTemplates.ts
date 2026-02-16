@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { storage } from "./storage";
 
 const defaultTemplates = [

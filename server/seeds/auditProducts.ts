@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import "dotenv/config";
 import { db } from "../db";
 import { products, installationScenarios, productRelationships, brandImages } from "@shared/schema";

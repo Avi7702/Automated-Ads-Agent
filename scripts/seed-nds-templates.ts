@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * NDS (Next Day Steel) Template Seeder
  *

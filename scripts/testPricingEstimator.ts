@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 ﻿import assert from 'node:assert/strict';
 
 import { computeAdaptiveEstimate, estimateGenerationCostMicros } from '../server/services/pricingEstimator';

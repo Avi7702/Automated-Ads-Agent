@@ -659,7 +659,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }));
 
         // Parse recipe into the shape the pipeline expects
-        let parsedRecipe = recipe;
+        const parsedRecipe = recipe;
         // Parse templateReferenceUrls from FormData (may come as JSON string)
         let parsedTemplateReferenceUrls: string[] | undefined;
         if (templateReferenceUrls) {

@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * Quick schema validation test for Phase 0.5 Product Knowledge
  */

@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * Multi-Platform Social Media Posting Example
  *

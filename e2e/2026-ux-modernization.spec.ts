@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { test, expect, Page } from '@playwright/test';
 
 /**
