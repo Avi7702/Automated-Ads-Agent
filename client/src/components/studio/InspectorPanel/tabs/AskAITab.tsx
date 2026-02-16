@@ -6,25 +6,18 @@
  * Extracted from ResultViewEnhanced inline ask-ai section.
  */
 
-import { memo, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Sparkles,
-  Loader2,
-  Send,
-  Bot,
-  User,
-  Lightbulb,
-} from "lucide-react";
-import type { StudioOrchestrator } from "@/hooks/useStudioOrchestrator";
+import { memo, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Sparkles, Loader2, Send, Bot, Lightbulb } from 'lucide-react';
+import type { StudioOrchestrator } from '@/hooks/useStudioOrchestrator';
 
 const QUICK_QUESTIONS = [
-  "What makes this image effective?",
-  "Suggest improvements",
-  "What audience would this appeal to?",
-  "Rate this for LinkedIn",
+  'What makes this image effective?',
+  'Suggest improvements',
+  'What audience would this appeal to?',
+  'Rate this for LinkedIn',
 ];
 
 interface AskAITabProps {
@@ -37,16 +30,12 @@ export const AskAITab = memo(function AskAITab({ orch }: AskAITabProps) {
 
   useEffect(() => {
     if (orch.askAIResponse && responseRef.current) {
-      responseRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      responseRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   }, [orch.askAIResponse]);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col h-full p-4"
-    >
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col h-full p-4">
       <div className="flex items-center gap-2 text-sm font-medium mb-4">
         <Sparkles className="w-4 h-4 text-primary" />
         Ask AI
@@ -90,9 +79,7 @@ export const AskAITab = memo(function AskAITab({ orch }: AskAITabProps) {
                   <Bot className="w-3.5 h-3.5" />
                   AI Response
                 </div>
-                <p className="text-sm whitespace-pre-wrap leading-relaxed">
-                  {orch.askAIResponse}
-                </p>
+                <p className="text-sm whitespace-pre-wrap leading-relaxed">{orch.askAIResponse}</p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -106,7 +93,7 @@ export const AskAITab = memo(function AskAITab({ orch }: AskAITabProps) {
                 placeholder="Ask about this generation..."
                 className="text-sm"
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
+                  if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     orch.handleAskAI();
                   }
@@ -118,11 +105,7 @@ export const AskAITab = memo(function AskAITab({ orch }: AskAITabProps) {
                 size="icon"
                 className="shrink-0"
               >
-                {orch.isAskingAI ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
+                {orch.isAskingAI ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               </Button>
             </div>
           </div>

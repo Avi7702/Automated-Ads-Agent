@@ -343,6 +343,18 @@ function createWrapper() {
 // Studio component reference - loaded dynamically
 let Studio: () => JSX.Element;
 
+/**
+ * Helper: add an upload via mock UploadZone to satisfy canGenerate.
+ * canGenerate requires (selectedProducts.length > 0 || tempUploads.length > 0).
+ */
+async function addUploadToEnableGenerate() {
+  await waitFor(() => {
+    const addUploadBtn = screen.getByTestId('add-upload-btn');
+    expect(addUploadBtn).toBeInTheDocument();
+    fireEvent.click(addUploadBtn);
+  });
+}
+
 // ============================================
 // TEST SUITES
 // ============================================
@@ -379,24 +391,23 @@ describe('Studio Page Integration Tests', () => {
         expect(screen.getByText('Your Products')).toBeInTheDocument();
       });
 
-      // Initially, the generate button should be disabled (no prompt)
+      // Initially, the generate button should be disabled (no prompt, no product)
       const generateButtons = screen.getAllByRole('button', { name: /Generate/i });
       const mainGenerateButton = generateButtons.find((btn) => btn.textContent?.includes('Generate Image'));
       expect(mainGenerateButton).toBeDisabled();
 
+      // Select a product (canGenerate requires selectedProducts.length > 0)
+      await addUploadToEnableGenerate();
+
       // Enter a prompt in the quick start textarea
-      const quickStartTextarea = screen.getByPlaceholderText(/Describe what you want to create/i);
+      const quickStartTextarea = screen.getByPlaceholderText(/Describe your ideal ad creative/i);
       fireEvent.change(quickStartTextarea, { target: { value: 'Professional product showcase' } });
 
       // Wait for debounce and state update
       await waitFor(() => {
-        const generateNowButton = screen.getByRole('button', { name: /Generate Now/i });
+        const generateNowButton = screen.getByRole('button', { name: /Generate Image/i });
         expect(generateNowButton).not.toBeDisabled();
       });
-
-      // Verify the IdeaBankPanel shows product count
-      const ideaBankPanel = screen.getByTestId('mock-idea-bank-panel');
-      expect(ideaBankPanel).toHaveAttribute('data-products', '0');
     });
 
     it('shows product selection count when products are selected via IdeaBank', async () => {
@@ -417,22 +428,25 @@ describe('Studio Page Integration Tests', () => {
       });
     });
 
-    it('enables Generate Now button when quick start has input', async () => {
+    it('enables Generate Now button when product selected and prompt entered', async () => {
       render(<Studio />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        expect(screen.getByText('Quick Start')).toBeInTheDocument();
+        expect(screen.getByText('Choose Your Path')).toBeInTheDocument();
       });
 
+      // Select a product (canGenerate requires selectedProducts.length > 0)
+      await addUploadToEnableGenerate();
+
       // Type in quick start
-      const quickStartTextarea = screen.getByPlaceholderText(/Describe what you want to create/i);
+      const quickStartTextarea = screen.getByPlaceholderText(/Describe your ideal ad creative/i);
       await act(async () => {
         fireEvent.change(quickStartTextarea, { target: { value: 'Create a stunning product photo' } });
       });
 
       // Generate Now should be enabled
       await waitFor(() => {
-        const generateNowButton = screen.getByRole('button', { name: /Generate Now/i });
+        const generateNowButton = screen.getByRole('button', { name: /Generate Image/i });
         expect(generateNowButton).toBeEnabled();
       });
     });
@@ -459,20 +473,23 @@ describe('Studio Page Integration Tests', () => {
       render(<Studio />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        expect(screen.getByPlaceholderText(/Describe what you want to create/i)).toBeInTheDocument();
+        expect(screen.getByPlaceholderText(/Describe your ideal ad creative/i)).toBeInTheDocument();
       });
 
+      // Select a product (canGenerate requires selectedProducts.length > 0)
+      await addUploadToEnableGenerate();
+
       // Enter a prompt
-      const quickStartTextarea = screen.getByPlaceholderText(/Describe what you want to create/i);
+      const quickStartTextarea = screen.getByPlaceholderText(/Describe your ideal ad creative/i);
       fireEvent.change(quickStartTextarea, { target: { value: 'Professional product shot with soft lighting' } });
 
       // Click generate
       await waitFor(() => {
-        const generateNowButton = screen.getByRole('button', { name: /Generate Now/i });
+        const generateNowButton = screen.getByRole('button', { name: /Generate Image/i });
         expect(generateNowButton).toBeEnabled();
       });
 
-      const generateNowButton = screen.getByRole('button', { name: /Generate Now/i });
+      const generateNowButton = screen.getByRole('button', { name: /Generate Image/i });
 
       await act(async () => {
         fireEvent.click(generateNowButton);
@@ -504,14 +521,17 @@ describe('Studio Page Integration Tests', () => {
       render(<Studio />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        expect(screen.getByPlaceholderText(/Describe what you want to create/i)).toBeInTheDocument();
+        expect(screen.getByPlaceholderText(/Describe your ideal ad creative/i)).toBeInTheDocument();
       });
 
+      // Select a product (canGenerate requires selectedProducts.length > 0)
+      await addUploadToEnableGenerate();
+
       // Enter prompt
-      const quickStartTextarea = screen.getByPlaceholderText(/Describe what you want to create/i);
+      const quickStartTextarea = screen.getByPlaceholderText(/Describe your ideal ad creative/i);
       fireEvent.change(quickStartTextarea, { target: { value: 'Test generation prompt' } });
 
-      const generateNowButton = screen.getByRole('button', { name: /Generate Now/i });
+      const generateNowButton = screen.getByRole('button', { name: /Generate Image/i });
       await waitFor(() => expect(generateNowButton).toBeEnabled());
 
       await act(async () => {
@@ -533,13 +553,16 @@ describe('Studio Page Integration Tests', () => {
       render(<Studio />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        expect(screen.getByPlaceholderText(/Describe what you want to create/i)).toBeInTheDocument();
+        expect(screen.getByPlaceholderText(/Describe your ideal ad creative/i)).toBeInTheDocument();
       });
 
-      const quickStartTextarea = screen.getByPlaceholderText(/Describe what you want to create/i);
+      // Select a product (canGenerate requires selectedProducts.length > 0)
+      await addUploadToEnableGenerate();
+
+      const quickStartTextarea = screen.getByPlaceholderText(/Describe your ideal ad creative/i);
       fireEvent.change(quickStartTextarea, { target: { value: 'Test prompt' } });
 
-      const generateNowButton = screen.getByRole('button', { name: /Generate Now/i });
+      const generateNowButton = screen.getByRole('button', { name: /Generate Image/i });
       await waitFor(() => expect(generateNowButton).toBeEnabled());
 
       await act(async () => {
@@ -765,16 +788,19 @@ describe('Studio Page Integration Tests', () => {
       render(<Studio />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        expect(screen.getByPlaceholderText(/Describe what you want to create/i)).toBeInTheDocument();
+        expect(screen.getByPlaceholderText(/Describe your ideal ad creative/i)).toBeInTheDocument();
       });
 
+      // Select a product (canGenerate requires selectedProducts.length > 0)
+      await addUploadToEnableGenerate();
+
       const longPrompt = 'A'.repeat(5000);
-      const quickStartTextarea = screen.getByPlaceholderText(/Describe what you want to create/i);
+      const quickStartTextarea = screen.getByPlaceholderText(/Describe your ideal ad creative/i);
       fireEvent.change(quickStartTextarea, { target: { value: longPrompt } });
 
       // Component should handle the long input without crashing
       await waitFor(() => {
-        const generateNowButton = screen.getByRole('button', { name: /Generate Now/i });
+        const generateNowButton = screen.getByRole('button', { name: /Generate Image/i });
         expect(generateNowButton).toBeEnabled();
       });
     });
@@ -784,11 +810,11 @@ describe('Studio Page Integration Tests', () => {
       render(<Studio />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        expect(screen.getByPlaceholderText(/Describe what you want to create/i)).toBeInTheDocument();
+        expect(screen.getByPlaceholderText(/Describe your ideal ad creative/i)).toBeInTheDocument();
       });
 
       const specialPrompt = '<script>alert("XSS")</script> & "quotes" \u2603 \u2764 \u2728';
-      const quickStartTextarea = screen.getByPlaceholderText(/Describe what you want to create/i);
+      const quickStartTextarea = screen.getByPlaceholderText(/Describe your ideal ad creative/i);
       fireEvent.change(quickStartTextarea, { target: { value: specialPrompt } });
 
       // Component should safely handle special characters
@@ -831,14 +857,17 @@ describe('Studio Page Integration Tests', () => {
       render(<Studio />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        expect(screen.getByPlaceholderText(/Describe what you want to create/i)).toBeInTheDocument();
+        expect(screen.getByPlaceholderText(/Describe your ideal ad creative/i)).toBeInTheDocument();
       });
 
+      // Select a product (canGenerate requires selectedProducts.length > 0)
+      await addUploadToEnableGenerate();
+
       // Start a generation
-      const quickStartTextarea = screen.getByPlaceholderText(/Describe what you want to create/i);
+      const quickStartTextarea = screen.getByPlaceholderText(/Describe your ideal ad creative/i);
       fireEvent.change(quickStartTextarea, { target: { value: 'Test prompt' } });
 
-      const generateNowButton = screen.getByRole('button', { name: /Generate Now/i });
+      const generateNowButton = screen.getByRole('button', { name: /Generate Image/i });
       await waitFor(() => expect(generateNowButton).toBeEnabled());
 
       await act(async () => {
@@ -868,13 +897,16 @@ describe('Studio Page Integration Tests', () => {
       render(<Studio />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        expect(screen.getByPlaceholderText(/Describe what you want to create/i)).toBeInTheDocument();
+        expect(screen.getByPlaceholderText(/Describe your ideal ad creative/i)).toBeInTheDocument();
       });
 
-      const quickStartTextarea = screen.getByPlaceholderText(/Describe what you want to create/i);
+      // Select a product (canGenerate requires selectedProducts.length > 0)
+      await addUploadToEnableGenerate();
+
+      const quickStartTextarea = screen.getByPlaceholderText(/Describe your ideal ad creative/i);
       fireEvent.change(quickStartTextarea, { target: { value: 'Test prompt' } });
 
-      const generateNowButton = screen.getByRole('button', { name: /Generate Now/i });
+      const generateNowButton = screen.getByRole('button', { name: /Generate Image/i });
       await waitFor(() => expect(generateNowButton).toBeEnabled());
 
       await act(async () => {

@@ -16,17 +16,10 @@ import { cn } from '@/lib/utils';
  */
 export function PromptEditor() {
   const {
-    state: {
-      prompt,
-      selectedSuggestion,
-      selectedProducts,
-      tempUploads,
-      ideaBankMode,
-    },
+    state: { prompt, selectedSuggestion, selectedProducts, tempUploads, ideaBankMode },
     setPrompt,
     setSuggestion,
     setRecipe,
-    setIdeaBankMode,
   } = useStudioState();
 
   const hasImages = selectedProducts.length > 0 || tempUploads.length > 0;
@@ -44,15 +37,10 @@ export function PromptEditor() {
               </div>
               <p className="text-sm">{selectedSuggestion.prompt}</p>
               {selectedSuggestion.reasoning && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  {selectedSuggestion.reasoning}
-                </p>
+                <p className="text-xs text-muted-foreground mt-1">{selectedSuggestion.reasoning}</p>
               )}
             </div>
-            <button
-              onClick={() => setSuggestion(null)}
-              className="p-1 rounded hover:bg-muted transition-colors"
-            >
+            <button onClick={() => setSuggestion(null)} className="p-1 rounded hover:bg-muted transition-colors">
               <X className="w-4 h-4 text-muted-foreground" />
             </button>
           </div>
@@ -69,15 +57,10 @@ export function PromptEditor() {
           }
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          className={cn(
-            'min-h-[120px] resize-none',
-            !hasImages && 'opacity-50'
-          )}
+          className={cn('min-h-[120px] resize-none', !hasImages && 'opacity-50')}
           disabled={!hasImages}
         />
-        <div className="absolute bottom-2 right-2 text-xs text-muted-foreground">
-          {prompt.length}/2000
-        </div>
+        <div className="absolute bottom-2 right-2 text-xs text-muted-foreground">{prompt.length}/2000</div>
       </div>
 
       {/* IdeaBank Panel */}

@@ -34,6 +34,8 @@ import { Sparkles, History, TrendingUp, Star, Layout, X } from 'lucide-react';
 
 // Hooks
 import { useStudioOrchestrator } from '@/hooks/useStudioOrchestrator';
+import type { ShortcutConfig } from '@/hooks/useKeyboardShortcuts';
+import type { Product } from '@shared/schema';
 
 // ─── Helper Components ──────────────────────────────────
 
@@ -43,8 +45,8 @@ function ContextBar({
   platform,
   visible,
 }: {
-  selectedProducts: any[];
-  selectedTemplate: any;
+  selectedProducts: Product[];
+  selectedTemplate: { title: string } | null;
   platform: string;
   visible: boolean;
 }) {
@@ -73,7 +75,7 @@ function KeyboardShortcutsPanel({
   haptic,
 }: {
   visible: boolean;
-  shortcuts: any[];
+  shortcuts: ShortcutConfig[];
   onClose: () => void;
   onToggle: () => void;
   haptic: (intensity: string) => void;

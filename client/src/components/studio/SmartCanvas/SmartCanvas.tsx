@@ -19,15 +19,10 @@ interface SmartCanvasProps {
  * 4. Result display with actions (edit, copy, preview, save)
  */
 export function SmartCanvas({ className }: SmartCanvasProps) {
-  const { hasResult, isGenerating } = useStudioState();
+  const { hasResult } = useStudioState();
 
   return (
-    <div
-      className={cn(
-        'flex flex-col h-full bg-background',
-        className
-      )}
-    >
+    <div className={cn('flex flex-col h-full bg-background', className)}>
       {/* Main content area */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {/* Show result view if we have a generated image */}

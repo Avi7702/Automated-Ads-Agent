@@ -372,22 +372,30 @@ describe('Studio Component - Generation Flow', () => {
       render(<Studio />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        const quickStartTextarea = screen.getByPlaceholderText(/Describe what you want to create/i);
+        const quickStartTextarea = screen.getByPlaceholderText(/Describe your ideal ad creative/i);
         expect(quickStartTextarea).toBeInTheDocument();
       });
     });
 
-    it('handles quick start generation with prompt only', async () => {
+    it('enables generate button when product selected and prompt entered', async () => {
       render(<Studio />, { wrapper: createWrapper() });
 
+      // Wait for products to load from mock API
       await waitFor(() => {
-        expect(screen.getByPlaceholderText(/Describe what you want to create/i)).toBeInTheDocument();
+        expect(screen.getByPlaceholderText(/Describe your ideal ad creative/i)).toBeInTheDocument();
       });
 
-      const quickStartTextarea = screen.getByPlaceholderText(/Describe what you want to create/i);
+      // Select a product (canGenerate requires selectedProducts.length > 0)
+      await waitFor(() => {
+        const productImages = screen.getAllByAltText(/NDS EZ-Drain/i);
+        expect(productImages.length).toBeGreaterThan(0);
+        fireEvent.click(productImages[0]);
+      });
+
+      const quickStartTextarea = screen.getByPlaceholderText(/Describe your ideal ad creative/i);
       fireEvent.change(quickStartTextarea, { target: { value: 'A beautiful product shot' } });
 
-      const generateNowButton = screen.getByRole('button', { name: /Generate Now/i });
+      const generateNowButton = screen.getByRole('button', { name: /Generate Image/i });
       expect(generateNowButton).not.toBeDisabled();
     });
 
@@ -423,16 +431,16 @@ describe('Studio Component - Generation Flow', () => {
       render(<Studio />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        expect(screen.getByPlaceholderText(/Describe what you want to create/i)).toBeInTheDocument();
+        expect(screen.getByPlaceholderText(/Describe your ideal ad creative/i)).toBeInTheDocument();
       });
 
       // Type a prompt in quick start
-      const quickStartTextarea = screen.getByPlaceholderText(/Describe what you want to create/i);
+      const quickStartTextarea = screen.getByPlaceholderText(/Describe your ideal ad creative/i);
       fireEvent.change(quickStartTextarea, { target: { value: 'Test prompt for generation' } });
 
       // Generating text appears during generation
       // Note: This test verifies the UI is ready for generation
-      const generateNowButton = screen.getByRole('button', { name: /Generate Now/i });
+      const generateNowButton = screen.getByRole('button', { name: /Generate Image/i });
       expect(generateNowButton).toBeInTheDocument();
     });
 
@@ -623,7 +631,7 @@ describe('Studio Component - Generation Flow', () => {
       render(<Studio />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        expect(screen.getByText('Quick Start')).toBeInTheDocument();
+        expect(screen.getByText('Choose Your Path')).toBeInTheDocument();
       });
     });
 
@@ -631,15 +639,22 @@ describe('Studio Component - Generation Flow', () => {
       render(<Studio />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        expect(screen.getByPlaceholderText(/Describe what you want to create/i)).toBeInTheDocument();
+        expect(screen.getByPlaceholderText(/Describe your ideal ad creative/i)).toBeInTheDocument();
+      });
+
+      // Select a product (canGenerate requires selectedProducts.length > 0)
+      await waitFor(() => {
+        const productImages = screen.getAllByAltText(/NDS EZ-Drain/i);
+        expect(productImages.length).toBeGreaterThan(0);
+        fireEvent.click(productImages[0]);
       });
 
       // Type prompt and click generate
-      const quickStartTextarea = screen.getByPlaceholderText(/Describe what you want to create/i);
+      const quickStartTextarea = screen.getByPlaceholderText(/Describe your ideal ad creative/i);
       fireEvent.change(quickStartTextarea, { target: { value: 'Test prompt' } });
 
       // The generate button should be ready
-      const generateNowButton = screen.getByRole('button', { name: /Generate Now/i });
+      const generateNowButton = screen.getByRole('button', { name: /Generate Image/i });
       expect(generateNowButton).not.toBeDisabled();
     });
 
@@ -691,14 +706,14 @@ describe('Studio Component - Generation Flow', () => {
       render(<Studio />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        expect(screen.getByPlaceholderText(/Describe what you want to create/i)).toBeInTheDocument();
+        expect(screen.getByPlaceholderText(/Describe your ideal ad creative/i)).toBeInTheDocument();
       });
 
-      const quickStartTextarea = screen.getByPlaceholderText(/Describe what you want to create/i);
+      const quickStartTextarea = screen.getByPlaceholderText(/Describe your ideal ad creative/i);
       fireEvent.change(quickStartTextarea, { target: { value: 'Test prompt' } });
 
       // The generate button should be ready for quick start
-      const generateNowButton = screen.getByRole('button', { name: /Generate Now/i });
+      const generateNowButton = screen.getByRole('button', { name: /Generate Image/i });
       expect(generateNowButton).toBeInTheDocument();
 
       // In quick start mode, the transform API will be called when generation runs
@@ -717,7 +732,7 @@ describe('Studio Component - Generation Flow', () => {
       render(<Studio />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        expect(screen.getByPlaceholderText(/Describe what you want to create/i)).toBeInTheDocument();
+        expect(screen.getByPlaceholderText(/Describe your ideal ad creative/i)).toBeInTheDocument();
       });
 
       // This tests that the request body includes the required fields
