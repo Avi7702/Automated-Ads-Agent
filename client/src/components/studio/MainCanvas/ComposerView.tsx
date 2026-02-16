@@ -37,6 +37,8 @@ import {
   Palette,
   Mic,
   MicOff,
+  Zap,
+  Lightbulb,
 } from 'lucide-react';
 import { useRipple } from '@/hooks/useRipple';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
@@ -359,6 +361,31 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
               </span>
               <Button variant="ghost" size="sm" onClick={() => orch.setSelectedTemplate(null)}>
                 <X className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
+
+          {/* Mode Selection Toggle — only when a template is selected */}
+          {orch.selectedTemplate && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground mr-1">Mode:</span>
+              <Button
+                variant={orch.generationMode === 'exact_insert' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => orch.setGenerationMode('exact_insert')}
+                className="gap-1.5"
+              >
+                <Zap className="w-4 h-4" />
+                Exact Insert
+              </Button>
+              <Button
+                variant={orch.generationMode === 'inspiration' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => orch.setGenerationMode('inspiration')}
+                className="gap-1.5"
+              >
+                <Lightbulb className="w-4 h-4" />
+                Inspiration
               </Button>
             </div>
           )}

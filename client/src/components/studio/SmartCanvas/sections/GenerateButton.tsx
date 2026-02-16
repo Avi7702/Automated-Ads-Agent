@@ -1,19 +1,11 @@
-import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useStudioState } from '@/hooks/useStudioState';
 import { Button } from '@/components/ui/button';
 import { Sparkles, Loader2 } from 'lucide-react';
 import { getProductImageUrl } from '@/lib/utils';
 
-interface PriceEstimate {
-  estimatedCost: number;
-  p90: number;
-  sampleCount: number;
-  usedFallback: boolean;
-}
-
 /**
- * GenerateButton - Main generation trigger with price estimate
+ * GenerateButton - Main generation trigger
  */
 export function GenerateButton() {
   const queryClient = useQueryClient();
@@ -34,34 +26,6 @@ export function GenerateButton() {
     setGenerating,
     setResult,
   } = useStudioState();
-
-  const [priceEstimate, setPriceEstimate] = useState<PriceEstimate | null>(null);
-
-  // Fetch price estimate
-  useEffect(() => {
-    const fetchEstimate = async () => {
-      try {
-        const res = await fetch('/api/estimate-cost', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            imageCount: selectedProducts.length + tempUploads.filter((u) => u.status === 'confirmed').length,
-            resolution,
-          }),
-        });
-        if (res.ok) {
-          setPriceEstimate(await res.json());
-        }
-      } catch {
-        // Ignore estimate errors
-      }
-    };
-
-    if (canGenerate) {
-      fetchEstimate();
-    }
-  }, [selectedProducts.length, tempUploads, resolution, canGenerate]);
 
   // Generation mutation
   const generateMutation = useMutation({
@@ -137,14 +101,14 @@ export function GenerateButton() {
         )}
       </Button>
 
-      {/* Price estimate and info */}
+      {/* Image count and info */}
       <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
         <span>
           {selectedProducts.length + tempUploads.filter((u) => u.status === 'confirmed').length} image
           {selectedProducts.length + tempUploads.filter((u) => u.status === 'confirmed').length !== 1 ? 's' : ''}{' '}
           selected
         </span>
-        {priceEstimate && <span>Est. ${priceEstimate.estimatedCost.toFixed(3)}</span>}
+        <span>Credits deducted after generation</span>
       </div>
     </div>
   );
