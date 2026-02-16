@@ -18,7 +18,10 @@ export function createCopyTools() {
       .enum(['professional', 'casual', 'technical', 'urgent', 'minimal', 'authentic'])
       .optional()
       .describe('Tone of voice (default: professional)'),
-    framework: z.enum(['aida', 'pas', 'bab', 'fab', 'auto']).optional().describe('Copywriting framework (default: auto)'),
+    framework: z
+      .enum(['aida', 'pas', 'bab', 'fab', 'auto'])
+      .optional()
+      .describe('Copywriting framework (default: auto)'),
     variations: z.number().min(1).max(5).optional().describe('Number of variations (default 3)'),
   });
 

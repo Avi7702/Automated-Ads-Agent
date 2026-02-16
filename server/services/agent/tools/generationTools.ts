@@ -155,7 +155,9 @@ export function createGenerationTools(storage: IStorage) {
 
       return {
         status: 'success',
-        uiActions: [{ type: 'generation_complete', payload: { imageUrl: result.imageUrl, generationId: result.generationId } }],
+        uiActions: [
+          { type: 'generation_complete', payload: { imageUrl: result.imageUrl, generationId: result.generationId } },
+        ],
         message: `Image generated successfully! Generation ID: ${result.generationId}`,
         generationId: result.generationId,
         imageUrl: result.imageUrl,
