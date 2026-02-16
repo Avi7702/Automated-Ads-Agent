@@ -31,9 +31,9 @@ export function log(message: string, source = 'express') {
 export const app = express();
 
 // CORS - allow cross-origin requests from configured origins
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
-  : [`http://localhost:${process.env.PORT || '5000'}`];
+const allowedOrigins = process.env['ALLOWED_ORIGINS']
+  ? process.env['ALLOWED_ORIGINS'].split(',').map((o) => o.trim())
+  : [`http://localhost:${process.env['PORT'] || '5000'}`];
 
 app.use(
   cors({
@@ -58,7 +58,7 @@ app.use(
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc:
-          process.env.NODE_ENV === 'production'
+          process.env['NODE_ENV'] === 'production'
             ? [
                 "'self'",
                 "'sha256-lDUBeBfpPQ4BeVVZpSDsSj8T+WdMfPRFeirOKsgrNAM='",
@@ -104,7 +104,7 @@ app.use(
 app.use(requestIdMiddleware);
 
 // Performance metrics tracking (if monitoring enabled)
-if (process.env.ENABLE_MONITORING !== 'false') {
+if (process.env['ENABLE_MONITORING'] !== 'false') {
   app.use(performanceMetricsMiddleware);
 }
 
@@ -146,7 +146,7 @@ app.use('/api/', (req, res, next) => {
 // Session middleware - uses Redis if available, falls back to memory store
 let sessionStore: session.Store | undefined;
 
-if (process.env.REDIS_URL) {
+if (process.env['REDIS_URL']) {
   try {
     const RedisStore = require('connect-redis').default;
     const { getRedisClient } = require('./lib/redis');
@@ -156,7 +156,7 @@ if (process.env.REDIS_URL) {
     });
     logger.info({ store: 'redis' }, 'Using Redis session store');
   } catch (error) {
-    if (process.env.NODE_ENV === 'production') {
+    if (process.env['NODE_ENV'] === 'production') {
       logger.warn(
         { store: 'memory', error },
         'Redis session store failed in production — falling back to memory store (single-instance only)',
@@ -165,7 +165,7 @@ if (process.env.REDIS_URL) {
     logger.warn({ store: 'memory', reason: 'redis_unavailable' }, 'Redis not available, using memory session store');
   }
 } else {
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env['NODE_ENV'] === 'production') {
     logger.warn(
       { store: 'memory', reason: 'no_redis_url' },
       'REDIS_URL not set in production — using memory session store (single-instance only)',
@@ -180,8 +180,8 @@ if (process.env.REDIS_URL) {
 
 // Validate session secret in production
 // Supports comma-separated secrets for key rotation (first = current, rest = legacy)
-const sessionSecret = process.env.SESSION_SECRET;
-if (process.env.NODE_ENV === 'production' && !sessionSecret) {
+const sessionSecret = process.env['SESSION_SECRET'];
+if (process.env['NODE_ENV'] === 'production' && !sessionSecret) {
   logger.warn(
     { security: true },
     'SESSION_SECRET not set in production - using random secret, sessions will not persist',
@@ -202,7 +202,7 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env['NODE_ENV'] === 'production',
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days (industry standard for SaaS)
       sameSite: 'lax',
@@ -212,8 +212,8 @@ app.use(
 
 // CSRF Protection - protects all state-changing operations (POST/PUT/DELETE)
 // Supports comma-separated secrets for key rotation
-const csrfSecret = process.env.CSRF_SECRET;
-if (process.env.NODE_ENV === 'production' && !csrfSecret) {
+const csrfSecret = process.env['CSRF_SECRET'];
+if (process.env['NODE_ENV'] === 'production' && !csrfSecret) {
   logger.warn(
     { security: true },
     'CSRF_SECRET not set in production — using random secret (sessions will not persist across restarts)',
@@ -230,10 +230,10 @@ const effectiveCsrfSecret = csrfSecrets[0] ?? randomBytes(32).toString('hex');
 
 const { generateToken, doubleCsrfProtection } = doubleCsrf({
   getSecret: () => effectiveCsrfSecret,
-  cookieName: process.env.NODE_ENV === 'production' ? '__Host-csrf' : 'csrf',
+  cookieName: process.env['NODE_ENV'] === 'production' ? '__Host-csrf' : 'csrf',
   cookieOptions: {
     sameSite: 'strict',
-    secure: process.env.NODE_ENV === 'production',
+    secure: process.env['NODE_ENV'] === 'production',
     httpOnly: true,
     path: '/',
   },
@@ -319,14 +319,15 @@ export default async function runApp(setup: (app: Express, server: Server) => Pr
     logger.error({ err, status, module: 'ErrorHandler' }, message);
 
     // Track error for dashboard (only if monitoring enabled)
-    if (process.env.ENABLE_MONITORING !== 'false') {
+    if (process.env['ENABLE_MONITORING'] !== 'false') {
+      const userAgent = req.get('user-agent');
       trackError({
-        statusCode: status,
-        message,
+        statusCode: Number(status) || 500,
+        message: String(message),
         endpoint: req.path,
         method: req.method,
-        userAgent: req.get('user-agent'),
-        stack: err.stack,
+        ...(typeof userAgent === 'string' ? { userAgent } : {}),
+        ...(typeof err?.stack === 'string' ? { stack: err.stack } : {}),
       });
     }
 
@@ -358,7 +359,7 @@ export default async function runApp(setup: (app: Express, server: Server) => Pr
   // Other ports are firewalled. Default to 5000 if not specified.
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
+  const port = parseInt(process.env['PORT'] || '5000', 10);
   server.listen(port, '0.0.0.0', () => {
     log(`serving on port ${port}`);
   });
@@ -396,7 +397,7 @@ export default async function runApp(setup: (app: Express, server: Server) => Pr
     }
 
     // Close Redis (sessions depend on Redis)
-    if (process.env.REDIS_URL) {
+    if (process.env['REDIS_URL']) {
       try {
         const { closeRedisClient } = require('./lib/redis');
         await closeRedisClient();
@@ -407,7 +408,7 @@ export default async function runApp(setup: (app: Express, server: Server) => Pr
     }
 
     // Clear monitoring data
-    if (process.env.ENABLE_MONITORING !== 'false') {
+    if (process.env['ENABLE_MONITORING'] !== 'false') {
       try {
         const { resetPerformanceMetrics } = require('./middleware/performanceMetrics');
         const { clearErrors } = require('./services/errorTrackingService');
@@ -440,21 +441,23 @@ export default async function runApp(setup: (app: Express, server: Server) => Pr
   });
 
   // Track unhandled errors (only if monitoring enabled)
-  if (process.env.ENABLE_MONITORING !== 'false') {
+  if (process.env['ENABLE_MONITORING'] !== 'false') {
     process.on('unhandledRejection', (reason: any) => {
       logger.error({ err: reason, module: 'UnhandledRejection' }, 'Unhandled promise rejection');
+      const reasonMessage = typeof reason?.message === 'string' ? reason.message : 'Unhandled promise rejection';
+      const reasonStack = typeof reason?.stack === 'string' ? reason.stack : undefined;
       trackError({
         statusCode: 500,
-        message: reason?.message || 'Unhandled promise rejection',
+        message: reasonMessage,
         endpoint: 'N/A',
         method: 'N/A',
-        stack: reason?.stack,
+        ...(reasonStack ? { stack: reasonStack } : {}),
       });
       notify({
         severity: 'critical',
         title: 'Unhandled Promise Rejection',
-        message: reason?.message || 'Unknown rejection',
-        context: { stack: reason?.stack?.split('\n')[1]?.trim() ?? 'N/A' },
+        message: reasonMessage,
+        context: { stack: reasonStack?.split('\n')[1]?.trim() ?? 'N/A' },
       }).catch(() => {});
     });
 
@@ -465,7 +468,7 @@ export default async function runApp(setup: (app: Express, server: Server) => Pr
         message: error.message,
         endpoint: 'N/A',
         method: 'N/A',
-        stack: error.stack,
+        ...(typeof error.stack === 'string' ? { stack: error.stack } : {}),
       });
       notify({
         severity: 'critical',
