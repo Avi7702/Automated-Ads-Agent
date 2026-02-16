@@ -1,0 +1,40 @@
+Wave 2B — Intelligence API Response Fix — COMPLETED
+
+## Problem
+Server intelligence routes wrap response arrays/objects in wrapper objects:
+  - GET /api/intelligence/priorities  → { priorities: [...] }
+  - GET /api/intelligence/business    → { businessIntelligence: {...} }
+  - GET /api/intelligence/stats       → { stats: [...] }
+
+But the React Query hooks in useBusinessIntelligence.ts returned `res.json()` directly,
+so the client received `{ priorities: [...] }` instead of the bare array, causing
+`.map()` runtime errors when the dashboard tried to iterate.
+
+## Fix Applied
+File: client/src/hooks/useBusinessIntelligence.ts
+
+Three hooks were updated to unwrap the server response:
+
+1. useBusinessIntelligence (line ~91):
+   - Before: `return res.json();`
+   - After:  `const data = await res.json(); return data.businessIntelligence ?? data;`
+
+2. useProductPriorities (line ~125):
+   - Before: `return res.json();`
+   - After:  `const data = await res.json(); return data.priorities ?? data;`
+
+3. useProductStats (line ~194):
+   - Before: `return res.json();`
+   - After:  `const data = await res.json(); return data.stats ?? data;`
+
+The `?? data` fallback ensures backwards compatibility if the server response format
+ever changes to return bare arrays/objects directly.
+
+## Verification
+- Vite build: PASSED (verified via main repo with modified file, worktree node_modules corrupted)
+- Commit: 56f0386 "fix: unwrap intelligence API response wrappers in client hooks"
+
+## Note
+The worktree's node_modules directory was corrupted (permission-denied errors preventing
+deletion). Build was verified by temporarily applying the change to the main repo's copy,
+running `npx vite build` (succeeded in 3m 35s), then reverting the main repo.
