@@ -19,7 +19,6 @@ import { logger } from '../lib/logger';
 import { generateContentWithRetry } from '../lib/geminiClient';
 import { getCacheService, CACHE_TTL } from '../lib/cacheService';
 import { sanitizeForPrompt, sanitizeKBContent, sanitizeOutputString } from '../lib/promptSanitizer';
-import { safeParseLLMResponse, ideaSuggestionArraySchema } from '../validation/llmResponseSchemas';
 import { storage } from '../storage';
 import { visionAnalysisService, type VisionAnalysisResult } from './visionAnalysisService';
 import { queryFileSearchStore } from './fileSearchService';
@@ -30,7 +29,6 @@ import type {
   IdeaBankSuggestion,
   IdeaBankSuggestResponse,
   GenerationMode,
-  SourcesUsed,
   GenerationRecipe,
   GenerationRecipeProduct,
   GenerationRecipeRelationship,
@@ -46,7 +44,7 @@ import { createRateLimitMap } from '../utils/memoryManager';
 
 // LLM model for reasoning - use Gemini 3 Flash for speed
 // MODEL RECENCY RULE: Before changing any model ID, verify today's date and confirm the model is current within the last 3-4 weeks.
-const REASONING_MODEL = process.env.GEMINI_REASONING_MODEL || 'gemini-3-flash-preview';
+const REASONING_MODEL = process.env['GEMINI_REASONING_MODEL'] || 'gemini-3-flash-preview';
 
 // Rate limiting for suggest endpoint
 // Now bounded with automatic cleanup of expired entries (max 10000 users)
@@ -162,14 +160,14 @@ export async function generateSuggestions(
       id: template.id,
       title: template.title,
       promptBlueprint: template.promptBlueprint,
-      placementHints: template.placementHints as PlacementHints | undefined,
-      lightingStyle: template.lightingStyle || undefined,
-      mood: template.mood || undefined,
-      environment: template.environment || undefined,
       category: template.category,
-      aspectRatioHints: template.aspectRatioHints || undefined,
-      platformHints: template.platformHints || undefined,
-      bestForProductTypes: template.bestForProductTypes || undefined,
+      ...(template.placementHints ? { placementHints: template.placementHints as PlacementHints } : {}),
+      ...(template.lightingStyle ? { lightingStyle: template.lightingStyle } : {}),
+      ...(template.mood ? { mood: template.mood } : {}),
+      ...(template.environment ? { environment: template.environment } : {}),
+      ...(template.aspectRatioHints ? { aspectRatioHints: template.aspectRatioHints } : {}),
+      ...(template.platformHints ? { platformHints: template.platformHints } : {}),
+      ...(template.bestForProductTypes ? { bestForProductTypes: template.bestForProductTypes } : {}),
     };
   }
 
@@ -276,9 +274,8 @@ export async function generateSuggestions(
   try {
     learnedPatterns = await getRelevantPatterns({
       userId,
-      category: productAnalysis?.category ?? undefined, // Convert null to undefined
-      platform: undefined, // Could be passed from request in future
-      industry: brandProfile?.industry ?? undefined,
+      ...(productAnalysis?.category ? { category: productAnalysis.category } : {}),
+      ...(brandProfile?.industry ? { industry: brandProfile.industry } : {}),
       maxPatterns: 3,
     });
     if (learnedPatterns.length > 0) {
@@ -298,27 +295,30 @@ export async function generateSuggestions(
       // TEMPLATE MODE: Generate slot suggestions for the selected template
       const slotSuggestions = await generateTemplateSlotSuggestions({
         templateContext,
-        product,
+        ...(product ? { product } : {}),
         productAnalysis,
         uploadDescriptions,
         enhancedContext,
         brandProfile,
         kbContext,
-        userGoal,
+        ...(userGoal !== undefined ? { userGoal } : {}),
         maxSuggestions: Math.min(maxSuggestions, 3), // Limit to 3 for template mode
       });
 
       // Merge template with the best slot suggestion
       const bestSlot = slotSuggestions[0];
+      if (!bestSlot) {
+        throw new Error('No slot suggestions generated for template');
+      }
       const productName = product?.name || 'product';
       const mergedPrompt = mergeTemplateWithInsights(templateContext, bestSlot, productName);
 
       // Build GenerationRecipe for template mode
       const recipe = buildGenerationRecipe({
-        product,
+        ...(product ? { product } : {}),
         enhancedContext,
         matchedTemplates: [], // No template matching in template mode
-        brandProfile,
+        ...(brandProfile ? { brandProfile } : {}),
         buildStartTime,
       });
 
@@ -335,14 +335,14 @@ export async function generateSuggestions(
           productKnowledgeUsed: !!enhancedContext,
           uploadDescriptionsUsed: uploadDescriptions.length,
         },
-        recipe,
+        ...(recipe ? { recipe } : {}),
       };
 
       return { success: true, response };
     } else {
       // FREESTYLE MODE: Generate complete prompt suggestions (existing behavior)
       const suggestions = await generateLLMSuggestions({
-        product,
+        ...(product ? { product } : {}),
         productAnalysis,
         uploadDescriptions,
         enhancedContext,
@@ -351,17 +351,17 @@ export async function generateSuggestions(
         kbCitations,
         matchedTemplates,
         learnedPatterns, // Learn from Winners patterns
-        userGoal,
+        ...(userGoal !== undefined ? { userGoal } : {}),
         maxSuggestions: Math.min(maxSuggestions, 5),
         enableWebSearch,
       });
 
       // Build GenerationRecipe for context passing to /api/transform
       const recipe = buildGenerationRecipe({
-        product,
+        ...(product ? { product } : {}),
         enhancedContext,
         matchedTemplates,
-        brandProfile,
+        ...(brandProfile ? { brandProfile } : {}),
         buildStartTime,
       });
 
@@ -377,7 +377,7 @@ export async function generateSuggestions(
           uploadDescriptionsUsed: uploadDescriptions.length, // Phase 9
           learnedPatternsUsed: learnedPatterns.length, // Learn from Winners
         },
-        recipe, // Include recipe for /api/transform context
+        ...(recipe ? { recipe } : {}), // Include recipe for /api/transform context
       };
 
       // Cache the response for future requests (only cacheable requests)
@@ -425,19 +425,6 @@ function buildSuggestionCacheKey(
   const modeKey = mode === 'template' && templateId ? `-t${templateId}` : '';
 
   return `${baseKey}${goalHash}${modeKey}`;
-}
-
-/**
- * Build a KB query based on product and analysis
- */
-function buildKBQuery(product: Product, analysis: VisionAnalysisResult, userGoal?: string): string {
-  const parts = [`advertising ideas for ${analysis.category}`, analysis.subcategory, analysis.style, product.name];
-
-  if (userGoal) {
-    parts.push(userGoal);
-  }
-
-  return parts.filter(Boolean).join(' ');
 }
 
 /**
@@ -569,7 +556,7 @@ async function generateLLMSuggestions(params: {
     enhancedContext,
     brandProfile,
     kbContext,
-    kbCitations,
+    kbCitations: _kbCitations,
     matchedTemplates,
     learnedPatterns,
     userGoal,
@@ -578,7 +565,7 @@ async function generateLLMSuggestions(params: {
 
   // Build prompt
   const prompt = buildSuggestionPrompt({
-    product,
+    ...(product ? { product } : {}),
     productAnalysis,
     uploadDescriptions,
     enhancedContext,
@@ -586,7 +573,7 @@ async function generateLLMSuggestions(params: {
     kbContext,
     matchedTemplates,
     learnedPatterns,
-    userGoal,
+    ...(userGoal !== undefined ? { userGoal } : {}),
     maxSuggestions,
   });
 
@@ -610,12 +597,12 @@ async function generateLLMSuggestions(params: {
 
   // Try extracting from code block if wrapped
   const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (codeBlockMatch) {
+  if (codeBlockMatch && codeBlockMatch[1]) {
     jsonContent = codeBlockMatch[1].trim();
   } else {
     // Try to find raw JSON array
     const jsonMatch = text.match(/\[[\s\S]*\]/);
-    if (jsonMatch) {
+    if (jsonMatch && jsonMatch[0]) {
       jsonContent = jsonMatch[0];
     }
   }
@@ -626,7 +613,7 @@ async function generateLLMSuggestions(params: {
   }
 
   // Try to fix truncated JSON by closing incomplete objects
-  let fixedJson = jsonContent;
+  let fixedJson: string = jsonContent;
   try {
     JSON.parse(fixedJson);
   } catch {
@@ -658,23 +645,25 @@ async function generateLLMSuggestions(params: {
   }>;
 
   // Transform and validate suggestions
-  return rawSuggestions.slice(0, maxSuggestions).map((s, index) => ({
-    id: `suggestion-${Date.now()}-${index}`,
-    summary: s.summary || s.prompt.slice(0, 80) + '...',
-    prompt: sanitizePrompt(s.prompt),
-    mode: validateMode(s.mode),
-    templateIds: s.templateId ? [s.templateId] : undefined,
-    reasoning: sanitizeString(s.reasoning),
-    confidence: Math.min(100, Math.max(0, s.confidence || 70)),
-    sourcesUsed: {
-      visionAnalysis: true,
-      kbRetrieval: !!kbContext,
-      webSearch: false,
-      templateMatching: matchedTemplates.length > 0,
-    } as SourcesUsed,
-    recommendedPlatform: s.recommendedPlatform,
-    recommendedAspectRatio: s.recommendedAspectRatio,
-  }));
+  return rawSuggestions.slice(0, maxSuggestions).map(
+    (s, index): IdeaBankSuggestion => ({
+      id: `suggestion-${Date.now()}-${index}`,
+      summary: s.summary || s.prompt.slice(0, 80) + '...',
+      prompt: sanitizePrompt(s.prompt),
+      mode: validateMode(s.mode),
+      ...(s.templateId ? { templateIds: [s.templateId] } : {}),
+      reasoning: sanitizeString(s.reasoning),
+      confidence: Math.min(100, Math.max(0, s.confidence || 70)),
+      sourcesUsed: {
+        visionAnalysis: true,
+        kbRetrieval: !!kbContext,
+        webSearch: false,
+        templateMatching: matchedTemplates.length > 0,
+      },
+      ...(s.recommendedPlatform ? { recommendedPlatform: s.recommendedPlatform } : {}),
+      ...(s.recommendedAspectRatio ? { recommendedAspectRatio: s.recommendedAspectRatio } : {}),
+    }),
+  );
 }
 
 /**
@@ -884,13 +873,13 @@ async function generateTemplateSlotSuggestions(params: {
 
   const prompt = buildTemplateSlotPrompt({
     templateContext,
-    product,
+    ...(product ? { product } : {}),
     productAnalysis,
     uploadDescriptions,
     enhancedContext,
     brandProfile,
     kbContext,
-    userGoal,
+    ...(userGoal !== undefined ? { userGoal } : {}),
     maxSuggestions,
   });
 
@@ -913,11 +902,11 @@ async function generateTemplateSlotSuggestions(params: {
   let jsonContent: string | null = null;
 
   const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (codeBlockMatch) {
+  if (codeBlockMatch && codeBlockMatch[1]) {
     jsonContent = codeBlockMatch[1].trim();
   } else {
     const jsonMatch = text.match(/\[[\s\S]*\]/);
-    if (jsonMatch) {
+    if (jsonMatch && jsonMatch[0]) {
       jsonContent = jsonMatch[0];
     }
   }
@@ -928,7 +917,7 @@ async function generateTemplateSlotSuggestions(params: {
   }
 
   // Try to fix truncated JSON
-  let fixedJson = jsonContent;
+  let fixedJson: string = jsonContent;
   try {
     JSON.parse(fixedJson);
   } catch {
@@ -961,19 +950,21 @@ async function generateTemplateSlotSuggestions(params: {
   }>;
 
   // Transform and validate slot suggestions
-  return rawSuggestions.slice(0, maxSuggestions).map((s) => ({
-    productHighlights: (s.productHighlights || []).slice(0, 5).map((h) => sanitizeString(h)),
-    productPlacement: sanitizeString(s.productPlacement || 'center of frame'),
-    detailsToEmphasize: (s.detailsToEmphasize || []).slice(0, 5).map((d) => sanitizeString(d)),
-    scaleReference: s.scaleReference ? sanitizeString(s.scaleReference) : undefined,
-    headerText: s.headerText ? sanitizeString(s.headerText).slice(0, 60) : undefined,
-    bodyText: s.bodyText ? sanitizeString(s.bodyText).slice(0, 150) : undefined,
-    ctaSuggestion: s.ctaSuggestion ? sanitizeString(s.ctaSuggestion).slice(0, 30) : undefined,
-    colorHarmony: (s.colorHarmony || []).slice(0, 5).map((c) => sanitizeString(c)),
-    lightingNotes: sanitizeString(s.lightingNotes || 'Natural lighting'),
-    confidence: Math.min(100, Math.max(0, s.confidence || 70)),
-    reasoning: sanitizeString(s.reasoning || 'Product-template compatibility analysis'),
-  }));
+  return rawSuggestions.slice(0, maxSuggestions).map(
+    (s): TemplateSlotSuggestion => ({
+      productHighlights: (s.productHighlights || []).slice(0, 5).map((h) => sanitizeString(h)),
+      productPlacement: sanitizeString(s.productPlacement || 'center of frame'),
+      detailsToEmphasize: (s.detailsToEmphasize || []).slice(0, 5).map((d) => sanitizeString(d)),
+      ...(s.scaleReference ? { scaleReference: sanitizeString(s.scaleReference) } : {}),
+      ...(s.headerText ? { headerText: sanitizeString(s.headerText).slice(0, 60) } : {}),
+      ...(s.bodyText ? { bodyText: sanitizeString(s.bodyText).slice(0, 150) } : {}),
+      ...(s.ctaSuggestion ? { ctaSuggestion: sanitizeString(s.ctaSuggestion).slice(0, 30) } : {}),
+      colorHarmony: (s.colorHarmony || []).slice(0, 5).map((c) => sanitizeString(c)),
+      lightingNotes: sanitizeString(s.lightingNotes || 'Natural lighting'),
+      confidence: Math.min(100, Math.max(0, s.confidence || 70)),
+      reasoning: sanitizeString(s.reasoning || 'Product-template compatibility analysis'),
+    }),
+  );
 }
 
 /**
@@ -1239,49 +1230,53 @@ function buildGenerationRecipe(params: {
   }
 
   // Check if debug context should be included (env var gated)
-  const includeDebug = process.env.ENABLE_DEBUG_CONTEXT === 'true';
+  const includeDebug = process.env['ENABLE_DEBUG_CONTEXT'] === 'true';
 
   // Build products array
   const products: GenerationRecipeProduct[] = [
     {
       id: product.id,
       name: product.name,
-      category: product.category || undefined,
-      description: product.description || undefined,
+      ...(product.category ? { category: product.category } : {}),
+      ...(product.description ? { description: product.description } : {}),
       imageUrls: product.cloudinaryUrl ? [product.cloudinaryUrl] : [],
     },
   ];
 
   // Build relationships array
-  const relationships: GenerationRecipeRelationship[] = enhancedContext.relatedProducts.map((rp) => ({
-    sourceProductId: product.id,
-    sourceProductName: product.name,
-    targetProductId: rp.product.id,
-    targetProductName: rp.product.name,
-    relationshipType: rp.relationshipType,
-    description: rp.relationshipDescription,
-  }));
+  const relationships: GenerationRecipeRelationship[] = enhancedContext.relatedProducts.map(
+    (rp): GenerationRecipeRelationship => ({
+      sourceProductId: product.id,
+      sourceProductName: product.name,
+      targetProductId: rp.product.id,
+      targetProductName: rp.product.name,
+      relationshipType: rp.relationshipType,
+      ...(rp.relationshipDescription ? { description: rp.relationshipDescription } : {}),
+    }),
+  );
 
   // Build scenarios array
-  const scenarios: GenerationRecipeScenario[] = enhancedContext.installationScenarios.map((s) => ({
-    id: s.id,
-    title: s.title,
-    description: s.description,
-    steps: s.installationSteps,
-    isActive: true, // From enhanced context means active
-    scenarioType: s.scenarioType,
-  }));
+  const scenarios: GenerationRecipeScenario[] = enhancedContext.installationScenarios.map(
+    (s): GenerationRecipeScenario => ({
+      id: s.id,
+      title: s.title,
+      description: s.description,
+      ...(s.installationSteps ? { steps: s.installationSteps } : {}),
+      isActive: true, // From enhanced context means active
+      ...(s.scenarioType ? { scenarioType: s.scenarioType } : {}),
+    }),
+  );
 
   // Build template info (first matched template if any)
-  const template =
-    matchedTemplates.length > 0
-      ? {
-          id: matchedTemplates[0].id,
-          title: matchedTemplates[0].title,
-          category: matchedTemplates[0].category,
-          aspectRatio: matchedTemplates[0].aspectRatioHints?.[0],
-        }
-      : undefined;
+  const firstTemplate = matchedTemplates[0];
+  const template = firstTemplate
+    ? {
+        id: firstTemplate.id,
+        title: firstTemplate.title,
+        category: firstTemplate.category,
+        ...(firstTemplate.aspectRatioHints?.[0] ? { aspectRatio: firstTemplate.aspectRatioHints[0] } : {}),
+      }
+    : undefined;
 
   // Build brand images
   const brandImages = enhancedContext.brandImages.map((bi) => ({
@@ -1293,9 +1288,9 @@ function buildGenerationRecipe(params: {
   // Build brand voice
   const brandVoice = brandProfile
     ? {
-        brandName: brandProfile.brandName || undefined,
-        industry: brandProfile.industry || undefined,
-        values: brandProfile.brandValues || undefined,
+        ...(brandProfile.brandName ? { brandName: brandProfile.brandName } : {}),
+        ...(brandProfile.industry ? { industry: brandProfile.industry } : {}),
+        ...(brandProfile.brandValues ? { values: brandProfile.brandValues } : {}),
       }
     : undefined;
 
@@ -1304,9 +1299,9 @@ function buildGenerationRecipe(params: {
     products,
     relationships,
     scenarios,
-    template,
+    ...(template ? { template } : {}),
     brandImages,
-    brandVoice,
+    ...(brandVoice ? { brandVoice } : {}),
   };
 
   // Add debug context if enabled

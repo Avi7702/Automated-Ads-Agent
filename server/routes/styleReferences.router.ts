@@ -14,7 +14,7 @@
 import type { Router, Request, Response } from 'express';
 import type { RouterContext, RouterFactory, RouterModule } from '../types/router';
 import { createRouter, asyncHandler } from './utils/createRouter';
-import { analyzeStyleImage, generateStyleFingerprint, type StyleElements } from '../services/styleAnalysisService';
+import { analyzeStyleImage, generateStyleFingerprint } from '../services/styleAnalysisService';
 
 const VALID_CATEGORIES = ['character', 'style', 'scene'] as const;
 
@@ -22,9 +22,13 @@ const VALID_CATEGORIES = ['character', 'style', 'scene'] as const;
  * Check if a database error is caused by a missing table (migration not yet applied).
  * PostgreSQL error code 42P01 = "undefined_table"
  */
-function isTableMissingError(error: any): boolean {
+function isTableMissingError(error: unknown): boolean {
+  const typed = error as Record<string, unknown> | null;
   return (
-    error?.code === '42P01' || (error?.message?.includes('relation') && error?.message?.includes('does not exist'))
+    typed?.['code'] === '42P01' ||
+    (typeof typed?.['message'] === 'string' &&
+      (typed['message'] as string).includes('relation') &&
+      (typed['message'] as string).includes('does not exist'))
   );
 }
 
@@ -43,26 +47,29 @@ export const styleReferencesRouter: RouterFactory = (ctx: RouterContext): Router
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = (req.session as unknown as Record<string, unknown>)['userId'] as string;
         const file = req.file;
 
         if (!file) {
           return res.status(400).json({ error: 'Image file is required' });
         }
 
-        const name = req.body.name || 'Untitled Reference';
-        const category = VALID_CATEGORIES.includes(req.body.category) ? req.body.category : 'style';
-        const tags = req.body.tags ? JSON.parse(req.body.tags) : [];
+        const body = req.body as Record<string, unknown>;
+        const name = (body['name'] as string) || 'Untitled Reference';
+        const category = VALID_CATEGORIES.includes(body['category'] as (typeof VALID_CATEGORIES)[number])
+          ? (body['category'] as string)
+          : 'style';
+        const tags = body['tags'] ? (JSON.parse(body['tags'] as string) as string[]) : [];
 
         // Upload to Cloudinary
         const cloudinary = (await import('cloudinary')).v2;
         cloudinary.config({
-          cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-          api_key: process.env.CLOUDINARY_API_KEY,
-          api_secret: process.env.CLOUDINARY_API_SECRET,
+          cloud_name: process.env['CLOUDINARY_CLOUD_NAME'] ?? '',
+          api_key: process.env['CLOUDINARY_API_KEY'] ?? '',
+          api_secret: process.env['CLOUDINARY_API_SECRET'] ?? '',
         });
 
-        const uploadResult = await new Promise<any>((resolve, reject) => {
+        const uploadResult = await new Promise<Record<string, unknown>>((resolve, reject) => {
           cloudinary.uploader
             .upload_stream(
               {
@@ -71,19 +78,19 @@ export const styleReferencesRouter: RouterFactory = (ctx: RouterContext): Router
               },
               (error, result) => {
                 if (error) reject(error);
-                else resolve(result);
+                else resolve(result as unknown as Record<string, unknown>);
               },
             )
             .end(file.buffer);
         });
 
-        const fingerprint = generateStyleFingerprint(uploadResult.public_id);
+        const fingerprint = generateStyleFingerprint(uploadResult['public_id'] as string);
 
         // Create DB record (pre-analysis)
         const ref = await storage.createStyleReference({
           userId,
-          cloudinaryUrl: uploadResult.secure_url,
-          cloudinaryPublicId: uploadResult.public_id,
+          cloudinaryUrl: uploadResult['secure_url'] as string,
+          cloudinaryPublicId: uploadResult['public_id'] as string,
           name,
           category,
           tags,
@@ -93,22 +100,22 @@ export const styleReferencesRouter: RouterFactory = (ctx: RouterContext): Router
         });
 
         // Run vision analysis async (don't block the response)
-        analyzeStyleImage(uploadResult.secure_url, name)
+        analyzeStyleImage(uploadResult['secure_url'] as string, name)
           .then(async (analysis) => {
             await storage.updateStyleReference(ref.id, {
               styleDescription: analysis.styleDescription,
-              extractedElements: analysis.extractedElements as any,
+              extractedElements: analysis.extractedElements as unknown as Record<string, unknown>,
               confidence: analysis.confidence,
               analyzedAt: new Date(),
             });
             logger.info({ refId: ref.id, confidence: analysis.confidence }, 'Style reference analyzed');
           })
-          .catch((err) => {
+          .catch((err: unknown) => {
             logger.error({ refId: ref.id, err }, 'Style reference analysis failed');
           });
 
         res.status(201).json(ref);
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (isTableMissingError(error)) {
           logger.warn({ module: 'StyleReferences' }, 'style_references table not found. Run migrations to create it.');
           return res
@@ -129,24 +136,25 @@ export const styleReferencesRouter: RouterFactory = (ctx: RouterContext): Router
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
-        const limit = Math.min(parseInt(String(req.query.limit)) || 50, 200);
-        const offset = parseInt(String(req.query.offset)) || 0;
-        const category = req.query.category as string | undefined;
+        const userId = (req.session as unknown as Record<string, unknown>)['userId'] as string;
+        const limit = Math.min(parseInt(String(req.query['limit'])) || 50, 200);
+        const offset = parseInt(String(req.query['offset'])) || 0;
+        const category = typeof req.query['category'] === 'string' ? req.query['category'] : undefined;
 
         let refs;
-        if (category && VALID_CATEGORIES.includes(category as any)) {
+        if (category && VALID_CATEGORIES.includes(category as (typeof VALID_CATEGORIES)[number])) {
           refs = await storage.getStyleReferencesByCategory(userId, category);
         } else {
           refs = await storage.getStyleReferencesByUser(userId, limit, offset);
         }
 
         res.json(refs);
-      } catch (error: any) {
-        // Non-critical feature — return empty list on any error instead of 500
+      } catch (error: unknown) {
+        // Non-critical feature -- return empty list on any error instead of 500
+        const errMsg = error instanceof Error ? error.message : String(error);
         logger.warn(
-          { module: 'StyleReferences', err: error?.message || error },
-          'Failed to list style references — returning empty list',
+          { module: 'StyleReferences', err: errMsg },
+          'Failed to list style references -- returning empty list',
         );
         return res.json([]);
       }
@@ -161,15 +169,15 @@ export const styleReferencesRouter: RouterFactory = (ctx: RouterContext): Router
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
-        const ref = await storage.getStyleReferenceById(req.params.id);
+        const userId = (req.session as unknown as Record<string, unknown>)['userId'] as string;
+        const ref = await storage.getStyleReferenceById(String(req.params['id'] ?? ''));
 
         if (!ref || ref.userId !== userId) {
           return res.status(404).json({ error: 'Style reference not found' });
         }
 
         res.json(ref);
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (isTableMissingError(error)) {
           logger.warn({ module: 'StyleReferences' }, 'style_references table not found. Run migrations to create it.');
           return res.status(404).json({ error: 'Style reference not found' });
@@ -188,23 +196,24 @@ export const styleReferencesRouter: RouterFactory = (ctx: RouterContext): Router
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
-        const existing = await storage.getStyleReferenceById(req.params.id);
+        const userId = (req.session as unknown as Record<string, unknown>)['userId'] as string;
+        const existing = await storage.getStyleReferenceById(String(req.params['id'] ?? ''));
 
         if (!existing || existing.userId !== userId) {
           return res.status(404).json({ error: 'Style reference not found' });
         }
 
-        const updates: Record<string, any> = {};
-        if (req.body.name) updates.name = req.body.name;
-        if (req.body.category && VALID_CATEGORIES.includes(req.body.category)) {
-          updates.category = req.body.category;
+        const body = req.body as Record<string, unknown>;
+        const updates: Record<string, unknown> = {};
+        if (body['name']) updates['name'] = body['name'];
+        if (body['category'] && VALID_CATEGORIES.includes(body['category'] as (typeof VALID_CATEGORIES)[number])) {
+          updates['category'] = body['category'];
         }
-        if (req.body.tags) updates.tags = req.body.tags;
+        if (body['tags']) updates['tags'] = body['tags'];
 
-        const ref = await storage.updateStyleReference(req.params.id, updates);
+        const ref = await storage.updateStyleReference(String(req.params['id'] ?? ''), updates);
         res.json(ref);
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (isTableMissingError(error)) {
           logger.warn({ module: 'StyleReferences' }, 'style_references table not found. Run migrations to create it.');
           return res
@@ -225,17 +234,17 @@ export const styleReferencesRouter: RouterFactory = (ctx: RouterContext): Router
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
-        const existing = await storage.getStyleReferenceById(req.params.id);
+        const userId = (req.session as unknown as Record<string, unknown>)['userId'] as string;
+        const existing = await storage.getStyleReferenceById(String(req.params['id'] ?? ''));
 
         if (!existing || existing.userId !== userId) {
           return res.status(404).json({ error: 'Style reference not found' });
         }
 
         // Soft delete in DB (keeps Cloudinary asset for potential recovery)
-        await storage.deleteStyleReference(req.params.id);
+        await storage.deleteStyleReference(String(req.params['id'] ?? ''));
         res.json({ success: true });
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (isTableMissingError(error)) {
           logger.warn({ module: 'StyleReferences' }, 'style_references table not found. Run migrations to create it.');
           return res
@@ -256,8 +265,8 @@ export const styleReferencesRouter: RouterFactory = (ctx: RouterContext): Router
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
-        const existing = await storage.getStyleReferenceById(req.params.id);
+        const userId = (req.session as unknown as Record<string, unknown>)['userId'] as string;
+        const existing = await storage.getStyleReferenceById(String(req.params['id'] ?? ''));
 
         if (!existing || existing.userId !== userId) {
           return res.status(404).json({ error: 'Style reference not found' });
@@ -265,15 +274,15 @@ export const styleReferencesRouter: RouterFactory = (ctx: RouterContext): Router
 
         const analysis = await analyzeStyleImage(existing.cloudinaryUrl, existing.name);
 
-        const updated = await storage.updateStyleReference(req.params.id, {
+        const updated = await storage.updateStyleReference(String(req.params['id'] ?? ''), {
           styleDescription: analysis.styleDescription,
-          extractedElements: analysis.extractedElements as any,
+          extractedElements: analysis.extractedElements as unknown as Record<string, unknown>,
           confidence: analysis.confidence,
           analyzedAt: new Date(),
         });
 
         res.json(updated);
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (isTableMissingError(error)) {
           logger.warn({ module: 'StyleReferences' }, 'style_references table not found. Run migrations to create it.');
           return res
