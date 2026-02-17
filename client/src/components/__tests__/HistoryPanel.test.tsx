@@ -11,14 +11,13 @@
  * @file client/src/components/__tests__/HistoryPanel.test.tsx
  */
 import React from 'react';
-import { vi, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
-import { render, screen, fireEvent, waitFor, within, act } from '@/test-utils';
+import { vi, describe, it, expect, afterEach, beforeAll, afterAll } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@/test-utils';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@testing-library/jest-dom';
 
 import { HistoryPanel } from '../studio/HistoryPanel/HistoryPanel';
 import { server, http, HttpResponse } from '@/mocks/server';
-import { mockGenerations, completedGenerations, createMockGeneration } from '@/fixtures';
 
 // ============================================
 // MOCKS
@@ -587,7 +586,7 @@ describe('HistoryPanel', () => {
       });
 
       // Click on the second generation
-      const generationButtons = screen.getAllByRole('button').filter((btn) => btn.querySelector('img'));
+      screen.getAllByRole('button').filter((btn) => btn.querySelector('img'));
 
       // Get the "All" tab first to see all items
       const allTab = screen.getByRole('tab', { name: /All/i });

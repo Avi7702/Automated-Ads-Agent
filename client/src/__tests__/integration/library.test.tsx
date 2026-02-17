@@ -23,7 +23,7 @@ import '@testing-library/jest-dom';
 import type { Product } from '@shared/schema';
 
 // Import fixtures
-import { mockProducts, singleDrainageProduct, singlePendingProduct, createMockProducts } from '@/fixtures';
+import { mockProducts } from '@/fixtures';
 
 // ============================================
 // MOCKS
@@ -115,7 +115,7 @@ const handlers = [
 
   // GET /api/products/:id - Get single product
   http.get('/api/products/:id', ({ params }) => {
-    const product = serverProducts.find((p) => p.id === params.id);
+    const product = serverProducts.find((p) => p.id === params['id']);
     if (!product) {
       return HttpResponse.json({ error: 'Product not found' }, { status: 404 });
     }
@@ -144,7 +144,7 @@ const handlers = [
   // PATCH /api/products/:id - Update product
   http.patch('/api/products/:id', async ({ params, request }) => {
     const body = (await request.json()) as Partial<Product>;
-    const productIndex = serverProducts.findIndex((p) => p.id === params.id);
+    const productIndex = serverProducts.findIndex((p) => p.id === params['id']);
 
     if (productIndex === -1) {
       return HttpResponse.json({ error: 'Product not found' }, { status: 404 });
@@ -166,19 +166,19 @@ const handlers = [
 
   // DELETE /api/products/:id - Delete product
   http.delete('/api/products/:id', ({ params }) => {
-    const productIndex = serverProducts.findIndex((p) => p.id === params.id);
+    const productIndex = serverProducts.findIndex((p) => p.id === params['id']);
 
     if (productIndex === -1) {
       return HttpResponse.json({ error: 'Product not found' }, { status: 404 });
     }
 
-    serverProducts = serverProducts.filter((p) => p.id !== params.id);
+    serverProducts = serverProducts.filter((p) => p.id !== params['id']);
     return HttpResponse.json({ success: true });
   }),
 
   // GET /api/products/:id/enrichment - Get enrichment status
   http.get('/api/products/:id/enrichment', ({ params }) => {
-    const product = serverProducts.find((p) => p.id === params.id);
+    const product = serverProducts.find((p) => p.id === params['id']);
     if (!product) {
       return HttpResponse.json({ error: 'Product not found' }, { status: 404 });
     }
@@ -199,7 +199,7 @@ const handlers = [
 
   // POST /api/products/:id/enrich - Generate AI draft
   http.post('/api/products/:id/enrich', async ({ params }) => {
-    const productIndex = serverProducts.findIndex((p) => p.id === params.id);
+    const productIndex = serverProducts.findIndex((p) => p.id === params['id']);
 
     if (productIndex === -1) {
       return HttpResponse.json({ error: 'Product not found' }, { status: 404 });
@@ -241,7 +241,7 @@ const handlers = [
   // POST /api/products/:id/enrichment/verify - Verify and save enrichment
   http.post('/api/products/:id/enrichment/verify', async ({ params, request }) => {
     const body = (await request.json()) as { approvedAsIs?: boolean; description?: string };
-    const productIndex = serverProducts.findIndex((p) => p.id === params.id);
+    const productIndex = serverProducts.findIndex((p) => p.id === params['id']);
 
     if (productIndex === -1) {
       return HttpResponse.json({ error: 'Product not found' }, { status: 404 });
@@ -626,7 +626,7 @@ describe('Integration Test 4: Product Enrichment Workflow', () => {
       // Verify enrichment draft was populated
       const enrichedProduct = serverProducts.find((p) => p.id === 'prod-enrich-test');
       expect(enrichedProduct?.enrichmentDraft).toBeDefined();
-      expect(enrichedProduct?.enrichmentDraft?.confidence).toBe(85);
+      expect((enrichedProduct?.enrichmentDraft as { confidence?: number })?.confidence).toBe(85);
     }
   });
 
