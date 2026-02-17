@@ -9,25 +9,19 @@
  * - Data visualization for extracted patterns
  */
 
-import { useState, useCallback, useRef, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { motion, AnimatePresence, useReducedMotion, type Variants } from 'framer-motion';
 import {
-  Upload,
   Sparkles,
   Eye,
   Trash2,
-  Filter,
   Search,
   Grid3X3,
   List,
   TrendingUp,
   Zap,
-  Shield,
-  CheckCircle2,
   AlertTriangle,
-  XCircle,
-  Loader2,
   Brain,
   Palette,
   Layout,
@@ -37,22 +31,19 @@ import {
   Star,
   Clock,
   RefreshCw,
-  ChevronRight,
-  Info,
-  X,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useUploadStatus } from '../hooks/useUploadStatus';
 import { AdaptiveUploadZone } from '../components/AdaptiveUploadZone';
 
 // UI Components
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Progress } from '@/components/ui/progress';
+
 import {
   Dialog,
   DialogContent,
@@ -60,24 +51,14 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Header } from "@/components/layout/Header";
-import { useToast } from "@/hooks/use-toast";
+} from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Header } from '@/components/layout/Header';
+import { useToast } from '@/hooks/use-toast';
 
 // Types
-import type { LearnedAdPattern, AdAnalysisUpload } from "@shared/schema";
+import type { LearnedAdPattern } from '@shared/schema';
 
 // ============================================
 // TYPES
@@ -101,46 +82,46 @@ interface LearnFromWinnersProps {
 // ============================================
 
 const PATTERN_CATEGORIES = [
-  { value: "product_showcase", label: "Product Showcase", icon: ImageIcon, color: "blue" },
-  { value: "testimonial", label: "Testimonial", icon: Star, color: "yellow" },
-  { value: "comparison", label: "Comparison", icon: BarChart3, color: "green" },
-  { value: "educational", label: "Educational", icon: Brain, color: "purple" },
-  { value: "promotional", label: "Promotional", icon: Zap, color: "orange" },
-  { value: "brand_awareness", label: "Brand Awareness", icon: Target, color: "pink" },
+  { value: 'product_showcase', label: 'Product Showcase', icon: ImageIcon, color: 'blue' },
+  { value: 'testimonial', label: 'Testimonial', icon: Star, color: 'yellow' },
+  { value: 'comparison', label: 'Comparison', icon: BarChart3, color: 'green' },
+  { value: 'educational', label: 'Educational', icon: Brain, color: 'purple' },
+  { value: 'promotional', label: 'Promotional', icon: Zap, color: 'orange' },
+  { value: 'brand_awareness', label: 'Brand Awareness', icon: Target, color: 'pink' },
 ];
 
 const PLATFORMS = [
-  { value: "linkedin", label: "LinkedIn" },
-  { value: "facebook", label: "Facebook" },
-  { value: "instagram", label: "Instagram" },
-  { value: "twitter", label: "Twitter/X" },
-  { value: "tiktok", label: "TikTok" },
-  { value: "youtube", label: "YouTube" },
-  { value: "pinterest", label: "Pinterest" },
-  { value: "general", label: "General" },
+  { value: 'linkedin', label: 'LinkedIn' },
+  { value: 'facebook', label: 'Facebook' },
+  { value: 'instagram', label: 'Instagram' },
+  { value: 'twitter', label: 'Twitter/X' },
+  { value: 'tiktok', label: 'TikTok' },
+  { value: 'youtube', label: 'YouTube' },
+  { value: 'pinterest', label: 'Pinterest' },
+  { value: 'general', label: 'General' },
 ];
 
 const ENGAGEMENT_TIERS = [
-  { value: "top-1", label: "Top 1%", color: "text-yellow-900 dark:text-yellow-400" },
-  { value: "top-5", label: "Top 5%", color: "text-orange-900 dark:text-orange-400" },
-  { value: "top-10", label: "Top 10%", color: "text-blue-900 dark:text-blue-400" },
-  { value: "top-25", label: "Top 25%", color: "text-green-900 dark:text-green-400" },
-  { value: "unverified", label: "Unverified", color: "text-muted-foreground" },
+  { value: 'top-1', label: 'Top 1%', color: 'text-yellow-900 dark:text-yellow-400' },
+  { value: 'top-5', label: 'Top 5%', color: 'text-orange-900 dark:text-orange-400' },
+  { value: 'top-10', label: 'Top 10%', color: 'text-blue-900 dark:text-blue-400' },
+  { value: 'top-25', label: 'Top 25%', color: 'text-green-900 dark:text-green-400' },
+  { value: 'unverified', label: 'Unverified', color: 'text-muted-foreground' },
 ];
 
 // Animation variants
-const cardVariants = {
+const cardVariants: Variants = {
   hidden: { opacity: 0, y: 20, scale: 0.95 },
   visible: {
     opacity: 1,
     y: 0,
     scale: 1,
-    transition: { duration: 0.2, ease: [0.4, 0, 0.2, 1] }
+    transition: { duration: 0.2, ease: [0.4, 0, 0.2, 1] },
   },
   exit: {
     opacity: 0,
     scale: 0.95,
-    transition: { duration: 0.15 }
+    transition: { duration: 0.15 },
   },
 };
 
@@ -148,8 +129,8 @@ const staggerContainer = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { staggerChildren: 0.05 }
-  }
+    transition: { staggerChildren: 0.05 },
+  },
 };
 
 // ============================================
@@ -169,10 +150,22 @@ function PatternVisualization({ pattern, compact = false }: PatternVisualization
     let score = 0;
     let total = 0;
 
-    if (pattern.layoutPattern) { score += 25; total += 25; }
-    if (pattern.colorPsychology) { score += 25; total += 25; }
-    if (pattern.hookPatterns) { score += 25; total += 25; }
-    if (pattern.visualElements) { score += 25; total += 25; }
+    if (pattern.layoutPattern) {
+      score += 25;
+      total += 25;
+    }
+    if (pattern.colorPsychology) {
+      score += 25;
+      total += 25;
+    }
+    if (pattern.hookPatterns) {
+      score += 25;
+      total += 25;
+    }
+    if (pattern.visualElements) {
+      score += 25;
+      total += 25;
+    }
 
     return total > 0 ? Math.round((score / total) * 100) : 0;
   };
@@ -192,18 +185,10 @@ function PatternVisualization({ pattern, compact = false }: PatternVisualization
             <circle cx="50" cy="50" r="15" fill="none" stroke="currentColor" strokeOpacity="0.1" strokeWidth="1" />
 
             {/* Pattern indicators */}
-            {pattern.layoutPattern && (
-              <circle cx="50" cy="10" r="4" fill="hsl(var(--primary))" />
-            )}
-            {pattern.colorPsychology && (
-              <circle cx="90" cy="50" r="4" fill="hsl(217 91% 60%)" />
-            )}
-            {pattern.hookPatterns && (
-              <circle cx="50" cy="90" r="4" fill="hsl(142 71% 45%)" />
-            )}
-            {pattern.visualElements && (
-              <circle cx="10" cy="50" r="4" fill="hsl(280 65% 60%)" />
-            )}
+            {pattern.layoutPattern && <circle cx="50" cy="10" r="4" fill="hsl(var(--primary))" />}
+            {pattern.colorPsychology && <circle cx="90" cy="50" r="4" fill="hsl(217 91% 60%)" />}
+            {pattern.hookPatterns && <circle cx="50" cy="90" r="4" fill="hsl(142 71% 45%)" />}
+            {pattern.visualElements && <circle cx="10" cy="50" r="4" fill="hsl(280 65% 60%)" />}
           </svg>
         </div>
 
@@ -227,10 +212,8 @@ function PatternVisualization({ pattern, compact = false }: PatternVisualization
           initial={shouldReduceMotion ? {} : { opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           className={cn(
-            "p-3 rounded-xl border transition-colors",
-            pattern.layoutPattern
-              ? "bg-primary/5 border-primary/30"
-              : "bg-muted/30 border-transparent opacity-50"
+            'p-3 rounded-xl border transition-colors',
+            pattern.layoutPattern ? 'bg-primary/5 border-primary/30' : 'bg-muted/30 border-transparent opacity-50',
           )}
         >
           <div className="flex items-center gap-2 mb-2">
@@ -239,8 +222,12 @@ function PatternVisualization({ pattern, compact = false }: PatternVisualization
           </div>
           {pattern.layoutPattern ? (
             <div className="space-y-1 text-xs text-muted-foreground">
-              <p>Structure: <span className="text-foreground">{pattern.layoutPattern.structure}</span></p>
-              <p>Whitespace: <span className="text-foreground">{pattern.layoutPattern.whitespaceUsage}</span></p>
+              <p>
+                Structure: <span className="text-foreground">{pattern.layoutPattern.structure}</span>
+              </p>
+              <p>
+                Whitespace: <span className="text-foreground">{pattern.layoutPattern.whitespaceUsage}</span>
+              </p>
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">Not detected</p>
@@ -253,10 +240,10 @@ function PatternVisualization({ pattern, compact = false }: PatternVisualization
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.05 }}
           className={cn(
-            "p-3 rounded-xl border transition-colors",
+            'p-3 rounded-xl border transition-colors',
             pattern.colorPsychology
-              ? "bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/30 dark:border-blue-500/20"
-              : "bg-muted/30 border-transparent opacity-50"
+              ? 'bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/30 dark:border-blue-500/20'
+              : 'bg-muted/30 border-transparent opacity-50',
           )}
         >
           <div className="flex items-center gap-2 mb-2">
@@ -265,8 +252,12 @@ function PatternVisualization({ pattern, compact = false }: PatternVisualization
           </div>
           {pattern.colorPsychology ? (
             <div className="space-y-1 text-xs text-muted-foreground">
-              <p>Mood: <span className="text-foreground">{pattern.colorPsychology.dominantMood}</span></p>
-              <p>Scheme: <span className="text-foreground">{pattern.colorPsychology.colorScheme}</span></p>
+              <p>
+                Mood: <span className="text-foreground">{pattern.colorPsychology.dominantMood}</span>
+              </p>
+              <p>
+                Scheme: <span className="text-foreground">{pattern.colorPsychology.colorScheme}</span>
+              </p>
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">Not detected</p>
@@ -279,10 +270,10 @@ function PatternVisualization({ pattern, compact = false }: PatternVisualization
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.1 }}
           className={cn(
-            "p-3 rounded-xl border transition-colors",
+            'p-3 rounded-xl border transition-colors',
             pattern.hookPatterns
-              ? "bg-green-500/5 dark:bg-green-500/10 border-green-500/30 dark:border-green-500/20"
-              : "bg-muted/30 border-transparent opacity-50"
+              ? 'bg-green-500/5 dark:bg-green-500/10 border-green-500/30 dark:border-green-500/20'
+              : 'bg-muted/30 border-transparent opacity-50',
           )}
         >
           <div className="flex items-center gap-2 mb-2">
@@ -291,8 +282,12 @@ function PatternVisualization({ pattern, compact = false }: PatternVisualization
           </div>
           {pattern.hookPatterns ? (
             <div className="space-y-1 text-xs text-muted-foreground">
-              <p>Type: <span className="text-foreground">{pattern.hookPatterns.hookType}</span></p>
-              <p>CTA: <span className="text-foreground">{pattern.hookPatterns.ctaStyle}</span></p>
+              <p>
+                Type: <span className="text-foreground">{pattern.hookPatterns.hookType}</span>
+              </p>
+              <p>
+                CTA: <span className="text-foreground">{pattern.hookPatterns.ctaStyle}</span>
+              </p>
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">Not detected</p>
@@ -305,10 +300,10 @@ function PatternVisualization({ pattern, compact = false }: PatternVisualization
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.15 }}
           className={cn(
-            "p-3 rounded-xl border transition-colors",
+            'p-3 rounded-xl border transition-colors',
             pattern.visualElements
-              ? "bg-purple-500/5 dark:bg-purple-500/10 border-purple-500/30 dark:border-purple-500/20"
-              : "bg-muted/30 border-transparent opacity-50"
+              ? 'bg-purple-500/5 dark:bg-purple-500/10 border-purple-500/30 dark:border-purple-500/20'
+              : 'bg-muted/30 border-transparent opacity-50',
           )}
         >
           <div className="flex items-center gap-2 mb-2">
@@ -317,8 +312,12 @@ function PatternVisualization({ pattern, compact = false }: PatternVisualization
           </div>
           {pattern.visualElements ? (
             <div className="space-y-1 text-xs text-muted-foreground">
-              <p>Style: <span className="text-foreground">{pattern.visualElements.imageStyle}</span></p>
-              <p>Product: <span className="text-foreground">{pattern.visualElements.productVisibility}</span></p>
+              <p>
+                Style: <span className="text-foreground">{pattern.visualElements.imageStyle}</span>
+              </p>
+              <p>
+                Product: <span className="text-foreground">{pattern.visualElements.productVisibility}</span>
+              </p>
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">Not detected</p>
@@ -356,19 +355,25 @@ function PatternCard({ pattern, onView, onDelete, onApply }: PatternCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const shouldReduceMotion = useReducedMotion();
 
-  const categoryInfo = PATTERN_CATEGORIES.find(c => c.value === pattern.category);
-  const engagementInfo = ENGAGEMENT_TIERS.find(t => t.value === pattern.engagementTier);
+  const categoryInfo = PATTERN_CATEGORIES.find((c) => c.value === pattern.category);
+  const engagementInfo = ENGAGEMENT_TIERS.find((t) => t.value === pattern.engagementTier);
 
   const getCategoryColor = (category: string) => {
     const colors: Record<string, string> = {
-      product_showcase: "bg-blue-500/20 dark:bg-blue-500/30 text-blue-900 dark:text-blue-300 border-blue-500/30 dark:border-blue-500/20",
-      testimonial: "bg-yellow-500/20 dark:bg-yellow-500/30 text-yellow-900 dark:text-yellow-300 border-yellow-500/30 dark:border-yellow-500/20",
-      comparison: "bg-green-500/20 dark:bg-green-500/30 text-green-900 dark:text-green-300 border-green-500/30 dark:border-green-500/20",
-      educational: "bg-purple-500/20 dark:bg-purple-500/30 text-purple-900 dark:text-purple-300 border-purple-500/30 dark:border-purple-500/20",
-      promotional: "bg-orange-500/20 dark:bg-orange-500/30 text-orange-900 dark:text-orange-300 border-orange-500/30 dark:border-orange-500/20",
-      brand_awareness: "bg-pink-500/20 dark:bg-pink-500/30 text-pink-900 dark:text-pink-300 border-pink-500/30 dark:border-pink-500/20",
+      product_showcase:
+        'bg-blue-500/20 dark:bg-blue-500/30 text-blue-900 dark:text-blue-300 border-blue-500/30 dark:border-blue-500/20',
+      testimonial:
+        'bg-yellow-500/20 dark:bg-yellow-500/30 text-yellow-900 dark:text-yellow-300 border-yellow-500/30 dark:border-yellow-500/20',
+      comparison:
+        'bg-green-500/20 dark:bg-green-500/30 text-green-900 dark:text-green-300 border-green-500/30 dark:border-green-500/20',
+      educational:
+        'bg-purple-500/20 dark:bg-purple-500/30 text-purple-900 dark:text-purple-300 border-purple-500/30 dark:border-purple-500/20',
+      promotional:
+        'bg-orange-500/20 dark:bg-orange-500/30 text-orange-900 dark:text-orange-300 border-orange-500/30 dark:border-orange-500/20',
+      brand_awareness:
+        'bg-pink-500/20 dark:bg-pink-500/30 text-pink-900 dark:text-pink-300 border-pink-500/30 dark:border-pink-500/20',
     };
-    return colors[category] || "bg-muted";
+    return colors[category] || 'bg-muted';
   };
 
   return (
@@ -381,20 +386,20 @@ function PatternCard({ pattern, onView, onDelete, onApply }: PatternCardProps) {
       onHoverEnd={() => setIsHovered(false)}
       className="group"
     >
-      <Card className={cn(
-        "relative overflow-hidden transition-all duration-200",
-        "hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5",
-        isHovered && "ring-1 ring-primary/20"
-      )}>
+      <Card
+        className={cn(
+          'relative overflow-hidden transition-all duration-200',
+          'hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5',
+          isHovered && 'ring-1 ring-primary/20',
+        )}
+      >
         {/* Header with badges */}
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <CardTitle className="text-base font-semibold line-clamp-1">
-                {pattern.name}
-              </CardTitle>
+              <CardTitle className="text-base font-semibold line-clamp-1">{pattern.name}</CardTitle>
               <div className="flex items-center gap-2 mt-2 flex-wrap">
-                <Badge variant="outline" className={cn("text-xs", getCategoryColor(pattern.category))}>
+                <Badge variant="outline" className={cn('text-xs', getCategoryColor(pattern.category))}>
                   {categoryInfo?.label || pattern.category}
                 </Badge>
                 <Badge variant="secondary" className="text-xs">
@@ -404,20 +409,20 @@ function PatternCard({ pattern, onView, onDelete, onApply }: PatternCardProps) {
             </div>
 
             {/* Engagement Tier Badge */}
-            {pattern.engagementTier && pattern.engagementTier !== "unverified" && (
+            {pattern.engagementTier && pattern.engagementTier !== 'unverified' && (
               <Tooltip>
                 <TooltipTrigger>
-                  <div className={cn(
-                    "flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
-                    "bg-gradient-to-r from-yellow-500/20 dark:from-yellow-500/30 to-orange-500/20 dark:to-orange-500/30 border border-yellow-500/30 dark:border-yellow-500/20"
-                  )}>
+                  <div
+                    className={cn(
+                      'flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium',
+                      'bg-gradient-to-r from-yellow-500/20 dark:from-yellow-500/30 to-orange-500/20 dark:to-orange-500/30 border border-yellow-500/30 dark:border-yellow-500/20',
+                    )}
+                  >
                     <TrendingUp className="w-3 h-3" />
                     {engagementInfo?.label}
                   </div>
                 </TooltipTrigger>
-                <TooltipContent>
-                  Performance tier based on engagement metrics
-                </TooltipContent>
+                <TooltipContent>Performance tier based on engagement metrics</TooltipContent>
               </Tooltip>
             )}
           </div>
@@ -448,7 +453,7 @@ function PatternCard({ pattern, onView, onDelete, onApply }: PatternCardProps) {
             initial={{ opacity: 0, y: 10 }}
             animate={{
               opacity: isHovered ? 1 : 0,
-              y: isHovered ? 0 : 10
+              y: isHovered ? 0 : 10,
             }}
             transition={{ duration: shouldReduceMotion ? 0 : 0.15 }}
             className="flex items-center gap-2 mt-4"
@@ -507,13 +512,13 @@ function PatternSkeleton() {
 // MAIN PAGE COMPONENT
 // ============================================
 
-export default function LearnFromWinners({ embedded = false, selectedId }: LearnFromWinnersProps) {
+export default function LearnFromWinners({ embedded = false, selectedId: _selectedId }: LearnFromWinnersProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [platformFilter, setPlatformFilter] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [platformFilter, setPlatformFilter] = useState<string>('all');
   const [currentUploadId, setCurrentUploadId] = useState<string | null>(null);
   const uploadStatusData = useUploadStatus(currentUploadId);
   const { isPolling } = uploadStatusData;
@@ -527,46 +532,48 @@ export default function LearnFromWinners({ embedded = false, selectedId }: Learn
     filters?: { category?: string; platform?: string; industry?: string };
   }
 
-  const { data: patternsResponse, isLoading, error } = useQuery<PatternsResponse>({
-    queryKey: ["learned-patterns", categoryFilter, platformFilter],
+  const {
+    data: patternsResponse,
+    isLoading,
+    error,
+  } = useQuery<PatternsResponse>({
+    queryKey: ['learned-patterns', categoryFilter, platformFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (categoryFilter !== "all") params.set("category", categoryFilter);
-      if (platformFilter !== "all") params.set("platform", platformFilter);
+      if (categoryFilter !== 'all') params.set('category', categoryFilter);
+      if (platformFilter !== 'all') params.set('platform', platformFilter);
 
       const res = await fetch(`/api/learned-patterns?${params}`, {
-        credentials: "include",
+        credentials: 'include',
       });
-      if (!res.ok) throw new Error("Failed to fetch patterns");
+      if (!res.ok) throw new Error('Failed to fetch patterns');
       return res.json();
     },
   });
 
   // Extract patterns array with defensive check
-  const patterns = Array.isArray(patternsResponse?.patterns)
-    ? patternsResponse.patterns
-    : [];
+  const patterns = Array.isArray(patternsResponse?.patterns) ? patternsResponse.patterns : [];
 
   // Upload mutation
   const uploadMutation = useMutation({
     mutationFn: async ({ file, metadata }: { file: File; metadata: UploadMetadata }) => {
       const formData = new FormData();
-      formData.append("image", file);
-      formData.append("name", metadata.name);
-      formData.append("category", metadata.category);
-      formData.append("platform", metadata.platform);
-      if (metadata.industry) formData.append("industry", metadata.industry);
-      if (metadata.engagementTier) formData.append("engagementTier", metadata.engagementTier);
+      formData.append('image', file);
+      formData.append('name', metadata.name);
+      formData.append('category', metadata.category);
+      formData.append('platform', metadata.platform);
+      if (metadata.industry) formData.append('industry', metadata.industry);
+      if (metadata.engagementTier) formData.append('engagementTier', metadata.engagementTier);
 
-      const res = await fetch("/api/learned-patterns/upload", {
-        method: "POST",
-        credentials: "include",
+      const res = await fetch('/api/learned-patterns/upload', {
+        method: 'POST',
+        credentials: 'include',
         body: formData,
       });
 
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.error || "Upload failed");
+        throw new Error(error.error || 'Upload failed');
       }
 
       return res.json();
@@ -574,15 +581,15 @@ export default function LearnFromWinners({ embedded = false, selectedId }: Learn
     onSuccess: (data) => {
       setCurrentUploadId(data.uploadId);
       toast({
-        title: "Upload accepted",
-        description: "Processing your ad pattern...",
+        title: 'Upload accepted',
+        description: 'Processing your ad pattern...',
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Upload failed",
+        title: 'Upload failed',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
     },
   });
@@ -591,24 +598,24 @@ export default function LearnFromWinners({ embedded = false, selectedId }: Learn
   const deleteMutation = useMutation({
     mutationFn: async (patternId: string) => {
       const res = await fetch(`/api/learned-patterns/${patternId}`, {
-        method: "DELETE",
-        credentials: "include",
+        method: 'DELETE',
+        credentials: 'include',
       });
-      if (!res.ok) throw new Error("Failed to delete pattern");
+      if (!res.ok) throw new Error('Failed to delete pattern');
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["learned-patterns"] });
+      queryClient.invalidateQueries({ queryKey: ['learned-patterns'] });
       toast({
-        title: "Pattern deleted",
-        description: "The pattern has been removed from your library.",
+        title: 'Pattern deleted',
+        description: 'The pattern has been removed from your library.',
       });
     },
     onError: () => {
       toast({
-        title: "Delete failed",
-        description: "Could not delete the pattern. Please try again.",
-        variant: "destructive",
+        title: 'Delete failed',
+        description: 'Could not delete the pattern. Please try again.',
+        variant: 'destructive',
       });
     },
   });
@@ -617,25 +624,25 @@ export default function LearnFromWinners({ embedded = false, selectedId }: Learn
   useEffect(() => {
     if (uploadStatusData?.isComplete) {
       if (uploadStatusData.status === 'completed') {
-        queryClient.invalidateQueries({ queryKey: ["learned-patterns"] });
-        toast({ title: "Pattern extracted successfully" });
+        queryClient.invalidateQueries({ queryKey: ['learned-patterns'] });
+        toast({ title: 'Pattern extracted successfully' });
         setCurrentUploadId(null);
       } else if (uploadStatusData.status === 'failed') {
-        toast({ title: "Extraction failed", description: uploadStatusData.error, variant: "destructive" });
+        toast({ title: 'Extraction failed', description: uploadStatusData.error, variant: 'destructive' });
         setCurrentUploadId(null);
       }
     }
   }, [uploadStatusData, queryClient, toast]);
 
   // Filter patterns - patterns is guaranteed to be an array
-  const filteredPatterns = patterns.filter(p => {
+  const filteredPatterns = patterns.filter((p) => {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       return (
-        (p.name || "").toLowerCase().includes(query) ||
-        (p.category || "").toLowerCase().includes(query) ||
-        (p.platform || "").toLowerCase().includes(query) ||
-        (p.industry || "").toLowerCase().includes(query)
+        (p.name || '').toLowerCase().includes(query) ||
+        (p.category || '').toLowerCase().includes(query) ||
+        (p.platform || '').toLowerCase().includes(query) ||
+        (p.industry || '').toLowerCase().includes(query)
       );
     }
     return true;
@@ -651,7 +658,7 @@ export default function LearnFromWinners({ embedded = false, selectedId }: Learn
   };
 
   const handleDeletePattern = (patternId: string) => {
-    if (confirm("Are you sure you want to delete this pattern?")) {
+    if (confirm('Are you sure you want to delete this pattern?')) {
       deleteMutation.mutate(patternId);
     }
   };
@@ -671,9 +678,7 @@ export default function LearnFromWinners({ embedded = false, selectedId }: Learn
           </div>
           <div>
             <h1 className="text-2xl font-display font-semibold">Learn from Winners</h1>
-            <p className="text-sm text-muted-foreground">
-              Extract success patterns from high-performing ads
-            </p>
+            <p className="text-sm text-muted-foreground">Extract success patterns from high-performing ads</p>
           </div>
         </div>
       </div>
@@ -702,7 +707,7 @@ export default function LearnFromWinners({ embedded = false, selectedId }: Learn
           <AlertTriangle className="w-12 h-12 text-destructive mx-auto mb-4" />
           <h3 className="text-lg font-medium mb-2">Failed to load patterns</h3>
           <p className="text-muted-foreground mb-4">Please try refreshing the page.</p>
-          <Button variant="outline" onClick={() => queryClient.invalidateQueries({ queryKey: ["learned-patterns"] })}>
+          <Button variant="outline" onClick={() => queryClient.invalidateQueries({ queryKey: ['learned-patterns'] })}>
             <RefreshCw className="w-4 h-4 mr-2" />
             Retry
           </Button>
@@ -752,16 +757,16 @@ export default function LearnFromWinners({ embedded = false, selectedId }: Learn
 
               <div className="flex items-center border rounded-lg p-1">
                 <Button
-                  variant={viewMode === "grid" ? "secondary" : "ghost"}
+                  variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
                   size="sm"
-                  onClick={() => setViewMode("grid")}
+                  onClick={() => setViewMode('grid')}
                 >
                   <Grid3X3 className="w-4 h-4" />
                 </Button>
                 <Button
-                  variant={viewMode === "list" ? "secondary" : "ghost"}
+                  variant={viewMode === 'list' ? 'secondary' : 'ghost'}
                   size="sm"
-                  onClick={() => setViewMode("list")}
+                  onClick={() => setViewMode('list')}
                 >
                   <List className="w-4 h-4" />
                 </Button>
@@ -771,7 +776,7 @@ export default function LearnFromWinners({ embedded = false, selectedId }: Learn
 
           {/* Results Count */}
           <div className="text-sm text-muted-foreground mb-4">
-            {filteredPatterns?.length || 0} pattern{(filteredPatterns?.length || 0) !== 1 ? "s" : ""} found
+            {filteredPatterns?.length || 0} pattern{(filteredPatterns?.length || 0) !== 1 ? 's' : ''} found
           </div>
 
           {/* Pattern Grid */}
@@ -780,9 +785,7 @@ export default function LearnFromWinners({ embedded = false, selectedId }: Learn
             initial="hidden"
             animate="visible"
             className={cn(
-              viewMode === "grid"
-                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-                : "flex flex-col gap-4"
+              viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'flex flex-col gap-4',
             )}
           >
             <AnimatePresence mode="popLayout">
@@ -811,18 +814,16 @@ export default function LearnFromWinners({ embedded = false, selectedId }: Learn
                     <DialogTitle className="text-xl">{selectedPattern.name}</DialogTitle>
                     <DialogDescription className="flex items-center gap-2 mt-1">
                       <Badge variant="outline">
-                        {PATTERN_CATEGORIES.find(c => c.value === selectedPattern.category)?.label}
+                        {PATTERN_CATEGORIES.find((c) => c.value === selectedPattern.category)?.label}
                       </Badge>
                       <Badge variant="secondary">{selectedPattern.platform}</Badge>
-                      {selectedPattern.industry && (
-                        <Badge variant="outline">{selectedPattern.industry}</Badge>
-                      )}
+                      {selectedPattern.industry && <Badge variant="outline">{selectedPattern.industry}</Badge>}
                     </DialogDescription>
                   </div>
-                  {selectedPattern.engagementTier && selectedPattern.engagementTier !== "unverified" && (
+                  {selectedPattern.engagementTier && selectedPattern.engagementTier !== 'unverified' && (
                     <Badge className="bg-gradient-to-r from-yellow-500/20 dark:from-yellow-500/30 to-orange-500/20 dark:to-orange-500/30 border-yellow-500/30 dark:border-yellow-500/20">
                       <TrendingUp className="w-3 h-3 mr-1" />
-                      {ENGAGEMENT_TIERS.find(t => t.value === selectedPattern.engagementTier)?.label}
+                      {ENGAGEMENT_TIERS.find((t) => t.value === selectedPattern.engagementTier)?.label}
                     </Badge>
                   )}
                 </div>
@@ -843,10 +844,12 @@ export default function LearnFromWinners({ embedded = false, selectedId }: Learn
                 <Button variant="outline" onClick={() => setShowDetailDialog(false)}>
                   Close
                 </Button>
-                <Button onClick={() => {
-                  handleApplyPattern(selectedPattern);
-                  setShowDetailDialog(false);
-                }}>
+                <Button
+                  onClick={() => {
+                    handleApplyPattern(selectedPattern);
+                    setShowDetailDialog(false);
+                  }}
+                >
                   <Sparkles className="w-4 h-4 mr-2" />
                   Apply Pattern
                 </Button>
@@ -865,9 +868,7 @@ export default function LearnFromWinners({ embedded = false, selectedId }: Learn
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="container max-w-7xl mx-auto py-8 px-4 sm:px-6">
-        {mainContent}
-      </main>
+      <main className="container max-w-7xl mx-auto py-8 px-4 sm:px-6">{mainContent}</main>
     </div>
   );
 }

@@ -47,6 +47,11 @@ export const mockGenerations: Generation[] = [
     parentGenerationId: null,
     editPrompt: null,
     editCount: 0,
+    mediaType: null,
+    videoDurationSec: null,
+    productIds: null,
+    templateId: null,
+    generationMode: null,
     createdAt: daysAgo(7),
     updatedAt: daysAgo(7),
   },
@@ -65,6 +70,11 @@ export const mockGenerations: Generation[] = [
     parentGenerationId: null,
     editPrompt: null,
     editCount: 0,
+    mediaType: null,
+    videoDurationSec: null,
+    productIds: null,
+    templateId: null,
+    generationMode: null,
     createdAt: daysAgo(5),
     updatedAt: daysAgo(5),
   },
@@ -83,6 +93,11 @@ export const mockGenerations: Generation[] = [
     parentGenerationId: null,
     editPrompt: null,
     editCount: 0,
+    mediaType: null,
+    videoDurationSec: null,
+    productIds: null,
+    templateId: null,
+    generationMode: null,
     createdAt: daysAgo(3),
     updatedAt: daysAgo(3),
   },
@@ -103,6 +118,11 @@ export const mockGenerations: Generation[] = [
     parentGenerationId: null,
     editPrompt: null,
     editCount: 0,
+    mediaType: null,
+    videoDurationSec: null,
+    productIds: null,
+    templateId: null,
+    generationMode: null,
     createdAt: daysAgo(10),
     updatedAt: daysAgo(10),
   },
@@ -124,6 +144,11 @@ export const mockGenerations: Generation[] = [
     parentGenerationId: 'gen-edit-parent',
     editPrompt: 'Make the car a red sports car instead',
     editCount: 1,
+    mediaType: null,
+    videoDurationSec: null,
+    productIds: null,
+    templateId: null,
+    generationMode: null,
     createdAt: daysAgo(9),
     updatedAt: daysAgo(9),
   },
@@ -147,6 +172,11 @@ export const mockGenerations: Generation[] = [
     parentGenerationId: 'gen-edit-child',
     editPrompt: 'Add rain and puddles for dramatic effect',
     editCount: 2,
+    mediaType: null,
+    videoDurationSec: null,
+    productIds: null,
+    templateId: null,
+    generationMode: null,
     createdAt: daysAgo(8),
     updatedAt: daysAgo(8),
   },
@@ -167,6 +197,11 @@ export const mockGenerations: Generation[] = [
     parentGenerationId: null,
     editPrompt: null,
     editCount: 0,
+    mediaType: null,
+    videoDurationSec: null,
+    productIds: null,
+    templateId: null,
+    generationMode: null,
     createdAt: hoursAgo(1),
     updatedAt: hoursAgo(1),
   },
@@ -185,6 +220,11 @@ export const mockGenerations: Generation[] = [
     parentGenerationId: null,
     editPrompt: null,
     editCount: 0,
+    mediaType: null,
+    videoDurationSec: null,
+    productIds: null,
+    templateId: null,
+    generationMode: null,
     createdAt: hoursAgo(0.5),
     updatedAt: hoursAgo(0.5),
   },
@@ -205,6 +245,11 @@ export const mockGenerations: Generation[] = [
     parentGenerationId: null,
     editPrompt: null,
     editCount: 0,
+    mediaType: null,
+    videoDurationSec: null,
+    productIds: null,
+    templateId: null,
+    generationMode: null,
     createdAt: hoursAgo(0.25),
     updatedAt: hoursAgo(0.1),
   },
@@ -221,12 +266,15 @@ export const mockGenerations: Generation[] = [
     model: 'gemini-3-pro-image',
     aspectRatio: '9:16',
     status: 'failed',
-    conversationHistory: [
-      { role: 'system', content: 'Error: Rate limit exceeded. Please try again later.' },
-    ],
+    conversationHistory: [{ role: 'system', content: 'Error: Rate limit exceeded. Please try again later.' }],
     parentGenerationId: null,
     editPrompt: null,
     editCount: 0,
+    mediaType: null,
+    videoDurationSec: null,
+    productIds: null,
+    templateId: null,
+    generationMode: null,
     createdAt: hoursAgo(2),
     updatedAt: hoursAgo(2),
   },
@@ -241,12 +289,15 @@ export const mockGenerations: Generation[] = [
     model: 'gemini-3-pro-image',
     aspectRatio: '16:9',
     status: 'failed',
-    conversationHistory: [
-      { role: 'system', content: 'Error: Content policy violation detected.' },
-    ],
+    conversationHistory: [{ role: 'system', content: 'Error: Content policy violation detected.' }],
     parentGenerationId: null,
     editPrompt: null,
     editCount: 0,
+    mediaType: null,
+    videoDurationSec: null,
+    productIds: null,
+    templateId: null,
+    generationMode: null,
     createdAt: hoursAgo(5),
     updatedAt: hoursAgo(5),
   },
@@ -267,6 +318,11 @@ export const mockGenerations: Generation[] = [
     parentGenerationId: null,
     editPrompt: null,
     editCount: 0,
+    mediaType: null,
+    videoDurationSec: null,
+    productIds: null,
+    templateId: null,
+    generationMode: null,
     createdAt: daysAgo(30),
     updatedAt: daysAgo(30),
   },
@@ -289,13 +345,19 @@ export const mockGenerations: Generation[] = [
     parentGenerationId: null,
     editPrompt: null,
     editCount: 0,
+    mediaType: null,
+    videoDurationSec: null,
+    productIds: null,
+    templateId: null,
+    generationMode: null,
     createdAt: daysAgo(2),
     updatedAt: daysAgo(2),
   },
   {
     id: 'gen-edge-003',
     userId: 'user-test-1',
-    prompt: 'Very long prompt that tests the limits of prompt handling in the system. This prompt contains extensive details about the desired image including specific lighting requirements, exact positioning of elements, detailed background descriptions, color specifications using hex codes, and multiple reference points for the AI to consider when generating the final output.',
+    prompt:
+      'Very long prompt that tests the limits of prompt handling in the system. This prompt contains extensive details about the desired image including specific lighting requirements, exact positioning of elements, detailed background descriptions, color specifications using hex codes, and multiple reference points for the AI to consider when generating the final output.',
     originalImagePaths: ['products/mixing-paddle.jpg'],
     generatedImagePath: 'generations/gen-edge-003-output.jpg',
     imagePath: '/uploads/generations/gen-edge-003-output.jpg',
@@ -307,6 +369,11 @@ export const mockGenerations: Generation[] = [
     parentGenerationId: null,
     editPrompt: null,
     editCount: 0,
+    mediaType: null,
+    videoDurationSec: null,
+    productIds: null,
+    templateId: null,
+    generationMode: null,
     createdAt: daysAgo(1),
     updatedAt: daysAgo(1),
   },
@@ -315,59 +382,37 @@ export const mockGenerations: Generation[] = [
 // === FILTERED SUBSETS ===
 
 /** All completed generations */
-export const completedGenerations = mockGenerations.filter(
-  (g) => g.status === 'completed'
-);
+export const completedGenerations = mockGenerations.filter((g) => g.status === 'completed');
 
 /** All pending generations */
-export const pendingGenerations = mockGenerations.filter(
-  (g) => g.status === 'pending'
-);
+export const pendingGenerations = mockGenerations.filter((g) => g.status === 'pending');
 
 /** All processing generations */
-export const processingGenerations = mockGenerations.filter(
-  (g) => g.status === 'processing'
-);
+export const processingGenerations = mockGenerations.filter((g) => g.status === 'processing');
 
 /** All failed generations */
-export const failedGenerations = mockGenerations.filter(
-  (g) => g.status === 'failed'
-);
+export const failedGenerations = mockGenerations.filter((g) => g.status === 'failed');
 
 /** Generations that are edits (have parent) */
-export const editGenerations = mockGenerations.filter(
-  (g) => g.parentGenerationId !== null
-);
+export const editGenerations = mockGenerations.filter((g) => g.parentGenerationId !== null);
 
 /** Root generations (no parent) */
-export const rootGenerations = mockGenerations.filter(
-  (g) => g.parentGenerationId === null
-);
+export const rootGenerations = mockGenerations.filter((g) => g.parentGenerationId === null);
 
 /** Generations by user-test-1 */
-export const userTest1Generations = mockGenerations.filter(
-  (g) => g.userId === 'user-test-1'
-);
+export const userTest1Generations = mockGenerations.filter((g) => g.userId === 'user-test-1');
 
 /** Generations by user-test-2 */
-export const userTest2Generations = mockGenerations.filter(
-  (g) => g.userId === 'user-test-2'
-);
+export const userTest2Generations = mockGenerations.filter((g) => g.userId === 'user-test-2');
 
 /** Generations with 4K resolution */
-export const highResGenerations = mockGenerations.filter(
-  (g) => g.resolution === '4K'
-);
+export const highResGenerations = mockGenerations.filter((g) => g.resolution === '4K');
 
 /** Generations from the last 24 hours */
-export const recentGenerations = mockGenerations.filter(
-  (g) => g.createdAt >= hoursAgo(24)
-);
+export const recentGenerations = mockGenerations.filter((g) => g.createdAt >= hoursAgo(24));
 
 /** Edge case generations */
-export const edgeCaseGenerations = mockGenerations.filter(
-  (g) => g.id.startsWith('gen-edge')
-);
+export const edgeCaseGenerations = mockGenerations.filter((g) => g.id.startsWith('gen-edge'));
 
 // === EDIT CHAIN HELPERS ===
 
@@ -425,9 +470,7 @@ export function getAllDescendants(generationId: string): Generation[] {
 /**
  * Creates a new generation with custom overrides
  */
-export function createMockGeneration(
-  overrides: Partial<Generation> = {}
-): Generation {
+export function createMockGeneration(overrides: Partial<Generation> = {}): Generation {
   const id = overrides.id || `gen-test-${Date.now()}`;
   const now = new Date();
   return {
@@ -445,6 +488,11 @@ export function createMockGeneration(
     parentGenerationId: null,
     editPrompt: null,
     editCount: 0,
+    mediaType: null,
+    videoDurationSec: null,
+    productIds: null,
+    templateId: null,
+    generationMode: null,
     createdAt: now,
     updatedAt: now,
     ...overrides,
@@ -454,11 +502,7 @@ export function createMockGeneration(
 /**
  * Creates an edit generation linked to a parent
  */
-export function createMockEdit(
-  parentId: string,
-  editPrompt: string,
-  overrides: Partial<Generation> = {}
-): Generation {
+export function createMockEdit(parentId: string, editPrompt: string, overrides: Partial<Generation> = {}): Generation {
   const parent = mockGenerations.find((g) => g.id === parentId);
   const editCount = (parent?.editCount || 0) + 1;
 
@@ -466,12 +510,10 @@ export function createMockEdit(
     parentGenerationId: parentId,
     editPrompt,
     editCount,
-    originalImagePaths: parent
-      ? [...parent.originalImagePaths, parent.generatedImagePath]
-      : ['test.jpg'],
+    originalImagePaths: parent ? [...parent.originalImagePaths, parent.generatedImagePath] : ['test.jpg'],
     conversationHistory: parent?.conversationHistory
       ? [
-          ...parent.conversationHistory,
+          ...(parent.conversationHistory as Array<{ role: string; content: string }>),
           { role: 'user', content: editPrompt },
           { role: 'assistant', content: 'Applied edit' },
         ]
@@ -486,9 +528,7 @@ export function createMockEdit(
 /**
  * Creates a pending generation
  */
-export function createPendingGeneration(
-  overrides: Partial<Generation> = {}
-): Generation {
+export function createPendingGeneration(overrides: Partial<Generation> = {}): Generation {
   return createMockGeneration({
     status: 'pending',
     generatedImagePath: '',
@@ -500,10 +540,7 @@ export function createPendingGeneration(
 /**
  * Creates a failed generation with error message
  */
-export function createFailedGeneration(
-  errorMessage: string,
-  overrides: Partial<Generation> = {}
-): Generation {
+export function createFailedGeneration(errorMessage: string, overrides: Partial<Generation> = {}): Generation {
   return createMockGeneration({
     status: 'failed',
     generatedImagePath: '',

@@ -106,7 +106,7 @@ export async function typedPostFormData<T>(
     },
     credentials: 'include',
     body: formData,
-    signal: options?.signal,
+    ...(options?.signal ? { signal: options.signal } : {}),
   });
 
   if (!response.ok) {

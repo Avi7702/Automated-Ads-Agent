@@ -9,24 +9,24 @@ import type {
   IdeaBankMode,
   TemplateSlotSuggestion,
   TemplateContext,
-} from "@shared/types/ideaBank";
-import type { Product } from "@shared/schema";
-import type { AnalyzedUpload } from "@/types/analyzedUpload";
+} from '@shared/types/ideaBank';
+import type { Product } from '@shared/schema';
+import type { AnalyzedUpload } from '@/types/analyzedUpload';
 
 export interface IdeaBankPanelProps {
   selectedProducts: Product[];
-  tempUploads?: AnalyzedUpload[];
+  tempUploads?: AnalyzedUpload[] | undefined;
   onSelectPrompt: (prompt: string, id?: string, reasoning?: string) => void;
-  onRecipeAvailable?: (recipe: GenerationRecipe | undefined) => void;
-  onSetPlatform?: (platform: string) => void;
-  onSetAspectRatio?: (aspectRatio: string) => void;
-  onQuickGenerate?: (prompt: string) => void;
-  className?: string;
-  selectedPromptId?: string;
-  isGenerating?: boolean;
-  mode?: IdeaBankMode;
-  templateId?: string;
-  onSlotSuggestionSelect?: (suggestion: TemplateSlotSuggestion, mergedPrompt: string) => void;
+  onRecipeAvailable?: ((recipe: GenerationRecipe | undefined) => void) | undefined;
+  onSetPlatform?: ((platform: string) => void) | undefined;
+  onSetAspectRatio?: ((aspectRatio: string) => void) | undefined;
+  onQuickGenerate?: ((prompt: string) => void) | undefined;
+  className?: string | undefined;
+  selectedPromptId?: string | undefined;
+  isGenerating?: boolean | undefined;
+  mode?: IdeaBankMode | undefined;
+  templateId?: string | undefined;
+  onSlotSuggestionSelect?: ((suggestion: TemplateSlotSuggestion, mergedPrompt: string) => void) | undefined;
 }
 
 export interface IdeaBankHeaderProps {
@@ -50,10 +50,10 @@ export interface IdeaBankAnalysisStatusProps {
 export interface SuggestionCardProps {
   suggestion: IdeaBankSuggestion;
   onUse: (prompt: string, id: string, reasoning?: string) => void;
-  onQuickGenerate?: (prompt: string) => void;
+  onQuickGenerate?: ((prompt: string) => void) | undefined;
   index: number;
   isSelected: boolean;
-  isGenerating?: boolean;
+  isGenerating?: boolean | undefined;
 }
 
 export interface TemplateSlotCardProps {
@@ -70,18 +70,18 @@ export interface IdeaBankSuggestionsProps {
   slotSuggestions: TemplateSlotSuggestion[];
   mergedPrompt: string;
   templateContext: TemplateContext | null;
-  templateId?: string;
+  templateId?: string | undefined;
   loading: boolean;
   error: string | null;
-  selectedPromptId?: string;
+  selectedPromptId?: string | undefined;
   selectedSlotIndex: number | null;
-  isGenerating?: boolean;
+  isGenerating?: boolean | undefined;
   onSelectPrompt: (prompt: string, id?: string, reasoning?: string) => void;
-  onQuickGenerate?: (prompt: string) => void;
+  onQuickGenerate?: ((prompt: string) => void) | undefined;
   onSlotSelect: (index: number, suggestion: TemplateSlotSuggestion, mergedPrompt: string) => void;
-  onRecipeAvailable?: (recipe: GenerationRecipe | undefined) => void;
-  onSetPlatform?: (platform: string) => void;
-  onSetAspectRatio?: (aspectRatio: string) => void;
+  onRecipeAvailable?: ((recipe: GenerationRecipe | undefined) => void) | undefined;
+  onSetPlatform?: ((platform: string) => void) | undefined;
+  onSetAspectRatio?: ((aspectRatio: string) => void) | undefined;
 }
 
 export type {

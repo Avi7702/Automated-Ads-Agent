@@ -1,8 +1,8 @@
-import React, { memo, useCallback, useMemo } from "react";
-import { RefreshCw, Target } from "lucide-react";
-import { SuggestionCard } from "./SuggestionCard";
-import { TemplateSlotCard } from "./TemplateSlotCard";
-import type { IdeaBankSuggestionsProps, TemplateSlotSuggestion } from "./types";
+import React, { memo, useCallback } from 'react';
+import { RefreshCw, Target } from 'lucide-react';
+import { SuggestionCard } from './SuggestionCard';
+import { TemplateSlotCard } from './TemplateSlotCard';
+import type { IdeaBankSuggestionsProps, TemplateSlotSuggestion } from './types';
 
 function IdeaBankSuggestionsComponent({
   mode,
@@ -44,7 +44,7 @@ function IdeaBankSuggestionsComponent({
         }
       }
     },
-    [onSelectPrompt, onRecipeAvailable, response, onSetPlatform, onSetAspectRatio]
+    [onSelectPrompt, onRecipeAvailable, response, onSetPlatform, onSetAspectRatio],
   );
 
   // Memoized handler for quick generate
@@ -71,7 +71,7 @@ function IdeaBankSuggestionsComponent({
       // Then trigger generation
       onQuickGenerate(prompt);
     },
-    [onQuickGenerate, onSelectPrompt, onRecipeAvailable, response, onSetPlatform]
+    [onQuickGenerate, onSelectPrompt, onRecipeAvailable, response, onSetPlatform],
   );
 
   // Memoized handler for slot suggestion selection
@@ -80,7 +80,7 @@ function IdeaBankSuggestionsComponent({
       onSlotSelect(index, suggestion, prompt);
       onSelectPrompt(prompt, `slot-${index}`, suggestion.reasoning);
     },
-    [onSlotSelect, onSelectPrompt]
+    [onSlotSelect, onSelectPrompt],
   );
 
   // Loading State
@@ -94,15 +94,11 @@ function IdeaBankSuggestionsComponent({
 
   // Error State
   if (error) {
-    return (
-      <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-500 text-sm">
-        {error}
-      </div>
-    );
+    return <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-500 text-sm">{error}</div>;
   }
 
   // Template Mode
-  if (mode === "template") {
+  if (mode === 'template') {
     return (
       <>
         {/* Template Context Info */}
@@ -110,17 +106,15 @@ function IdeaBankSuggestionsComponent({
           <div className="p-3 rounded-lg bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/30 dark:border-amber-500/20 text-sm">
             <div className="flex items-center gap-2 mb-2">
               <Target className="w-4 h-4 text-amber-600" />
-              <span className="font-medium text-amber-700 dark:text-amber-400">
-                {templateContext.title}
-              </span>
+              <span className="font-medium text-amber-700 dark:text-amber-400">{templateContext.title}</span>
               <span className="text-xs px-2 py-0.5 rounded bg-amber-500/20 dark:bg-amber-500/30 text-amber-600 dark:text-amber-400">
                 {templateContext.category}
               </span>
             </div>
             {templateContext.environment && (
               <p className="text-xs text-muted-foreground">
-                Environment: {templateContext.environment} | Mood: {templateContext.mood || "N/A"} |
-                Lighting: {templateContext.lightingStyle || "N/A"}
+                Environment: {templateContext.environment} | Mood: {templateContext.mood || 'N/A'} | Lighting:{' '}
+                {templateContext.lightingStyle || 'N/A'}
               </p>
             )}
           </div>
@@ -131,8 +125,8 @@ function IdeaBankSuggestionsComponent({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground">
-                {slotSuggestions.length} slot{" "}
-                {slotSuggestions.length === 1 ? "suggestion" : "suggestions"} for this template
+                {slotSuggestions.length} slot {slotSuggestions.length === 1 ? 'suggestion' : 'suggestions'} for this
+                template
               </span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -173,13 +167,10 @@ function IdeaBankSuggestionsComponent({
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-xs text-muted-foreground">
-            {response.suggestions.length} AI-generated{" "}
-            {response.suggestions.length === 1 ? "idea" : "ideas"}
+            {response.suggestions.length} AI-generated {response.suggestions.length === 1 ? 'idea' : 'ideas'}
           </span>
           {onQuickGenerate && (
-            <span className="text-xs text-green-600 dark:text-green-400">
-              Click "Generate" to start immediately
-            </span>
+            <span className="text-xs text-green-600 dark:text-green-400">Click "Generate" to start immediately</span>
           )}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -188,11 +179,7 @@ function IdeaBankSuggestionsComponent({
               key={suggestion.id}
               suggestion={suggestion}
               onUse={handleSuggestionUse}
-              onQuickGenerate={
-                onQuickGenerate
-                  ? (prompt) => handleQuickGenerate(prompt, suggestion.id)
-                  : undefined
-              }
+              onQuickGenerate={onQuickGenerate ? (prompt) => handleQuickGenerate(prompt, suggestion.id) : undefined}
               index={index}
               isSelected={selectedPromptId === suggestion.id}
               isGenerating={isGenerating}

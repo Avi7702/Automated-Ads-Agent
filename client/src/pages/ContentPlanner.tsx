@@ -208,7 +208,12 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
 
   // Mark as posted mutation
   const markAsPostedMutation = useMutation({
-    mutationFn: async (data: { category: string; subType: string; platform?: string; notes?: string }) => {
+    mutationFn: async (data: {
+      category: string;
+      subType: string;
+      platform?: string | undefined;
+      notes?: string | undefined;
+    }) => {
       const response = await fetch('/api/content-planner/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -729,7 +734,12 @@ function MarkAsPostedDialog({
   onOpenChange: (open: boolean) => void;
   categoryId: string | null;
   categories: ContentCategory[];
-  onSubmit: (data: { category: string; subType: string; platform?: string; notes?: string }) => void;
+  onSubmit: (data: {
+    category: string;
+    subType: string;
+    platform?: string | undefined;
+    notes?: string | undefined;
+  }) => void;
   isSubmitting: boolean;
 }) {
   const [subType, setSubType] = useState<string>('general');
