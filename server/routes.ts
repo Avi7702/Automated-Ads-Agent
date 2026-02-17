@@ -352,7 +352,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
-      const valid = await authService.comparePassword(password, user.passwordHash || user.password);
+      const { valid, newHash } = await authService.comparePasswordWithRehash(
+        password,
+        user.passwordHash || user.password,
+      );
       if (!valid) {
         await authService.recordFailedLogin(email);
         telemetry.trackAuth({
@@ -361,6 +364,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           reason: 'invalid_password',
         });
         return res.status(401).json({ error: 'Invalid credentials' });
+      }
+
+      // Transparent bcrypt→argon2 migration: update hash if re-hashed
+      if (newHash) {
+        await storage.updatePasswordHash(user.id, newHash);
       }
 
       await authService.clearFailedLogins(email);

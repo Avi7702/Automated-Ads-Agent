@@ -116,7 +116,7 @@ export async function loginUser(email: string, password: string): Promise<AuthRe
   // ALWAYS run password verification to prevent timing attacks
   // This ensures consistent response time whether user exists or not
   const hashToCompare = user?.password || DUMMY_HASH;
-  const isValid = await comparePassword(password, hashToCompare);
+  const { valid: isValid, newHash } = await comparePasswordWithRehash(password, hashToCompare);
 
   // Check if user exists (after timing-consistent password check)
   if (!user) {
@@ -126,6 +126,11 @@ export async function loginUser(email: string, password: string): Promise<AuthRe
   // Check password validity (already computed above)
   if (!isValid) {
     return { success: false, error: 'Invalid email or password', statusCode: 401 };
+  }
+
+  // Transparent bcrypt→argon2 migration: update hash if re-hashed
+  if (newHash) {
+    await storage.updatePasswordHash(user.id, newHash);
   }
 
   // Generate session ID

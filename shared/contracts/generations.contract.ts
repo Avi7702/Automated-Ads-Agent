@@ -28,6 +28,9 @@ export const GenerationDTO = z
     createdAt: z.string().or(z.date()),
     updatedAt: z.string().or(z.date()),
     canEdit: z.boolean().optional(),
+    productIds: z.array(z.string()).nullable().optional(),
+    templateId: z.string().nullable().optional(),
+    generationMode: z.string().nullable().optional(),
   })
   .passthrough();
 

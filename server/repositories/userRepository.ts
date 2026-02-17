@@ -33,3 +33,7 @@ export async function updateUserBrandVoice(userId: string, brandVoice: any): Pro
   }
   return user;
 }
+
+export async function updatePasswordHash(userId: string, newHash: string): Promise<void> {
+  await db.update(users).set({ password: newHash, passwordHash: newHash }).where(eq(users.id, userId));
+}

@@ -14,6 +14,16 @@
 import { z } from 'zod';
 import { getCsrfToken } from './queryClient';
 
+/** Fetch CSRF token with dev-mode logging on failure. */
+async function fetchCsrfToken(): Promise<string> {
+  return getCsrfToken().catch((err: Error) => {
+    if (import.meta.env.DEV) {
+      console.warn('[typedFetch] CSRF token fetch failed:', err.message);
+    }
+    return '';
+  });
+}
+
 // ─── GET ────────────────────────────────────────────────────────────
 
 /**
@@ -47,7 +57,7 @@ export async function typedGet<T>(url: string, schema: z.ZodType<T>): Promise<T>
  * @param schema - Zod schema to validate the response against
  */
 export async function typedPost<T>(url: string, body: unknown, schema: z.ZodType<T>): Promise<T> {
-  const token = await getCsrfToken().catch(() => '');
+  const token = await fetchCsrfToken();
 
   const response = await fetch(url, {
     method: 'POST',
@@ -87,7 +97,7 @@ export async function typedPostFormData<T>(
   schema: z.ZodType<T>,
   options?: { signal?: AbortSignal },
 ): Promise<T> {
-  const token = await getCsrfToken().catch(() => '');
+  const token = await fetchCsrfToken();
 
   const response = await fetch(url, {
     method: 'POST',
@@ -138,6 +148,13 @@ function validateWithFallback<T>(data: unknown, schema: z.ZodType<T>, method: st
         // In production, log a compact summary
         console.warn(`[typedFetch] Schema mismatch: ${method} ${url} (${result.error.issues.length} issue(s))`);
       }
+    }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('typedFetch:schemaMismatch', {
+          detail: { method, url, issueCount: result.error.issues.length, firstIssue: result.error.issues[0]?.message },
+        }),
+      );
     }
     // Graceful fallback — return raw data without breaking the app
     return data as T;

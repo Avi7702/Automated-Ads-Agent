@@ -33,6 +33,9 @@ export async function getGenerations(limit: number = 50, offset: number = 0): Pr
       editCount: generations.editCount,
       createdAt: generations.createdAt,
       updatedAt: generations.updatedAt,
+      productIds: generations.productIds,
+      templateId: generations.templateId,
+      generationMode: generations.generationMode,
     })
     .from(generations)
     .orderBy(desc(generations.createdAt))

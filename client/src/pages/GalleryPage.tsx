@@ -19,7 +19,7 @@ import {
 import { ArrowLeft, Search, SortDesc, Trash2, Image as ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import type { Generation } from '@shared/schema';
+import type { GenerationDTO } from '@shared/types/api';
 
 type SortOption = 'newest' | 'oldest';
 
@@ -33,7 +33,7 @@ export default function GalleryPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const { data: generations, isLoading } = useQuery<Generation[]>({
+  const { data: generations, isLoading } = useQuery<GenerationDTO[]>({
     queryKey: ['generations'],
     queryFn: async () => {
       const res = await fetch('/api/generations');
@@ -214,7 +214,7 @@ export default function GalleryPage() {
                 onClick={() => navigate(`/?generation=${gen.id}`)}
               >
                 <img
-                  src={(gen as any).imageUrl ?? gen.generatedImagePath}
+                  src={gen.imageUrl}
                   alt={gen.prompt.slice(0, 80)}
                   className="w-full h-full object-cover"
                   loading="lazy"
@@ -252,18 +252,18 @@ export default function GalleryPage() {
 
                 {/* Wave 3: Mode badge + product count */}
                 <div className="absolute bottom-2 left-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {(gen as any).generationMode && (
+                  {gen.generationMode && (
                     <span className="bg-black/70 text-white text-[9px] px-1.5 py-0.5 rounded">
-                      {(gen as any).generationMode === 'exact_insert'
+                      {gen.generationMode === 'exact_insert'
                         ? 'Exact'
-                        : (gen as any).generationMode === 'inspiration'
+                        : gen.generationMode === 'inspiration'
                           ? 'Inspiration'
                           : 'Standard'}
                     </span>
                   )}
-                  {(gen as any).productIds && (gen as any).productIds.length > 0 && (
+                  {gen.productIds && gen.productIds.length > 0 && (
                     <span className="bg-black/70 text-white text-[9px] px-1.5 py-0.5 rounded">
-                      {(gen as any).productIds.length} product{(gen as any).productIds.length !== 1 ? 's' : ''}
+                      {gen.productIds.length} product{gen.productIds.length !== 1 ? 's' : ''}
                     </span>
                   )}
                 </div>
