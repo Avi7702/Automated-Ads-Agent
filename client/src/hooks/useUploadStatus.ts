@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from 'react';
 
 /**
  * Upload status response from backend
  */
 interface UploadStatusResponse {
   id: string;
-  status: "pending" | "scanning" | "extracting" | "completed" | "failed" | "expired";
+  status: 'pending' | 'scanning' | 'extracting' | 'completed' | 'failed' | 'expired';
   errorMessage?: string;
   extractedPatternId?: string;
   processingStartedAt?: string;
@@ -18,28 +18,28 @@ interface UploadStatusResponse {
  * Upload status with progress information
  */
 export interface UploadStatus {
-  status: "pending" | "scanning" | "extracting" | "completed" | "failed";
+  status: 'pending' | 'scanning' | 'extracting' | 'completed' | 'failed';
   progress: number;
-  error?: string;
+  error?: string | undefined;
   isComplete: boolean;
-  patternId?: string;
+  patternId?: string | undefined;
 }
 
 /**
  * Map backend status to progress percentage
  */
-function getProgressFromStatus(status: UploadStatusResponse["status"]): number {
+function getProgressFromStatus(status: UploadStatusResponse['status']): number {
   switch (status) {
-    case "pending":
+    case 'pending':
       return 10;
-    case "scanning":
+    case 'scanning':
       return 40;
-    case "extracting":
+    case 'extracting':
       return 70;
-    case "completed":
+    case 'completed':
       return 100;
-    case "failed":
-    case "expired":
+    case 'failed':
+    case 'expired':
       return 0;
     default:
       return 0;
@@ -58,7 +58,7 @@ function getProgressFromStatus(status: UploadStatusResponse["status"]): number {
  */
 export function useUploadStatus(uploadId: string | null): UploadStatus & { isPolling: boolean } {
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>({
-    status: "pending",
+    status: 'pending',
     progress: 0,
     isComplete: false,
   });
@@ -82,23 +82,23 @@ export function useUploadStatus(uploadId: string | null): UploadStatus & { isPol
     const pollStatus = async () => {
       try {
         const res = await fetch(`/api/learned-patterns/upload/${uploadId}`, {
-          credentials: "include",
+          credentials: 'include',
         });
 
         if (!res.ok) {
           // Handle HTTP errors
           if (res.status === 404) {
             setUploadStatus({
-              status: "failed",
+              status: 'failed',
               progress: 0,
-              error: "Upload not found",
+              error: 'Upload not found',
               isComplete: true,
             });
           } else if (res.status === 403) {
             setUploadStatus({
-              status: "failed",
+              status: 'failed',
               progress: 0,
-              error: "Not authorized to access this upload",
+              error: 'Not authorized to access this upload',
               isComplete: true,
             });
           } else {
@@ -123,10 +123,10 @@ export function useUploadStatus(uploadId: string | null): UploadStatus & { isPol
 
         // Update status
         const newStatus: UploadStatus = {
-          status: data.status === "expired" ? "failed" : data.status,
+          status: data.status === 'expired' ? 'failed' : data.status,
           progress: getProgressFromStatus(data.status),
           error: data.errorMessage,
-          isComplete: data.status === "completed" || data.status === "failed" || data.status === "expired",
+          isComplete: data.status === 'completed' || data.status === 'failed' || data.status === 'expired',
           patternId: data.extractedPatternId,
         };
 
@@ -158,9 +158,9 @@ export function useUploadStatus(uploadId: string | null): UploadStatus & { isPol
     // Set up timeout (30 seconds)
     timeoutRef.current = setTimeout(() => {
       setUploadStatus({
-        status: "failed",
+        status: 'failed',
         progress: 0,
-        error: "Upload processing timed out after 30 seconds",
+        error: 'Upload processing timed out after 30 seconds',
         isComplete: true,
       });
       setIsPolling(false);

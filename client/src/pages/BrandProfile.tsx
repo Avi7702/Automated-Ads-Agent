@@ -1,15 +1,9 @@
-import { BrandProfileDisplay } from "@/components/BrandProfileDisplay";
-import { Link } from "wouter";
-import { ArrowLeft, KeyRound, Building2, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Header } from "@/components/layout/Header";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { BrandProfileDisplay } from '@/components/BrandProfileDisplay';
+import { Link } from 'wouter';
+import { ArrowLeft, KeyRound, Building2, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Header } from '@/components/layout/Header';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface BrandProfileProps {
   embedded?: boolean;
@@ -55,9 +49,7 @@ export default function BrandProfile({ embedded = false }: BrandProfileProps) {
                   </div>
                   <div>
                     <CardTitle className="text-base">Brand Profile</CardTitle>
-                    <CardDescription className="text-xs">
-                      Your brand identity and voice
-                    </CardDescription>
+                    <CardDescription className="text-xs">Your brand identity and voice</CardDescription>
                   </div>
                 </div>
               </div>
@@ -74,9 +66,7 @@ export default function BrandProfile({ embedded = false }: BrandProfileProps) {
                     </div>
                     <div>
                       <CardTitle className="text-base">API Keys</CardTitle>
-                      <CardDescription className="text-xs">
-                        Manage external service keys
-                      </CardDescription>
+                      <CardDescription className="text-xs">Manage external service keys</CardDescription>
                     </div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />

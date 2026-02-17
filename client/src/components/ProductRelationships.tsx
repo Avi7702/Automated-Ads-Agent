@@ -1,70 +1,46 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  Link2,
-  Plus,
-  Trash2,
-  ArrowRight,
-  Package,
-  Loader2,
-  X,
-} from "lucide-react";
-import { cn, getProductImageUrl } from "@/lib/utils";
-import type { ProductRelationship, Product } from "@shared/schema";
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Link2, Plus, Trash2, ArrowRight, Package, Loader2 } from 'lucide-react';
+import { cn, getProductImageUrl } from '@/lib/utils';
+import type { ProductRelationship, Product } from '@shared/schema';
 
 // Components
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 
 // Relationship types with descriptions
 const RELATIONSHIP_TYPES = [
-  { value: "pairs_with", label: "Pairs With", description: "Products that complement each other" },
-  { value: "requires", label: "Requires", description: "Products that are required for installation" },
-  { value: "replaces", label: "Replaces", description: "Products that can substitute each other" },
-  { value: "matches", label: "Matches", description: "Products with similar style/color" },
-  { value: "completes", label: "Completes", description: "Products that complete a set" },
-  { value: "upgrades", label: "Upgrades", description: "Products that are premium alternatives" },
+  { value: 'pairs_with', label: 'Pairs With', description: 'Products that complement each other' },
+  { value: 'requires', label: 'Requires', description: 'Products that are required for installation' },
+  { value: 'replaces', label: 'Replaces', description: 'Products that can substitute each other' },
+  { value: 'matches', label: 'Matches', description: 'Products with similar style/color' },
+  { value: 'completes', label: 'Completes', description: 'Products that complete a set' },
+  { value: 'upgrades', label: 'Upgrades', description: 'Products that are premium alternatives' },
 ];
 
 // Get relationship type info
 function getRelationshipInfo(type: string) {
-  return RELATIONSHIP_TYPES.find(t => t.value === type) || { value: type, label: type, description: "" };
+  return RELATIONSHIP_TYPES.find((t) => t.value === type) || { value: type, label: type, description: '' };
 }
 
 // Relationship badge component (light mode readable + dark mode optimized)
 function RelationshipTypeBadge({ type }: { type: string }) {
   const info = getRelationshipInfo(type);
   const colors: Record<string, string> = {
-    pairs_with: "bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/30",
-    requires: "bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/30",
-    replaces: "bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-500/30",
-    matches: "bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30",
-    completes: "bg-purple-500/20 text-purple-700 dark:text-purple-400 border-purple-500/30",
-    upgrades: "bg-orange-500/20 text-orange-700 dark:text-orange-400 border-orange-500/30",
+    pairs_with: 'bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/30',
+    requires: 'bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/30',
+    replaces: 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-500/30',
+    matches: 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30',
+    completes: 'bg-purple-500/20 text-purple-700 dark:text-purple-400 border-purple-500/30',
+    upgrades: 'bg-orange-500/20 text-orange-700 dark:text-orange-400 border-orange-500/30',
   };
 
-  return (
-    <Badge className={cn("text-xs", colors[type] || "bg-muted")}>
-      {info.label}
-    </Badge>
-  );
+  return <Badge className={cn('text-xs', colors[type] || 'bg-muted')}>{info.label}</Badge>;
 }
 
 // Relationship card
@@ -81,7 +57,7 @@ function RelationshipCard({
 }) {
   const isSource = relationship.sourceProductId === currentProductId;
   const relatedProductId = isSource ? relationship.targetProductId : relationship.sourceProductId;
-  const relatedProduct = products.find(p => p.id === relatedProductId);
+  const relatedProduct = products.find((p) => p.id === relatedProductId);
 
   return (
     <motion.div
@@ -111,24 +87,19 @@ function RelationshipCard({
           <div className="flex items-center gap-2">
             <RelationshipTypeBadge type={relationship.relationshipType} />
             {relationship.isRequired && (
-              <Badge variant="destructive" className="text-xs">Required</Badge>
+              <Badge variant="destructive" className="text-xs">
+                Required
+              </Badge>
             )}
           </div>
-          <p className="text-sm font-medium truncate mt-1">
-            {relatedProduct?.name || "Unknown Product"}
-          </p>
+          <p className="text-sm font-medium truncate mt-1">{relatedProduct?.name || 'Unknown Product'}</p>
           {relationship.description && (
-            <p className="text-xs text-muted-foreground truncate">
-              {relationship.description}
-            </p>
+            <p className="text-xs text-muted-foreground truncate">{relationship.description}</p>
           )}
         </div>
 
         {/* Direction indicator */}
-        <ArrowRight className={cn(
-          "w-4 h-4 text-muted-foreground",
-          !isSource && "rotate-180"
-        )} />
+        <ArrowRight className={cn('w-4 h-4 text-muted-foreground', !isSource && 'rotate-180')} />
 
         {/* Delete button */}
         <Button
@@ -159,22 +130,32 @@ function AddRelationshipModal({
   sourceProductId: string;
   products: Product[];
   existingRelationships: ProductRelationship[];
-  onSubmit: (data: { targetProductId: string; relationshipType: string; description?: string; isRequired?: boolean }) => void;
+  onSubmit: (data: {
+    targetProductId: string;
+    relationshipType: string;
+    description?: string | undefined;
+    isRequired?: boolean | undefined;
+  }) => void;
   isSubmitting: boolean;
 }) {
-  const [targetProductId, setTargetProductId] = useState("");
-  const [relationshipType, setRelationshipType] = useState("pairs_with");
-  const [description, setDescription] = useState("");
+  const [targetProductId, setTargetProductId] = useState('');
+  const [relationshipType, setRelationshipType] = useState('pairs_with');
+  const [description, setDescription] = useState('');
   const [isRequired, setIsRequired] = useState(false);
 
   // Filter out products that already have a relationship of the same type
-  const availableProducts = products.filter(p => {
+  const availableProducts = products.filter((p) => {
     if (p.id === sourceProductId) return false;
 
     // Check if relationship already exists
     const existingRel = existingRelationships.find(
-      r => (r.sourceProductId === sourceProductId && r.targetProductId === p.id && r.relationshipType === relationshipType) ||
-           (r.targetProductId === sourceProductId && r.sourceProductId === p.id && r.relationshipType === relationshipType)
+      (r) =>
+        (r.sourceProductId === sourceProductId &&
+          r.targetProductId === p.id &&
+          r.relationshipType === relationshipType) ||
+        (r.targetProductId === sourceProductId &&
+          r.sourceProductId === p.id &&
+          r.relationshipType === relationshipType),
     );
     return !existingRel;
   });
@@ -191,8 +172,8 @@ function AddRelationshipModal({
     });
 
     // Reset form
-    setTargetProductId("");
-    setDescription("");
+    setTargetProductId('');
+    setDescription('');
     setIsRequired(false);
   };
 
@@ -201,9 +182,7 @@ function AddRelationshipModal({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add Product Relationship</DialogTitle>
-          <DialogDescription>
-            Define how this product relates to other products in your catalog.
-          </DialogDescription>
+          <DialogDescription>Define how this product relates to other products in your catalog.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
@@ -215,7 +194,7 @@ function AddRelationshipModal({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {RELATIONSHIP_TYPES.map(type => (
+                {RELATIONSHIP_TYPES.map((type) => (
                   <SelectItem key={type.value} value={type.value}>
                     <div>
                       <span className="font-medium">{type.label}</span>
@@ -240,7 +219,7 @@ function AddRelationshipModal({
                   <SelectValue placeholder="Select a product" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableProducts.map(product => (
+                  {availableProducts.map((product) => (
                     <SelectItem key={product.id} value={product.id}>
                       {product.name}
                     </SelectItem>
@@ -262,7 +241,7 @@ function AddRelationshipModal({
           </div>
 
           {/* Is Required */}
-          {relationshipType === "requires" && (
+          {relationshipType === 'requires' && (
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -280,11 +259,7 @@ function AddRelationshipModal({
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting || !targetProductId}>
-              {isSubmitting ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              ) : (
-                <Plus className="w-4 h-4 mr-2" />
-              )}
+              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
               Add Relationship
             </Button>
           </div>
@@ -306,30 +281,35 @@ export function ProductRelationships({ productId, className }: ProductRelationsh
 
   // Fetch relationships for this product
   const { data: relationships = [], isLoading: isLoadingRelationships } = useQuery<ProductRelationship[]>({
-    queryKey: ["product-relationships", productId],
+    queryKey: ['product-relationships', productId],
     queryFn: async () => {
       const response = await fetch(`/api/products/${productId}/relationships`);
-      if (!response.ok) throw new Error("Failed to fetch relationships");
+      if (!response.ok) throw new Error('Failed to fetch relationships');
       return response.json();
     },
   });
 
   // Fetch all products for the dropdown
   const { data: products = [] } = useQuery<Product[]>({
-    queryKey: ["products"],
+    queryKey: ['products'],
     queryFn: async () => {
-      const response = await fetch("/api/products");
-      if (!response.ok) throw new Error("Failed to fetch products");
+      const response = await fetch('/api/products');
+      if (!response.ok) throw new Error('Failed to fetch products');
       return response.json();
     },
   });
 
   // Create relationship mutation
   const createMutation = useMutation({
-    mutationFn: async (data: { targetProductId: string; relationshipType: string; description?: string; isRequired?: boolean }) => {
-      const response = await fetch("/api/product-relationships", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+    mutationFn: async (data: {
+      targetProductId: string;
+      relationshipType: string;
+      description?: string | undefined;
+      isRequired?: boolean | undefined;
+    }) => {
+      const response = await fetch('/api/product-relationships', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sourceProductId: productId,
           ...data,
@@ -337,12 +317,12 @@ export function ProductRelationships({ productId, className }: ProductRelationsh
       });
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Failed to create relationship");
+        throw new Error(error.error || 'Failed to create relationship');
       }
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["product-relationships", productId] });
+      queryClient.invalidateQueries({ queryKey: ['product-relationships', productId] });
       setIsAddModalOpen(false);
     },
   });
@@ -351,12 +331,12 @@ export function ProductRelationships({ productId, className }: ProductRelationsh
   const deleteMutation = useMutation({
     mutationFn: async (relationshipId: string) => {
       const response = await fetch(`/api/product-relationships/${relationshipId}`, {
-        method: "DELETE",
+        method: 'DELETE',
       });
-      if (!response.ok) throw new Error("Failed to delete relationship");
+      if (!response.ok) throw new Error('Failed to delete relationship');
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["product-relationships", productId] });
+      queryClient.invalidateQueries({ queryKey: ['product-relationships', productId] });
     },
   });
 
@@ -389,7 +369,7 @@ export function ProductRelationships({ productId, className }: ProductRelationsh
       <CardContent>
         {isLoadingRelationships ? (
           <div className="space-y-2">
-            {[1, 2, 3].map(i => (
+            {[1, 2, 3].map((i) => (
               <div key={i} className="h-16 bg-muted/30 rounded-lg animate-pulse" />
             ))}
           </div>
@@ -397,9 +377,7 @@ export function ProductRelationships({ productId, className }: ProductRelationsh
           <div className="text-center py-8 text-muted-foreground">
             <Link2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">No relationships defined</p>
-            <p className="text-xs mt-1">
-              Add relationships to help AI understand product connections
-            </p>
+            <p className="text-xs mt-1">Add relationships to help AI understand product connections</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -410,7 +388,7 @@ export function ProductRelationships({ productId, className }: ProductRelationsh
                 </h4>
                 <div className="space-y-2">
                   <AnimatePresence>
-                    {rels.map(rel => (
+                    {rels.map((rel) => (
                       <RelationshipCard
                         key={rel.id}
                         relationship={rel}

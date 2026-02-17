@@ -31,13 +31,13 @@ export const platformCharLimits = {
  * Available copywriting frameworks
  */
 export const copywritingFrameworks = ['AIDA', 'PAS', 'BAB', 'FAB', 'auto'] as const;
-export type CopywritingFramework = typeof copywritingFrameworks[number];
+export type CopywritingFramework = (typeof copywritingFrameworks)[number];
 
 /**
  * Campaign objectives
  */
 export const campaignObjectives = ['awareness', 'consideration', 'conversion', 'engagement'] as const;
-export type CampaignObjective = typeof campaignObjectives[number];
+export type CampaignObjective = (typeof campaignObjectives)[number];
 
 /**
  * Full mock ad copy array with 12 entries
@@ -51,9 +51,11 @@ export const mockAdCopy: AdCopy[] = [
     userId: 'user-test-1',
     headline: 'Transform Your Drainage',
     hook: 'Stop fighting with gravel. Start installing in minutes.',
-    bodyText: 'The NDS EZ-Drain system revolutionizes French drain installation. No gravel needed, no heavy lifting required. Just unroll, connect, and forget about water problems forever.',
+    bodyText:
+      'The NDS EZ-Drain system revolutionizes French drain installation. No gravel needed, no heavy lifting required. Just unroll, connect, and forget about water problems forever.',
     cta: 'Shop Now',
-    caption: 'Say goodbye to water problems! The NDS EZ-Drain makes French drain installation a breeze. No gravel, no hassle, just results.',
+    caption:
+      'Say goodbye to water problems! The NDS EZ-Drain makes French drain installation a breeze. No gravel, no hassle, just results.',
     hashtags: ['#drainage', '#landscaping', '#diyhomeimprovement', '#watermanagement', '#ezinstall'],
     platform: 'instagram',
     tone: 'casual',
@@ -102,7 +104,8 @@ export const mockAdCopy: AdCopy[] = [
     userId: 'user-test-1',
     headline: 'Drain Smarter, Not Harder',
     hook: 'What if drainage could actually be easy?',
-    bodyText: 'Forget everything you know about French drains. The EZ-Drain system cuts installation time by 75% and eliminates the need for messy gravel.',
+    bodyText:
+      'Forget everything you know about French drains. The EZ-Drain system cuts installation time by 75% and eliminates the need for messy gravel.',
     cta: 'Learn More',
     caption: 'Who said French drains had to be hard? Not us! Discover the easier way to solve drainage problems.',
     hashtags: ['#frenchdrain', '#easydiy', '#homeimprovement', '#drainagesolution'],
@@ -144,9 +147,11 @@ export const mockAdCopy: AdCopy[] = [
     userId: 'user-test-1',
     headline: 'Protect Your Foundation Investment with BlueSkin VP160',
     hook: 'Foundation failures cost businesses an average of $40,000 in repairs.',
-    bodyText: 'The BlueSkin VP160 Self-Adhered Membrane provides premium waterproofing that protects your building investment for decades. With vapor-permeable technology and self-healing properties, it is the choice of professional contractors nationwide.',
+    bodyText:
+      'The BlueSkin VP160 Self-Adhered Membrane provides premium waterproofing that protects your building investment for decades. With vapor-permeable technology and self-healing properties, it is the choice of professional contractors nationwide.',
     cta: 'Request a Quote',
-    caption: 'Your foundation is the backbone of your building. Protect it with industry-leading waterproofing technology. The BlueSkin VP160 delivers professional-grade protection with easier installation.',
+    caption:
+      'Your foundation is the backbone of your building. Protect it with industry-leading waterproofing technology. The BlueSkin VP160 delivers professional-grade protection with easier installation.',
     hashtags: ['#construction', '#waterproofing', '#buildingmaterials', '#contractorlife', '#commercialconstruction'],
     platform: 'linkedin',
     tone: 'professional',
@@ -199,7 +204,8 @@ export const mockAdCopy: AdCopy[] = [
     hook: 'Your dream floor is just a click away.',
     bodyText: 'Transform any room with our Premium Engineered Oak. Real wood beauty that lasts.',
     cta: 'Shop Collection',
-    caption: 'Ready to transform your home? Our engineered oak hardwood brings warmth and elegance to any space. With easy installation options and compatibility with radiant heat, it is the perfect choice for modern living. Get free samples today!',
+    caption:
+      'Ready to transform your home? Our engineered oak hardwood brings warmth and elegance to any space. With easy installation options and compatibility with radiant heat, it is the perfect choice for modern living. Get free samples today!',
     hashtags: ['#flooring', '#homedesign', '#interiordesign', '#hardwoodfloors', '#homedecor'],
     platform: 'facebook',
     tone: 'casual',
@@ -252,7 +258,8 @@ export const mockAdCopy: AdCopy[] = [
     hook: 'Your concrete is only as strong as your support.',
     bodyText: 'Stop guessing on rebar clearance. Our #4 chairs ensure perfect coverage every time. 100-pack in stock.',
     cta: 'Order Now',
-    caption: 'Perfect concrete coverage starts with perfect rebar placement. Our heavy-duty chairs handle up to #8 rebar. In stock and ready to ship.',
+    caption:
+      'Perfect concrete coverage starts with perfect rebar placement. Our heavy-duty chairs handle up to #8 rebar. In stock and ready to ship.',
     hashtags: ['#concrete', '#construction', '#rebar', '#buildingmaterials'],
     platform: 'twitter',
     tone: 'technical',
@@ -296,9 +303,11 @@ export const mockAdCopy: AdCopy[] = [
     userId: 'user-test-2',
     headline: 'Tile Cutting Made Easy',
     hook: 'POV: You just upgraded your tile game',
-    bodyText: 'Watch this 7-inch wet saw make clean cuts every time. No chips, no cracks, just perfect tiles. Who else needs one of these?',
+    bodyText:
+      'Watch this 7-inch wet saw make clean cuts every time. No chips, no cracks, just perfect tiles. Who else needs one of these?',
     cta: 'Link in Bio',
-    caption: 'This wet saw changed my tile game forever. Clean cuts, no dust, and so easy to use! If you are doing any tile work, you NEED this.',
+    caption:
+      'This wet saw changed my tile game forever. Clean cuts, no dust, and so easy to use! If you are doing any tile work, you NEED this.',
     hashtags: ['#tileinstallation', '#diy', '#homeimprovement', '#tilesaw', '#renovation', '#fyp', '#buildtok'],
     platform: 'tiktok',
     tone: 'casual',
@@ -441,7 +450,7 @@ export const fabCopy = mockAdCopy.filter((c) => c.framework === 'FAB');
 
 /** High quality copy (score >= 8) */
 export const highQualityCopy = mockAdCopy.filter(
-  (c) => c.qualityScore && c.qualityScore.overallScore >= 8
+  (c) => c.qualityScore && (c.qualityScore as { overallScore: number }).overallScore >= 8,
 );
 
 /** Copy variations (has parent) */
@@ -451,9 +460,7 @@ export const variationCopy = mockAdCopy.filter((c) => c.parentCopyId !== null);
 export const rootCopy = mockAdCopy.filter((c) => c.parentCopyId === null);
 
 /** Copy with complete metadata */
-export const copyWithFullMetadata = mockAdCopy.filter(
-  (c) => c.targetAudience !== null && c.brandVoice !== null
-);
+export const copyWithFullMetadata = mockAdCopy.filter((c) => c.targetAudience !== null && c.brandVoice !== null);
 
 // === FACTORY FUNCTIONS ===
 
@@ -510,7 +517,7 @@ export function createMockAdCopy(overrides: Partial<AdCopy> = {}): AdCopy {
  */
 export function createPlatformCopy(
   platform: 'instagram' | 'linkedin' | 'facebook' | 'twitter' | 'tiktok',
-  overrides: Partial<AdCopy> = {}
+  overrides: Partial<AdCopy> = {},
 ): AdCopy {
   const toneMap = {
     instagram: 'casual',
@@ -533,7 +540,7 @@ export function createPlatformCopy(
 export function createCopyVariation(
   parentId: string,
   variationNumber: number,
-  overrides: Partial<AdCopy> = {}
+  overrides: Partial<AdCopy> = {},
 ): AdCopy {
   return createMockAdCopy({
     parentCopyId: parentId,

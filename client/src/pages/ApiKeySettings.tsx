@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'wouter';
 import { ArrowLeft, KeyRound, ShieldCheck, Info, Webhook } from 'lucide-react';
@@ -17,8 +17,14 @@ interface ApiKeysResponse {
   keys: ApiKeyInfo[];
 }
 
+interface N8nConfigResponse {
+  configured?: boolean;
+  baseUrl?: string;
+  hasApiKey?: boolean;
+}
+
 interface ApiKeySettingsProps {
-  embedded?: boolean;
+  embedded?: boolean | undefined;
 }
 
 export default function ApiKeySettings({ embedded = false }: ApiKeySettingsProps) {
@@ -47,18 +53,20 @@ export default function ApiKeySettings({ embedded = false }: ApiKeySettingsProps
   });
 
   // Fetch n8n configuration (Phase 8.1)
-  const { data: n8nData } = useQuery({
+  const { data: n8nData } = useQuery<N8nConfigResponse>({
     queryKey: ['/api/settings/n8n'],
     refetchOnWindowFocus: true,
-    onSuccess: (data: any) => {
-      if (data?.configured) {
-        setN8nConfig({
-          baseUrl: data.baseUrl || '',
-          apiKey: '', // Never populate from API for security
-        });
-      }
-    },
   });
+
+  // Sync n8n config state when data loads
+  useEffect(() => {
+    if (n8nData?.configured) {
+      setN8nConfig({
+        baseUrl: n8nData.baseUrl || '',
+        apiKey: '', // Never populate from API for security
+      });
+    }
+  }, [n8nData]);
 
   // Save API key mutation
   const saveMutation = useMutation({
@@ -66,7 +74,7 @@ export default function ApiKeySettings({ embedded = false }: ApiKeySettingsProps
       const response = await apiRequest('POST', `/api/settings/api-keys/${service}`, data);
       return response.json();
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_data, variables) => {
       setFormSuccess(true);
       setFormError(null);
       queryClient.invalidateQueries({ queryKey: ['/api/settings/api-keys'] });
@@ -109,7 +117,7 @@ export default function ApiKeySettings({ embedded = false }: ApiKeySettingsProps
         });
       }
     },
-    onError: (error: Error, service) => {
+    onError: (error: Error, _service) => {
       setValidatingService(null);
       toast({
         title: 'Validation Failed',
@@ -126,7 +134,7 @@ export default function ApiKeySettings({ embedded = false }: ApiKeySettingsProps
       const response = await apiRequest('DELETE', `/api/settings/api-keys/${service}`);
       return response.json();
     },
-    onSuccess: (data, service) => {
+    onSuccess: (_data, service) => {
       setDeletingService(null);
       queryClient.invalidateQueries({ queryKey: ['/api/settings/api-keys'] });
       toast({
@@ -134,7 +142,7 @@ export default function ApiKeySettings({ embedded = false }: ApiKeySettingsProps
         description: `Your custom ${service} API key has been removed.`,
       });
     },
-    onError: (error: Error, service) => {
+    onError: (error: Error, _service) => {
       setDeletingService(null);
       toast({
         title: 'Deletion Failed',

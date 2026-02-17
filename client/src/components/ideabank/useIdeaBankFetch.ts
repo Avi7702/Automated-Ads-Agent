@@ -17,8 +17,8 @@ interface UseIdeaBankFetchProps {
   selectedProducts: Product[];
   tempUploads: AnalyzedUpload[];
   mode: IdeaBankMode;
-  templateId?: string;
-  onRecipeAvailable?: (recipe: GenerationRecipe | undefined) => void;
+  templateId?: string | undefined;
+  onRecipeAvailable?: ((recipe: GenerationRecipe | undefined) => void) | undefined;
 }
 
 interface UseIdeaBankFetchResult {
@@ -83,7 +83,7 @@ export function useIdeaBankFetch({
     const typedData = data as Record<string, unknown>;
     const { mode: currentMode, onRecipeAvailable: onRecipe } = latestPropsRef.current;
 
-    if (currentMode === 'template' && typedData.slotSuggestions) {
+    if (currentMode === 'template' && typedData['slotSuggestions']) {
       const templateResponse = typedData as unknown as IdeaBankTemplateResponse;
       setSlotSuggestions(templateResponse.slotSuggestions);
       setMergedPrompt(templateResponse.mergedPrompt);
@@ -93,7 +93,7 @@ export function useIdeaBankFetch({
       if (onRecipe && templateResponse.recipe) {
         onRecipe(templateResponse.recipe);
       }
-    } else if (typedData.suggestions && typedData.analysisStatus) {
+    } else if (typedData['suggestions'] && typedData['analysisStatus']) {
       setResponse(typedData as unknown as IdeaBankSuggestResponse);
       setSlotSuggestions([]);
       setMergedPrompt('');

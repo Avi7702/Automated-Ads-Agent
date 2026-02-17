@@ -9,9 +9,9 @@ import { Search, Filter, Sparkles, RefreshCw } from 'lucide-react';
 import type { AdSceneTemplate } from '@shared/schema';
 
 interface TemplateLibraryProps {
-  onSelectTemplate?: (template: AdSceneTemplate) => void;
-  selectedTemplateId?: string;
-  className?: string;
+  onSelectTemplate?: ((template: AdSceneTemplate) => void) | undefined;
+  selectedTemplateId?: string | undefined;
+  className?: string | undefined;
 }
 
 const categories = [

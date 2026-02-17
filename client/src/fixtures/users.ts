@@ -8,7 +8,7 @@
  */
 
 import type { User, Session, BrandProfile } from '../../../shared/schema';
-import type { BrandVoice, TargetAudience } from '../../../shared/types/ideaBank';
+import type { BrandVoice } from '../../../shared/types/ideaBank';
 
 // Base date for consistent timestamps in tests
 const BASE_DATE = new Date('2026-01-15T12:00:00Z');
@@ -33,6 +33,7 @@ export const mockUsers: User[] = [
     email: 'admin@company.com',
     password: 'hashed_admin_password_123',
     passwordHash: '$2b$10$abcdefghijklmnopqrstuv.hashedadminpassword123',
+    role: 'user',
     failedAttempts: 0,
     lockedUntil: null,
     brandVoice: {
@@ -47,6 +48,7 @@ export const mockUsers: User[] = [
     email: 'user1@example.com',
     password: 'hashed_password_123',
     passwordHash: '$2b$10$abcdefghijklmnopqrstuv.hashedpassword123',
+    role: 'user',
     failedAttempts: 0,
     lockedUntil: null,
     brandVoice: {
@@ -61,6 +63,7 @@ export const mockUsers: User[] = [
     email: 'user2@example.com',
     password: 'hashed_password_456',
     passwordHash: '$2b$10$abcdefghijklmnopqrstuv.hashedpassword456',
+    role: 'user',
     failedAttempts: 0,
     lockedUntil: null,
     brandVoice: null,
@@ -71,6 +74,7 @@ export const mockUsers: User[] = [
     email: 'newuser@example.com',
     password: 'hashed_password_789',
     passwordHash: '$2b$10$abcdefghijklmnopqrstuv.hashedpassword789',
+    role: 'user',
     failedAttempts: 0,
     lockedUntil: null,
     brandVoice: null,
@@ -83,6 +87,7 @@ export const mockUsers: User[] = [
     email: 'locked@example.com',
     password: 'hashed_password_locked',
     passwordHash: '$2b$10$abcdefghijklmnopqrstuv.hashedlockedpw',
+    role: 'user',
     failedAttempts: 5,
     lockedUntil: hoursFromNow(1), // Locked for 1 more hour
     brandVoice: null,
@@ -93,6 +98,7 @@ export const mockUsers: User[] = [
     email: 'temporarily-locked@example.com',
     password: 'hashed_password_temp',
     passwordHash: '$2b$10$abcdefghijklmnopqrstuv.hashedtemppw',
+    role: 'user',
     failedAttempts: 3,
     lockedUntil: new Date(BASE_DATE.getTime() - 60 * 60 * 1000), // Lock expired 1 hour ago
     brandVoice: null,
@@ -105,6 +111,7 @@ export const mockUsers: User[] = [
     email: 'edge+special@example.com', // Email with special characters
     password: 'hashed_edge_pw',
     passwordHash: '$2b$10$abcdefghijklmnopqrstuv.hashededgepw',
+    role: 'user',
     failedAttempts: 0,
     lockedUntil: null,
     brandVoice: {
@@ -119,6 +126,7 @@ export const mockUsers: User[] = [
     email: 'unicode.user@example.com',
     password: 'hashed_unicode_pw',
     passwordHash: '$2b$10$abcdefghijklmnopqrstuv.hashedunicodepw',
+    role: 'user',
     failedAttempts: 0,
     lockedUntil: null,
     brandVoice: {
@@ -248,39 +256,25 @@ export const mockBrandProfiles: BrandProfile[] = [
 // === FILTERED SUBSETS ===
 
 /** Active (unlocked) users */
-export const activeUsers = mockUsers.filter(
-  (u) => u.lockedUntil === null || u.lockedUntil < BASE_DATE
-);
+export const activeUsers = mockUsers.filter((u) => u.lockedUntil === null || u.lockedUntil < BASE_DATE);
 
 /** Currently locked users */
-export const lockedUsers = mockUsers.filter(
-  (u) => u.lockedUntil !== null && u.lockedUntil > BASE_DATE
-);
+export const lockedUsers = mockUsers.filter((u) => u.lockedUntil !== null && u.lockedUntil > BASE_DATE);
 
 /** Users with brand voice configured */
-export const usersWithBrandVoice = mockUsers.filter(
-  (u) => u.brandVoice !== null
-);
+export const usersWithBrandVoice = mockUsers.filter((u) => u.brandVoice !== null);
 
 /** Users without brand voice */
-export const usersWithoutBrandVoice = mockUsers.filter(
-  (u) => u.brandVoice === null
-);
+export const usersWithoutBrandVoice = mockUsers.filter((u) => u.brandVoice === null);
 
 /** Recently created users (last 7 days) */
-export const recentUsers = mockUsers.filter(
-  (u) => u.createdAt >= daysAgo(7)
-);
+export const recentUsers = mockUsers.filter((u) => u.createdAt >= daysAgo(7));
 
 /** Active sessions (not expired) */
-export const activeSessions = mockSessions.filter(
-  (s) => s.expiresAt > BASE_DATE
-);
+export const activeSessions = mockSessions.filter((s) => s.expiresAt > BASE_DATE);
 
 /** Expired sessions */
-export const expiredSessions = mockSessions.filter(
-  (s) => s.expiresAt <= BASE_DATE
-);
+export const expiredSessions = mockSessions.filter((s) => s.expiresAt <= BASE_DATE);
 
 /** Sessions expiring within 1 hour */
 export const expiringSessions = mockSessions.filter((s) => {
@@ -289,14 +283,10 @@ export const expiringSessions = mockSessions.filter((s) => {
 });
 
 /** Complete brand profiles */
-export const completeBrandProfiles = mockBrandProfiles.filter(
-  (bp) => bp.brandName !== null && bp.voice !== null
-);
+export const completeBrandProfiles = mockBrandProfiles.filter((bp) => bp.brandName !== null && bp.voice !== null);
 
 /** Incomplete brand profiles */
-export const incompleteBrandProfiles = mockBrandProfiles.filter(
-  (bp) => bp.brandName === null || bp.voice === null
-);
+export const incompleteBrandProfiles = mockBrandProfiles.filter((bp) => bp.brandName === null || bp.voice === null);
 
 // === FACTORY FUNCTIONS ===
 
@@ -310,6 +300,7 @@ export function createMockUser(overrides: Partial<User> = {}): User {
     email: `${id}@example.com`,
     password: 'hashed_test_password',
     passwordHash: '$2b$10$abcdefghijklmnopqrstuv.hashedtestpw',
+    role: 'user',
     failedAttempts: 0,
     lockedUntil: null,
     brandVoice: null,
@@ -321,10 +312,7 @@ export function createMockUser(overrides: Partial<User> = {}): User {
 /**
  * Creates a locked user
  */
-export function createLockedUser(
-  lockDurationHours: number = 1,
-  overrides: Partial<User> = {}
-): User {
+export function createLockedUser(lockDurationHours: number = 1, overrides: Partial<User> = {}): User {
   return createMockUser({
     failedAttempts: 5,
     lockedUntil: hoursFromNow(lockDurationHours),
@@ -335,10 +323,7 @@ export function createLockedUser(
 /**
  * Creates a user with brand voice configured
  */
-export function createUserWithBrandVoice(
-  brandVoice: BrandVoice,
-  overrides: Partial<User> = {}
-): User {
+export function createUserWithBrandVoice(brandVoice: BrandVoice, overrides: Partial<User> = {}): User {
   return createMockUser({
     brandVoice: brandVoice as unknown as typeof overrides.brandVoice,
     ...overrides,
@@ -348,10 +333,7 @@ export function createUserWithBrandVoice(
 /**
  * Creates a new mock session
  */
-export function createMockSession(
-  userId: string,
-  overrides: Partial<Session> = {}
-): Session {
+export function createMockSession(userId: string, overrides: Partial<Session> = {}): Session {
   const id = overrides.id || `session-test-${Date.now()}`;
   return {
     id,
@@ -368,7 +350,7 @@ export function createMockSession(
 export function createExpiredSession(
   userId: string,
   hoursExpiredAgo: number = 1,
-  overrides: Partial<Session> = {}
+  overrides: Partial<Session> = {},
 ): Session {
   return createMockSession(userId, {
     expiresAt: new Date(BASE_DATE.getTime() - hoursExpiredAgo * 60 * 60 * 1000),
@@ -379,10 +361,7 @@ export function createExpiredSession(
 /**
  * Creates a new mock brand profile
  */
-export function createMockBrandProfile(
-  userId: string,
-  overrides: Partial<BrandProfile> = {}
-): BrandProfile {
+export function createMockBrandProfile(userId: string, overrides: Partial<BrandProfile> = {}): BrandProfile {
   const id = overrides.id || `bp-test-${Date.now()}`;
   const now = new Date();
   return {
@@ -477,8 +456,10 @@ export const testCredentials = {
  * JWT-like tokens for testing (not real JWTs)
  */
 export const testTokens = {
-  valid: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ1c2VyLXRlc3QtMSIsImV4cCI6OTk5OTk5OTk5OX0.mock_valid_signature',
-  expired: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ1c2VyLXRlc3QtMSIsImV4cCI6MTAwMDAwMDAwMH0.mock_expired_signature',
+  valid:
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ1c2VyLXRlc3QtMSIsImV4cCI6OTk5OTk5OTk5OX0.mock_valid_signature',
+  expired:
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ1c2VyLXRlc3QtMSIsImV4cCI6MTAwMDAwMDAwMH0.mock_expired_signature',
   malformed: 'not.a.valid.jwt',
   missingUserId: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjk5OTk5OTk5OTl9.mock_no_user_signature',
 };

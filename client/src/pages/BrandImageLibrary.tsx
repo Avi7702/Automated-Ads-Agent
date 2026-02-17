@@ -1,19 +1,7 @@
 import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Plus,
-  Trash2,
-  Image as ImageIcon,
-  Upload,
-  Tag,
-  Filter,
-  X,
-  Loader2,
-  Eye,
-  Package,
-  ImageOff,
-} from 'lucide-react';
+import { Plus, Trash2, Image as ImageIcon, Upload, Tag, Filter, X, Loader2, Eye, ImageOff } from 'lucide-react';
 import { cn, getProductImageUrl } from '@/lib/utils';
 import type { BrandImage, Product } from '@shared/schema';
 
@@ -553,7 +541,7 @@ function ImageDetailModal({
   );
 }
 
-export default function BrandImageLibrary({ embedded = false, selectedId }: BrandImageLibraryProps) {
+export default function BrandImageLibrary({ embedded = false, selectedId: _selectedId }: BrandImageLibraryProps) {
   const queryClient = useQueryClient();
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<BrandImage | null>(null);
