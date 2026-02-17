@@ -356,9 +356,7 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
           logger.info({ module: 'ClearProducts', productCount: productIds.length }, 'Product caches invalidated');
         }
 
-        for (const product of products) {
-          await storage.deleteProduct(product.id);
-        }
+        await storage.deleteProductsByIds(productIds);
 
         logger.info({ module: 'Products', clearedCount: products.length }, 'Cleared products from database');
         res.json({ success: true, deleted: products.length });

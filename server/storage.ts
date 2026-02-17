@@ -110,6 +110,7 @@ export interface IStorage {
   getProducts(limit?: number, offset?: number): Promise<Product[]>;
   getProductById(id: string): Promise<Product | undefined>;
   deleteProduct(id: string): Promise<void>;
+  deleteProductsByIds(ids: string[]): Promise<void>;
 
   // Prompt Template CRUD operations
   savePromptTemplate(template: InsertPromptTemplate): Promise<PromptTemplate>;
@@ -465,6 +466,9 @@ export class DbStorage implements IStorage {
   }
   async deleteProduct(id: string): Promise<void> {
     return productRepo.deleteProduct(id);
+  }
+  async deleteProductsByIds(ids: string[]): Promise<void> {
+    return productRepo.deleteProductsByIds(ids);
   }
   async updateProduct(id: string, updates: Partial<InsertProduct>): Promise<Product> {
     return productRepo.updateProduct(id, updates);

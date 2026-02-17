@@ -31,6 +31,11 @@ export async function deleteProduct(id: string): Promise<void> {
   await db.delete(products).where(eq(products.id, id));
 }
 
+export async function deleteProductsByIds(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  await db.delete(products).where(inArray(products.id, ids));
+}
+
 export async function updateProduct(id: string, updates: Partial<InsertProduct>): Promise<Product> {
   const [product] = await db.update(products).set(updates).where(eq(products.id, id)).returning();
   return product;
