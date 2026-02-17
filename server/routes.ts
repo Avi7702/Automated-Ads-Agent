@@ -260,10 +260,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Serve static files from attached_assets directory
-  app.use('/attached_assets', express.static(path.join(process.cwd(), 'attached_assets')));
+  app.use(
+    '/attached_assets',
+    express.static(path.join(process.cwd(), 'attached_assets'), {
+      maxAge: '1h',
+      setHeaders: (res) => {
+        res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
+      },
+    }),
+  );
 
   // Serve uploaded images (generations)
-  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+  app.use(
+    '/uploads',
+    express.static(path.join(process.cwd(), 'uploads'), {
+      maxAge: '1h',
+      setHeaders: (res) => {
+        res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
+      },
+    }),
+  );
 
   // Apply rate limiting to API routes
   // Exempt lightweight read-only endpoints from the global rate limiter
