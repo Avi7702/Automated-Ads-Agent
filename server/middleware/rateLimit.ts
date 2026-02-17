@@ -51,7 +51,7 @@ function shouldUseRedis(useRedis: boolean | undefined): boolean {
   if (useRedis !== undefined) {
     return useRedis;
   }
-  return Boolean(process.env.REDIS_URL);
+  return Boolean(process.env['REDIS_URL']);
 }
 
 /**
@@ -108,8 +108,8 @@ export function createRateLimiter(options: RateLimiterOptions = {}) {
     // Skip rate limiting in test environment only
     // BUG-022b fix: Only allow x-e2e-test header bypass in non-production environments
     if (
-      process.env.NODE_ENV === 'test' ||
-      (process.env.NODE_ENV !== 'production' && req.headers['x-e2e-test'] === 'true')
+      process.env['NODE_ENV'] === 'test' ||
+      (process.env['NODE_ENV'] !== 'production' && req.headers['x-e2e-test'] === 'true')
     ) {
       return next();
     }

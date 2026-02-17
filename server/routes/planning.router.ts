@@ -17,7 +17,7 @@
 import type { Router, Request, Response } from 'express';
 import type { RouterContext, RouterFactory, RouterModule } from '../types/router';
 import { createRouter, asyncHandler } from './utils/createRouter';
-import { validate } from '../middleware/validate';
+import { validate as validateMiddleware } from '../middleware/validate';
 import { planningPostsQuerySchema } from '../validation/schemas';
 
 export const planningRouter: RouterFactory = (ctx: RouterContext): Router => {
@@ -187,7 +187,7 @@ export const planningRouter: RouterFactory = (ctx: RouterContext): Router => {
   router.get(
     '/posts',
     requireAuth,
-    validate(planningPostsQuerySchema, 'query'),
+    validateMiddleware(planningPostsQuerySchema, 'query'),
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const userId = (req.session as any).userId;
@@ -216,7 +216,7 @@ export const planningRouter: RouterFactory = (ctx: RouterContext): Router => {
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const userId = (req.session as any).userId;
-        const { id } = req.params;
+        const id = String(req.params['id']);
 
         // Verify ownership before deleting
         const post = await storage.getContentPlannerPostById(id);

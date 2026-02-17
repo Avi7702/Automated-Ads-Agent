@@ -55,17 +55,23 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     return;
   }
 
-  req.user = sanitizeUser(user);
+  const sanitized = sanitizeUser(user);
+  if (sanitized !== undefined) {
+    req.user = sanitized;
+  }
   next();
 }
 
-export async function optionalAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function optionalAuth(req: Request, _res: Response, next: NextFunction): Promise<void> {
   const userId = req.session?.userId;
 
   if (userId) {
     const user = await storage.getUserById(userId);
     if (user) {
-      req.user = sanitizeUser(user);
+      const sanitized = sanitizeUser(user);
+      if (sanitized !== undefined) {
+        req.user = sanitized;
+      }
     }
   }
 

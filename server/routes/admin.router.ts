@@ -209,7 +209,7 @@ export const adminRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/dead-letter-queue/:jobId/retry',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const { jobId } = req.params;
+        const jobId = String(req.params['jobId']);
         if (!jobId) {
           res.status(400).json({ error: 'jobId parameter is required' });
           return;
@@ -282,7 +282,7 @@ export const adminRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/scraper/scrape-category/:category',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const { category } = req.params;
+        const category = String(req.params['category']);
         logger.info({ module: 'Scraper', category }, 'Scraping category');
         const { scrapeSingleCategory } = await import('../services/ndsWebsiteScraper');
         const results = await scrapeSingleCategory(category);
@@ -338,7 +338,7 @@ export const adminRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/experiments/:id/status',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const { id } = req.params;
+        const id = String(req.params['id']);
         const { status } = req.body;
         if (!['running', 'paused', 'completed'].includes(status)) {
           res.status(400).json({ error: 'Invalid status. Must be: running, paused, completed' });
@@ -361,7 +361,7 @@ export const adminRouter: RouterFactory = (ctx: RouterContext): Router => {
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const { getExperimentResults } = await import('../services/experimentService');
-        const results = await getExperimentResults(req.params.id);
+        const results = await getExperimentResults(String(req.params['id']));
         if (!results) {
           res.status(404).json({ error: 'Experiment not found' });
           return;
