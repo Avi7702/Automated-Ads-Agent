@@ -22,7 +22,7 @@ const prompts: PromptDefinition[] = [
     version: '1.0.0',
     description: 'PTCF (Persona, Task, Context, Format) framework for ad copy generation',
     build: (ctx) => ({
-      userPrompt: `Generate ad copy using PTCF framework for ${ctx.platform || 'instagram'} platform.`,
+      userPrompt: `Generate ad copy using PTCF framework for ${ctx['platform'] || 'instagram'} platform.`,
     }),
   },
   {
@@ -30,7 +30,7 @@ const prompts: PromptDefinition[] = [
     version: '1.0.0',
     description: 'PTCF prompt enhanced with RAG context from knowledge base',
     build: (ctx) => ({
-      userPrompt: `Generate RAG-enhanced ad copy for ${ctx.platform || 'instagram'} with knowledge base context.`,
+      userPrompt: `Generate RAG-enhanced ad copy for ${ctx['platform'] || 'instagram'} with knowledge base context.`,
     }),
   },
 
@@ -40,7 +40,7 @@ const prompts: PromptDefinition[] = [
     version: '1.0.0',
     description: 'Ad concept ideation with reasoning, confidence, and platform recommendations',
     build: (ctx) => ({
-      userPrompt: `Generate ad suggestions for product: ${ctx.productName || 'unknown'}.`,
+      userPrompt: `Generate ad suggestions for product: ${ctx['productName'] || 'unknown'}.`,
     }),
   },
   {
@@ -48,7 +48,7 @@ const prompts: PromptDefinition[] = [
     version: '1.0.0',
     description: 'Template slot filling for template-based generation mode',
     build: (ctx) => ({
-      userPrompt: `Fill template slots for template: ${ctx.templateId || 'unknown'}.`,
+      userPrompt: `Fill template slots for template: ${ctx['templateId'] || 'unknown'}.`,
     }),
   },
 
@@ -86,7 +86,7 @@ const prompts: PromptDefinition[] = [
     version: '1.0.0',
     description: 'Multi-layer content safety validation (hate, violence, PII, etc.)',
     build: (ctx) => ({
-      userPrompt: `Check content safety for: "${ctx.text || ''}"`,
+      userPrompt: `Check content safety for: "${ctx['text'] || ''}"`,
     }),
   },
 
@@ -96,7 +96,7 @@ const prompts: PromptDefinition[] = [
     version: '1.0.0',
     description: 'Brand voice alignment scoring for generated copy',
     build: (ctx) => ({
-      userPrompt: `Evaluate brand voice alignment for ${ctx.platform || 'instagram'} copy.`,
+      userPrompt: `Evaluate brand voice alignment for ${ctx['platform'] || 'instagram'} copy.`,
     }),
   },
 
@@ -106,7 +106,7 @@ const prompts: PromptDefinition[] = [
     version: '1.0.0',
     description: 'Product relationship discovery using knowledge base context',
     build: (ctx) => ({
-      userPrompt: `Discover relationships for product: ${ctx.productName || 'unknown'}.`,
+      userPrompt: `Discover relationships for product: ${ctx['productName'] || 'unknown'}.`,
     }),
   },
   {
@@ -114,7 +114,7 @@ const prompts: PromptDefinition[] = [
     version: '1.0.0',
     description: 'Pairwise product relationship analysis and confidence scoring',
     build: (ctx) => ({
-      userPrompt: `Analyze relationship between ${ctx.productA || ''} and ${ctx.productB || ''}.`,
+      userPrompt: `Analyze relationship between ${ctx['productA'] || ''} and ${ctx['productB'] || ''}.`,
     }),
   },
 
@@ -124,7 +124,7 @@ const prompts: PromptDefinition[] = [
     version: '1.0.0',
     description: 'Template matching and scoring based on context/industry/platform',
     build: (ctx) => ({
-      userPrompt: `Match templates for context: ${ctx.context || 'general'}.`,
+      userPrompt: `Match templates for context: ${ctx['context'] || 'general'}.`,
     }),
   },
 
@@ -134,7 +134,7 @@ const prompts: PromptDefinition[] = [
     version: '1.0.0',
     description: 'Installation steps, accessories, and room-specific tips generation',
     build: (ctx) => ({
-      userPrompt: `Generate installation scenario for ${ctx.productName || 'unknown'}.`,
+      userPrompt: `Generate installation scenario for ${ctx['productName'] || 'unknown'}.`,
     }),
   },
 
@@ -144,7 +144,7 @@ const prompts: PromptDefinition[] = [
     version: '1.0.0',
     description: 'Carousel slide outlines with hook, points, and CTA',
     build: (ctx) => ({
-      userPrompt: `Generate carousel outline for topic: ${ctx.topic || 'unknown'}.`,
+      userPrompt: `Generate carousel outline for topic: ${ctx['topic'] || 'unknown'}.`,
     }),
   },
 
@@ -154,7 +154,7 @@ const prompts: PromptDefinition[] = [
     version: '1.0.0',
     description: 'Image generation prompts for content planning with template/brand context',
     build: (ctx) => ({
-      userPrompt: `Build image prompt for planned content on ${ctx.platform || 'instagram'}.`,
+      userPrompt: `Build image prompt for planned content on ${ctx['platform'] || 'instagram'}.`,
     }),
   },
 ];

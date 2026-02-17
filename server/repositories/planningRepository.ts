@@ -4,7 +4,7 @@ import { and, eq, desc, gte, lte } from 'drizzle-orm';
 
 export async function createContentPlannerPost(post: InsertContentPlannerPost): Promise<ContentPlannerPost> {
   const [result] = await db.insert(contentPlannerPosts).values(post).returning();
-  return result;
+  return result!;
 }
 
 export async function getContentPlannerPostsByUser(

@@ -6,7 +6,6 @@ import {
   type PromptTemplate,
   type InsertPromptTemplate,
   type User,
-  type InsertUser,
   type AdCopy,
   type InsertAdCopy,
   type GenerationUsage,
@@ -61,7 +60,6 @@ import {
   type ApprovalAuditLog,
   type InsertApprovalAuditLog,
   type ApprovalSettings,
-  type InsertApprovalSettings,
   // Style Reference types
   type StyleReference,
   type InsertStyleReference,

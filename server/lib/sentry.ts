@@ -8,8 +8,8 @@
 import * as Sentry from '@sentry/node';
 import { logger } from './logger';
 
-const SENTRY_DSN = process.env.SENTRY_DSN;
-const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const SENTRY_DSN = process.env['SENTRY_DSN'];
+const IS_PRODUCTION = process.env['NODE_ENV'] === 'production';
 
 /**
  * Initialize Sentry SDK
@@ -23,11 +23,11 @@ export function initSentry(): void {
 
   Sentry.init({
     dsn: SENTRY_DSN,
-    environment: process.env.NODE_ENV || 'development',
-    release: process.env.npm_package_version || '1.0.0',
+    environment: process.env['NODE_ENV'] || 'development',
+    release: process.env['npm_package_version'] || '1.0.0',
 
     // Only send errors in production by default
-    enabled: IS_PRODUCTION || process.env.SENTRY_ENABLED === 'true',
+    enabled: IS_PRODUCTION || process.env['SENTRY_ENABLED'] === 'true',
 
     // Sample rate for performance monitoring (0-1)
     tracesSampleRate: IS_PRODUCTION ? 0.1 : 1.0,
@@ -71,7 +71,7 @@ export function initSentry(): void {
     },
   });
 
-  logger.info({ module: 'Sentry', environment: process.env.NODE_ENV }, 'Sentry initialized');
+  logger.info({ module: 'Sentry', environment: process.env['NODE_ENV'] }, 'Sentry initialized');
 }
 
 /**
@@ -120,18 +120,19 @@ export function addBreadcrumb(breadcrumb: {
 /**
  * Express error handler middleware
  * Add this AFTER all routes but BEFORE your custom error handler
+ *
+ * Modern @sentry/node no longer exposes Sentry.Handlers; use
+ * Sentry.setupExpressErrorHandler(app) instead. These are kept as
+ * passthrough no-ops for backwards-compatible middleware registration.
  */
-// @ts-expect-error - Sentry Handlers API varies by version, fallback provided
-export const sentryErrorHandler =
-  Sentry.Handlers?.errorHandler?.() ?? ((err: any, _req: any, _res: any, next: any) => next(err));
+export const sentryErrorHandler = (err: unknown, _req: unknown, _res: unknown, next: (e?: unknown) => void) =>
+  next(err);
 
 /**
  * Express request handler middleware
  * Add this BEFORE all routes
  */
-// @ts-expect-error - Sentry Handlers API varies by version, fallback provided
-export const sentryRequestHandler =
-  Sentry.Handlers?.requestHandler?.() ?? ((_req: any, _res: any, next: any) => next());
+export const sentryRequestHandler = (_req: unknown, _res: unknown, next: () => void) => next();
 
 // Re-export Sentry for advanced usage
 export { Sentry };

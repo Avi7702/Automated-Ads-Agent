@@ -8,28 +8,28 @@ import {
   learnedAdPatterns,
   adAnalysisUploads,
   patternApplicationHistory,
-} from "@shared/schema";
-import { db } from "../db";
-import { and, eq, desc, lte, sql } from "drizzle-orm";
+} from '@shared/schema';
+import { db } from '../db';
+import { and, eq, desc, lte, sql } from 'drizzle-orm';
 
 // ============================================
 // LEARNED AD PATTERN OPERATIONS
 // ============================================
 
 export async function createLearnedPattern(pattern: InsertLearnedAdPattern): Promise<LearnedAdPattern> {
-  const [result] = await db
-    .insert(learnedAdPatterns)
-    .values(pattern)
-    .returning();
-  return result;
+  const [result] = await db.insert(learnedAdPatterns).values(pattern).returning();
+  return result!;
 }
 
-export async function getLearnedPatterns(userId: string, filters?: {
-  category?: string;
-  platform?: string;
-  industry?: string;
-  isActive?: boolean;
-}): Promise<LearnedAdPattern[]> {
+export async function getLearnedPatterns(
+  userId: string,
+  filters?: {
+    category?: string;
+    platform?: string;
+    industry?: string;
+    isActive?: boolean;
+  },
+): Promise<LearnedAdPattern[]> {
   const conditions = [eq(learnedAdPatterns.userId, userId)];
 
   if (filters?.category) {
@@ -53,33 +53,31 @@ export async function getLearnedPatterns(userId: string, filters?: {
 }
 
 export async function getLearnedPatternById(id: string): Promise<LearnedAdPattern | undefined> {
-  const [pattern] = await db
-    .select()
-    .from(learnedAdPatterns)
-    .where(eq(learnedAdPatterns.id, id));
+  const [pattern] = await db.select().from(learnedAdPatterns).where(eq(learnedAdPatterns.id, id));
   return pattern;
 }
 
-export async function getLearnedPatternByHash(userId: string, sourceHash: string): Promise<LearnedAdPattern | undefined> {
+export async function getLearnedPatternByHash(
+  userId: string,
+  sourceHash: string,
+): Promise<LearnedAdPattern | undefined> {
   const [pattern] = await db
     .select()
     .from(learnedAdPatterns)
-    .where(
-      and(
-        eq(learnedAdPatterns.userId, userId),
-        eq(learnedAdPatterns.sourceHash, sourceHash)
-      )
-    );
+    .where(and(eq(learnedAdPatterns.userId, userId), eq(learnedAdPatterns.sourceHash, sourceHash)));
   return pattern;
 }
 
-export async function updateLearnedPattern(id: string, updates: Partial<InsertLearnedAdPattern>): Promise<LearnedAdPattern> {
+export async function updateLearnedPattern(
+  id: string,
+  updates: Partial<InsertLearnedAdPattern>,
+): Promise<LearnedAdPattern> {
   const [result] = await db
     .update(learnedAdPatterns)
     .set({ ...updates, updatedAt: new Date() })
     .where(eq(learnedAdPatterns.id, id))
     .returning();
-  return result;
+  return result!;
 }
 
 export async function deleteLearnedPattern(id: string): Promise<void> {
@@ -102,18 +100,12 @@ export async function incrementPatternUsage(id: string): Promise<void> {
 // ============================================
 
 export async function createUploadRecord(upload: InsertAdAnalysisUpload): Promise<AdAnalysisUpload> {
-  const [result] = await db
-    .insert(adAnalysisUploads)
-    .values(upload)
-    .returning();
-  return result;
+  const [result] = await db.insert(adAnalysisUploads).values(upload).returning();
+  return result!;
 }
 
 export async function getUploadById(id: string): Promise<AdAnalysisUpload | undefined> {
-  const [upload] = await db
-    .select()
-    .from(adAnalysisUploads)
-    .where(eq(adAnalysisUploads.id, id));
+  const [upload] = await db.select().from(adAnalysisUploads).where(eq(adAnalysisUploads.id, id));
   return upload;
 }
 
@@ -126,15 +118,15 @@ export async function updateUploadStatus(id: string, status: string, errorMessag
     updateData.processingStartedAt = new Date();
   }
 
-  const [result] = await db
-    .update(adAnalysisUploads)
-    .set(updateData)
-    .where(eq(adAnalysisUploads.id, id))
-    .returning();
-  return result;
+  const [result] = await db.update(adAnalysisUploads).set(updateData).where(eq(adAnalysisUploads.id, id)).returning();
+  return result!;
 }
 
-export async function updateUploadWithPattern(id: string, patternId: string, processingDurationMs: number): Promise<AdAnalysisUpload> {
+export async function updateUploadWithPattern(
+  id: string,
+  patternId: string,
+  processingDurationMs: number,
+): Promise<AdAnalysisUpload> {
   const [result] = await db
     .update(adAnalysisUploads)
     .set({
@@ -145,19 +137,14 @@ export async function updateUploadWithPattern(id: string, patternId: string, pro
     })
     .where(eq(adAnalysisUploads.id, id))
     .returning();
-  return result;
+  return result!;
 }
 
 export async function getExpiredUploads(): Promise<AdAnalysisUpload[]> {
   return await db
     .select()
     .from(adAnalysisUploads)
-    .where(
-      and(
-        lte(adAnalysisUploads.expiresAt, new Date()),
-        sql`${adAnalysisUploads.status} != 'expired'`
-      )
-    );
+    .where(and(lte(adAnalysisUploads.expiresAt, new Date()), sql`${adAnalysisUploads.status} != 'expired'`));
 }
 
 export async function deleteUpload(id: string): Promise<void> {
@@ -168,12 +155,11 @@ export async function deleteUpload(id: string): Promise<void> {
 // PATTERN APPLICATION HISTORY OPERATIONS
 // ============================================
 
-export async function createApplicationHistory(history: InsertPatternApplicationHistory): Promise<PatternApplicationHistory> {
-  const [result] = await db
-    .insert(patternApplicationHistory)
-    .values(history)
-    .returning();
-  return result;
+export async function createApplicationHistory(
+  history: InsertPatternApplicationHistory,
+): Promise<PatternApplicationHistory> {
+  const [result] = await db.insert(patternApplicationHistory).values(history).returning();
+  return result!;
 }
 
 export async function getPatternApplicationHistory(patternId: string): Promise<PatternApplicationHistory[]> {
@@ -188,7 +174,7 @@ export async function updateApplicationFeedback(
   id: string,
   rating: number,
   wasUsed: boolean,
-  feedback?: string
+  feedback?: string,
 ): Promise<PatternApplicationHistory> {
   const [result] = await db
     .update(patternApplicationHistory)
@@ -199,5 +185,5 @@ export async function updateApplicationFeedback(
     })
     .where(eq(patternApplicationHistory.id, id))
     .returning();
-  return result;
+  return result!;
 }

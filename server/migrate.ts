@@ -1,4 +1,4 @@
-import { pool } from "./db";
+import { pool } from './db';
 import { logger } from './lib/logger';
 
 /**
@@ -8,16 +8,16 @@ import { logger } from './lib/logger';
  * This replaces `drizzle-kit push` which times out via npx on cold start.
  */
 export async function pushSchema() {
-    if (process.env.SKIP_SCHEMA_PUSH === 'true') {
-        logger.info({ module: 'db' }, 'Schema push skipped (SKIP_SCHEMA_PUSH=true)');
-        return;
-    }
+  if (process.env['SKIP_SCHEMA_PUSH'] === 'true') {
+    logger.info({ module: 'db' }, 'Schema push skipped (SKIP_SCHEMA_PUSH=true)');
+    return;
+  }
 
-    try {
-        logger.info({ module: 'db' }, 'Running schema migrations...');
+  try {
+    logger.info({ module: 'db' }, 'Running schema migrations...');
 
-        // Add missing columns to existing tables (idempotent — IF NOT EXISTS)
-        await pool.query(`
+    // Add missing columns to existing tables (idempotent — IF NOT EXISTS)
+    await pool.query(`
             -- Users: role column (PR #61)
             ALTER TABLE users ADD COLUMN IF NOT EXISTS role varchar(20) NOT NULL DEFAULT 'user';
 
@@ -49,10 +49,10 @@ export async function pushSchema() {
             );
         `);
 
-        logger.info({ module: 'db' }, 'Schema migrations completed successfully');
-    } catch (error: unknown) {
-        logger.error({ module: 'db', err: error }, 'Schema migration failed');
-        // Don't exit — tables may already exist with the right shape
-        logger.info({ module: 'db' }, 'Continuing without schema migration — tables may already exist');
-    }
+    logger.info({ module: 'db' }, 'Schema migrations completed successfully');
+  } catch (error: unknown) {
+    logger.error({ module: 'db', err: error }, 'Schema migration failed');
+    // Don't exit — tables may already exist with the right shape
+    logger.info({ module: 'db' }, 'Continuing without schema migration — tables may already exist');
+  }
 }
