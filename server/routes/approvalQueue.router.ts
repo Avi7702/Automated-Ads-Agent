@@ -298,21 +298,22 @@ export const approvalQueueRouter: RouterFactory = (ctx: RouterContext): Router =
           });
         }
 
-        // Verify ownership of all items
-        for (const id of ids) {
-          const item = await storage.getApprovalQueue(id);
-          if (!item) {
-            return res.status(404).json({
-              success: false,
-              error: `Queue item not found: ${id}`,
-            });
-          }
-          if (item.userId !== req.user!.id) {
-            return res.status(403).json({
-              success: false,
-              error: `Unauthorized: You do not own item ${id}`,
-            });
-          }
+        // Verify ownership of all items (batch query instead of N+1)
+        const items = await storage.getApprovalQueueByIds(ids);
+        if (items.length !== ids.length) {
+          const foundIds = new Set(items.map((i) => i.id));
+          const missingId = ids.find((id) => !foundIds.has(id));
+          return res.status(404).json({
+            success: false,
+            error: `Queue item not found: ${missingId}`,
+          });
+        }
+        const unauthorized = items.find((item) => item.userId !== req.user!.id);
+        if (unauthorized) {
+          return res.status(403).json({
+            success: false,
+            error: `Unauthorized: You do not own item ${unauthorized.id}`,
+          });
         }
 
         const result = await approvalQueueService.bulkApprove(ids, req.user!.id);

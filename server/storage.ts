@@ -359,6 +359,7 @@ export interface IStorage {
   // Approval Queue CRUD operations
   createApprovalQueue(data: InsertApprovalQueue): Promise<ApprovalQueue>;
   getApprovalQueue(id: string): Promise<ApprovalQueue | null>;
+  getApprovalQueueByIds(ids: string[]): Promise<ApprovalQueue[]>;
   getApprovalQueueForUser(
     userId: string,
     filters?: {
@@ -953,6 +954,9 @@ export class DbStorage implements IStorage {
   }
   async getApprovalQueue(id: string): Promise<ApprovalQueue | null> {
     return approvalRepo.getApprovalQueue(id);
+  }
+  async getApprovalQueueByIds(ids: string[]): Promise<ApprovalQueue[]> {
+    return approvalRepo.getApprovalQueueByIds(ids);
   }
   async getApprovalQueueForUser(
     userId: string,
