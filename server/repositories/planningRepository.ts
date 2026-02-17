@@ -1,6 +1,6 @@
 import { type ContentPlannerPost, type InsertContentPlannerPost, contentPlannerPosts } from '@shared/schema';
 import { db } from '../db';
-import { and, eq, desc, gte, lte } from 'drizzle-orm';
+import { and, eq, desc, gte, lte, sql } from 'drizzle-orm';
 
 export async function createContentPlannerPost(post: InsertContentPlannerPost): Promise<ContentPlannerPost> {
   const [result] = await db.insert(contentPlannerPosts).values(post).returning();
@@ -35,22 +35,16 @@ export async function getWeeklyBalance(userId: string): Promise<{ category: stri
   weekStart.setDate(now.getDate() - daysSinceMonday);
   weekStart.setHours(0, 0, 0, 0);
 
-  const posts = await db
+  // Use database-level aggregation to reduce memory usage and payload size
+  // BOLT OPTIMIZATION: Moved from in-memory loop to GROUP BY + COUNT(*)
+  return (await db
     .select({
       category: contentPlannerPosts.category,
+      count: sql<number>`count(*)::int`,
     })
     .from(contentPlannerPosts)
-    .where(and(eq(contentPlannerPosts.userId, userId), gte(contentPlannerPosts.postedAt, weekStart)));
-
-  const countMap: Record<string, number> = {};
-  for (const post of posts) {
-    countMap[post.category] = (countMap[post.category] || 0) + 1;
-  }
-
-  return Object.entries(countMap).map(([category, count]) => ({
-    category,
-    count,
-  }));
+    .where(and(eq(contentPlannerPosts.userId, userId), gte(contentPlannerPosts.postedAt, weekStart)))
+    .groupBy(contentPlannerPosts.category)) as { category: string; count: number }[];
 }
 
 export async function getContentPlannerPostById(id: string): Promise<ContentPlannerPost | null> {
