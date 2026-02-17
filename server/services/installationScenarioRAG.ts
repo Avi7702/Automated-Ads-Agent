@@ -232,21 +232,6 @@ const ROOM_CONSIDERATIONS: Record<RoomType, string[]> = {
   ],
 };
 
-/**
- * Common accessory categories
- */
-const ACCESSORY_CATEGORIES = [
-  'underlayment',
-  'trim',
-  'transition_strips',
-  'adhesive',
-  'moisture_barrier',
-  'fasteners',
-  'tools',
-  'cleaning_supplies',
-  'protection',
-] as const;
-
 // ============================================
 // MAIN FUNCTIONS
 // ============================================
@@ -424,7 +409,7 @@ export async function suggestAccessories(
       operation: 'generate',
       inputTokens: prompt.length * 0.25,
       durationMs: Date.now() - startTime,
-      userId,
+      ...(userId !== undefined && { userId }),
       success: true,
     });
 
@@ -448,7 +433,7 @@ export async function suggestAccessories(
 export async function getInstallationTips(
   productId: string,
   roomType?: RoomType,
-  userId?: string,
+  _userId?: string,
 ): Promise<InstallationTip[]> {
   const tips: InstallationTip[] = [];
 
@@ -466,7 +451,7 @@ export async function getInstallationTips(
     for (const scenario of scenarios) {
       if (scenario.installationSteps) {
         // Extract tips from installation steps (if they contain tip-like content)
-        scenario.installationSteps.forEach((step, index) => {
+        scenario.installationSteps.forEach((step, _index) => {
           if (step.toLowerCase().includes('tip:') || step.toLowerCase().includes('note:')) {
             tips.push({
               tip: step,
@@ -680,7 +665,7 @@ function buildScenarioContext(scenarios: InstallationScenario[]): string {
  * Build prompt for installation step generation
  */
 function buildInstallationPrompt(
-  product: Product,
+  _product: Product,
   productContext: string,
   roomContext: string | null,
   scenarioContext: string,
@@ -822,7 +807,7 @@ function parseInstallationSuggestions(
     metadata: {
       productId: product.id,
       productName: product.name,
-      roomType,
+      ...(roomType !== undefined && { roomType }),
       kbContextUsed: false,
       generatedAt: new Date(),
     },
@@ -869,9 +854,13 @@ function parseInstallationSuggestions(
     const metadata = {
       productId: product.id,
       productName: product.name,
-      roomType,
-      totalEstimatedTime: parsed.metadata?.totalEstimatedTime,
-      difficultyLevel: parsed.metadata?.difficultyLevel,
+      ...(roomType !== undefined && { roomType }),
+      ...(parsed.metadata?.totalEstimatedTime !== undefined && {
+        totalEstimatedTime: parsed.metadata.totalEstimatedTime as string,
+      }),
+      ...(parsed.metadata?.difficultyLevel !== undefined && {
+        difficultyLevel: parsed.metadata.difficultyLevel as 'beginner' | 'intermediate' | 'advanced',
+      }),
       kbContextUsed: false,
       generatedAt: new Date(),
     };

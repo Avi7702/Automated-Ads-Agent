@@ -23,12 +23,7 @@ import { createHash } from 'crypto';
 import { generateContentWithRetry } from '../lib/geminiClient';
 import { logger } from '../lib/logger';
 import { storage } from '../storage';
-import {
-  scanForPrivateContent,
-  sanitizeExtractedPattern,
-  type PrivacyScanResult,
-  type ExtractedPatternData,
-} from './patternPrivacyFilter';
+import { scanForPrivateContent, sanitizeExtractedPattern, type PrivacyScanResult } from './patternPrivacyFilter';
 import type { LearnedAdPattern } from '../../shared/schema';
 
 // Type definitions matching the schema JSONB types
@@ -62,7 +57,7 @@ interface VisualElements {
 }
 
 // Model for pattern extraction (use pro for quality)
-const EXTRACTION_MODEL = process.env.GEMINI_EXTRACTION_MODEL || 'gemini-3-pro-preview';
+const EXTRACTION_MODEL = process.env['GEMINI_EXTRACTION_MODEL'] || 'gemini-3-pro-preview';
 
 /**
  * Pattern extraction request
@@ -172,9 +167,7 @@ Return ONLY generic pattern descriptors. Do not include any specific content fro
  * 5. Sanitize extracted patterns
  * 6. Store in database
  */
-export async function extractPatterns(
-  request: PatternExtractionRequest
-): Promise<PatternExtractionResult> {
+export async function extractPatterns(request: PatternExtractionRequest): Promise<PatternExtractionResult> {
   const { imageBuffer, mimeType, userId, metadata } = request;
 
   try {
@@ -197,43 +190,49 @@ export async function extractPatterns(
     const privacyScan = await scanForPrivateContent(imageBuffer, mimeType);
 
     if (!privacyScan.isSafeToProcess) {
-      logger.warn({
-        userId,
-        reason: privacyScan.rejectionReason,
-        hasFaces: privacyScan.hasFaces,
-        detectedBrands: privacyScan.detectedBrands,
-      }, 'Image rejected by privacy scan');
+      logger.warn(
+        {
+          userId,
+          reason: privacyScan.rejectionReason,
+          hasFaces: privacyScan.hasFaces,
+          detectedBrands: privacyScan.detectedBrands,
+        },
+        'Image rejected by privacy scan',
+      );
 
       return {
         success: false,
         privacyScan,
-        error: privacyScan.rejectionReason,
+        ...(privacyScan.rejectionReason !== undefined && { error: privacyScan.rejectionReason }),
       };
     }
 
     // Step 4: Extract patterns using Gemini Vision
     const base64Image = imageBuffer.toString('base64');
 
-    const response = await generateContentWithRetry({
-      model: EXTRACTION_MODEL,
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            { text: EXTRACTION_PROMPT },
-            {
-              inlineData: {
-                mimeType,
-                data: base64Image,
+    const response = await generateContentWithRetry(
+      {
+        model: EXTRACTION_MODEL,
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              { text: EXTRACTION_PROMPT },
+              {
+                inlineData: {
+                  mimeType,
+                  data: base64Image,
+                },
               },
-            },
-          ],
+            ],
+          },
+        ],
+        config: {
+          temperature: 0.2, // Low temperature for consistent pattern extraction
         },
-      ],
-      config: {
-        temperature: 0.2, // Low temperature for consistent pattern extraction
       },
-    }, { operation: 'pattern_extraction' });
+      { operation: 'pattern_extraction' },
+    );
 
     const responseText = response.text || '';
 
@@ -274,20 +273,22 @@ export async function extractPatterns(
       sourceHash,
     });
 
-    logger.info({
-      patternId: pattern.id,
-      userId,
-      category: metadata.category,
-      platform: metadata.platform,
-      confidenceScore: rawPattern.confidenceScore,
-    }, 'Pattern extracted successfully');
+    logger.info(
+      {
+        patternId: pattern.id,
+        userId,
+        category: metadata.category,
+        platform: metadata.platform,
+        confidenceScore: rawPattern.confidenceScore,
+      },
+      'Pattern extracted successfully',
+    );
 
     return {
       success: true,
       pattern,
       privacyScan,
     };
-
   } catch (error) {
     logger.error({ err: error, userId }, 'Pattern extraction failed');
     return {
@@ -307,7 +308,7 @@ export async function processUploadForPatterns(
   uploadId: string,
   imageBuffer: Buffer,
   mimeType: string,
-  metadata: PatternExtractionRequest['metadata']
+  metadata: PatternExtractionRequest['metadata'],
 ): Promise<PatternExtractionResult> {
   // Get upload record
   const upload = await storage.getUploadById(uploadId);
@@ -336,28 +337,15 @@ export async function processUploadForPatterns(
 
     if (result.success && result.pattern) {
       // Update upload with extracted pattern
-      await storage.updateUploadWithPattern(
-        uploadId,
-        result.pattern.id,
-        processingDurationMs
-      );
+      await storage.updateUploadWithPattern(uploadId, result.pattern.id, processingDurationMs);
     } else {
       // Update upload as failed
-      await storage.updateUploadStatus(
-        uploadId,
-        'failed',
-        result.error
-      );
+      await storage.updateUploadStatus(uploadId, 'failed', result.error);
     }
 
     return result;
-
   } catch (error) {
-    await storage.updateUploadStatus(
-      uploadId,
-      'failed',
-      error instanceof Error ? error.message : 'Processing failed'
-    );
+    await storage.updateUploadStatus(uploadId, 'failed', error instanceof Error ? error.message : 'Processing failed');
 
     return {
       success: false,
@@ -388,7 +376,7 @@ export async function getRelevantPatterns(params: {
   }
 
   // Score patterns based on relevance
-  const scoredPatterns = allPatterns.map(pattern => {
+  const scoredPatterns = allPatterns.map((pattern) => {
     let score = 0;
 
     // Category match (highest weight)
@@ -414,7 +402,7 @@ export async function getRelevantPatterns(params: {
       'top-5': 12,
       'top-10': 8,
       'top-25': 4,
-      'unverified': 0,
+      unverified: 0,
     };
     score += tierScores[pattern.engagementTier || 'unverified'] || 0;
 
@@ -437,7 +425,7 @@ export async function getRelevantPatterns(params: {
   return scoredPatterns
     .sort((a, b) => b.score - a.score)
     .slice(0, maxPatterns)
-    .map(sp => sp.pattern);
+    .map((sp) => sp.pattern);
 }
 
 /**
@@ -454,23 +442,31 @@ export function formatPatternsForPrompt(patterns: LearnedAdPattern[]): string {
     if (pattern.layoutPattern) {
       const lp = pattern.layoutPattern;
       const hierarchy = lp.visualHierarchy?.join(' -> ') || 'balanced';
-      parts.push(`  Layout: ${lp.structure || 'flexible'} structure, ${hierarchy} flow, ${lp.whitespaceUsage || 'balanced'} whitespace`);
+      parts.push(
+        `  Layout: ${lp.structure || 'flexible'} structure, ${hierarchy} flow, ${lp.whitespaceUsage || 'balanced'} whitespace`,
+      );
     }
 
     if (pattern.colorPsychology) {
       const cp = pattern.colorPsychology;
-      parts.push(`  Color Mood: ${cp.dominantMood || 'neutral'}, ${cp.colorScheme || 'balanced'} scheme, ${cp.contrastLevel || 'medium'} contrast`);
+      parts.push(
+        `  Color Mood: ${cp.dominantMood || 'neutral'}, ${cp.colorScheme || 'balanced'} scheme, ${cp.contrastLevel || 'medium'} contrast`,
+      );
     }
 
     if (pattern.hookPatterns) {
       const hp = pattern.hookPatterns;
-      parts.push(`  Hook: ${hp.hookType || 'benefit'} opening, ${hp.headlineFormula || 'direct'} headline, ${hp.ctaStyle || 'direct'} CTA`);
+      parts.push(
+        `  Hook: ${hp.hookType || 'benefit'} opening, ${hp.headlineFormula || 'direct'} headline, ${hp.ctaStyle || 'direct'} CTA`,
+      );
     }
 
     if (pattern.visualElements) {
       const ve = pattern.visualElements;
       const humanText = ve.humanPresence ? 'with people' : 'no people';
-      parts.push(`  Visuals: ${ve.imageStyle || 'photography'} style, ${ve.productVisibility || 'prominent'} product focus, ${humanText}`);
+      parts.push(
+        `  Visuals: ${ve.imageStyle || 'photography'} style, ${ve.productVisibility || 'prominent'} product focus, ${humanText}`,
+      );
     }
 
     if (pattern.engagementTier && pattern.engagementTier !== 'unverified') {

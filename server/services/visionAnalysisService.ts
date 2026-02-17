@@ -13,15 +13,15 @@
  * 2. Database cache (persistent, via productAnalyses table) - checked second
  */
 
-import crypto from "crypto";
-import { generateContentWithRetry } from "../lib/geminiClient";
-import { storage } from "../storage";
-import type { ProductAnalysis, InsertProductAnalysis, Product } from "@shared/schema";
-import { createRateLimitMap } from "../utils/memoryManager";
-import { sanitizeOutputString } from "../lib/promptSanitizer";
-import { safeParseLLMResponse, visionAnalysisSchema } from "../validation/llmResponseSchemas";
-import { logger } from "../lib/logger";
-import { getCacheService, CACHE_TTL } from "../lib/cacheService";
+import crypto from 'crypto';
+import { generateContentWithRetry } from '../lib/geminiClient';
+import { storage } from '../storage';
+import type { ProductAnalysis, InsertProductAnalysis, Product } from '@shared/schema';
+import { createRateLimitMap } from '../utils/memoryManager';
+import { sanitizeOutputString } from '../lib/promptSanitizer';
+import { safeParseLLMResponse, visionAnalysisSchema } from '../validation/llmResponseSchemas';
+import { logger } from '../lib/logger';
+import { getCacheService, CACHE_TTL } from '../lib/cacheService';
 
 // Rate limiting: max 10 analysis requests per minute per user
 // Now bounded with automatic cleanup of expired entries (max 10000 users)
@@ -32,8 +32,7 @@ const RATE_LIMIT_MAX_REQUESTS = 10;
 // Vision analysis model - Gemini 3 Pro is #1 on LMArena Vision leaderboard (Dec 2025)
 // Superior spatial reasoning and OCR for understanding product details
 // MODEL RECENCY RULE: Before changing any model ID, verify today's date and confirm the model is current within the last 3-4 weeks.
-const VISION_MODEL = process.env.GEMINI_VISION_MODEL || "gemini-3-pro-preview";
-
+const VISION_MODEL = process.env['GEMINI_VISION_MODEL'] || 'gemini-3-pro-preview';
 
 export interface VisionAnalysisResult {
   category: string;
@@ -48,7 +47,7 @@ export interface VisionAnalysisResult {
 }
 
 export interface VisionAnalysisError {
-  code: "RATE_LIMITED" | "INVALID_IMAGE" | "API_ERROR" | "CACHE_ERROR";
+  code: 'RATE_LIMITED' | 'INVALID_IMAGE' | 'API_ERROR' | 'CACHE_ERROR';
   message: string;
 }
 
@@ -86,7 +85,7 @@ export function generateImageFingerprint(product: Product): string {
  * Generate an MD5 hash of the image URL for cache key
  */
 function generateImageHash(imageUrl: string): string {
-  return crypto.createHash("md5").update(imageUrl).digest("hex");
+  return crypto.createHash('md5').update(imageUrl).digest('hex');
 }
 
 /**
@@ -100,15 +99,15 @@ function generateImageHash(imageUrl: string): string {
 export async function analyzeProductImage(
   product: Product,
   userId: string,
-  forceRefresh = false
+  forceRefresh = false,
 ): Promise<{ success: true; analysis: VisionAnalysisResult } | { success: false; error: VisionAnalysisError }> {
   // Check rate limit
   if (!checkRateLimit(userId)) {
     return {
       success: false,
       error: {
-        code: "RATE_LIMITED",
-        message: "Too many analysis requests. Please wait before trying again.",
+        code: 'RATE_LIMITED',
+        message: 'Too many analysis requests. Please wait before trying again.',
       },
     };
   }
@@ -124,7 +123,10 @@ export async function analyzeProductImage(
     try {
       const redisCached = await cache.get<VisionAnalysisResult>(cacheKey);
       if (redisCached) {
-        logger.info({ module: 'VisionAnalysis', productId: product.id, cached: true, layer: 'redis' }, 'Redis cache hit');
+        logger.info(
+          { module: 'VisionAnalysis', productId: product.id, cached: true, layer: 'redis' },
+          'Redis cache hit',
+        );
         return { success: true, analysis: redisCached };
       }
     } catch (err) {
@@ -136,13 +138,13 @@ export async function analyzeProductImage(
       const dbCached = await storage.getProductAnalysisByProductId(product.id);
       if (dbCached && dbCached.imageFingerprint === fingerprint) {
         const analysis: VisionAnalysisResult = {
-          category: dbCached.category || "unknown",
-          subcategory: dbCached.subcategory || "unknown",
+          category: dbCached.category || 'unknown',
+          subcategory: dbCached.subcategory || 'unknown',
           materials: dbCached.materials || [],
           colors: dbCached.colors || [],
-          style: dbCached.style || "unknown",
-          usageContext: dbCached.usageContext || "",
-          targetDemographic: dbCached.targetDemographic || "",
+          style: dbCached.style || 'unknown',
+          usageContext: dbCached.usageContext || '',
+          targetDemographic: dbCached.targetDemographic || '',
           detectedText: dbCached.detectedText,
           confidence: dbCached.confidence || 80,
         };
@@ -150,7 +152,10 @@ export async function analyzeProductImage(
         // Backfill Redis cache for future fast access
         try {
           await cache.set(cacheKey, analysis, CACHE_TTL.VISION_ANALYSIS);
-          logger.info({ module: 'VisionAnalysis', productId: product.id, cached: true, layer: 'database' }, 'Database cache hit, backfilled Redis');
+          logger.info(
+            { module: 'VisionAnalysis', productId: product.id, cached: true, layer: 'database' },
+            'Database cache hit, backfilled Redis',
+          );
         } catch (backfillErr) {
           logger.warn({ module: 'VisionAnalysis', backfillErr }, 'Failed to backfill Redis cache');
         }
@@ -165,7 +170,10 @@ export async function analyzeProductImage(
 
   // Layer 3: Perform fresh analysis via Gemini Vision
   try {
-    logger.info({ module: 'VisionAnalysis', productId: product.id, cached: false }, 'Cache miss, performing fresh analysis');
+    logger.info(
+      { module: 'VisionAnalysis', productId: product.id, cached: false },
+      'Cache miss, performing fresh analysis',
+    );
     const analysisResult = await callGeminiVision(product.cloudinaryUrl, product.name);
 
     // Save to both cache layers
@@ -205,8 +213,8 @@ export async function analyzeProductImage(
     return {
       success: false,
       error: {
-        code: "API_ERROR",
-        message: err instanceof Error ? err.message : "Vision analysis failed",
+        code: 'API_ERROR',
+        message: err instanceof Error ? err.message : 'Vision analysis failed',
       },
     };
   }
@@ -233,43 +241,46 @@ Extract the following information in JSON format:
 
 Be accurate and specific. If uncertain about a field, use your best judgment but lower the confidence score.`;
 
-  const response = await generateContentWithRetry({
-    model: VISION_MODEL,
-    contents: [
-      {
-        role: "user",
-        parts: [
-          { text: prompt },
-          {
-            inlineData: {
-              mimeType: "image/jpeg",
-              data: await fetchImageAsBase64(imageUrl),
+  const response = await generateContentWithRetry(
+    {
+      model: VISION_MODEL,
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { text: prompt },
+            {
+              inlineData: {
+                mimeType: 'image/jpeg',
+                data: await fetchImageAsBase64(imageUrl),
+              },
             },
-          },
-        ],
+          ],
+        },
+      ],
+      config: {
+        temperature: 0.3, // Lower temperature for more consistent results
       },
-    ],
-    config: {
-      temperature: 0.3, // Lower temperature for more consistent results
     },
-  }, { operation: 'vision_analysis' });
+    { operation: 'vision_analysis' },
+  );
 
-  const text = response.text || "";
+  const text = response.text || '';
 
   // Extract and validate JSON response with Zod schema
   const parsed = safeParseLLMResponse(text, visionAnalysisSchema, 'vision_analysis');
 
   // Sanitize output strings
   return {
-    category: sanitizeOutputString(parsed.category) || "unknown",
-    subcategory: sanitizeOutputString(parsed.subcategory) || "unknown",
+    category: sanitizeOutputString(parsed.category) || 'unknown',
+    subcategory: sanitizeOutputString(parsed.subcategory) || 'unknown',
     materials: Array.isArray(parsed.materials) ? parsed.materials.map(sanitizeOutputString).filter(Boolean) : [],
     colors: Array.isArray(parsed.colors) ? parsed.colors.map(sanitizeOutputString).filter(Boolean) : [],
-    style: sanitizeOutputString(parsed.style) || "unknown",
-    usageContext: sanitizeOutputString(parsed.usageContext) || "",
-    targetDemographic: sanitizeOutputString(parsed.targetDemographic) || "",
+    style: sanitizeOutputString(parsed.style) || 'unknown',
+    usageContext: sanitizeOutputString(parsed.usageContext) || '',
+    targetDemographic: sanitizeOutputString(parsed.targetDemographic) || '',
     detectedText: parsed.detectedText ? sanitizeOutputString(parsed.detectedText) : null,
-    confidence: typeof parsed.confidence === "number" ? Math.min(100, Math.max(0, parsed.confidence)) : 80,
+    confidence: typeof parsed.confidence === 'number' ? Math.min(100, Math.max(0, parsed.confidence)) : 80,
   };
 }
 
@@ -280,8 +291,8 @@ function normalizeImageUrl(url: string, width: number = 800): string {
   if (!url) return url;
 
   // Handle Shopify URLs with {width} placeholder (e.g., nextdaysteel.co.uk)
-  if (url.includes("{width}")) {
-    return url.replace("{width}", String(width));
+  if (url.includes('{width}')) {
+    return url.replace('{width}', String(width));
   }
 
   return url;
@@ -299,7 +310,7 @@ async function fetchImageAsBase64(url: string): Promise<string> {
     throw new Error(`Failed to fetch image: ${response.status} for URL: ${normalizedUrl}`);
   }
   const buffer = await response.arrayBuffer();
-  return Buffer.from(buffer).toString("base64");
+  return Buffer.from(buffer).toString('base64');
 }
 
 /**
@@ -360,21 +371,21 @@ export interface SimpleImageAnalysis {
 export async function analyzeArbitraryImage(
   imageBuffer: Buffer,
   mimeType: string,
-  userId: string
+  userId: string,
 ): Promise<{ success: true; analysis: SimpleImageAnalysis } | { success: false; error: VisionAnalysisError }> {
   // Check rate limit
   if (!checkRateLimit(userId)) {
     return {
       success: false,
       error: {
-        code: "RATE_LIMITED",
-        message: "Too many analysis requests. Please wait before trying again.",
+        code: 'RATE_LIMITED',
+        message: 'Too many analysis requests. Please wait before trying again.',
       },
     };
   }
 
   try {
-    const base64Data = imageBuffer.toString("base64");
+    const base64Data = imageBuffer.toString('base64');
 
     const prompt = `Analyze this image and provide a concise description for advertising context.
 
@@ -395,33 +406,36 @@ Example good descriptions:
 - "Construction site showing freshly poured concrete foundation with rebar reinforcement visible"
 - "Professional flooring installation with oak hardwood planks being laid in herringbone pattern"`;
 
-    const response = await generateContentWithRetry({
-      model: VISION_MODEL,
-      contents: [
-        {
-          role: "user",
-          parts: [
-            { text: prompt },
-            {
-              inlineData: {
-                mimeType: mimeType || "image/jpeg",
-                data: base64Data,
+    const response = await generateContentWithRetry(
+      {
+        model: VISION_MODEL,
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              { text: prompt },
+              {
+                inlineData: {
+                  mimeType: mimeType || 'image/jpeg',
+                  data: base64Data,
+                },
               },
-            },
-          ],
+            ],
+          },
+        ],
+        config: {
+          temperature: 0.3,
         },
-      ],
-      config: {
-        temperature: 0.3,
       },
-    }, { operation: 'vision_analysis' });
+      { operation: 'vision_analysis' },
+    );
 
-    const text = response.text || "";
+    const text = response.text || '';
 
     // Extract JSON from response
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      throw new Error("Failed to parse image analysis response");
+      throw new Error('Failed to parse image analysis response');
     }
 
     const parsed = JSON.parse(jsonMatch[0]);
@@ -429,8 +443,8 @@ Example good descriptions:
     return {
       success: true,
       analysis: {
-        description: sanitizeString(parsed.description) || "Unable to describe image",
-        confidence: typeof parsed.confidence === "number" ? Math.min(100, Math.max(0, parsed.confidence)) : 70,
+        description: sanitizeString(parsed.description) || 'Unable to describe image',
+        confidence: typeof parsed.confidence === 'number' ? Math.min(100, Math.max(0, parsed.confidence)) : 70,
       },
     };
   } catch (err) {
@@ -438,8 +452,8 @@ Example good descriptions:
     return {
       success: false,
       error: {
-        code: "API_ERROR",
-        message: err instanceof Error ? err.message : "Image analysis failed",
+        code: 'API_ERROR',
+        message: err instanceof Error ? err.message : 'Image analysis failed',
       },
     };
   }

@@ -18,31 +18,26 @@
  * - Confidence levels reflect data quality (HIGH/MEDIUM/LOW)
  */
 
-import { logger } from "../../lib/logger";
-import { storage } from "../../storage";
-import { visionAnalysisService } from "../visionAnalysisService";
-import type { Product } from "@shared/schema";
-
-import {
-  discoverSources,
-  fetchSourceContentsBatch,
-} from "./sourceDiscovery";
+import { logger } from '../../lib/logger';
+import { storage } from '../../storage';
+import { visionAnalysisService } from '../visionAnalysisService';
+import { discoverSources, fetchSourceContentsBatch } from './sourceDiscovery';
 import {
   extractFromSourcesBatch,
   aggregateExtractions,
   extractFeatures,
   extractBenefits,
   extractTags,
-} from "./dataExtraction";
-import { verifySourcesBatch, getPassedSources } from "./gate1-sourceMatch";
-import { verifyExtractionsBatch, getVerifiedFields } from "./gate2-extraction";
-import { verifyDatabaseWrite, buildWritePayload } from "./gate3-dbWrite";
+} from './dataExtraction';
+import { verifySourcesBatch, getPassedSources } from './gate1-sourceMatch';
+import { verifyExtractionsBatch, getVerifiedFields } from './gate2-extraction';
+import { verifyDatabaseWrite, buildWritePayload } from './gate3-dbWrite';
 import {
   verifyCrossSourceTruth,
   resolveConflicts,
   filterContradictedClaims,
   calculateGate4Confidence,
-} from "./gate4-crossSource";
+} from './gate4-crossSource';
 
 import {
   DEFAULT_PIPELINE_CONFIG,
@@ -59,7 +54,7 @@ import {
   type AggregatedData,
   type ConfidenceLevel,
   type PipelineConfig,
-} from "./types";
+} from './types';
 
 // ============================================
 // MAIN PIPELINE FUNCTION
@@ -68,9 +63,7 @@ import {
 /**
  * Run the full enrichment pipeline for a product
  */
-export async function runEnrichmentPipeline(
-  input: EnrichmentInput
-): Promise<EnrichmentOutput> {
+export async function runEnrichmentPipeline(input: EnrichmentInput): Promise<EnrichmentOutput> {
   const startTime = Date.now();
   const config: PipelineConfig = {
     ...DEFAULT_PIPELINE_CONFIG,
@@ -90,8 +83,8 @@ export async function runEnrichmentPipeline(
       return {
         success: false,
         productId: input.productId,
-        report: createEmptyReport(input.productId, "Unknown"),
-        error: "Product not found",
+        report: createEmptyReport(input.productId, 'Unknown'),
+        error: 'Product not found',
       };
     }
 
@@ -105,8 +98,8 @@ export async function runEnrichmentPipeline(
     try {
       const analysisResult = await visionAnalysisService.analyzeProductImage(
         product,
-        "system", // Use system user for background processing
-        input.forceRefresh
+        'system', // Use system user for background processing
+        input.forceRefresh,
       );
 
       if (analysisResult.success) {
@@ -119,22 +112,23 @@ export async function runEnrichmentPipeline(
           usageContext: analysisResult.analysis.usageContext,
           targetDemographic: analysisResult.analysis.targetDemographic,
           confidence: analysisResult.analysis.confidence,
-          detectedText: analysisResult.analysis.detectedText
-            ? [analysisResult.analysis.detectedText]
-            : [],
+          detectedText: analysisResult.analysis.detectedText ? [analysisResult.analysis.detectedText] : [],
         };
       } else {
         // Vision failed - use minimal data
         visionResult = createMinimalVisionResult(product.name);
-        adaptations.push("Vision analysis failed - using minimal data");
+        adaptations.push('Vision analysis failed - using minimal data');
       }
     } catch (err) {
       logger.error({ module: 'Pipeline', err }, 'Vision analysis error');
       visionResult = createMinimalVisionResult(product.name);
-      adaptations.push("Vision analysis error - using minimal data");
+      adaptations.push('Vision analysis error - using minimal data');
     }
 
-    logger.info({ module: 'Pipeline', category: visionResult.category, subcategory: visionResult.subcategory }, 'Vision analysis complete');
+    logger.info(
+      { module: 'Pipeline', category: visionResult.category, subcategory: visionResult.subcategory },
+      'Vision analysis complete',
+    );
 
     // ============================================
     // 3. SOURCE DISCOVERY (Step 2)
@@ -150,7 +144,7 @@ export async function runEnrichmentPipeline(
     } catch (err) {
       logger.error({ module: 'Pipeline', err }, 'Source discovery error');
       sources = [];
-      adaptations.push("Source discovery failed - using vision-only data");
+      adaptations.push('Source discovery failed - using vision-only data');
     }
 
     // ============================================
@@ -161,24 +155,22 @@ export async function runEnrichmentPipeline(
 
     if (sources.length > 0) {
       try {
-        gate1Results = await verifySourcesBatch(
-          visionResult,
-          sources,
-          product.cloudinaryUrl,
-          config
-        );
+        gate1Results = await verifySourcesBatch(visionResult, sources, product.cloudinaryUrl, config);
 
         verifiedSources = getPassedSources(sources, gate1Results);
-        logger.info({ module: 'Pipeline', verified: verifiedSources.length, total: sources.length }, 'Gate 1 verification complete');
+        logger.info(
+          { module: 'Pipeline', verified: verifiedSources.length, total: sources.length },
+          'Gate 1 verification complete',
+        );
 
         if (verifiedSources.length === 0) {
-          adaptations.push("No sources passed Gate 1 - using vision-only data");
+          adaptations.push('No sources passed Gate 1 - using vision-only data');
         } else if (verifiedSources.length < sources.length) {
           adaptations.push(`${sources.length - verifiedSources.length} sources failed Gate 1`);
         }
       } catch (err) {
         logger.error({ module: 'Pipeline', err }, 'Gate 1 error');
-        adaptations.push("Gate 1 error - using vision-only data");
+        adaptations.push('Gate 1 error - using vision-only data');
       }
     }
 
@@ -193,7 +185,7 @@ export async function runEnrichmentPipeline(
         logger.info({ module: 'Pipeline', extractionCount: extractions.length }, 'Extracted data from sources');
       } catch (err) {
         logger.error({ module: 'Pipeline', err }, 'Extraction error');
-        adaptations.push("Data extraction failed - using vision-only data");
+        adaptations.push('Data extraction failed - using vision-only data');
       }
     }
 
@@ -206,35 +198,39 @@ export async function runEnrichmentPipeline(
       try {
         gate2Results = await verifyExtractionsBatch(
           extractions.map((extracted, i) => ({
-            source: verifiedSources[i],
+            source: verifiedSources[i]!,
             extracted,
           })),
-          config
+          config,
         );
 
         // Filter to only verified extractions
         const verifiedExtractions: ExtractedData[] = [];
         for (let i = 0; i < extractions.length; i++) {
-          if (gate2Results[i].passed) {
-            verifiedExtractions.push(extractions[i]);
+          const g2 = gate2Results[i];
+          const ext = extractions[i];
+          if (!g2 || !ext) continue;
+          if (g2.passed) {
+            verifiedExtractions.push(ext);
           } else {
             // Use only verified fields
-            verifiedExtractions.push(
-              getVerifiedFields(extractions[i], gate2Results[i])
-            );
+            verifiedExtractions.push(getVerifiedFields(ext, g2));
           }
         }
         extractions = verifiedExtractions;
 
-        const passedCount = gate2Results.filter(r => r.passed).length;
-        logger.info({ module: 'Pipeline', passed: passedCount, total: gate2Results.length }, 'Gate 2 verification complete');
+        const passedCount = gate2Results.filter((r) => r.passed).length;
+        logger.info(
+          { module: 'Pipeline', passed: passedCount, total: gate2Results.length },
+          'Gate 2 verification complete',
+        );
 
         if (passedCount < gate2Results.length) {
-          adaptations.push("Some extractions had unverified fields - using only verified data");
+          adaptations.push('Some extractions had unverified fields - using only verified data');
         }
       } catch (err) {
         logger.error({ module: 'Pipeline', err }, 'Gate 2 error');
-        adaptations.push("Gate 2 error - using unverified extractions");
+        adaptations.push('Gate 2 error - using unverified extractions');
       }
     }
 
@@ -255,7 +251,7 @@ export async function runEnrichmentPipeline(
     } else {
       // Fall back to vision-only aggregation
       aggregated = createVisionOnlyAggregation(visionResult, product.name);
-      adaptations.push("Using vision-only aggregation (no external sources)");
+      adaptations.push('Using vision-only aggregation (no external sources)');
     }
 
     // ============================================
@@ -265,7 +261,7 @@ export async function runEnrichmentPipeline(
       passed: true,
       conflicts: [],
       truthChecks: [],
-      overallVerdict: "ALL_VERIFIED",
+      overallVerdict: 'ALL_VERIFIED',
     };
 
     if (extractions.length > 1) {
@@ -275,19 +271,16 @@ export async function runEnrichmentPipeline(
 
         // Handle conflicts
         if (gate4Result.conflicts.length > 0) {
-          const { resolved, unresolved } = resolveConflicts(
-            gate4Result.conflicts,
-            extractions
-          );
+          const { resolved, unresolved } = resolveConflicts(gate4Result.conflicts, extractions);
 
           // Apply resolved values
           for (const [field, value] of Object.entries(resolved)) {
-            if (field.startsWith("specifications.")) {
-              const specKey = field.replace("specifications.", "");
+            if (field.startsWith('specifications.')) {
+              const specKey = field.replace('specifications.', '');
               aggregated.specifications[specKey] = value;
-            } else if (field === "productName") {
+            } else if (field === 'productName') {
               aggregated.productName = value;
-            } else if (field === "description") {
+            } else if (field === 'description') {
               aggregated.description = value;
             }
           }
@@ -298,20 +291,15 @@ export async function runEnrichmentPipeline(
         }
 
         // Handle contradicted claims
-        const contradictedCount = gate4Result.truthChecks.filter(
-          t => t.verdict === "CONTRADICTED"
-        ).length;
+        const contradictedCount = gate4Result.truthChecks.filter((t) => t.verdict === 'CONTRADICTED').length;
 
         if (contradictedCount > 0) {
-          aggregated.description = filterContradictedClaims(
-            aggregated.description,
-            gate4Result.truthChecks
-          );
+          aggregated.description = filterContradictedClaims(aggregated.description, gate4Result.truthChecks);
           adaptations.push(`${contradictedCount} contradicted claims removed from description`);
         }
       } catch (err) {
         logger.error({ module: 'Pipeline', err }, 'Gate 4 error');
-        adaptations.push("Gate 4 error - using aggregated data as-is");
+        adaptations.push('Gate 4 error - using aggregated data as-is');
       }
     }
 
@@ -329,7 +317,7 @@ export async function runEnrichmentPipeline(
       features,
       benefits,
       tags,
-      aggregated.sources
+      aggregated.sources,
     );
 
     // ============================================
@@ -342,7 +330,9 @@ export async function runEnrichmentPipeline(
       logger.info({ module: 'Pipeline', passed: gate3Result.passed }, 'Gate 3 database write verification');
 
       if (!gate3Result.passed) {
-        adaptations.push(`Database write had ${gate3Result.discrepancies.length} discrepancies after ${gate3Result.retryCount} retries`);
+        adaptations.push(
+          `Database write had ${gate3Result.discrepancies.length} discrepancies after ${gate3Result.retryCount} retries`,
+        );
       }
     } catch (err) {
       logger.error({ module: 'Pipeline', err }, 'Gate 3 error');
@@ -351,15 +341,15 @@ export async function runEnrichmentPipeline(
         productId: input.productId,
         discrepancies: [
           {
-            field: "_error",
-            intended: "write data",
+            field: '_error',
+            intended: 'write data',
             actual: err instanceof Error ? err.message : String(err),
-            issue: "CORRUPTED",
+            issue: 'CORRUPTED',
           },
         ],
         retryCount: 0,
       };
-      adaptations.push("Database write failed");
+      adaptations.push('Database write failed');
     }
 
     // ============================================
@@ -370,7 +360,7 @@ export async function runEnrichmentPipeline(
       gate1Results,
       gate2Results,
       gate4Result,
-      extractions.length
+      extractions.length,
     );
 
     // ============================================
@@ -380,7 +370,7 @@ export async function runEnrichmentPipeline(
       productId: input.productId,
       productName: product.name,
       timestamp: new Date(),
-      sources: verifiedSources.map(s => ({
+      sources: verifiedSources.map((s) => ({
         url: s.url,
         sourceType: s.sourceType,
         trustLevel: s.trustLevel,
@@ -399,8 +389,8 @@ export async function runEnrichmentPipeline(
       },
       overallConfidence,
       allGatesPassed:
-        gate1Results.every(r => r.passed) &&
-        gate2Results.every(r => r.passed) &&
+        gate1Results.every((r) => r.passed) &&
+        gate2Results.every((r) => r.passed) &&
         gate3Result.passed &&
         gate4Result.passed,
       adaptations,
@@ -420,7 +410,7 @@ export async function runEnrichmentPipeline(
     return {
       success: false,
       productId: input.productId,
-      report: createEmptyReport(input.productId, "Unknown"),
+      report: createEmptyReport(input.productId, 'Unknown'),
       error: err instanceof Error ? err.message : String(err),
     };
   }
@@ -436,12 +426,12 @@ export async function runEnrichmentPipeline(
 export async function runEnrichmentBatch(
   productIds: string[],
   config?: Partial<PipelineConfig>,
-  onProgress?: (completed: number, total: number, current: string) => void
+  onProgress?: (completed: number, total: number, current: string) => void,
 ): Promise<Map<string, EnrichmentOutput>> {
   const results = new Map<string, EnrichmentOutput>();
 
   for (let i = 0; i < productIds.length; i++) {
-    const productId = productIds[i];
+    const productId = productIds[i]!;
 
     if (onProgress) {
       onProgress(i, productIds.length, productId);
@@ -450,7 +440,7 @@ export async function runEnrichmentBatch(
     try {
       const result = await runEnrichmentPipeline({
         productId,
-        config,
+        ...(config !== undefined && { config }),
       });
       results.set(productId, result);
     } catch (err) {
@@ -458,7 +448,7 @@ export async function runEnrichmentBatch(
       results.set(productId, {
         success: false,
         productId,
-        report: createEmptyReport(productId, "Unknown"),
+        report: createEmptyReport(productId, 'Unknown'),
         error: err instanceof Error ? err.message : String(err),
       });
     }
@@ -475,17 +465,14 @@ export async function runEnrichmentBatch(
  */
 export async function runEnrichmentForPendingProducts(
   config?: Partial<PipelineConfig>,
-  onProgress?: (completed: number, total: number, current: string) => void
+  onProgress?: (completed: number, total: number, current: string) => void,
 ): Promise<Map<string, EnrichmentOutput>> {
   // Get all products
   const allProducts = await storage.getProducts();
 
   // Filter to those needing enrichment
-  const needsEnrichment = allProducts.filter(p =>
-    !p.description ||
-    p.description.length < 20 ||
-    p.enrichmentStatus === "pending" ||
-    !p.enrichmentStatus
+  const needsEnrichment = allProducts.filter(
+    (p) => !p.description || p.description.length < 20 || p.enrichmentStatus === 'pending' || !p.enrichmentStatus,
   );
 
   logger.info({ module: 'Pipeline', count: needsEnrichment.length }, 'Found products needing enrichment');
@@ -495,9 +482,9 @@ export async function runEnrichmentForPendingProducts(
   }
 
   return runEnrichmentBatch(
-    needsEnrichment.map(p => p.id),
+    needsEnrichment.map((p) => p.id),
     config,
-    onProgress
+    onProgress,
   );
 }
 
@@ -508,15 +495,15 @@ export async function runEnrichmentForPendingProducts(
 /**
  * Create minimal vision result when analysis fails
  */
-function createMinimalVisionResult(productName: string): VisionResult {
+function createMinimalVisionResult(_productName: string): VisionResult {
   return {
-    category: "unknown",
-    subcategory: "unknown",
+    category: 'unknown',
+    subcategory: 'unknown',
     materials: [],
     colors: [],
-    style: "unknown",
-    usageContext: "",
-    targetDemographic: "",
+    style: 'unknown',
+    usageContext: '',
+    targetDemographic: '',
     confidence: 0,
     detectedText: [],
   };
@@ -525,23 +512,20 @@ function createMinimalVisionResult(productName: string): VisionResult {
 /**
  * Create aggregation from vision only (no external sources)
  */
-function createVisionOnlyAggregation(
-  vision: VisionResult,
-  productName: string
-): AggregatedData {
+function createVisionOnlyAggregation(vision: VisionResult, productName: string): AggregatedData {
   const description = vision.usageContext
     ? `${productName} - ${vision.category} ${vision.subcategory}. ${vision.usageContext}.`
     : `${productName} - ${vision.category} ${vision.subcategory}.`;
 
   const specifications: Record<string, string> = {};
   if (vision.materials.length > 0) {
-    specifications.material = vision.materials.join(", ");
+    specifications['material'] = vision.materials.join(', ');
   }
   if (vision.colors.length > 0) {
-    specifications.color = vision.colors.join(", ");
+    specifications['color'] = vision.colors.join(', ');
   }
-  if (vision.style !== "unknown") {
-    specifications.style = vision.style;
+  if (vision.style !== 'unknown') {
+    specifications['style'] = vision.style;
   }
 
   return {
@@ -575,16 +559,16 @@ function createEmptyReport(productId: string, productName: string): EnrichmentRe
         passed: false,
         conflicts: [],
         truthChecks: [],
-        overallVerdict: "CONFLICTS_FOUND",
+        overallVerdict: 'CONFLICTS_FOUND',
       },
     },
     dataWritten: {
-      description: "",
+      description: '',
       specifications: {},
       scenariosCreated: 0,
       relationshipsCreated: 0,
     },
-    overallConfidence: "LOW",
+    overallConfidence: 'LOW',
     allGatesPassed: false,
     adaptations: [],
   };
@@ -598,53 +582,39 @@ function calculateOverallConfidence(
   gate1Results: Gate1Result[],
   gate2Results: Gate2Result[],
   gate4Result: Gate4Result,
-  extractionCount: number
+  extractionCount: number,
 ): ConfidenceLevel {
   // No external sources - LOW confidence
   if (extractionCount === 0) {
-    return vision.confidence >= 70 ? "LOW" : "LOW";
+    return vision.confidence >= 70 ? 'LOW' : 'LOW';
   }
 
   // Calculate component confidences
-  const gate1PassRate = gate1Results.length > 0
-    ? gate1Results.filter(r => r.passed).length / gate1Results.length
-    : 0;
+  const gate1PassRate = gate1Results.length > 0 ? gate1Results.filter((r) => r.passed).length / gate1Results.length : 0;
 
-  const gate2PassRate = gate2Results.length > 0
-    ? gate2Results.filter(r => r.passed).length / gate2Results.length
-    : 0;
+  const gate2PassRate = gate2Results.length > 0 ? gate2Results.filter((r) => r.passed).length / gate2Results.length : 0;
 
   const gate4Confidence = calculateGate4Confidence(gate4Result);
 
   // Multiple agreeing sources with all gates passed = HIGH
-  if (
-    extractionCount >= 3 &&
-    gate1PassRate >= 0.8 &&
-    gate2PassRate >= 0.8 &&
-    gate4Confidence === "HIGH"
-  ) {
-    return "HIGH";
+  if (extractionCount >= 3 && gate1PassRate >= 0.8 && gate2PassRate >= 0.8 && gate4Confidence === 'HIGH') {
+    return 'HIGH';
   }
 
   // At least 2 sources with most gates passed = MEDIUM
-  if (
-    extractionCount >= 2 &&
-    gate1PassRate >= 0.5 &&
-    gate2PassRate >= 0.5 &&
-    gate4Confidence !== "LOW"
-  ) {
-    return "MEDIUM";
+  if (extractionCount >= 2 && gate1PassRate >= 0.5 && gate2PassRate >= 0.5 && gate4Confidence !== 'LOW') {
+    return 'MEDIUM';
   }
 
   // Single source or many gate failures = LOW
-  return "LOW";
+  return 'LOW';
 }
 
 /**
  * Simple delay utility
  */
 function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // Export pipeline module

@@ -53,10 +53,8 @@ export function extractUsageMetadataTokens(usage?: UsageMetadataLike | null): {
 } {
   if (!usage) return { inputTokens: null, outputTokens: null };
 
-  const inputTokens =
-    typeof usage.promptTokenCount === 'number' ? usage.promptTokenCount : null;
-  const outputTokens =
-    typeof usage.candidatesTokenCount === 'number' ? usage.candidatesTokenCount : null;
+  const inputTokens = typeof usage.promptTokenCount === 'number' ? usage.promptTokenCount : null;
+  const outputTokens = typeof usage.candidatesTokenCount === 'number' ? usage.candidatesTokenCount : null;
 
   return { inputTokens, outputTokens };
 }
@@ -73,34 +71,24 @@ export function estimateGenerationCostMicros(inputs: GenerationCostInputs): Cost
   // Prefer real token counts from usageMetadata when available.
   const fromUsage = extractUsageMetadataTokens(inputs.usageMetadata ?? null);
   const inputTokens =
-    typeof inputs.inputTokens === 'number'
-      ? clampInt(inputs.inputTokens, 0, 10_000_000)
-      : fromUsage.inputTokens;
+    typeof inputs.inputTokens === 'number' ? clampInt(inputs.inputTokens, 0, 10_000_000) : fromUsage.inputTokens;
   const outputTokens =
-    typeof inputs.outputTokens === 'number'
-      ? clampInt(inputs.outputTokens, 0, 10_000_000)
-      : fromUsage.outputTokens;
+    typeof inputs.outputTokens === 'number' ? clampInt(inputs.outputTokens, 0, 10_000_000) : fromUsage.outputTokens;
 
   // Deterministic formula:
   // - Base image cost by resolution
   // - Slight uplift for multi-image compositions (more complex scenes)
   // - Optional token cost if PRICING_TOKEN_USD_PER_1K is provided (otherwise 0)
-  const multiImageFactor =
-    inputImagesCount <= 1 ? 1 : 1 + Math.min(0.25, 0.05 * (inputImagesCount - 1));
+  const multiImageFactor = inputImagesCount <= 1 ? 1 : 1 + Math.min(0.25, 0.05 * (inputImagesCount - 1));
 
-  const tokenUsdPer1k = process.env.PRICING_TOKEN_USD_PER_1K
-    ? Number(process.env.PRICING_TOKEN_USD_PER_1K)
-    : 0;
+  const tokenUsdPer1k = process.env['PRICING_TOKEN_USD_PER_1K'] ? Number(process.env['PRICING_TOKEN_USD_PER_1K']) : 0;
 
   const inferredInputTokens = inputTokens ?? Math.round(promptChars / 4);
   const inferredOutputTokens = outputTokens ?? 0;
 
-  const tokenUsd =
-    tokenUsdPer1k > 0
-      ? ((inferredInputTokens + inferredOutputTokens) / 1000) * tokenUsdPer1k
-      : 0;
+  const tokenUsd = tokenUsdPer1k > 0 ? ((inferredInputTokens + inferredOutputTokens) / 1000) * tokenUsdPer1k : 0;
 
-  const estimatedCostMicros = usdToMicros((baselineUsd * multiImageFactor) + tokenUsd);
+  const estimatedCostMicros = usdToMicros(baselineUsd * multiImageFactor + tokenUsd);
 
   const estimationSource: CostEstimationSource =
     inputTokens !== null || outputTokens !== null ? 'usageMetadata' : 'pricingFormula';
@@ -173,15 +161,20 @@ export function computeAdaptiveEstimate(params: {
   });
 
   const sumW = weighted.reduce((s, x) => s + x.w, 0);
-  const sumWV = weighted.reduce((s, x) => s + (x.w * x.v), 0);
-  const sumW2 = weighted.reduce((s, x) => s + (x.w * x.w), 0);
+  const sumWV = weighted.reduce((s, x) => s + x.w * x.v, 0);
+  const sumW2 = weighted.reduce((s, x) => s + x.w * x.w, 0);
   const effectiveSampleCount = sumW2 > 0 ? (sumW * sumW) / sumW2 : weighted.length;
 
-  const posteriorMean =
-    (priorStrength * priorMeanMicros + sumWV) / (priorStrength + sumW);
+  const posteriorMean = (priorStrength * priorMeanMicros + sumWV) / (priorStrength + sumW);
 
-  const p50 = weightedQuantile(weighted.map(x => ({ v: x.v, w: x.w })), 0.5);
-  const p90 = weightedQuantile(weighted.map(x => ({ v: x.v, w: x.w })), 0.9);
+  const p50 = weightedQuantile(
+    weighted.map((x) => ({ v: x.v, w: x.w })),
+    0.5,
+  );
+  const p90 = weightedQuantile(
+    weighted.map((x) => ({ v: x.v, w: x.w })),
+    0.9,
+  );
 
   const lastUpdatedAtMs = weighted.reduce((m, x) => Math.max(m, x.createdAt), 0);
 

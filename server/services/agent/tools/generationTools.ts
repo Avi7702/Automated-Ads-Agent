@@ -90,8 +90,8 @@ export function createGenerationTools(storage: IStorage) {
         recipeProducts.push({
           id: String(product.id),
           name: product.name ?? id,
-          category: product.category ?? undefined,
-          description: product.description?.slice(0, 500) ?? undefined,
+          ...(product.category != null && { category: product.category }),
+          ...(product.description != null && { description: product.description.slice(0, 500) }),
           imageUrls: product.cloudinaryUrl ? [product.cloudinaryUrl] : [],
         });
 

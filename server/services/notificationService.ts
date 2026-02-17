@@ -154,12 +154,12 @@ export async function notify(payload: AlertPayload): Promise<void> {
 
   const promises: Promise<boolean>[] = [];
 
-  const slackUrl = process.env.SLACK_ALERTS_WEBHOOK_URL;
+  const slackUrl = process.env['SLACK_ALERTS_WEBHOOK_URL'];
   if (slackUrl) {
     promises.push(sendSlack(slackUrl, payload));
   }
 
-  const discordUrl = process.env.DISCORD_ALERTS_WEBHOOK_URL;
+  const discordUrl = process.env['DISCORD_ALERTS_WEBHOOK_URL'];
   if (discordUrl) {
     promises.push(sendDiscord(discordUrl, payload));
   }

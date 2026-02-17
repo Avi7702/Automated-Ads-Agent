@@ -16,17 +16,11 @@ import type { Product, BrandProfile } from '@shared/schema';
 import type { GenerateCopyInput } from '../validation/schemas';
 
 // Try to import genaiImage for direct image generation
-let genaiImage: any = null;
 try {
-  const { genAI } = require('../lib/gemini');
-  genaiImage = genAI;
-} catch (e) {
+  require('../lib/gemini');
+} catch {
   logger.warn({ module: 'ContentPlannerService' }, 'Image generation not available - gemini client not loaded');
 }
-
-// LLM Configuration
-const COPY_MODEL = process.env.GEMINI_REASONING_MODEL || 'gemini-3-pro-preview';
-const IMAGE_MODEL = 'gemini-3-pro-image-preview';
 
 // Types
 export interface GenerateCompletePostRequest {
@@ -69,18 +63,21 @@ export interface GenerateCompletePostResponse {
  * Generate a complete post with copy and image in parallel
  */
 export async function generateCompletePost(
-  request: GenerateCompletePostRequest
+  request: GenerateCompletePostRequest,
 ): Promise<GenerateCompletePostResponse> {
   const startTime = Date.now();
   const { userId, templateId, productIds, topic, platform } = request;
 
-  logger.info({
-    module: 'ContentPlannerService',
-    userId,
-    templateId,
-    productCount: productIds.length,
-    platform
-  }, 'Starting complete post generation');
+  logger.info(
+    {
+      module: 'ContentPlannerService',
+      userId,
+      templateId,
+      productCount: productIds.length,
+      platform,
+    },
+    'Starting complete post generation',
+  );
 
   // 1. Fetch template
   const template = getTemplateById(templateId);
@@ -89,7 +86,7 @@ export async function generateCompletePost(
       success: false,
       copyError: `Template not found: ${templateId}`,
       imageError: `Template not found: ${templateId}`,
-      template: { id: templateId, title: 'Unknown', category: 'unknown' }
+      template: { id: templateId, title: 'Unknown', category: 'unknown' },
     };
   }
 
@@ -99,7 +96,7 @@ export async function generateCompletePost(
       success: false,
       copyError: `Template "${template.title}" requires at least one product`,
       imageError: `Template "${template.title}" requires at least one product`,
-      template: { id: template.id, title: template.title, category: template.category }
+      template: { id: template.id, title: template.title, category: template.category },
     };
   }
 
@@ -108,14 +105,14 @@ export async function generateCompletePost(
       success: false,
       copyError: `Template "${template.title}" requires at least ${template.minProducts} products`,
       imageError: `Template "${template.title}" requires at least ${template.minProducts} products`,
-      template: { id: template.id, title: template.title, category: template.category }
+      template: { id: template.id, title: template.title, category: template.category },
     };
   }
 
   // 3. Fetch brand profile and products
   const [brandProfile, products] = await Promise.all([
     storage.getBrandProfileByUserId(userId),
-    productIds.length > 0 ? fetchProducts(userId, productIds) : Promise.resolve([])
+    productIds.length > 0 ? fetchProducts(userId, productIds) : Promise.resolve([]),
   ]);
 
   // 4. Generate copy and image in parallel
@@ -123,13 +120,13 @@ export async function generateCompletePost(
     generateCopy(template, products, brandProfile ?? null, topic, platform),
     template.imageRequirement !== 'none'
       ? generateImage(template, products, brandProfile ?? null, topic, platform)
-      : Promise.resolve(null)
+      : Promise.resolve(null),
   ]);
 
   // 5. Process results with partial success handling
   const response: GenerateCompletePostResponse = {
     success: false,
-    template: { id: template.id, title: template.title, category: template.category }
+    template: { id: template.id, title: template.title, category: template.category },
   };
 
   // Handle copy result
@@ -138,10 +135,13 @@ export async function generateCompletePost(
     response.success = true;
   } else if (copyResult.status === 'rejected') {
     response.copyError = copyResult.reason?.message || 'Copy generation failed';
-    logger.error({
-      module: 'ContentPlannerService',
-      error: copyResult.reason
-    }, 'Copy generation failed');
+    logger.error(
+      {
+        module: 'ContentPlannerService',
+        error: copyResult.reason,
+      },
+      'Copy generation failed',
+    );
   }
 
   // Handle image result
@@ -150,23 +150,29 @@ export async function generateCompletePost(
     response.success = true;
   } else if (imageResult.status === 'rejected') {
     response.imageError = imageResult.reason?.message || 'Image generation failed';
-    logger.error({
-      module: 'ContentPlannerService',
-      error: imageResult.reason
-    }, 'Image generation failed');
+    logger.error(
+      {
+        module: 'ContentPlannerService',
+        error: imageResult.reason,
+      },
+      'Image generation failed',
+    );
   } else if (template.imageRequirement === 'none') {
     // Not an error - template doesn't need images
     response.success = response.copy !== undefined;
   }
 
   const duration = Date.now() - startTime;
-  logger.info({
-    module: 'ContentPlannerService',
-    duration,
-    hasCopy: !!response.copy,
-    hasImage: !!response.image,
-    success: response.success
-  }, 'Complete post generation finished');
+  logger.info(
+    {
+      module: 'ContentPlannerService',
+      duration,
+      hasCopy: !!response.copy,
+      hasImage: !!response.image,
+      success: response.success,
+    },
+    'Complete post generation finished',
+  );
 
   return response;
 }
@@ -184,10 +190,13 @@ async function fetchProducts(_userId: string, productIds: string[]): Promise<Pro
         products.push(product);
       }
     } catch (e) {
-      logger.warn({
-        module: 'ContentPlannerService',
-        productId
-      }, 'Failed to fetch product');
+      logger.warn(
+        {
+          module: 'ContentPlannerService',
+          productId,
+        },
+        'Failed to fetch product',
+      );
     }
   }
 
@@ -202,7 +211,7 @@ async function generateCopy(
   products: Product[],
   brandProfile: BrandProfile | null,
   topic: string | undefined,
-  platform: string
+  platform: string,
 ): Promise<CopyResult> {
   // Map template category to campaign objective
   const campaignObjective = mapCategoryToObjective(template.category);
@@ -211,25 +220,27 @@ async function generateCopy(
   const framework = inferFramework(template);
 
   // Build product context
-  const productName = products.length > 0
-    ? products.map(p => p.name).join(' + ')
-    : topic || template.title;
+  const productName = products.length > 0 ? products.map((p) => p.name).join(' + ') : topic || template.title;
 
   const productDescription = buildProductDescription(products, template, topic);
 
   // Build target audience from brand profile
-  const targetAudience = brandProfile ? {
-    demographics: String(brandProfile.targetAudience || 'B2B professionals'),
-    psychographics: 'Decision-makers seeking reliable solutions',
-    painPoints: ['Quality concerns', 'Delivery timing', 'Cost optimization'] as string[]
-  } : undefined;
+  const targetAudience = brandProfile
+    ? {
+        demographics: String(brandProfile.targetAudience || 'B2B professionals'),
+        psychographics: 'Decision-makers seeking reliable solutions',
+        painPoints: ['Quality concerns', 'Delivery timing', 'Cost optimization'] as string[],
+      }
+    : undefined;
 
   // Build brand voice from profile
-  const brandVoice = brandProfile?.voice ? {
-    principles: (brandProfile.voice as any).principles || ['Professional', 'Trustworthy'],
-    wordsToAvoid: (brandProfile.voice as any).wordsToAvoid || [],
-    wordsToUse: (brandProfile.voice as any).wordsToUse || []
-  } : undefined;
+  const brandVoice = brandProfile?.voice
+    ? {
+        principles: (brandProfile.voice as any).principles || ['Professional', 'Trustworthy'],
+        wordsToAvoid: (brandProfile.voice as any).wordsToAvoid || [],
+        wordsToUse: (brandProfile.voice as any).wordsToUse || [],
+      }
+    : undefined;
 
   // Add template hooks to the request
   const input: GenerateCopyInput = {
@@ -243,16 +254,17 @@ async function generateCopy(
     industry: brandProfile?.industry || 'Construction/Steel',
     targetAudience,
     brandVoice,
-    variations: 1
+    variations: 1,
   };
 
   const results = await copywritingService.generateCopy(input);
 
-  if (results.length === 0) {
+  const first = results[0];
+  if (!first) {
     throw new Error('No copy variations generated');
   }
 
-  return results[0];
+  return first;
 }
 
 /**
@@ -264,7 +276,7 @@ async function generateImage(
   products: Product[],
   brandProfile: BrandProfile | null,
   topic: string | undefined,
-  platform: string
+  platform: string,
 ): Promise<ImageResult> {
   // Build an image prompt based on template and products
   const platformFormats: Record<string, string> = {
@@ -272,16 +284,22 @@ async function generateImage(
     linkedin: '1200x627 landscape format',
     facebook: '1080x1080 square format',
     twitter: '1200x675 landscape format',
-    tiktok: '1080x1920 portrait format'
+    tiktok: '1080x1920 portrait format',
   };
 
-  const prompt = buildImagePrompt(template, products, brandProfile, topic, platformFormats[platform]);
+  const prompt = buildImagePrompt(
+    template,
+    products,
+    brandProfile,
+    topic,
+    platformFormats[platform] ?? '1080x1080 square format',
+  );
 
   // For now, return the prompt - the frontend will call /api/transform
   // In the future, we could call the image generation directly here
   return {
     imageUrl: '', // Will be filled by /api/transform call
-    prompt
+    prompt,
   };
 }
 
@@ -293,7 +311,7 @@ function buildImagePrompt(
   products: Product[],
   brandProfile: BrandProfile | null,
   topic: string | undefined,
-  format: string
+  format: string,
 ): string {
   let prompt = `Generate a professional marketing image for a ${template.category} social media post.
 
@@ -306,7 +324,7 @@ FORMAT: ${format}
   if (products.length > 0) {
     prompt += `
 PRODUCTS TO FEATURE:
-${products.map(p => `- ${p.name}: ${p.description || 'Product image'}`).join('\n')}
+${products.map((p) => `- ${p.name}: ${p.description || 'Product image'}`).join('\n')}
 
 IMPORTANT: The product(s) must be the hero/focus of the image.
 `;
@@ -340,19 +358,17 @@ STYLE REQUIREMENTS:
 /**
  * Build product description from products and template
  */
-function buildProductDescription(
-  products: Product[],
-  template: ContentTemplate,
-  topic: string | undefined
-): string {
+function buildProductDescription(products: Product[], template: ContentTemplate, topic: string | undefined): string {
   let description = '';
 
   if (products.length > 0) {
-    description = products.map(p => {
-      let desc = p.name;
-      if (p.description) desc += `: ${p.description}`;
-      return desc;
-    }).join('\n\n');
+    description = products
+      .map((p) => {
+        let desc = p.name;
+        if (p.description) desc += `: ${p.description}`;
+        return desc;
+      })
+      .join('\n\n');
   }
 
   if (topic) {
@@ -375,7 +391,7 @@ function mapCategoryToObjective(category: string): string {
     industry_insights: 'awareness',
     customer_success: 'conversion',
     company_updates: 'engagement',
-    engagement: 'engagement'
+    engagement: 'engagement',
   };
   return mapping[category] || 'awareness';
 }
@@ -404,5 +420,5 @@ function inferFramework(template: ContentTemplate): string {
 
 // Export as service object for clean imports
 export const contentPlannerService = {
-  generateCompletePost
+  generateCompletePost,
 };
