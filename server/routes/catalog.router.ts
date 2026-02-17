@@ -151,7 +151,7 @@ export const catalogRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const { fileId } = req.params;
+        const fileId = String(req.params['fileId']);
         const { deleteReferenceFile } = await import('../services/fileSearchService');
 
         await deleteReferenceFile(fileId);

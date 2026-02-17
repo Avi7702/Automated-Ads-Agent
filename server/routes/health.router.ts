@@ -21,7 +21,7 @@ interface RedisHealthStatus {
 }
 
 async function checkRedisHealth(): Promise<RedisHealthStatus> {
-  if (!process.env.REDIS_URL) {
+  if (!process.env['REDIS_URL']) {
     return { connected: false };
   }
   try {
@@ -52,57 +52,63 @@ export const healthRouter: RouterFactory = (ctx: RouterContext): Router => {
    * GET /ready - Readiness probe
    * Returns 503 if shutting down or database is unavailable
    */
-  router.get('/ready', asyncHandler(async (_req, res) => {
-    if (isServerShuttingDown()) {
-      return res.status(503).json({
-        status: 'shutting_down',
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    let dbOk = false;
-    try {
-      await pool.query('SELECT 1');
-      dbOk = true;
-    } catch (err) {
-      logger.error({ module: 'Health', err }, 'Database readiness check failed');
-    }
-
-    const redisHealth = await checkRedisHealth();
-
-    const allReady = dbOk;
-    const statusCode = allReady ? 200 : 503;
-
-    res.status(statusCode).json({
-      status: allReady ? 'ready' : 'not_ready',
-      timestamp: new Date().toISOString(),
-      checks: {
-        database: dbOk ? 'ok' : 'failed',
-        redis: redisHealth,
+  router.get(
+    '/ready',
+    asyncHandler(async (_req, res) => {
+      if (isServerShuttingDown()) {
+        return res.status(503).json({
+          status: 'shutting_down',
+          timestamp: new Date().toISOString(),
+        });
       }
-    });
-  }));
+
+      let dbOk = false;
+      try {
+        await pool.query('SELECT 1');
+        dbOk = true;
+      } catch (err) {
+        logger.error({ module: 'Health', err }, 'Database readiness check failed');
+      }
+
+      const redisHealth = await checkRedisHealth();
+
+      const allReady = dbOk;
+      const statusCode = allReady ? 200 : 503;
+
+      res.status(statusCode).json({
+        status: allReady ? 'ready' : 'not_ready',
+        timestamp: new Date().toISOString(),
+        checks: {
+          database: dbOk ? 'ok' : 'failed',
+          redis: redisHealth,
+        },
+      });
+    }),
+  );
 
   /**
    * GET / - General health status
    * Legacy endpoint for backwards compatibility, now includes Redis and Gemini status
    */
-  router.get('/', asyncHandler(async (_req, res) => {
-    const redisHealth = await checkRedisHealth();
-    let geminiHealth: GeminiHealth = { status: 'unknown', failureRate: 0, lastSuccess: null };
-    try {
-      geminiHealth = await getGeminiHealthStatus();
-    } catch {
-      // If health check fails, return unknown status
-    }
+  router.get(
+    '/',
+    asyncHandler(async (_req, res) => {
+      const redisHealth = await checkRedisHealth();
+      let geminiHealth: GeminiHealth = { status: 'unknown', failureRate: 0, lastSuccess: null };
+      try {
+        geminiHealth = await getGeminiHealthStatus();
+      } catch {
+        // If health check fails, return unknown status
+      }
 
-    res.json({
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      redis: redisHealth,
-      gemini: geminiHealth,
-    });
-  }));
+      res.json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        redis: redisHealth,
+        gemini: geminiHealth,
+      });
+    }),
+  );
 
   return router;
 };
@@ -113,5 +119,5 @@ export const healthRouterModule: RouterModule = {
   description: 'Health check endpoints for monitoring',
   endpointCount: 3,
   requiresAuth: false,
-  tags: ['infrastructure', 'monitoring']
+  tags: ['infrastructure', 'monitoring'],
 };

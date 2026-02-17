@@ -38,19 +38,12 @@ export const approvalQueueRouter: RouterFactory = (ctx: RouterContext): Router =
       try {
         const validated = (req as any).validatedQuery ?? {};
 
-        const filters: {
-          status?: string;
-          priority?: string;
-          dateFrom?: Date;
-          dateTo?: Date;
-        } = {};
-
-        if (validated.status) filters.status = validated.status;
-        if (validated.priority) filters.priority = validated.priority;
-        if (validated.dateFrom) filters.dateFrom = new Date(validated.dateFrom);
-        if (validated.dateTo) filters.dateTo = new Date(validated.dateTo);
-
-        const items = await approvalQueueService.getQueueForUser(req.user!.id, filters);
+        const items = await approvalQueueService.getQueueForUser(req.user!.id, {
+          ...(validated.status ? { status: validated.status } : {}),
+          ...(validated.priority ? { priority: validated.priority } : {}),
+          ...(validated.dateFrom ? { dateFrom: new Date(validated.dateFrom) } : {}),
+          ...(validated.dateTo ? { dateTo: new Date(validated.dateTo) } : {}),
+        });
 
         // Calculate stats
         const stats = {
@@ -100,7 +93,7 @@ export const approvalQueueRouter: RouterFactory = (ctx: RouterContext): Router =
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const { id } = req.params;
+        const id = String(req.params['id']);
         const item = await storage.getApprovalQueue(id);
 
         if (!item) {
@@ -123,7 +116,7 @@ export const approvalQueueRouter: RouterFactory = (ctx: RouterContext): Router =
           data: item,
         });
       } catch (error) {
-        logger.error({ module: 'ApprovalQueue', err: error, id: req.params.id }, 'Failed to fetch queue item');
+        logger.error({ module: 'ApprovalQueue', err: error, id: req.params['id'] }, 'Failed to fetch queue item');
         res.status(500).json({
           success: false,
           error: 'Failed to fetch queue item',
@@ -140,7 +133,7 @@ export const approvalQueueRouter: RouterFactory = (ctx: RouterContext): Router =
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const { id } = req.params;
+        const id = String(req.params['id']);
         const { notes } = req.body;
 
         // Verify ownership
@@ -168,7 +161,7 @@ export const approvalQueueRouter: RouterFactory = (ctx: RouterContext): Router =
           message: 'Content approved',
         });
       } catch (error) {
-        logger.error({ module: 'ApprovalQueue', err: error, id: req.params.id }, 'Failed to approve content');
+        logger.error({ module: 'ApprovalQueue', err: error, id: req.params['id'] }, 'Failed to approve content');
         res.status(500).json({
           success: false,
           error: 'Failed to approve content',
@@ -185,7 +178,7 @@ export const approvalQueueRouter: RouterFactory = (ctx: RouterContext): Router =
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const { id } = req.params;
+        const id = String(req.params['id']);
         const { reason } = req.body;
 
         if (!reason || typeof reason !== 'string') {
@@ -220,7 +213,7 @@ export const approvalQueueRouter: RouterFactory = (ctx: RouterContext): Router =
           message: 'Content rejected',
         });
       } catch (error) {
-        logger.error({ module: 'ApprovalQueue', err: error, id: req.params.id }, 'Failed to reject content');
+        logger.error({ module: 'ApprovalQueue', err: error, id: req.params['id'] }, 'Failed to reject content');
         res.status(500).json({
           success: false,
           error: 'Failed to reject content',
@@ -237,7 +230,7 @@ export const approvalQueueRouter: RouterFactory = (ctx: RouterContext): Router =
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const { id } = req.params;
+        const id = String(req.params['id']);
         const { notes } = req.body;
 
         if (!notes || typeof notes !== 'string') {
@@ -272,7 +265,7 @@ export const approvalQueueRouter: RouterFactory = (ctx: RouterContext): Router =
           message: 'Revision requested',
         });
       } catch (error) {
-        logger.error({ module: 'ApprovalQueue', err: error, id: req.params.id }, 'Failed to request revision');
+        logger.error({ module: 'ApprovalQueue', err: error, id: req.params['id'] }, 'Failed to request revision');
         res.status(500).json({
           success: false,
           error: 'Failed to request revision',
@@ -349,7 +342,7 @@ export const approvalQueueRouter: RouterFactory = (ctx: RouterContext): Router =
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const { id } = req.params;
+        const id = String(req.params['id']);
 
         // Verify ownership
         const item = await storage.getApprovalQueue(id);
@@ -374,7 +367,7 @@ export const approvalQueueRouter: RouterFactory = (ctx: RouterContext): Router =
           data: auditLog,
         });
       } catch (error) {
-        logger.error({ module: 'ApprovalQueue', err: error, id: req.params.id }, 'Failed to fetch audit log');
+        logger.error({ module: 'ApprovalQueue', err: error, id: req.params['id'] }, 'Failed to fetch audit log');
         res.status(500).json({
           success: false,
           error: 'Failed to fetch audit log',
