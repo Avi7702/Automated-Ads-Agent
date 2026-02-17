@@ -16,7 +16,9 @@ interface HeaderProps {
     | 'settings'
     | 'content-planner'
     | 'social-accounts'
-    | 'approval-queue';
+    | 'approval-queue'
+    | 'templates'
+    | undefined;
 }
 
 export function Header({ currentPage }: HeaderProps) {

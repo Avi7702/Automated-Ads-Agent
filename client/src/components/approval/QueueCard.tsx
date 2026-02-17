@@ -1,12 +1,11 @@
-import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { PriorityBadge } from "./PriorityBadge";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { PriorityBadge } from './PriorityBadge';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import {
   CheckCircle2,
-  XCircle,
   Eye,
   Trash2,
   Clock,
@@ -15,9 +14,9 @@ import {
   Linkedin,
   Facebook,
   Instagram,
-  Twitter
-} from "lucide-react";
-import { motion } from "framer-motion";
+  Twitter,
+} from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface QueueCardProps {
   item: {
@@ -57,7 +56,7 @@ export function QueueCard({
   onDelete,
   isSelected = false,
   onSelect,
-  index = 0
+  index = 0,
 }: QueueCardProps) {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -68,7 +67,7 @@ export function QueueCard({
 
   const confidenceScore = item.aiConfidenceScore || 0;
   const scheduledDate = item.scheduledFor ? new Date(item.scheduledFor) : null;
-  const isScheduledSoon = scheduledDate && (scheduledDate.getTime() - Date.now()) < 3 * 60 * 60 * 1000; // 3 hours
+  const isScheduledSoon = scheduledDate && scheduledDate.getTime() - Date.now() < 3 * 60 * 60 * 1000; // 3 hours
 
   const getConfidenceColor = (score: number) => {
     if (score >= 90) return 'text-green-600 dark:text-green-400';
@@ -84,10 +83,7 @@ export function QueueCard({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <Card className={cn(
-        "transition-all hover:shadow-md",
-        isSelected && "ring-2 ring-primary"
-      )}>
+      <Card className={cn('transition-all hover:shadow-md', isSelected && 'ring-2 ring-primary')}>
         <CardContent className="p-4">
           <div className="flex gap-3">
             {/* Checkbox */}
@@ -134,29 +130,26 @@ export function QueueCard({
                 {/* Confidence Score */}
                 {confidenceScore > 0 && (
                   <div className="flex items-center gap-1 text-xs">
-                    <TrendingUp className={cn("w-3 h-3", getConfidenceColor(confidenceScore))} />
-                    <span className={cn("font-medium", getConfidenceColor(confidenceScore))}>
-                      {confidenceScore}%
-                    </span>
+                    <TrendingUp className={cn('w-3 h-3', getConfidenceColor(confidenceScore))} />
+                    <span className={cn('font-medium', getConfidenceColor(confidenceScore))}>{confidenceScore}%</span>
                   </div>
                 )}
               </div>
 
               {/* Caption snippet */}
-              <p className="text-sm text-foreground line-clamp-2">
-                {truncatedCaption}
-              </p>
+              <p className="text-sm text-foreground line-clamp-2">{truncatedCaption}</p>
 
               {/* Scheduled time (if urgent) */}
               {scheduledDate && isScheduledSoon && (
                 <div className="flex items-center gap-1 text-xs text-orange-600 dark:text-orange-400">
                   <Clock className="w-3 h-3" />
                   <span>
-                    Scheduled: {scheduledDate.toLocaleString('en-US', {
+                    Scheduled:{' '}
+                    {scheduledDate.toLocaleString('en-US', {
                       month: 'short',
                       day: 'numeric',
                       hour: 'numeric',
-                      minute: '2-digit'
+                      minute: '2-digit',
                     })}
                   </span>
                 </div>
@@ -173,12 +166,7 @@ export function QueueCard({
                   <CheckCircle2 className="w-3 h-3 mr-1" />
                   Quick Approve
                 </Button>
-                <Button
-                  onClick={onReview}
-                  size="sm"
-                  variant="outline"
-                  className="flex-1"
-                >
+                <Button onClick={onReview} size="sm" variant="outline" className="flex-1">
                   <Eye className="w-3 h-3 mr-1" />
                   Review
                 </Button>

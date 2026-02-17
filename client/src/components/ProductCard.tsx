@@ -11,15 +11,15 @@ export type EnrichmentStatus = 'pending' | 'draft' | 'verified' | 'complete';
 
 export interface ProductCardProps {
   product: Product;
-  onClick?: (product: Product) => void;
-  onDelete?: (product: Product) => void;
-  onEnrich?: (product: Product) => void;
-  isLoading?: boolean;
-  className?: string;
+  onClick?: ((product: Product) => void) | undefined;
+  onDelete?: ((product: Product) => void) | undefined;
+  onEnrich?: ((product: Product) => void) | undefined;
+  isLoading?: boolean | undefined;
+  className?: string | undefined;
 }
 
 // Skeleton loader for ProductCard
-export function ProductCardSkeleton({ className }: { className?: string }) {
+export function ProductCardSkeleton({ className }: { className?: string | undefined }) {
   return (
     <Card className={cn('overflow-hidden', className)}>
       <Skeleton className="aspect-square w-full" />

@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { useStudioContext, StudioAction, SelectedSuggestion } from '@/context/StudioContext';
+import { useStudioContext, SelectedSuggestion } from '@/context/StudioContext';
 import type { Product, AdSceneTemplate } from '@shared/schema';
 import type { GenerationRecipe, GenerationMode, IdeaBankMode } from '@shared/types/ideaBank';
 import type { AnalyzedUpload } from '@/types/analyzedUpload';
@@ -31,14 +31,12 @@ export function useStudioState() {
   // Count of selected/confirmed uploads
   const confirmedUploads = useMemo(
     () => state.tempUploads.filter((u) => u.status === 'confirmed'),
-    [state.tempUploads]
+    [state.tempUploads],
   );
 
   // All image URLs for generation
   const allImageUrls = useMemo(() => {
-    const productUrls = state.selectedProducts
-      .map((p) => p.cloudinaryUrl)
-      .filter(Boolean) as string[];
+    const productUrls = state.selectedProducts.map((p) => p.cloudinaryUrl).filter(Boolean) as string[];
     const uploadUrls = confirmedUploads.map((u) => u.previewUrl);
     return [...productUrls, ...uploadUrls];
   }, [state.selectedProducts, confirmedUploads]);
@@ -56,7 +54,7 @@ export function useStudioState() {
     (image: string, id: string) => {
       dispatch({ type: 'SET_GENERATED_IMAGE', image, id });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const clearGeneration = useCallback(() => {
@@ -68,14 +66,14 @@ export function useStudioState() {
     (product: Product) => {
       dispatch({ type: 'SELECT_PRODUCT', product });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const deselectProduct = useCallback(
     (productId: string) => {
       dispatch({ type: 'DESELECT_PRODUCT', productId });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const clearProducts = useCallback(() => {
@@ -86,7 +84,7 @@ export function useStudioState() {
     (products: Product[]) => {
       dispatch({ type: 'SET_PRODUCTS', products });
     },
-    [dispatch]
+    [dispatch],
   );
 
   // Template Actions
@@ -94,7 +92,7 @@ export function useStudioState() {
     (template: AdSceneTemplate) => {
       dispatch({ type: 'SELECT_TEMPLATE', template });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const clearTemplate = useCallback(() => {
@@ -106,28 +104,28 @@ export function useStudioState() {
     (uploads: AnalyzedUpload[]) => {
       dispatch({ type: 'SET_UPLOADS', uploads });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const addUpload = useCallback(
     (upload: AnalyzedUpload) => {
       dispatch({ type: 'ADD_UPLOAD', upload });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const updateUpload = useCallback(
     (id: string, updates: Partial<AnalyzedUpload>) => {
       dispatch({ type: 'UPDATE_UPLOAD', id, updates });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const removeUpload = useCallback(
     (id: string) => {
       dispatch({ type: 'REMOVE_UPLOAD', id });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const clearUploads = useCallback(() => {
@@ -139,14 +137,14 @@ export function useStudioState() {
     (prompt: string) => {
       dispatch({ type: 'SET_PROMPT', prompt });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const setSuggestion = useCallback(
     (suggestion: SelectedSuggestion | null) => {
       dispatch({ type: 'SET_SUGGESTION', suggestion });
     },
-    [dispatch]
+    [dispatch],
   );
 
   // Output Settings Actions
@@ -154,21 +152,21 @@ export function useStudioState() {
     (platform: string) => {
       dispatch({ type: 'SET_PLATFORM', platform });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const setAspectRatio = useCallback(
     (aspectRatio: string) => {
       dispatch({ type: 'SET_ASPECT_RATIO', aspectRatio });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const setResolution = useCallback(
     (resolution: '1K' | '2K' | '4K') => {
       dispatch({ type: 'SET_RESOLUTION', resolution });
     },
-    [dispatch]
+    [dispatch],
   );
 
   // Mode Actions
@@ -176,28 +174,28 @@ export function useStudioState() {
     (mode: IdeaBankMode) => {
       dispatch({ type: 'SET_IDEABANK_MODE', mode });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const setGenerationMode = useCallback(
     (mode: GenerationMode) => {
       dispatch({ type: 'SET_GENERATION_MODE', mode });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const setTemplateForMode = useCallback(
     (template: AdSceneTemplate | null) => {
       dispatch({ type: 'SET_TEMPLATE_FOR_MODE', template });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const setRecipe = useCallback(
     (recipe: GenerationRecipe | undefined) => {
       dispatch({ type: 'SET_RECIPE', recipe });
     },
-    [dispatch]
+    [dispatch],
   );
 
   // Copy Actions
@@ -205,7 +203,7 @@ export function useStudioState() {
     (copy: string) => {
       dispatch({ type: 'SET_GENERATED_COPY', copy });
     },
-    [dispatch]
+    [dispatch],
   );
 
   // Reset
@@ -218,7 +216,7 @@ export function useStudioState() {
     (payload: Parameters<typeof dispatch>[0] extends { type: 'LOAD_FROM_HISTORY'; payload: infer P } ? P : never) => {
       dispatch({ type: 'LOAD_FROM_HISTORY', payload });
     },
-    [dispatch]
+    [dispatch],
   );
 
   return {
