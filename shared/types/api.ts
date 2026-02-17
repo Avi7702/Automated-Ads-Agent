@@ -18,7 +18,7 @@ export interface GenerationDTO {
   id: string;
   userId: string | null;
   prompt: string;
-  imageUrl: string;  // Transformed from generatedImagePath (adds / prefix for local paths)
+  imageUrl: string; // Transformed from generatedImagePath (adds / prefix for local paths)
   originalImagePaths: string[];
   resolution: string | null;
   model: string | null;
@@ -29,5 +29,8 @@ export interface GenerationDTO {
   editCount: number | null;
   createdAt: Date;
   updatedAt: Date;
-  canEdit?: boolean;  // Derived from conversationHistory existence
+  canEdit?: boolean; // Derived from conversationHistory existence
+  productIds: string[] | null;
+  templateId: string | null;
+  generationMode: string | null;
 }

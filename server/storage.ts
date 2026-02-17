@@ -110,6 +110,7 @@ export interface IStorage {
   getProducts(limit?: number, offset?: number): Promise<Product[]>;
   getProductById(id: string): Promise<Product | undefined>;
   deleteProduct(id: string): Promise<void>;
+  deleteProductsByIds(ids: string[]): Promise<void>;
 
   // Prompt Template CRUD operations
   savePromptTemplate(template: InsertPromptTemplate): Promise<PromptTemplate>;
@@ -123,6 +124,7 @@ export interface IStorage {
   getUserById(id: string): Promise<User | undefined>;
   deleteUser(id: string): Promise<void>;
   updateUserBrandVoice(userId: string, brandVoice: any): Promise<User>;
+  updatePasswordHash(userId: string, newHash: string): Promise<void>;
 
   // AdCopy CRUD operations
   saveAdCopy(copy: InsertAdCopy): Promise<AdCopy>;
@@ -357,6 +359,7 @@ export interface IStorage {
   // Approval Queue CRUD operations
   createApprovalQueue(data: InsertApprovalQueue): Promise<ApprovalQueue>;
   getApprovalQueue(id: string): Promise<ApprovalQueue | null>;
+  getApprovalQueueByIds(ids: string[]): Promise<ApprovalQueue[]>;
   getApprovalQueueForUser(
     userId: string,
     filters?: {
@@ -465,6 +468,9 @@ export class DbStorage implements IStorage {
   async deleteProduct(id: string): Promise<void> {
     return productRepo.deleteProduct(id);
   }
+  async deleteProductsByIds(ids: string[]): Promise<void> {
+    return productRepo.deleteProductsByIds(ids);
+  }
   async updateProduct(id: string, updates: Partial<InsertProduct>): Promise<Product> {
     return productRepo.updateProduct(id, updates);
   }
@@ -511,6 +517,9 @@ export class DbStorage implements IStorage {
   }
   async updateUserBrandVoice(userId: string, brandVoice: any): Promise<User> {
     return userRepo.updateUserBrandVoice(userId, brandVoice);
+  }
+  async updatePasswordHash(userId: string, newHash: string): Promise<void> {
+    return userRepo.updatePasswordHash(userId, newHash);
   }
 
   // ============================================
@@ -945,6 +954,9 @@ export class DbStorage implements IStorage {
   }
   async getApprovalQueue(id: string): Promise<ApprovalQueue | null> {
     return approvalRepo.getApprovalQueue(id);
+  }
+  async getApprovalQueueByIds(ids: string[]): Promise<ApprovalQueue[]> {
+    return approvalRepo.getApprovalQueueByIds(ids);
   }
   async getApprovalQueueForUser(
     userId: string,

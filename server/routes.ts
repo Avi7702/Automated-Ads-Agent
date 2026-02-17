@@ -14,6 +14,7 @@ import { buildRouterContext } from './routes/utils/buildContext';
 import { deleteFile } from './fileStorage';
 import { insertInstallationScenarioSchema, insertProductRelationshipSchema } from '@shared/schema';
 import { validate } from './middleware/validate';
+import { forgotPasswordSchema, resetPasswordSchema, verifyEmailSchema } from './validation/schemas';
 import express from 'express';
 import path from 'path';
 import { v2 as cloudinary } from 'cloudinary';
@@ -259,10 +260,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Serve static files from attached_assets directory
-  app.use('/attached_assets', express.static(path.join(process.cwd(), 'attached_assets')));
+  app.use(
+    '/attached_assets',
+    express.static(path.join(process.cwd(), 'attached_assets'), {
+      maxAge: '1h',
+      setHeaders: (res) => {
+        res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
+      },
+    }),
+  );
 
   // Serve uploaded images (generations)
-  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+  app.use(
+    '/uploads',
+    express.static(path.join(process.cwd(), 'uploads'), {
+      maxAge: '1h',
+      setHeaders: (res) => {
+        res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
+      },
+    }),
+  );
 
   // Apply rate limiting to API routes
   // Exempt lightweight read-only endpoints from the global rate limiter
@@ -352,7 +369,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
-      const valid = await authService.comparePassword(password, user.passwordHash || user.password);
+      const { valid, newHash } = await authService.comparePasswordWithRehash(
+        password,
+        user.passwordHash || user.password,
+      );
       if (!valid) {
         await authService.recordFailedLogin(email);
         telemetry.trackAuth({
@@ -361,6 +381,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           reason: 'invalid_password',
         });
         return res.status(401).json({ error: 'Invalid credentials' });
+      }
+
+      // Transparent bcrypt→argon2 migration: update hash if re-hashed
+      if (newHash) {
+        await storage.updatePasswordHash(user.id, newHash);
       }
 
       await authService.clearFailedLogins(email);
@@ -432,12 +457,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/auth/forgot-password — Request password reset
-  app.post('/api/auth/forgot-password', async (req, res) => {
+  app.post('/api/auth/forgot-password', validate(forgotPasswordSchema), async (req, res) => {
     try {
       const { email } = req.body;
-      if (!email) {
-        return res.status(400).json({ error: 'Email is required' });
-      }
       // Always return success to avoid email enumeration
       logger.info({ module: 'Auth', action: 'forgot-password', email }, 'Password reset requested');
       res.json({ message: 'If an account exists with that email, a reset link has been sent.' });
@@ -448,15 +470,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/auth/reset-password — Reset password with token
-  app.post('/api/auth/reset-password', async (req, res) => {
+  app.post('/api/auth/reset-password', validate(resetPasswordSchema), async (req, res) => {
     try {
-      const { token, newPassword } = req.body;
-      if (!token || !newPassword) {
-        return res.status(400).json({ error: 'Token and new password are required' });
-      }
-      if (newPassword.length < 8) {
-        return res.status(400).json({ error: 'Password must be at least 8 characters' });
-      }
+      const { token: _token, newPassword: _newPassword } = req.body;
       // Token validation will be implemented when email service is added
       logger.info({ module: 'Auth', action: 'reset-password' }, 'Password reset attempted');
       res.status(501).json({ error: 'Email service not configured. Contact administrator.' });
@@ -467,12 +483,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/auth/verify-email — Verify email with token
-  app.post('/api/auth/verify-email', async (req, res) => {
+  app.post('/api/auth/verify-email', validate(verifyEmailSchema), async (req, res) => {
     try {
-      const { token } = req.body;
-      if (!token) {
-        return res.status(400).json({ error: 'Verification token is required' });
-      }
+      const { token: _verifyToken } = req.body;
       logger.info({ module: 'Auth', action: 'verify-email' }, 'Email verification attempted');
       res.status(501).json({ error: 'Email service not configured. Contact administrator.' });
     } catch (error: any) {
@@ -1365,9 +1378,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         logger.info({ module: 'ClearProducts', productCount: productIds.length }, 'Product caches invalidated');
       }
 
-      for (const product of products) {
-        await storage.deleteProduct(product.id);
-      }
+      await storage.deleteProductsByIds(productIds);
 
       logger.info({ module: 'Products', clearedCount: products.length }, 'Cleared products from database');
       res.json({ success: true, deleted: products.length });

@@ -8,10 +8,10 @@ import {
   approvalQueue,
   approvalAuditLog,
   approvalSettings,
-} from "@shared/schema";
-import { db } from "../db";
-import { and, eq, desc, gte, lte } from "drizzle-orm";
-import { logger } from "../lib/logger";
+} from '@shared/schema';
+import { db } from '../db';
+import { and, eq, desc, gte, lte, inArray } from 'drizzle-orm';
+import { logger } from '../lib/logger';
 
 export async function createApprovalQueue(data: InsertApprovalQueue): Promise<ApprovalQueue> {
   const [item] = await db
@@ -28,13 +28,14 @@ export async function createApprovalQueue(data: InsertApprovalQueue): Promise<Ap
 }
 
 export async function getApprovalQueue(id: string): Promise<ApprovalQueue | null> {
-  const [item] = await db
-    .select()
-    .from(approvalQueue)
-    .where(eq(approvalQueue.id, id))
-    .limit(1);
+  const [item] = await db.select().from(approvalQueue).where(eq(approvalQueue.id, id)).limit(1);
 
   return item || null;
+}
+
+export async function getApprovalQueueByIds(ids: string[]): Promise<ApprovalQueue[]> {
+  if (ids.length === 0) return [];
+  return db.select().from(approvalQueue).where(inArray(approvalQueue.id, ids));
 }
 
 export async function getApprovalQueueForUser(
@@ -45,7 +46,7 @@ export async function getApprovalQueueForUser(
     platform?: string;
     dateFrom?: Date;
     dateTo?: Date;
-  }
+  },
 ): Promise<ApprovalQueue[]> {
   try {
     const conditions = [eq(approvalQueue.userId, userId)];
@@ -78,10 +79,7 @@ export async function getApprovalQueueForUser(
   }
 }
 
-export async function updateApprovalQueue(
-  id: string,
-  updates: Partial<ApprovalQueue>
-): Promise<ApprovalQueue> {
+export async function updateApprovalQueue(id: string, updates: Partial<ApprovalQueue>): Promise<ApprovalQueue> {
   const [item] = await db
     .update(approvalQueue)
     .set({
@@ -100,9 +98,7 @@ export async function updateApprovalQueue(
 }
 
 export async function deleteApprovalQueue(id: string): Promise<void> {
-  await db
-    .delete(approvalQueue)
-    .where(eq(approvalQueue.id, id));
+  await db.delete(approvalQueue).where(eq(approvalQueue.id, id));
 
   logger.info({ queueItemId: id }, 'Approval queue item deleted');
 }
@@ -129,18 +125,14 @@ export async function getApprovalAuditLog(approvalQueueId: string): Promise<Appr
 }
 
 export async function getApprovalSettings(userId: string): Promise<ApprovalSettings | null> {
-  const [settingsRow] = await db
-    .select()
-    .from(approvalSettings)
-    .where(eq(approvalSettings.userId, userId))
-    .limit(1);
+  const [settingsRow] = await db.select().from(approvalSettings).where(eq(approvalSettings.userId, userId)).limit(1);
 
   return settingsRow || null;
 }
 
 export async function updateApprovalSettings(
   userId: string,
-  settingsUpdates: Partial<ApprovalSettings>
+  settingsUpdates: Partial<ApprovalSettings>,
 ): Promise<ApprovalSettings> {
   const existing = await getApprovalSettings(userId);
 

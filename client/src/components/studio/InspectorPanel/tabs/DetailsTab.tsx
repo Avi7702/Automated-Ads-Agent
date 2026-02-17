@@ -104,36 +104,38 @@ export const DetailsTab = memo(function DetailsTab({ orch }: DetailsTabProps) {
             </div>
 
             {/* Wave 3: Generation context metadata */}
-            {(orch as any).generationMode && (
+            {orch.generationMode && orch.generationMode !== 'standard' && (
               <div className="space-y-1">
                 <span className="text-xs text-muted-foreground uppercase tracking-wider">Generation Mode</span>
                 <div>
                   <Badge variant="secondary" className="text-xs">
-                    {(orch as any).generationMode === 'exact_insert'
+                    {orch.generationMode === 'exact_insert'
                       ? 'Exact Insert'
-                      : (orch as any).generationMode === 'inspiration'
+                      : orch.generationMode === 'inspiration'
                         ? 'Inspiration'
                         : 'Standard'}
                   </Badge>
                 </div>
               </div>
             )}
-            {(orch as any).productIds && (orch as any).productIds.length > 0 && (
+            {orch.selectedProducts.length > 0 && (
               <div className="space-y-1">
                 <span className="text-xs text-muted-foreground uppercase tracking-wider">Products Used</span>
                 <div className="flex flex-wrap gap-1">
-                  {(orch as any).productIds.map((pid: string) => (
-                    <Badge key={pid} variant="outline" className="text-[10px] font-mono">
-                      {pid.slice(0, 8)}
+                  {orch.selectedProducts.map((p) => (
+                    <Badge key={p.id} variant="outline" className="text-[10px] font-mono">
+                      {p.name || String(p.id).slice(0, 8)}
                     </Badge>
                   ))}
                 </div>
               </div>
             )}
-            {(orch as any).templateId && (
+            {orch.selectedTemplateForMode && (
               <div className="space-y-1">
-                <span className="text-xs text-muted-foreground uppercase tracking-wider">Template ID</span>
-                <p className="text-xs font-mono text-foreground/60 break-all">{(orch as any).templateId}</p>
+                <span className="text-xs text-muted-foreground uppercase tracking-wider">Template</span>
+                <p className="text-xs font-mono text-foreground/60 break-all">
+                  {orch.selectedTemplateForMode.name || orch.selectedTemplateForMode.id}
+                </p>
               </div>
             )}
           </div>

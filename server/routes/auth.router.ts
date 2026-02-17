@@ -14,6 +14,8 @@
 import type { Router, Request, Response } from 'express';
 import type { RouterContext, RouterFactory, RouterModule } from '../types/router';
 import { createRouter, asyncHandler, handleRouteError } from './utils/createRouter';
+import { validate } from '../middleware/validate';
+import { registerSchema, loginSchema } from '../validation/schemas';
 
 export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
   const router = createRouter();
@@ -26,17 +28,10 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
    */
   router.post(
     '/register',
+    validate(registerSchema),
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const { email, password } = req.body;
-
-        if (!email || !password) {
-          return res.status(400).json({ error: 'Email and password required' });
-        }
-
-        if (password.length < 8) {
-          return res.status(400).json({ error: 'Password must be at least 8 characters' });
-        }
 
         const existingUser = await storage.getUserByEmail(email);
         if (existingUser) {
@@ -74,13 +69,10 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
    */
   router.post(
     '/login',
+    validate(loginSchema),
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const { email, password } = req.body;
-
-        if (!email || !password) {
-          return res.status(400).json({ error: 'Email and password required' });
-        }
 
         // Check lockout
         if (await authService.isLockedOut(email)) {
@@ -102,7 +94,10 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
           return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        const valid = await authService.comparePassword(password, user.passwordHash || user.password);
+        const { valid, newHash } = await authService.comparePasswordWithRehash(
+          password,
+          user.passwordHash || user.password,
+        );
         if (!valid) {
           await authService.recordFailedLogin(email);
           telemetry.trackAuth({
@@ -111,6 +106,11 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
             reason: 'invalid_password',
           });
           return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
+        // Transparent bcrypt→argon2 migration: update hash if re-hashed
+        if (newHash) {
+          await storage.updatePasswordHash(user.id, newHash);
         }
 
         await authService.clearFailedLogins(email);

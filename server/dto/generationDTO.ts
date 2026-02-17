@@ -20,9 +20,7 @@ export function toGenerationDTO(generation: Generation): GenerationDTO {
   // Smart URL handling: Cloudinary URLs start with http/https, local paths don't
   // Normalize Windows backslashes to forward slashes for URL compatibility
   const rawPath = generation.generatedImagePath || generation.imagePath || '';
-  const imageUrl = rawPath.startsWith('http')
-    ? rawPath
-    : `/${rawPath.replace(/\\/g, '/')}`;
+  const imageUrl = rawPath.startsWith('http') ? rawPath : `/${rawPath.replace(/\\/g, '/')}`;
 
   return {
     id: generation.id,
@@ -40,6 +38,9 @@ export function toGenerationDTO(generation: Generation): GenerationDTO {
     createdAt: generation.createdAt,
     updatedAt: generation.updatedAt,
     canEdit: !!generation.conversationHistory,
+    productIds: generation.productIds ?? null,
+    templateId: generation.templateId ?? null,
+    generationMode: generation.generationMode ?? null,
   };
 }
 

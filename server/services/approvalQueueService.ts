@@ -12,14 +12,12 @@
 
 import { logger } from '../lib/logger';
 import { storage } from '../storage';
+import { db } from '../db';
+import { eq } from 'drizzle-orm';
+import { approvalQueue, approvalAuditLog } from '@shared/schema';
 import { evaluateContent as evaluateConfidence, type ConfidenceScore } from './confidenceScoringService';
 // NOTE: contentSafetyService will be created next, using interface for now
-import type {
-  ApprovalQueue,
-  InsertApprovalQueue,
-  InsertApprovalAuditLog,
-  ApprovalSettings,
-} from '@shared/schema';
+import type { ApprovalQueue, InsertApprovalQueue, InsertApprovalAuditLog, ApprovalSettings } from '@shared/schema';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -115,7 +113,7 @@ export interface BulkResult {
 export function calculatePriority(
   content: GeneratedContent,
   confidenceScore: number,
-  safetyChecks: SafetyCheckResults
+  safetyChecks: SafetyCheckResults,
 ): { score: number; level: 'low' | 'medium' | 'high' | 'urgent' } {
   let score = 0;
 
@@ -169,10 +167,7 @@ export function calculatePriority(
     level = 'low';
   }
 
-  logger.info(
-    { module: 'ApprovalQueue', score, level, confidenceScore },
-    'Priority calculated'
-  );
+  logger.info({ module: 'ApprovalQueue', score, level, confidenceScore }, 'Priority calculated');
 
   return { score, level };
 }
@@ -189,7 +184,7 @@ function checkLegalClaims(caption: string): boolean {
     /money\s+back\s+guarantee/i,
   ];
 
-  return legalPatterns.some(pattern => pattern.test(caption));
+  return legalPatterns.some((pattern) => pattern.test(caption));
 }
 
 /**
@@ -203,7 +198,7 @@ function checkPricingInfo(caption: string): boolean {
     /buy\s+now|order\s+now|purchase/i,
   ];
 
-  return pricingPatterns.some(pattern => pattern.test(caption));
+  return pricingPatterns.some((pattern) => pattern.test(caption));
 }
 
 /**
@@ -225,13 +220,7 @@ async function runSafetyChecks(content: GeneratedContent): Promise<SafetyCheckRe
   const legalClaims = checkLegalClaims(content.caption);
   const pricingInfo = checkPricingInfo(content.caption);
 
-  const allPassed = !(
-    hateSpeech ||
-    violence ||
-    sexualContent ||
-    dangerousContent ||
-    harassmentBullying
-  );
+  const allPassed = !(hateSpeech || violence || sexualContent || dangerousContent || harassmentBullying);
 
   const flaggedReasons: string[] = [];
   if (hateSpeech) flaggedReasons.push('hate_speech');
@@ -266,7 +255,7 @@ async function runSafetyChecks(content: GeneratedContent): Promise<SafetyCheckRe
 export async function evaluateContent(content: GeneratedContent): Promise<AIEvaluation> {
   logger.info(
     { module: 'ApprovalQueue', userId: content.userId, platform: content.platform },
-    'Starting AI content evaluation'
+    'Starting AI content evaluation',
   );
 
   // Step 1: Run confidence scoring
@@ -286,9 +275,7 @@ export async function evaluateContent(content: GeneratedContent): Promise<AIEval
 
   // Step 4: Determine auto-approve eligibility
   const shouldAutoApprove =
-    confidenceScore.recommendation === 'auto_approve' &&
-    safetyChecks.allPassed &&
-    priority.level !== 'urgent';
+    confidenceScore.recommendation === 'auto_approve' && safetyChecks.allPassed && priority.level !== 'urgent';
 
   // Step 5: Build compliance flags
   const complianceFlags: string[] = [];
@@ -304,7 +291,7 @@ export async function evaluateContent(content: GeneratedContent): Promise<AIEval
       priority: priority.level,
       shouldAutoApprove,
     },
-    'AI evaluation complete'
+    'AI evaluation complete',
   );
 
   return {
@@ -321,10 +308,7 @@ export async function evaluateContent(content: GeneratedContent): Promise<AIEval
  * Runs AI evaluation, calculates priority, and optionally auto-approves
  */
 export async function addToQueue(content: GeneratedContent): Promise<ApprovalQueueItem> {
-  logger.info(
-    { module: 'ApprovalQueue', userId: content.userId },
-    'Adding content to approval queue'
-  );
+  logger.info({ module: 'ApprovalQueue', userId: content.userId }, 'Adding content to approval queue');
 
   // Step 1: Run AI evaluation
   const evaluation = await evaluateContent(content);
@@ -363,30 +347,36 @@ export async function addToQueue(content: GeneratedContent): Promise<ApprovalQue
     reviewedAt: shouldAutoApprove ? new Date() : null,
   };
 
-  const queueItem = await storage.createApprovalQueue(queueData);
+  // Step 5: Create queue item + audit log atomically
+  const queueItem = await db.transaction(async (tx) => {
+    const [item] = await tx
+      .insert(approvalQueue)
+      .values({ ...queueData, createdAt: new Date(), updatedAt: new Date() })
+      .returning();
 
-  // Step 5: Create audit log entry
-  const auditData: InsertApprovalAuditLog = {
-    approvalQueueId: queueItem.id,
-    eventType: shouldAutoApprove ? 'auto_approved' : 'created',
-    userId: content.userId,
-    userName: null, // Will be populated from user record
-    userRole: null,
-    isSystemAction: shouldAutoApprove,
-    previousStatus: null,
-    newStatus: queueItem.status,
-    decision: shouldAutoApprove ? 'approve' : null,
-    decisionReason: shouldAutoApprove ? 'Auto-approved based on high confidence and safety checks' : null,
-    decisionNotes: null,
-    snapshot: {
-      caption: content.caption,
-      platform: content.platform,
-      imageUrl: content.imageUrl,
-      hashtags: content.hashtags,
-    },
-  };
+    await tx.insert(approvalAuditLog).values({
+      approvalQueueId: item.id,
+      eventType: shouldAutoApprove ? 'auto_approved' : 'created',
+      userId: content.userId,
+      userName: null,
+      userRole: null,
+      isSystemAction: shouldAutoApprove,
+      previousStatus: null,
+      newStatus: item.status,
+      decision: shouldAutoApprove ? 'approve' : null,
+      decisionReason: shouldAutoApprove ? 'Auto-approved based on high confidence and safety checks' : null,
+      decisionNotes: null,
+      snapshot: {
+        caption: content.caption,
+        platform: content.platform,
+        imageUrl: content.imageUrl,
+        hashtags: content.hashtags,
+      },
+      createdAt: new Date(),
+    });
 
-  await storage.createApprovalAuditLog(auditData);
+    return item;
+  });
 
   logger.info(
     {
@@ -395,7 +385,7 @@ export async function addToQueue(content: GeneratedContent): Promise<ApprovalQue
       status: queueItem.status,
       autoApproved: shouldAutoApprove,
     },
-    'Content added to approval queue'
+    'Content added to approval queue',
   );
 
   return queueItem as ApprovalQueueItem;
@@ -404,14 +394,8 @@ export async function addToQueue(content: GeneratedContent): Promise<ApprovalQue
 /**
  * Get approval queue items for a user with optional filters
  */
-export async function getQueueForUser(
-  userId: string,
-  filters?: QueueFilters
-): Promise<ApprovalQueueItem[]> {
-  logger.info(
-    { module: 'ApprovalQueue', userId, filters },
-    'Fetching approval queue items'
-  );
+export async function getQueueForUser(userId: string, filters?: QueueFilters): Promise<ApprovalQueueItem[]> {
+  logger.info({ module: 'ApprovalQueue', userId, filters }, 'Fetching approval queue items');
 
   const items = await storage.getApprovalQueueForUser(userId, filters);
 
@@ -422,15 +406,8 @@ export async function getQueueForUser(
  * Approve content
  * Updates status, records reviewer, and creates audit log
  */
-export async function approveContent(
-  queueItemId: string,
-  userId: string,
-  notes?: string
-): Promise<void> {
-  logger.info(
-    { module: 'ApprovalQueue', queueItemId, userId },
-    'Approving content'
-  );
+export async function approveContent(queueItemId: string, userId: string, notes?: string): Promise<void> {
+  logger.info({ module: 'ApprovalQueue', queueItemId, userId }, 'Approving content');
 
   // Step 1: Get queue item
   const queueItem = await storage.getApprovalQueue(queueItemId);
@@ -438,52 +415,46 @@ export async function approveContent(
     throw new Error(`Approval queue item ${queueItemId} not found`);
   }
 
-  // Step 2: Update status
+  // Step 2+3: Update status + create audit log atomically
   const previousStatus = queueItem.status;
-  await storage.updateApprovalQueue(queueItemId, {
-    status: 'approved',
-    reviewedBy: userId,
-    reviewedAt: new Date(),
-    reviewNotes: notes ?? null,
+  await db.transaction(async (tx) => {
+    await tx
+      .update(approvalQueue)
+      .set({
+        status: 'approved',
+        reviewedBy: userId,
+        reviewedAt: new Date(),
+        reviewNotes: notes ?? null,
+        updatedAt: new Date(),
+      })
+      .where(eq(approvalQueue.id, queueItemId));
+
+    await tx.insert(approvalAuditLog).values({
+      approvalQueueId: queueItemId,
+      eventType: 'approved',
+      userId,
+      userName: null,
+      userRole: null,
+      isSystemAction: false,
+      previousStatus,
+      newStatus: 'approved',
+      decision: 'approve',
+      decisionReason: null,
+      decisionNotes: notes ?? null,
+      snapshot: null,
+      createdAt: new Date(),
+    });
   });
 
-  // Step 3: Create audit log
-  const auditData: InsertApprovalAuditLog = {
-    approvalQueueId: queueItemId,
-    eventType: 'approved',
-    userId,
-    userName: null,
-    userRole: null,
-    isSystemAction: false,
-    previousStatus,
-    newStatus: 'approved',
-    decision: 'approve',
-    decisionReason: null,
-    decisionNotes: notes ?? null,
-    snapshot: null, // Content snapshot already exists from creation
-  };
-
-  await storage.createApprovalAuditLog(auditData);
-
-  logger.info(
-    { module: 'ApprovalQueue', queueItemId, previousStatus },
-    'Content approved'
-  );
+  logger.info({ module: 'ApprovalQueue', queueItemId, previousStatus }, 'Content approved');
 }
 
 /**
  * Reject content
  * Updates status, records rejection reason, and creates audit log
  */
-export async function rejectContent(
-  queueItemId: string,
-  userId: string,
-  reason: string
-): Promise<void> {
-  logger.info(
-    { module: 'ApprovalQueue', queueItemId, userId },
-    'Rejecting content'
-  );
+export async function rejectContent(queueItemId: string, userId: string, reason: string): Promise<void> {
+  logger.info({ module: 'ApprovalQueue', queueItemId, userId }, 'Rejecting content');
 
   // Step 1: Get queue item
   const queueItem = await storage.getApprovalQueue(queueItemId);
@@ -491,51 +462,46 @@ export async function rejectContent(
     throw new Error(`Approval queue item ${queueItemId} not found`);
   }
 
-  // Step 2: Update status
+  // Step 2+3: Update status + create audit log atomically
   const previousStatus = queueItem.status;
-  await storage.updateApprovalQueue(queueItemId, {
-    status: 'rejected',
-    reviewedBy: userId,
-    reviewedAt: new Date(),
-    reviewNotes: reason,
+  await db.transaction(async (tx) => {
+    await tx
+      .update(approvalQueue)
+      .set({
+        status: 'rejected',
+        reviewedBy: userId,
+        reviewedAt: new Date(),
+        reviewNotes: reason,
+        updatedAt: new Date(),
+      })
+      .where(eq(approvalQueue.id, queueItemId));
+
+    await tx.insert(approvalAuditLog).values({
+      approvalQueueId: queueItemId,
+      eventType: 'rejected',
+      userId,
+      userName: null,
+      userRole: null,
+      isSystemAction: false,
+      previousStatus,
+      newStatus: 'rejected',
+      decision: 'reject',
+      decisionReason: reason,
+      decisionNotes: null,
+      snapshot: null,
+      createdAt: new Date(),
+    });
   });
 
-  // Step 3: Create audit log
-  const auditData: InsertApprovalAuditLog = {
-    approvalQueueId: queueItemId,
-    eventType: 'rejected',
-    userId,
-    userName: null,
-    userRole: null,
-    isSystemAction: false,
-    previousStatus,
-    newStatus: 'rejected',
-    decision: 'reject',
-    decisionReason: reason,
-    decisionNotes: null,
-    snapshot: null,
-  };
-
-  await storage.createApprovalAuditLog(auditData);
-
-  logger.info(
-    { module: 'ApprovalQueue', queueItemId, previousStatus },
-    'Content rejected'
-  );
+  logger.info({ module: 'ApprovalQueue', queueItemId, previousStatus }, 'Content rejected');
 }
 
 /**
  * Bulk approve multiple items
  * Returns success/failure for each item
  */
-export async function bulkApprove(
-  queueItemIds: string[],
-  userId: string
-): Promise<BulkResult> {
-  logger.info(
-    { module: 'ApprovalQueue', count: queueItemIds.length, userId },
-    'Starting bulk approve'
-  );
+export async function bulkApprove(queueItemIds: string[], userId: string): Promise<BulkResult> {
+  logger.info({ module: 'ApprovalQueue', count: queueItemIds.length, userId }, 'Starting bulk approve');
 
   const succeeded: string[] = [];
   const failed: { id: string; error: string }[] = [];
@@ -558,7 +524,7 @@ export async function bulkApprove(
       succeeded: succeeded.length,
       failed: failed.length,
     },
-    'Bulk approve complete'
+    'Bulk approve complete',
   );
 
   return { succeeded, failed };
@@ -568,15 +534,8 @@ export async function bulkApprove(
  * Request revision for content
  * Updates status and creates audit log with revision notes
  */
-export async function requestRevision(
-  queueItemId: string,
-  userId: string,
-  revisionNotes: string
-): Promise<void> {
-  logger.info(
-    { module: 'ApprovalQueue', queueItemId, userId },
-    'Requesting revision'
-  );
+export async function requestRevision(queueItemId: string, userId: string, revisionNotes: string): Promise<void> {
+  logger.info({ module: 'ApprovalQueue', queueItemId, userId }, 'Requesting revision');
 
   const queueItem = await storage.getApprovalQueue(queueItemId);
   if (!queueItem) {
@@ -584,29 +543,34 @@ export async function requestRevision(
   }
 
   const previousStatus = queueItem.status;
-  await storage.updateApprovalQueue(queueItemId, {
-    status: 'needs_revision',
-    reviewedBy: userId,
-    reviewedAt: new Date(),
-    reviewNotes: revisionNotes,
+  await db.transaction(async (tx) => {
+    await tx
+      .update(approvalQueue)
+      .set({
+        status: 'needs_revision',
+        reviewedBy: userId,
+        reviewedAt: new Date(),
+        reviewNotes: revisionNotes,
+        updatedAt: new Date(),
+      })
+      .where(eq(approvalQueue.id, queueItemId));
+
+    await tx.insert(approvalAuditLog).values({
+      approvalQueueId: queueItemId,
+      eventType: 'needs_revision',
+      userId,
+      userName: null,
+      userRole: null,
+      isSystemAction: false,
+      previousStatus,
+      newStatus: 'needs_revision',
+      decision: 'request_revision',
+      decisionReason: revisionNotes,
+      decisionNotes: null,
+      snapshot: null,
+      createdAt: new Date(),
+    });
   });
-
-  const auditData: InsertApprovalAuditLog = {
-    approvalQueueId: queueItemId,
-    eventType: 'needs_revision',
-    userId,
-    userName: null,
-    userRole: null,
-    isSystemAction: false,
-    previousStatus,
-    newStatus: 'needs_revision',
-    decision: 'request_revision',
-    decisionReason: revisionNotes,
-    decisionNotes: null,
-    snapshot: null,
-  };
-
-  await storage.createApprovalAuditLog(auditData);
 
   logger.info({ module: 'ApprovalQueue', queueItemId }, 'Revision requested');
 }
@@ -631,7 +595,7 @@ export async function getApprovalSettings(userId: string): Promise<ApprovalSetti
  */
 export async function updateApprovalSettings(
   userId: string,
-  settings: Partial<ApprovalSettings>
+  settings: Partial<ApprovalSettings>,
 ): Promise<ApprovalSettings> {
   return await storage.updateApprovalSettings(userId, settings);
 }

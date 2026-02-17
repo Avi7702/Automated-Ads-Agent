@@ -1,4 +1,5 @@
 import bcrypt from 'bcrypt';
+import argon2 from '@node-rs/argon2';
 import { v4 as uuidv4 } from 'uuid';
 import { storage } from '../storage';
 import type { User } from '../../shared/schema';
@@ -7,6 +8,7 @@ import { logger } from '../lib/logger';
 import * as redisLockout from './redisAuthLockout';
 
 const BCRYPT_ROUNDS = 12;
+const ARGON2_CONFIG = { memoryCost: 19456, timeCost: 2, parallelism: 1 };
 const LOCKOUT_THRESHOLD = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 
@@ -55,7 +57,7 @@ function validatePassword(password: string): ValidationResult {
   if (complexityCount < 3) {
     return {
       valid: false,
-      error: 'Password must contain at least 3 of: uppercase, lowercase, number, special character'
+      error: 'Password must contain at least 3 of: uppercase, lowercase, number, special character',
     };
   }
 
@@ -91,8 +93,8 @@ export async function registerUser(email: string, password: string): Promise<Aut
     return { success: false, error: 'User already exists', statusCode: 409 };
   }
 
-  // Hash password
-  const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
+  // Hash password (argon2id)
+  const hashedPassword = await hashPassword(password);
 
   // Create user
   const user = await storage.createUser(email, hashedPassword);
@@ -103,17 +105,18 @@ export async function registerUser(email: string, password: string): Promise<Aut
   };
 }
 
-// Dummy hash for timing attack prevention (pre-computed bcrypt hash)
-const DUMMY_HASH = '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X.wJJPK.abc123xyz';
+// Argon2 dummy hash for timing attack prevention (pre-computed)
+const DUMMY_HASH =
+  '$argon2id$v=19$m=19456,t=2,p=1$dGltaW5nLWF0dGFjay1wcmV2ZW50aW9u$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
 
 export async function loginUser(email: string, password: string): Promise<AuthResult> {
   // Find user
   const user = await storage.getUserByEmail(email);
 
-  // ALWAYS run bcrypt.compare() to prevent timing attacks
+  // ALWAYS run password verification to prevent timing attacks
   // This ensures consistent response time whether user exists or not
   const hashToCompare = user?.password || DUMMY_HASH;
-  const isValid = await bcrypt.compare(password, hashToCompare);
+  const { valid: isValid, newHash } = await comparePasswordWithRehash(password, hashToCompare);
 
   // Check if user exists (after timing-consistent password check)
   if (!user) {
@@ -123,6 +126,11 @@ export async function loginUser(email: string, password: string): Promise<AuthRe
   // Check password validity (already computed above)
   if (!isValid) {
     return { success: false, error: 'Invalid email or password', statusCode: 401 };
+  }
+
+  // Transparent bcrypt→argon2 migration: update hash if re-hashed
+  if (newHash) {
+    await storage.updatePasswordHash(user.id, newHash);
   }
 
   // Generate session ID
@@ -139,14 +147,42 @@ export async function loginUser(email: string, password: string): Promise<AuthRe
 // The validateSession() function has been removed as it's no longer needed
 // Session validation is done via req.session.userId in the auth middleware
 
-// Password hashing helper
+// Password hashing helper (argon2id -- modern default)
 export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, BCRYPT_ROUNDS);
+  return argon2.hash(password, ARGON2_CONFIG);
 }
 
-// Password comparison helper
+// Detects hash format and verifies accordingly. Returns boolean for backward compat.
 export async function comparePassword(password: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(password, hash);
+  if (hash.startsWith('$2b$') || hash.startsWith('$2a$')) {
+    // Legacy bcrypt hash
+    return bcrypt.compare(password, hash);
+  }
+  // Modern argon2 hash
+  return argon2.verify(hash, password);
+}
+
+/**
+ * Hybrid password verification with optional re-hash.
+ * If the stored hash is bcrypt and password is valid, returns a new argon2 hash
+ * so the caller can update the DB (transparent migration).
+ */
+export async function comparePasswordWithRehash(
+  password: string,
+  hash: string,
+): Promise<{ valid: boolean; newHash?: string }> {
+  if (hash.startsWith('$2b$') || hash.startsWith('$2a$')) {
+    // Legacy bcrypt hash -- verify with bcrypt, then re-hash to argon2
+    const valid = await bcrypt.compare(password, hash);
+    if (valid) {
+      const newHash = await argon2.hash(password, ARGON2_CONFIG);
+      return { valid: true, newHash };
+    }
+    return { valid: false };
+  }
+  // Modern argon2 hash
+  const valid = await argon2.verify(hash, password);
+  return { valid, newHash: undefined };
 }
 
 // --- In-memory lockout helpers (used as fallback) ---
@@ -238,6 +274,7 @@ export const authService = {
   loginUser,
   hashPassword,
   comparePassword,
+  comparePasswordWithRehash,
   isLockedOut,
   getLockoutTimeRemaining,
   recordFailedLogin,
