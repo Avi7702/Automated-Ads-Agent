@@ -6,6 +6,8 @@ import { db } from '../db';
 import { products } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 
+const SCRAPE_DELAY_MS = 1_000;
+
 /**
  * NDS Website Scraper Service
  *
@@ -435,7 +437,7 @@ async function scrapeCategory(category: (typeof CATEGORIES)[0]): Promise<ScrapeR
       }
 
       // Rate limiting: wait 1 second between requests
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, SCRAPE_DELAY_MS));
     }
   } catch (error) {
     result.errors.push(`Category error: ${error}`);

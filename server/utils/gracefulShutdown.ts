@@ -1,6 +1,8 @@
 import { Server } from 'http';
 import { logger } from '../lib/logger';
 
+const GRACEFUL_SHUTDOWN_TIMEOUT_MS = 30_000;
+
 let isShuttingDown = false;
 const shutdownCallbacks: Array<() => Promise<void>> = [];
 
@@ -49,7 +51,7 @@ export function initGracefulShutdown(server: Server): void {
     setTimeout(() => {
       logger.warn('Forced shutdown after timeout');
       process.exit(1);
-    }, 30000).unref();
+    }, GRACEFUL_SHUTDOWN_TIMEOUT_MS).unref();
   };
 
   process.on('SIGTERM', () => shutdown('SIGTERM'));

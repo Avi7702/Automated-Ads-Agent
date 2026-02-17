@@ -44,6 +44,8 @@ import { getBrandDNAContext } from '../brandDNAService';
 
 import type { GenerationContext, GenerationInput, GenerationResult } from '../../types/generationPipeline';
 
+const FETCH_TIMEOUT_MS = 10_000;
+
 // ============================================
 // MAIN PIPELINE
 // ============================================
@@ -509,7 +511,7 @@ async function buildImageParts(
 
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
         const response = await fetch(refUrl, { signal: controller.signal });
         clearTimeout(timeoutId);
 
