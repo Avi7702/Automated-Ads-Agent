@@ -36,7 +36,7 @@ export class BoundedMap<K, V> {
   private map: Map<K, { value: V; lastAccess: number }>;
   private readonly maxSize: number;
   private readonly cleanupIntervalMs: number;
-  private readonly isExpired?: (value: V, key: string) => boolean;
+  private readonly isExpired: ((value: V, key: string) => boolean) | undefined;
   private readonly name: string;
   private cleanupTimer: ReturnType<typeof setInterval> | null = null;
   private evictionCount = 0;
@@ -192,7 +192,7 @@ export class BoundedMap<K, V> {
       }
     });
 
-    keysToDelete.forEach(key => {
+    keysToDelete.forEach((key) => {
       this.map.delete(key);
       removed++;
     });
@@ -201,7 +201,10 @@ export class BoundedMap<K, V> {
     this.lastCleanupTime = new Date();
 
     if (removed > 0) {
-      logger.info({ module: this.name, removed, size: this.map.size, maxSize: this.maxSize }, 'Cleanup removed expired entries');
+      logger.info(
+        { module: this.name, removed, size: this.map.size, maxSize: this.maxSize },
+        'Cleanup removed expired entries',
+      );
     }
   }
 
@@ -245,7 +248,7 @@ export class BoundedMap<K, V> {
  */
 export function createRateLimitMap<V extends { resetAt: number }>(
   name: string,
-  maxSize: number = 10000
+  maxSize: number = 10000,
 ): BoundedMap<string, V> {
   return new BoundedMap<string, V>({
     name,
@@ -261,7 +264,7 @@ export function createRateLimitMap<V extends { resetAt: number }>(
  */
 export function createQuotaMetricsMap<V extends { windowStart: number }>(
   name: string,
-  maxSize: number = 5000
+  maxSize: number = 5000,
 ): BoundedMap<string, V> {
   return new BoundedMap<string, V>({
     name,
@@ -279,7 +282,7 @@ export function createQuotaMetricsMap<V extends { windowStart: number }>(
  * Expires entries when lockedUntil has passed (or never locked)
  */
 export function createAuthFailedLoginsMap(
-  maxSize: number = 5000
+  maxSize: number = 5000,
 ): BoundedMap<string, { count: number; lockedUntil?: number }> {
   return new BoundedMap<string, { count: number; lockedUntil?: number }>({
     name: 'AuthFailedLogins',
@@ -303,7 +306,7 @@ export function createAuthFailedLoginsMap(
  */
 export function startMemoryMonitoring(
   warningThresholdPercent: number = 80,
-  checkIntervalMs: number = 60 * 1000 // 1 minute
+  checkIntervalMs: number = 60 * 1000, // 1 minute
 ): () => void {
   const timer = setInterval(() => {
     const usage = process.memoryUsage();

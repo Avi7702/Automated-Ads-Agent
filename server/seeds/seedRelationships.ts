@@ -1,8 +1,8 @@
 /* eslint-disable no-console */
-import "dotenv/config";
-import { db } from "../db";
-import { productRelationships, products, users } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import 'dotenv/config';
+import { db } from '../db';
+import { productRelationships } from '@shared/schema';
+import { eq, and } from 'drizzle-orm';
 
 /**
  * Product Relationships Seed for NDS (Next Day Steel)
@@ -22,12 +22,12 @@ import { eq, and } from "drizzle-orm";
 
 // Relationship Types
 const RELATIONSHIP_TYPES = {
-  PAIRS_WITH: "pairs_with", // Commonly used together
-  REQUIRES: "requires", // Must be used together
-  COMPLETES: "completes", // Part of a kit/system
-  UPGRADES: "upgrades", // Heavy-duty version
-  MATCHES: "matches", // Matching style/aesthetics
-  REPLACES: "replaces", // Can substitute for
+  PAIRS_WITH: 'pairs_with', // Commonly used together
+  REQUIRES: 'requires', // Must be used together
+  COMPLETES: 'completes', // Part of a kit/system
+  UPGRADES: 'upgrades', // Heavy-duty version
+  MATCHES: 'matches', // Matching style/aesthetics
+  REPLACES: 'replaces', // Can substitute for
 } as const;
 
 /**
@@ -39,278 +39,278 @@ const RELATIONSHIP_TYPES = {
 const PRODUCT_RELATIONSHIPS = [
   // Rebar + Spacers (REQUIRED relationships)
   {
-    sourceSku: "NDS-T8-6M",
-    targetSku: "NDS-SPACER-25-100",
+    sourceSku: 'NDS-T8-6M',
+    targetSku: 'NDS-SPACER-25-100',
     type: RELATIONSHIP_TYPES.REQUIRES,
-    description: "25mm spacers required to maintain concrete cover",
+    description: '25mm spacers required to maintain concrete cover',
     isRequired: true,
   },
   {
-    sourceSku: "NDS-T10-6M",
-    targetSku: "NDS-SPACER-25-100",
+    sourceSku: 'NDS-T10-6M',
+    targetSku: 'NDS-SPACER-25-100',
     type: RELATIONSHIP_TYPES.REQUIRES,
-    description: "Spacers essential for correct cover on T10 bars",
+    description: 'Spacers essential for correct cover on T10 bars',
     isRequired: true,
   },
   {
-    sourceSku: "NDS-T12-6M",
-    targetSku: "NDS-SPACER-40-100",
+    sourceSku: 'NDS-T12-6M',
+    targetSku: 'NDS-SPACER-40-100',
     type: RELATIONSHIP_TYPES.REQUIRES,
-    description: "40mm spacers for standard external cover",
+    description: '40mm spacers for standard external cover',
     isRequired: true,
   },
   {
-    sourceSku: "NDS-T16-6M",
-    targetSku: "NDS-SPACER-40-100",
+    sourceSku: 'NDS-T16-6M',
+    targetSku: 'NDS-SPACER-40-100',
     type: RELATIONSHIP_TYPES.REQUIRES,
-    description: "40mm spacers for structural applications",
+    description: '40mm spacers for structural applications',
     isRequired: true,
   },
   {
-    sourceSku: "NDS-T20-6M",
-    targetSku: "NDS-SPACER-50-100",
+    sourceSku: 'NDS-T20-6M',
+    targetSku: 'NDS-SPACER-50-100',
     type: RELATIONSHIP_TYPES.REQUIRES,
-    description: "50mm spacers for heavy-duty applications",
+    description: '50mm spacers for heavy-duty applications',
     isRequired: true,
   },
   {
-    sourceSku: "NDS-T25-6M",
-    targetSku: "NDS-SPACER-50-100",
+    sourceSku: 'NDS-T25-6M',
+    targetSku: 'NDS-SPACER-50-100',
     type: RELATIONSHIP_TYPES.REQUIRES,
-    description: "Maximum cover for commercial applications",
+    description: 'Maximum cover for commercial applications',
     isRequired: true,
   },
 
   // Rebar + Tie Wire (REQUIRED)
   {
-    sourceSku: "NDS-T8-6M",
-    targetSku: "NDS-TIEWIRE-20KG",
+    sourceSku: 'NDS-T8-6M',
+    targetSku: 'NDS-TIEWIRE-20KG',
     type: RELATIONSHIP_TYPES.REQUIRES,
-    description: "Tie wire essential for binding rebar intersections",
+    description: 'Tie wire essential for binding rebar intersections',
     isRequired: true,
   },
   {
-    sourceSku: "NDS-T10-6M",
-    targetSku: "NDS-TIEWIRE-20KG",
+    sourceSku: 'NDS-T10-6M',
+    targetSku: 'NDS-TIEWIRE-20KG',
     type: RELATIONSHIP_TYPES.REQUIRES,
-    description: "Required for secure binding of rebar cage",
+    description: 'Required for secure binding of rebar cage',
     isRequired: true,
   },
   {
-    sourceSku: "NDS-T12-6M",
-    targetSku: "NDS-TIEWIRE-20KG",
+    sourceSku: 'NDS-T12-6M',
+    targetSku: 'NDS-TIEWIRE-20KG',
     type: RELATIONSHIP_TYPES.REQUIRES,
-    description: "Essential for tying all rebar intersections",
+    description: 'Essential for tying all rebar intersections',
     isRequired: true,
   },
   {
-    sourceSku: "NDS-T16-6M",
-    targetSku: "NDS-TIEWIRE-20KG",
+    sourceSku: 'NDS-T16-6M',
+    targetSku: 'NDS-TIEWIRE-20KG',
     type: RELATIONSHIP_TYPES.REQUIRES,
-    description: "Heavy-duty binding for structural cages",
+    description: 'Heavy-duty binding for structural cages',
     isRequired: true,
   },
   {
-    sourceSku: "NDS-T20-6M",
-    targetSku: "NDS-TIEWIRE-20KG",
+    sourceSku: 'NDS-T20-6M',
+    targetSku: 'NDS-TIEWIRE-20KG',
     type: RELATIONSHIP_TYPES.REQUIRES,
-    description: "Secure binding for major reinforcement",
+    description: 'Secure binding for major reinforcement',
     isRequired: true,
   },
 
   // Rebar Upgrades (light to heavy)
   {
-    sourceSku: "NDS-T8-6M",
-    targetSku: "NDS-T10-6M",
+    sourceSku: 'NDS-T8-6M',
+    targetSku: 'NDS-T10-6M',
     type: RELATIONSHIP_TYPES.UPGRADES,
-    description: "T10 provides higher tensile capacity than T8",
+    description: 'T10 provides higher tensile capacity than T8',
     isRequired: false,
   },
   {
-    sourceSku: "NDS-T10-6M",
-    targetSku: "NDS-T12-6M",
+    sourceSku: 'NDS-T10-6M',
+    targetSku: 'NDS-T12-6M',
     type: RELATIONSHIP_TYPES.UPGRADES,
-    description: "T12 for heavier structural requirements",
+    description: 'T12 for heavier structural requirements',
     isRequired: false,
   },
   {
-    sourceSku: "NDS-T12-6M",
-    targetSku: "NDS-T16-6M",
+    sourceSku: 'NDS-T12-6M',
+    targetSku: 'NDS-T16-6M',
     type: RELATIONSHIP_TYPES.UPGRADES,
-    description: "T16 for commercial/heavy-duty applications",
+    description: 'T16 for commercial/heavy-duty applications',
     isRequired: false,
   },
   {
-    sourceSku: "NDS-T16-6M",
-    targetSku: "NDS-T20-6M",
+    sourceSku: 'NDS-T16-6M',
+    targetSku: 'NDS-T20-6M',
     type: RELATIONSHIP_TYPES.UPGRADES,
-    description: "T20 for major structural elements",
+    description: 'T20 for major structural elements',
     isRequired: false,
   },
   {
-    sourceSku: "NDS-T20-6M",
-    targetSku: "NDS-T25-6M",
+    sourceSku: 'NDS-T20-6M',
+    targetSku: 'NDS-T25-6M',
     type: RELATIONSHIP_TYPES.UPGRADES,
-    description: "T25 for commercial/industrial grade",
+    description: 'T25 for commercial/industrial grade',
     isRequired: false,
   },
   {
-    sourceSku: "NDS-T25-6M",
-    targetSku: "NDS-T32-6M",
+    sourceSku: 'NDS-T25-6M',
+    targetSku: 'NDS-T32-6M',
     type: RELATIONSHIP_TYPES.UPGRADES,
-    description: "T32 for heavy commercial construction",
+    description: 'T32 for heavy commercial construction',
     isRequired: false,
   },
   {
-    sourceSku: "NDS-T32-6M",
-    targetSku: "NDS-T40-6M",
+    sourceSku: 'NDS-T32-6M',
+    targetSku: 'NDS-T40-6M',
     type: RELATIONSHIP_TYPES.UPGRADES,
-    description: "T40 for maximum strength applications",
+    description: 'T40 for maximum strength applications',
     isRequired: false,
   },
 
   // Mesh + Chair Spacers (REQUIRED)
   {
-    sourceSku: "NDS-A142-SHEET",
-    targetSku: "NDS-CHAIR-HD-50",
+    sourceSku: 'NDS-A142-SHEET',
+    targetSku: 'NDS-CHAIR-HD-50',
     type: RELATIONSHIP_TYPES.REQUIRES,
-    description: "Chair spacers support mesh at correct height in slab",
+    description: 'Chair spacers support mesh at correct height in slab',
     isRequired: true,
   },
   {
-    sourceSku: "NDS-A193-SHEET",
-    targetSku: "NDS-CHAIR-HD-50",
+    sourceSku: 'NDS-A193-SHEET',
+    targetSku: 'NDS-CHAIR-HD-50',
     type: RELATIONSHIP_TYPES.REQUIRES,
-    description: "Chairs essential for mesh positioning",
+    description: 'Chairs essential for mesh positioning',
     isRequired: true,
   },
   {
-    sourceSku: "NDS-A252-SHEET",
-    targetSku: "NDS-CHAIR-HD-50",
+    sourceSku: 'NDS-A252-SHEET',
+    targetSku: 'NDS-CHAIR-HD-50',
     type: RELATIONSHIP_TYPES.REQUIRES,
-    description: "Heavy-duty chairs for heavier mesh",
+    description: 'Heavy-duty chairs for heavier mesh',
     isRequired: true,
   },
   {
-    sourceSku: "NDS-A393-SHEET",
-    targetSku: "NDS-CHAIR-HD-50",
+    sourceSku: 'NDS-A393-SHEET',
+    targetSku: 'NDS-CHAIR-HD-50',
     type: RELATIONSHIP_TYPES.REQUIRES,
-    description: "Industrial chairs for A393 mesh support",
+    description: 'Industrial chairs for A393 mesh support',
     isRequired: true,
   },
 
   // Mesh + Mesh Clips (REQUIRED)
   {
-    sourceSku: "NDS-A142-SHEET",
-    targetSku: "NDS-MESHCLIP-200",
+    sourceSku: 'NDS-A142-SHEET',
+    targetSku: 'NDS-MESHCLIP-200',
     type: RELATIONSHIP_TYPES.REQUIRES,
-    description: "Clips secure mesh sheet overlaps",
+    description: 'Clips secure mesh sheet overlaps',
     isRequired: true,
   },
   {
-    sourceSku: "NDS-A193-SHEET",
-    targetSku: "NDS-MESHCLIP-200",
+    sourceSku: 'NDS-A193-SHEET',
+    targetSku: 'NDS-MESHCLIP-200',
     type: RELATIONSHIP_TYPES.REQUIRES,
-    description: "Essential for connecting mesh sheets",
+    description: 'Essential for connecting mesh sheets',
     isRequired: true,
   },
   {
-    sourceSku: "NDS-A252-SHEET",
-    targetSku: "NDS-MESHCLIP-200",
+    sourceSku: 'NDS-A252-SHEET',
+    targetSku: 'NDS-MESHCLIP-200',
     type: RELATIONSHIP_TYPES.REQUIRES,
-    description: "Secure overlaps for heavy-duty mesh",
+    description: 'Secure overlaps for heavy-duty mesh',
     isRequired: true,
   },
   {
-    sourceSku: "NDS-A393-SHEET",
-    targetSku: "NDS-MESHCLIP-200",
+    sourceSku: 'NDS-A393-SHEET',
+    targetSku: 'NDS-MESHCLIP-200',
     type: RELATIONSHIP_TYPES.REQUIRES,
-    description: "Industrial grade clip connections",
+    description: 'Industrial grade clip connections',
     isRequired: true,
   },
 
   // Mesh Upgrades (light to heavy)
   {
-    sourceSku: "NDS-A142-SHEET",
-    targetSku: "NDS-A193-SHEET",
+    sourceSku: 'NDS-A142-SHEET',
+    targetSku: 'NDS-A193-SHEET',
     type: RELATIONSHIP_TYPES.UPGRADES,
-    description: "A193 provides more steel area than A142",
+    description: 'A193 provides more steel area than A142',
     isRequired: false,
   },
   {
-    sourceSku: "NDS-A193-SHEET",
-    targetSku: "NDS-A252-SHEET",
+    sourceSku: 'NDS-A193-SHEET',
+    targetSku: 'NDS-A252-SHEET',
     type: RELATIONSHIP_TYPES.UPGRADES,
-    description: "A252 for heavier loading requirements",
+    description: 'A252 for heavier loading requirements',
     isRequired: false,
   },
   {
-    sourceSku: "NDS-A252-SHEET",
-    targetSku: "NDS-A393-SHEET",
+    sourceSku: 'NDS-A252-SHEET',
+    targetSku: 'NDS-A393-SHEET',
     type: RELATIONSHIP_TYPES.UPGRADES,
-    description: "A393 for industrial/heavy commercial",
+    description: 'A393 for industrial/heavy commercial',
     isRequired: false,
   },
 
   // Rebar + Couplers (PAIRS_WITH)
   {
-    sourceSku: "NDS-T12-6M",
-    targetSku: "NDS-COUPLER-T12-10",
+    sourceSku: 'NDS-T12-6M',
+    targetSku: 'NDS-COUPLER-T12-10',
     type: RELATIONSHIP_TYPES.PAIRS_WITH,
-    description: "Mechanical splice alternative to lap joints",
+    description: 'Mechanical splice alternative to lap joints',
     isRequired: false,
   },
   {
-    sourceSku: "NDS-T16-6M",
-    targetSku: "NDS-COUPLER-T16-10",
+    sourceSku: 'NDS-T16-6M',
+    targetSku: 'NDS-COUPLER-T16-10',
     type: RELATIONSHIP_TYPES.PAIRS_WITH,
-    description: "Reduces steel usage vs traditional laps",
+    description: 'Reduces steel usage vs traditional laps',
     isRequired: false,
   },
 
   // Spacer + Spacer (COMPLETES - different cover options)
   {
-    sourceSku: "NDS-SPACER-25-100",
-    targetSku: "NDS-SPACER-40-100",
+    sourceSku: 'NDS-SPACER-25-100',
+    targetSku: 'NDS-SPACER-40-100',
     type: RELATIONSHIP_TYPES.COMPLETES,
-    description: "Different covers for internal vs external work",
+    description: 'Different covers for internal vs external work',
     isRequired: false,
   },
   {
-    sourceSku: "NDS-SPACER-40-100",
-    targetSku: "NDS-SPACER-50-100",
+    sourceSku: 'NDS-SPACER-40-100',
+    targetSku: 'NDS-SPACER-50-100',
     type: RELATIONSHIP_TYPES.COMPLETES,
-    description: "Full range of cover options",
+    description: 'Full range of cover options',
     isRequired: false,
   },
   {
-    sourceSku: "NDS-SPACER-25-100",
-    targetSku: "NDS-CHAIR-HD-50",
+    sourceSku: 'NDS-SPACER-25-100',
+    targetSku: 'NDS-CHAIR-HD-50',
     type: RELATIONSHIP_TYPES.COMPLETES,
-    description: "Clip spacers + chairs for complete positioning system",
+    description: 'Clip spacers + chairs for complete positioning system',
     isRequired: false,
   },
 
   // Common Pairings (PAIRS_WITH)
   {
-    sourceSku: "NDS-T10-6M",
-    targetSku: "NDS-A193-SHEET",
+    sourceSku: 'NDS-T10-6M',
+    targetSku: 'NDS-A193-SHEET',
     type: RELATIONSHIP_TYPES.PAIRS_WITH,
-    description: "T10 starter bars often paired with A193 slab mesh",
+    description: 'T10 starter bars often paired with A193 slab mesh',
     isRequired: false,
   },
   {
-    sourceSku: "NDS-T12-6M",
-    targetSku: "NDS-A252-SHEET",
+    sourceSku: 'NDS-T12-6M',
+    targetSku: 'NDS-A252-SHEET',
     type: RELATIONSHIP_TYPES.PAIRS_WITH,
-    description: "Common pairing for commercial foundations",
+    description: 'Common pairing for commercial foundations',
     isRequired: false,
   },
   {
-    sourceSku: "NDS-T16-6M",
-    targetSku: "NDS-A393-SHEET",
+    sourceSku: 'NDS-T16-6M',
+    targetSku: 'NDS-A393-SHEET',
     type: RELATIONSHIP_TYPES.PAIRS_WITH,
-    description: "Heavy-duty rebar with industrial mesh",
+    description: 'Heavy-duty rebar with industrial mesh',
     isRequired: false,
   },
 ];
@@ -319,12 +319,12 @@ const PRODUCT_RELATIONSHIPS = [
  * Seed product relationships
  */
 export async function seedProductRelationships() {
-  console.log("🌱 Seeding NDS Product Relationships...");
+  console.log('🌱 Seeding NDS Product Relationships...');
 
   // Get first user (single-tenant for now)
   const user = await db.query.users.findFirst();
   if (!user) {
-    console.log("⚠️ No users found. Create a user first.");
+    console.log('⚠️ No users found. Create a user first.');
     return { created: 0, skipped: 0, errors: 0 };
   }
 
@@ -338,7 +338,7 @@ export async function seedProductRelationships() {
   }
 
   if (skuToId.size === 0) {
-    console.log("⚠️ No products with SKUs found. Run seedProducts.ts first.");
+    console.log('⚠️ No products with SKUs found. Run seedProducts.ts first.');
     return { created: 0, skipped: 0, errors: 0 };
   }
 
@@ -369,7 +369,7 @@ export async function seedProductRelationships() {
         where: and(
           eq(productRelationships.sourceProductId, sourceId),
           eq(productRelationships.targetProductId, targetId),
-          eq(productRelationships.relationshipType, rel.type)
+          eq(productRelationships.relationshipType, rel.type),
         ),
       });
 

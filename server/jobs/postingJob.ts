@@ -25,14 +25,14 @@ const MODULE = 'PostingJob';
  * format the content, and send it to the n8n webhook.
  */
 async function processPost(post: Record<string, unknown>): Promise<boolean> {
-  const postId = post.id as string;
-  const connectionId = post.connection_id as string;
-  const caption = post.caption as string;
-  const hashtags = (post.hashtags as string[]) ?? [];
-  const imageUrl = post.image_url as string | undefined;
-  const userId = post.user_id as string;
-  const generationId = post.generation_id as string | undefined;
-  const templateId = post.template_id as string | undefined;
+  const postId = post['id'] as string;
+  const connectionId = post['connection_id'] as string;
+  const caption = post['caption'] as string;
+  const hashtags = (post['hashtags'] as string[]) ?? [];
+  const imageUrl = post['image_url'] as string | undefined;
+  const userId = post['user_id'] as string;
+  const generationId = post['generation_id'] as string | undefined;
+  const templateId = post['template_id'] as string | undefined;
 
   try {
     // Look up the social connection to get the platform
@@ -49,8 +49,8 @@ async function processPost(post: Record<string, unknown>): Promise<boolean> {
 
     // Send to n8n webhook
     const result = await postToN8n(platform, formatted, imageUrl, userId, postId, {
-      generationId,
-      templateId,
+      ...(generationId !== undefined && { generationId }),
+      ...(templateId !== undefined && { templateId }),
     });
 
     if (!result.success) {

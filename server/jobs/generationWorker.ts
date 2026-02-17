@@ -81,8 +81,7 @@ async function processGenerateJob(
   const result = await geminiService.generateImage(
     data.prompt,
     {
-      aspectRatio: data.aspectRatio,
-      referenceImages: undefined,
+      ...(data.aspectRatio !== undefined && { aspectRatio: data.aspectRatio }),
     },
     data.userId,
   );
@@ -153,8 +152,7 @@ async function processVariationJob(
   const result = await geminiService.generateImage(
     variationPrompt,
     {
-      referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
-      aspectRatio: undefined,
+      ...(referenceImages.length > 0 && { referenceImages }),
     },
     data.userId,
   );
@@ -197,10 +195,9 @@ async function processVideoGenerateJob(
   const result = await generateVideo(
     data.prompt,
     {
-      duration: data.duration,
-      aspectRatio: data.aspectRatio,
-      resolution: data.videoResolution,
-      sourceImageBase64: data.sourceImageUrl ? undefined : undefined,
+      ...(data.duration !== undefined && { duration: data.duration }),
+      ...(data.aspectRatio !== undefined && { aspectRatio: data.aspectRatio }),
+      ...(data.videoResolution !== undefined && { resolution: data.videoResolution }),
     },
     async (pct, message) => {
       await reportProgress(job, 'processing', Math.min(pct, 85), message);
@@ -292,9 +289,15 @@ export async function processGenerationJob(
     if (isGenerateJob(data)) {
       processResult = await processGenerateJob(job, data);
     } else if (isEditJob(data)) {
-      processResult = await processEditJob(job, data, existingGeneration);
+      processResult = await processEditJob(job, data, {
+        conversationHistory: existingGeneration.conversationHistory as any[] | null,
+        ...(existingGeneration['editCount'] !== undefined && { editCount: existingGeneration['editCount'] as number }),
+      });
     } else if (isVariationJob(data)) {
-      processResult = await processVariationJob(job, data, existingGeneration);
+      processResult = await processVariationJob(job, data, {
+        conversationHistory: existingGeneration.conversationHistory as any[] | null,
+        ...(existingGeneration.prompt !== undefined && { prompt: existingGeneration.prompt }),
+      });
     } else {
       throw new Error(`Unknown job type: ${jobType}`);
     }
@@ -313,7 +316,7 @@ export async function processGenerationJob(
     };
 
     if (processResult.editCount !== undefined) {
-      updateData.editCount = processResult.editCount;
+      updateData['editCount'] = processResult.editCount;
     }
 
     await storage.updateGeneration(generationId, updateData);
