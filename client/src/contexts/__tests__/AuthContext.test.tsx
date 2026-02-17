@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { AuthProvider, useAuth } from '../AuthContext';
 import { _resetCsrfToken } from '@/lib/queryClient';
 
@@ -15,7 +15,7 @@ vi.mock('wouter', () => ({
 // ============================================
 
 const createWrapper = () => {
-  return function Wrapper({ children }: { children: ReactNode }) {
+  return function Wrapper({ children }: { children: ReactNode }): ReactNode {
     return <AuthProvider>{children}</AuthProvider>;
   };
 };

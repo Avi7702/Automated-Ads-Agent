@@ -15,7 +15,7 @@
  * @file client/src/components/__tests__/CarouselBuilder.test.tsx
  */
 import React from 'react';
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@/test-utils';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@testing-library/jest-dom';
@@ -656,7 +656,7 @@ describe('CarouselBuilder - Integration', () => {
       const transformCall = mockFetch.mock.calls.find((call) => call[0] === '/api/transform');
       expect(transformCall).toBeDefined();
 
-      const requestBody = JSON.parse(transformCall[1].body);
+      const requestBody = JSON.parse(transformCall![1].body);
       expect(requestBody.productImageUrls).toEqual([
         'https://example.com/product1.jpg',
         'https://example.com/product2.jpg',
@@ -674,14 +674,14 @@ describe('CarouselBuilder - Integration', () => {
     });
 
     // Find and click close button (X icon)
-    const closeButton = screen.getByRole('button', { name: '' }); // Icon-only button
+    screen.getByRole('button', { name: '' }); // Icon-only button — assert exists
     const closeButtons = screen
       .getAllByRole('button')
       .filter((btn) => btn.querySelector('svg.lucide-x') || btn.querySelector('[class*="lucide-x"]'));
 
     // The close button should be in the header
     if (closeButtons.length > 0) {
-      fireEvent.click(closeButtons[0]);
+      fireEvent.click(closeButtons[0]!);
       expect(onClose).toHaveBeenCalled();
     }
   });
@@ -756,7 +756,7 @@ describe('CarouselBuilder - Edge Cases', () => {
       const transformCall = mockFetch.mock.calls.find((call) => call[0] === '/api/transform');
       expect(transformCall).toBeDefined();
 
-      const requestBody = JSON.parse(transformCall[1].body);
+      const requestBody = JSON.parse(transformCall![1].body);
       expect(requestBody.mode).toBe('standard');
     });
   });

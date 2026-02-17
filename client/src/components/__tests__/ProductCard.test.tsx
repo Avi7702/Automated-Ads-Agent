@@ -256,7 +256,7 @@ describe('ProductCard Edge Cases', () => {
       cloudinaryPublicId: null,
       enrichmentStatus: null,
     };
-    render(<ProductCard product={minimalProduct} />);
+    render(<ProductCard product={minimalProduct as unknown as typeof mockProduct} />);
     // Should render product name even with all null optional fields
     expect(screen.getByText('Test Product')).toBeInTheDocument();
     expect(screen.getByText('No image')).toBeInTheDocument();

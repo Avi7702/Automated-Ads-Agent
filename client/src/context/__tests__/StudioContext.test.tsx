@@ -1,13 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import {
   StudioProvider,
   useStudioContext,
   studioReducer,
   initialStudioState,
-  StudioState,
-  StudioAction,
+  type StudioState,
 } from '../StudioContext';
 
 // ============================================
@@ -15,8 +14,8 @@ import {
 // ============================================
 
 const createWrapper = (initialState?: Partial<StudioState>) => {
-  return function Wrapper({ children }: { children: ReactNode }) {
-    return <StudioProvider initialState={initialState}>{children}</StudioProvider>;
+  return function Wrapper({ children }: { children: ReactNode }): ReactNode {
+    return <StudioProvider {...(initialState !== undefined ? { initialState } : {})}>{children}</StudioProvider>;
   };
 };
 
@@ -240,9 +239,9 @@ describe('studioReducer', () => {
       const result = studioReducer(state, {
         type: 'UPDATE_UPLOAD',
         id: 'upload-1',
-        updates: { status: 'processing' },
+        updates: { status: 'analyzing' },
       });
-      expect(result.tempUploads[0]?.status).toBe('processing');
+      expect(result.tempUploads[0]?.status).toBe('analyzing');
     });
 
     it('REMOVE_UPLOAD deletes specific upload', () => {
@@ -335,17 +334,17 @@ describe('studioReducer', () => {
     it('SET_IDEABANK_MODE updates ideaBankMode', () => {
       const result = studioReducer(initialStudioState, {
         type: 'SET_IDEABANK_MODE',
-        mode: 'guided',
+        mode: 'template',
       });
-      expect(result.ideaBankMode).toBe('guided');
+      expect(result.ideaBankMode).toBe('template');
     });
 
     it('SET_GENERATION_MODE updates generationMode', () => {
       const result = studioReducer(initialStudioState, {
         type: 'SET_GENERATION_MODE',
-        mode: 'template',
+        mode: 'standard',
       });
-      expect(result.generationMode).toBe('template');
+      expect(result.generationMode).toBe('standard');
     });
 
     it('SET_TEMPLATE_FOR_MODE updates selectedTemplateForMode', () => {
@@ -504,12 +503,12 @@ describe('StudioContext Integration', () => {
     });
 
     act(() => {
-      result.current.dispatch({ type: 'SET_IDEABANK_MODE', mode: 'guided' });
-      result.current.dispatch({ type: 'SET_GENERATION_MODE', mode: 'template' });
+      result.current.dispatch({ type: 'SET_IDEABANK_MODE', mode: 'template' });
+      result.current.dispatch({ type: 'SET_GENERATION_MODE', mode: 'standard' });
     });
 
-    expect(result.current.state.ideaBankMode).toBe('guided');
-    expect(result.current.state.generationMode).toBe('template');
+    expect(result.current.state.ideaBankMode).toBe('template');
+    expect(result.current.state.generationMode).toBe('standard');
   });
 
   it('clears all state on reset', () => {
