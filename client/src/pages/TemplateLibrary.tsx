@@ -4,21 +4,16 @@ import { useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
-  Filter,
   Plus,
   Trash2,
   Star,
   TrendingUp,
   Layout,
-  ImageOff,
   ExternalLink,
   Palette,
-  Type,
   Target,
   BarChart3,
   Clock,
-  ChevronDown,
-  X,
   Sparkles,
   Instagram,
   Linkedin,
@@ -32,23 +27,16 @@ import type { PerformingAdTemplate } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
 import { Header } from '@/components/layout/Header';
 import { AddTemplateModal } from '@/components/AddTemplateModal';
 
 interface TemplateLibraryProps {
-  embedded?: boolean;
-  selectedId?: string | null;
+  embedded?: boolean | undefined;
+  selectedId?: string | null | undefined;
 }
 
 // Platform icons mapping
@@ -401,7 +389,7 @@ function TemplateSkeleton() {
   );
 }
 
-export default function TemplateLibrary({ embedded = false, selectedId }: TemplateLibraryProps) {
+export default function TemplateLibrary({ embedded = false, selectedId: _selectedId }: TemplateLibraryProps) {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState('');

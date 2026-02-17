@@ -129,6 +129,11 @@ export function createMockGeneration(overrides: Partial<Generation> = {}): Gener
     parentGenerationId: null,
     editPrompt: null,
     editCount: 0,
+    mediaType: null,
+    videoDurationSec: null,
+    productIds: null,
+    templateId: null,
+    generationMode: null,
     createdAt: now,
     updatedAt: now,
     ...overrides,
@@ -159,8 +164,7 @@ export function createMockTemplate(overrides: Partial<PromptTemplate> = {}): Pro
   return {
     id,
     title: `Test Template ${id.substring(0, 8)}`,
-    prompt:
-      'Create a {{style}} advertisement featuring {{product}} with {{background}} background.',
+    prompt: 'Create a {{style}} advertisement featuring {{product}} with {{background}} background.',
     category: 'product_showcase',
     tags: ['marketing', 'product', 'professional'],
     createdAt: new Date(),
@@ -197,6 +201,7 @@ export function createMockUser(overrides: Partial<User> = {}): User {
     passwordHash: '$2b$10$mockhashedpasswordfortesting123456789',
     failedAttempts: 0,
     lockedUntil: null,
+    role: 'user',
     brandVoice: {
       principles: ['Professional', 'Trustworthy', 'Innovative'],
       wordsToAvoid: ['cheap', 'discount'],
@@ -240,8 +245,7 @@ export function createMockAdCopy(overrides: Partial<AdCopy> = {}): AdCopy {
     bodyText:
       'Discover premium flooring solutions that combine durability with stunning aesthetics. Our expert installation ensures a perfect fit every time.',
     cta: 'Get Your Free Quote',
-    caption:
-      'Elevate your home with premium flooring. Professional installation, lifetime warranty.',
+    caption: 'Elevate your home with premium flooring. Professional installation, lifetime warranty.',
     hashtags: ['#flooring', '#homeimprovement', '#interiordesign', '#renovation'],
 
     // Platform and tone
@@ -316,9 +320,7 @@ export function createMockAdCopy(overrides: Partial<AdCopy> = {}): AdCopy {
  * });
  * ```
  */
-export function createMockSocialConnection(
-  overrides: Partial<SocialConnection> = {}
-): SocialConnection {
+export function createMockSocialConnection(overrides: Partial<SocialConnection> = {}): SocialConnection {
   const id = overrides.id || generateId('social');
   const now = new Date();
   const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
@@ -375,8 +377,7 @@ export function createMockScheduledPost(overrides: Partial<ScheduledPost> = {}):
     id,
     userId: overrides.userId || generateId('user'),
     connectionId: overrides.connectionId || generateId('social'),
-    caption:
-      'Discover the beauty of premium flooring. Transform your space with our expert installation services.',
+    caption: 'Discover the beauty of premium flooring. Transform your space with our expert installation services.',
     hashtags: ['#flooring', '#homedesign', '#renovation'],
     imageUrl: `https://res.cloudinary.com/test/image/upload/post-${id}.jpg`,
     imagePublicId: `posts/${id}`,

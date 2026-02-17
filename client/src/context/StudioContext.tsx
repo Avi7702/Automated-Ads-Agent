@@ -12,7 +12,7 @@ export type GenerationState = 'idle' | 'generating' | 'result';
 export interface SelectedSuggestion {
   id: string;
   prompt: string;
-  reasoning?: string;
+  reasoning?: string | undefined;
 }
 
 export interface StudioState {
@@ -195,9 +195,7 @@ export function studioReducer(state: StudioState, action: StudioAction): StudioS
     case 'UPDATE_UPLOAD':
       return {
         ...state,
-        tempUploads: state.tempUploads.map((u) =>
-          u.id === action.id ? { ...u, ...action.updates } : u
-        ),
+        tempUploads: state.tempUploads.map((u) => (u.id === action.id ? { ...u, ...action.updates } : u)),
       };
 
     case 'REMOVE_UPLOAD':
@@ -286,11 +284,7 @@ export function StudioProvider({ children, initialState }: StudioProviderProps) 
     ...initialState,
   });
 
-  return (
-    <StudioContext.Provider value={{ state, dispatch }}>
-      {children}
-    </StudioContext.Provider>
-  );
+  return <StudioContext.Provider value={{ state, dispatch }}>{children}</StudioContext.Provider>;
 }
 
 // ============================================

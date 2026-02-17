@@ -1,11 +1,9 @@
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles,
-  RefreshCw,
   Check,
   AlertCircle,
-  Edit2,
   Eye,
   Globe,
   Database,
@@ -19,12 +17,12 @@ import {
   List,
   Link2,
   ExternalLink,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { cn, getProductImageUrl } from "@/lib/utils";
-import type { Product } from "@shared/schema";
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { cn, getProductImageUrl } from '@/lib/utils';
+import type { Product } from '@shared/schema';
 
 interface EnrichmentDraft {
   description: string;
@@ -41,7 +39,7 @@ interface EnrichmentDraft {
   relatedProductTypes?: string[];
   confidence: number;
   sources: Array<{
-    type: "vision" | "web_search" | "kb" | "url";
+    type: 'vision' | 'web_search' | 'kb' | 'url';
     detail: string;
   }>;
   generatedAt: string;
@@ -49,7 +47,7 @@ interface EnrichmentDraft {
 
 interface EnrichmentStatus {
   productId: string;
-  status: "pending" | "draft" | "verified" | "complete";
+  status: 'pending' | 'draft' | 'verified' | 'complete';
   draft: EnrichmentDraft | null;
   verifiedAt: string | null;
   source: string | null;
@@ -67,7 +65,7 @@ interface ProductEnrichmentFormProps {
 }
 
 // Source badge component
-function SourceBadge({ source }: { source: EnrichmentDraft["sources"][0] }) {
+function SourceBadge({ source }: { source: EnrichmentDraft['sources'][0] }) {
   const iconMap: Record<string, typeof Eye> = {
     vision: Eye,
     web_search: Globe,
@@ -79,17 +77,17 @@ function SourceBadge({ source }: { source: EnrichmentDraft["sources"][0] }) {
   return (
     <div className="flex items-center gap-1.5 px-2 py-1 bg-muted/50 rounded-full text-xs">
       <Icon className="w-3 h-3" />
-      <span className="capitalize">{source.type.replace("_", " ")}</span>
+      <span className="capitalize">{source.type.replace('_', ' ')}</span>
     </div>
   );
 }
 
 // Completeness indicator
-function CompletenessIndicator({ completeness }: { completeness: EnrichmentStatus["completeness"] }) {
+function CompletenessIndicator({ completeness }: { completeness: EnrichmentStatus['completeness'] }) {
   const getColor = (pct: number) => {
-    if (pct >= 75) return "bg-green-500 dark:bg-green-600";
-    if (pct >= 50) return "bg-yellow-500 dark:bg-yellow-600";
-    return "bg-red-500 dark:bg-red-600";
+    if (pct >= 75) return 'bg-green-500 dark:bg-green-600';
+    if (pct >= 50) return 'bg-yellow-500 dark:bg-yellow-600';
+    return 'bg-red-500 dark:bg-red-600';
   };
 
   return (
@@ -100,16 +98,14 @@ function CompletenessIndicator({ completeness }: { completeness: EnrichmentStatu
       </div>
       <div className="h-1.5 bg-muted rounded-full overflow-hidden">
         <motion.div
-          className={cn("h-full rounded-full", getColor(completeness.percentage))}
+          className={cn('h-full rounded-full', getColor(completeness.percentage))}
           initial={{ width: 0 }}
           animate={{ width: `${completeness.percentage}%` }}
           transition={{ duration: 0.5 }}
         />
       </div>
       {completeness.missing.length > 0 && (
-        <p className="text-xs text-muted-foreground">
-          Missing: {completeness.missing.join(", ")}
-        </p>
+        <p className="text-xs text-muted-foreground">Missing: {completeness.missing.join(', ')}</p>
       )}
     </div>
   );
@@ -125,18 +121,18 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
   const [isExpanded, setIsExpanded] = useState(false);
 
   // URL enrichment state
-  const [productUrl, setProductUrl] = useState("");
+  const [productUrl, setProductUrl] = useState('');
 
   // Editable form state
   const [formData, setFormData] = useState({
-    description: "",
+    description: '',
     features: {} as Record<string, string>,
     benefits: [] as string[],
     tags: [] as string[],
-    sku: "",
+    sku: '',
   });
-  const [newBenefit, setNewBenefit] = useState("");
-  const [newTag, setNewTag] = useState("");
+  const [newBenefit, setNewBenefit] = useState('');
+  const [newTag, setNewTag] = useState('');
 
   // Fetch current enrichment status
   useEffect(() => {
@@ -147,27 +143,27 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/products/${product.id}/enrichment`, { credentials: "include" });
-      if (!response.ok) throw new Error("Failed to fetch enrichment status");
+      const response = await fetch(`/api/products/${product.id}/enrichment`, { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch enrichment status');
       const data = await response.json();
       setEnrichmentStatus(data);
 
       // Populate form with draft or existing data
       if (data.draft) {
         setFormData({
-          description: data.draft.description || "",
+          description: data.draft.description || '',
           features: flattenFeatures(data.draft.features || {}),
           benefits: data.draft.benefits || [],
           tags: data.draft.tags || [],
-          sku: product.sku || "",
+          sku: product.sku || '',
         });
       } else if (product.description) {
         setFormData({
-          description: product.description || "",
+          description: product.description || '',
           features: flattenFeatures((product.features as Record<string, unknown>) || {}),
           benefits: (product.benefits as string[]) || [],
           tags: (product.tags as string[]) || [],
-          sku: product.sku || "",
+          sku: product.sku || '',
         });
       }
     } catch (err: any) {
@@ -181,7 +177,7 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
   function flattenFeatures(features: Record<string, unknown>): Record<string, string> {
     const result: Record<string, string> = {};
     for (const [key, value] of Object.entries(features)) {
-      result[key] = Array.isArray(value) ? value.join(", ") : String(value || "");
+      result[key] = Array.isArray(value) ? value.join(', ') : String(value || '');
     }
     return result;
   }
@@ -192,13 +188,13 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
     setError(null);
     try {
       const response = await fetch(`/api/products/${product.id}/enrich`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
       });
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Failed to generate draft");
+        throw new Error(data.error || 'Failed to generate draft');
       }
       await fetchEnrichmentStatus();
       setIsExpanded(true);
@@ -212,7 +208,7 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
   // Fetch from URL
   async function fetchFromUrl() {
     if (!productUrl.trim()) {
-      setError("Please enter a product URL");
+      setError('Please enter a product URL');
       return;
     }
 
@@ -220,7 +216,7 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
     try {
       new URL(productUrl);
     } catch {
-      setError("Please enter a valid URL");
+      setError('Please enter a valid URL');
       return;
     }
 
@@ -228,31 +224,31 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
     setError(null);
     try {
       const response = await fetch(`/api/products/${product.id}/enrich-from-url`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productUrl: productUrl.trim() }),
-        credentials: "include",
+        credentials: 'include',
       });
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Failed to fetch from URL");
+        throw new Error(data.error || 'Failed to fetch from URL');
       }
       const result = await response.json();
 
       // Update form with fetched data
       if (result.draft) {
         setFormData({
-          description: result.draft.description || "",
+          description: result.draft.description || '',
           features: flattenFeatures(result.draft.features || {}),
           benefits: result.draft.benefits || [],
           tags: result.draft.tags || [],
-          sku: product.sku || "",
+          sku: product.sku || '',
         });
       }
 
       await fetchEnrichmentStatus();
       setIsExpanded(true);
-      setProductUrl(""); // Clear the input after success
+      setProductUrl(''); // Clear the input after success
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -266,14 +262,14 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
     setError(null);
     try {
       const response = await fetch(`/api/products/${product.id}/enrichment/verify`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(approvedAsIs ? { approvedAsIs: true } : formData),
-        credentials: "include",
+        credentials: 'include',
       });
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Failed to save enrichment");
+        throw new Error(data.error || 'Failed to save enrichment');
       }
       await fetchEnrichmentStatus();
       onComplete?.();
@@ -291,7 +287,7 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
         ...prev,
         benefits: [...prev.benefits, newBenefit.trim()],
       }));
-      setNewBenefit("");
+      setNewBenefit('');
     }
   }
 
@@ -309,7 +305,7 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
         ...prev,
         tags: [...prev.tags, newTag.trim().toLowerCase()],
       }));
-      setNewTag("");
+      setNewTag('');
     }
   }
 
@@ -322,18 +318,18 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
 
   if (isLoading) {
     return (
-      <div className={cn("p-6 flex items-center justify-center", className)}>
+      <div className={cn('p-6 flex items-center justify-center', className)}>
         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
-  const status = enrichmentStatus?.status || "pending";
+  const status = enrichmentStatus?.status || 'pending';
   const draft = enrichmentStatus?.draft;
   const completeness = enrichmentStatus?.completeness;
 
   return (
-    <div className={cn("rounded-lg border bg-card", className)}>
+    <div className={cn('rounded-lg border bg-card', className)}>
       {/* Header */}
       <div
         className="p-4 flex items-center justify-between cursor-pointer hover:bg-muted/30 transition-colors"
@@ -352,15 +348,13 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
             <div className="flex items-center gap-2 mt-1">
               <StatusBadge status={status} />
               {completeness && (
-                <span className="text-xs text-muted-foreground">
-                  {completeness.percentage}% complete
-                </span>
+                <span className="text-xs text-muted-foreground">{completeness.percentage}% complete</span>
               )}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {status === "pending" && (
+          {status === 'pending' && (
             <Button
               size="sm"
               variant="outline"
@@ -370,11 +364,7 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
               }}
               disabled={isGenerating}
             >
-              {isGenerating ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-1" />
-              ) : (
-                <Sparkles className="w-4 h-4 mr-1" />
-              )}
+              {isGenerating ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Sparkles className="w-4 h-4 mr-1" />}
               Generate Draft
             </Button>
           )}
@@ -399,7 +389,7 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
         {isExpanded && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
+            animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
@@ -423,13 +413,9 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
                     onChange={(e) => setProductUrl(e.target.value)}
                     placeholder="https://example.com/product-page"
                     className="flex-1"
-                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), fetchFromUrl())}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), fetchFromUrl())}
                   />
-                  <Button
-                    variant="secondary"
-                    onClick={fetchFromUrl}
-                    disabled={isFetchingUrl || !productUrl.trim()}
-                  >
+                  <Button variant="secondary" onClick={fetchFromUrl} disabled={isFetchingUrl || !productUrl.trim()}>
                     {isFetchingUrl ? (
                       <Loader2 className="w-4 h-4 animate-spin mr-1" />
                     ) : (
@@ -448,9 +434,7 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
                     <SourceBadge key={idx} source={source} />
                   ))}
                   {draft.confidence && (
-                    <span className="text-xs text-muted-foreground ml-2">
-                      Confidence: {draft.confidence}%
-                    </span>
+                    <span className="text-xs text-muted-foreground ml-2">Confidence: {draft.confidence}%</span>
                   )}
                 </div>
               )}
@@ -463,9 +447,7 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
                 </label>
                 <Textarea
                   value={formData.description}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, description: e.target.value }))
-                  }
+                  onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
                   placeholder="Describe the product, its use case, and key selling points..."
                   rows={3}
                 />
@@ -511,7 +493,7 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
                     onClick={() => {
                       setFormData((prev) => ({
                         ...prev,
-                        features: { ...prev.features, "": "" },
+                        features: { ...prev.features, '': '' },
                       }));
                     }}
                   >
@@ -547,7 +529,7 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
                     value={newBenefit}
                     onChange={(e) => setNewBenefit(e.target.value)}
                     placeholder="Add a benefit..."
-                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addBenefit())}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addBenefit())}
                   />
                   <Button variant="outline" size="sm" onClick={addBenefit}>
                     Add
@@ -582,7 +564,7 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
                     value={newTag}
                     onChange={(e) => setNewTag(e.target.value)}
                     placeholder="Add a tag..."
-                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
                   />
                   <Button variant="outline" size="sm" onClick={addTag}>
                     Add
@@ -598,38 +580,21 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
                 </label>
                 <Input
                   value={formData.sku}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, sku: e.target.value }))
-                  }
+                  onChange={(e) => setFormData((prev) => ({ ...prev, sku: e.target.value }))}
                   placeholder="Product SKU or model number"
                 />
               </div>
 
               {/* Action buttons */}
               <div className="flex justify-end gap-2 pt-4 border-t">
-                {status === "draft" && draft && (
-                  <Button
-                    variant="outline"
-                    onClick={() => saveEnrichment(true)}
-                    disabled={isSaving}
-                  >
-                    {isSaving ? (
-                      <Loader2 className="w-4 h-4 animate-spin mr-1" />
-                    ) : (
-                      <Check className="w-4 h-4 mr-1" />
-                    )}
+                {status === 'draft' && draft && (
+                  <Button variant="outline" onClick={() => saveEnrichment(true)} disabled={isSaving}>
+                    {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Check className="w-4 h-4 mr-1" />}
                     Approve As-Is
                   </Button>
                 )}
-                <Button
-                  onClick={() => saveEnrichment(false)}
-                  disabled={isSaving || !formData.description}
-                >
-                  {isSaving ? (
-                    <Loader2 className="w-4 h-4 animate-spin mr-1" />
-                  ) : (
-                    <Check className="w-4 h-4 mr-1" />
-                  )}
+                <Button onClick={() => saveEnrichment(false)} disabled={isSaving || !formData.description}>
+                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Check className="w-4 h-4 mr-1" />}
                   Save & Verify
                 </Button>
               </div>
@@ -645,30 +610,26 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
 function StatusBadge({ status }: { status: string }) {
   const config: Record<string, { label: string; className: string }> = {
     pending: {
-      label: "Needs Enrichment",
-      className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
+      label: 'Needs Enrichment',
+      className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
     },
     draft: {
-      label: "Draft Ready",
-      className: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+      label: 'Draft Ready',
+      className: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
     },
     verified: {
-      label: "Verified",
-      className: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+      label: 'Verified',
+      className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
     },
     complete: {
-      label: "Complete",
-      className: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+      label: 'Complete',
+      className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
     },
   };
 
-  const c = config[status] || config.pending;
+  const c = config[status] ?? config['pending'] ?? { label: 'Unknown', className: '' };
 
-  return (
-    <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", c.className)}>
-      {c.label}
-    </span>
-  );
+  return <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium', c.className)}>{c.label}</span>;
 }
 
 export default ProductEnrichmentForm;

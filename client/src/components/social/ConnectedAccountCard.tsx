@@ -88,7 +88,7 @@ export function ConnectedAccountCard({ account, onDisconnect }: ConnectedAccount
     },
   };
 
-  const config = platformConfig[account.platform] || platformConfig.linkedin;
+  const config = platformConfig[account.platform] || platformConfig['linkedin'];
   const Icon = config.icon;
 
   // Compute status from existing fields (2026 UX: clear visual feedback)
@@ -168,9 +168,7 @@ export function ConnectedAccountCard({ account, onDisconnect }: ConnectedAccount
 
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">Connected:</span>
-                <span className="font-medium">
-                  {format(parseISO(account.connectedAt), 'MMM d, yyyy')}
-                </span>
+                <span className="font-medium">{format(parseISO(account.connectedAt), 'MMM d, yyyy')}</span>
               </div>
 
               <div className="flex items-center gap-2">
@@ -183,9 +181,7 @@ export function ConnectedAccountCard({ account, onDisconnect }: ConnectedAccount
               {account.lastUsedAt && (
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground">Last Used:</span>
-                  <span className="font-medium">
-                    {format(parseISO(account.lastUsedAt), 'MMM d, yyyy h:mm a')}
-                  </span>
+                  <span className="font-medium">{format(parseISO(account.lastUsedAt), 'MMM d, yyyy h:mm a')}</span>
                 </div>
               )}
 
@@ -196,9 +192,7 @@ export function ConnectedAccountCard({ account, onDisconnect }: ConnectedAccount
                     <p className="text-xs text-muted-foreground">
                       Last Error ({format(parseISO(account.lastErrorAt), 'MMM d, h:mm a')}):
                     </p>
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      {account.lastErrorMessage}
-                    </p>
+                    <p className="text-sm text-red-600 dark:text-red-400">{account.lastErrorMessage}</p>
                   </div>
                 </div>
               )}
@@ -229,8 +223,10 @@ export function ConnectedAccountCard({ account, onDisconnect }: ConnectedAccount
             <AlertDialogDescription>
               This will remove the reference to your {config.label} account{' '}
               {account.platformUsername && `(@${account.platformUsername})`} from this application.
-              <br /><br />
-              <strong>Note:</strong> This does NOT revoke OAuth permissions in n8n. Scheduled posts using this account will fail until you reconnect via the "Sync Accounts from n8n" button.
+              <br />
+              <br />
+              <strong>Note:</strong> This does NOT revoke OAuth permissions in n8n. Scheduled posts using this account
+              will fail until you reconnect via the "Sync Accounts from n8n" button.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

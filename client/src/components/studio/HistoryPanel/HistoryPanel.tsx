@@ -12,8 +12,8 @@ import { ListGenerationsResponse } from '@shared/contracts/generations.contract'
 interface HistoryPanelProps {
   isOpen: boolean;
   onToggle: () => void;
-  onSelectGeneration?: (id: string) => void;
-  className?: string;
+  onSelectGeneration?: ((id: string) => void) | undefined;
+  className?: string | undefined;
 }
 
 interface Generation {
@@ -22,7 +22,7 @@ interface Generation {
   prompt: string;
   createdAt: string;
   platform: string;
-  status?: string;
+  status?: string | undefined;
 }
 
 const tabs = [
@@ -47,7 +47,7 @@ export function HistoryPanel({ isOpen, onToggle, onSelectGeneration, className }
     queryKey: ['generations'],
     queryFn: async () => {
       const all = await typedGet('/api/generations', ListGenerationsResponse);
-      return (all as Generation[]).filter((g) => !g.status || g.status === 'completed');
+      return (all as unknown as Generation[]).filter((g) => !g.status || g.status === 'completed');
     },
   });
 

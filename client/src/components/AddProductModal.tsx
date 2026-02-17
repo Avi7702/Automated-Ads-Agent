@@ -1,13 +1,13 @@
-import { useState, useCallback } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { useDropzone, type FileRejection } from "react-dropzone";
-import { motion, AnimatePresence } from "framer-motion";
-import { Upload, X, Image, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { useState, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useDropzone, type FileRejection } from 'react-dropzone';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Upload, X, Image, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
@@ -15,8 +15,8 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
+} from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 
 interface AddProductModalProps {
   isOpen: boolean;
@@ -24,7 +24,6 @@ interface AddProductModalProps {
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
   const queryClient = useQueryClient();
@@ -32,9 +31,9 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
 
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [name, setName] = useState("");
-  const [category, setCategory] = useState("");
-  const [description, setDescription] = useState("");
+  const [name, setName] = useState('');
+  const [category, setCategory] = useState('');
+  const [description, setDescription] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
@@ -42,9 +41,9 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
   const resetForm = () => {
     setFile(null);
     setPreview(null);
-    setName("");
-    setCategory("");
-    setDescription("");
+    setName('');
+    setCategory('');
+    setDescription('');
     setUploadError(null);
   };
 
@@ -57,54 +56,55 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
   };
 
   // Dropzone configuration
-  const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: FileRejection[]) => {
-    setUploadError(null);
+  const onDrop = useCallback(
+    (acceptedFiles: File[], rejectedFiles: FileRejection[]) => {
+      setUploadError(null);
 
-    if (rejectedFiles.length > 0) {
-      const firstRejection = rejectedFiles[0];
-      const error = firstRejection?.errors[0];
-      if (!error) {
-        setUploadError("File rejected.");
+      if (rejectedFiles.length > 0) {
+        const firstRejection = rejectedFiles[0];
+        const error = firstRejection?.errors[0];
+        if (!error) {
+          setUploadError('File rejected.');
+          return;
+        }
+        if (error.code === 'file-too-large') {
+          setUploadError('File is too large. Maximum size is 10MB.');
+        } else if (error.code === 'file-invalid-type') {
+          setUploadError('Invalid file type. Please upload JPG, PNG, WebP, or GIF.');
+        } else {
+          setUploadError(error.message);
+        }
         return;
       }
-      if (error.code === "file-too-large") {
-        setUploadError("File is too large. Maximum size is 10MB.");
-      } else if (error.code === "file-invalid-type") {
-        setUploadError("Invalid file type. Please upload JPG, PNG, WebP, or GIF.");
-      } else {
-        setUploadError(error.message);
+
+      if (acceptedFiles.length > 0) {
+        const selectedFile = acceptedFiles[0];
+        if (!selectedFile) return;
+
+        setFile(selectedFile);
+
+        // Create preview
+        const objectUrl = URL.createObjectURL(selectedFile);
+        setPreview(objectUrl);
+
+        // Auto-fill name from filename if empty
+        if (!name) {
+          const fileName = selectedFile.name.replace(/\.[^/.]+$/, ''); // Remove extension
+          const formattedName = fileName.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+          setName(formattedName);
+        }
       }
-      return;
-    }
-
-    if (acceptedFiles.length > 0) {
-      const selectedFile = acceptedFiles[0];
-      if (!selectedFile) return;
-
-      setFile(selectedFile);
-
-      // Create preview
-      const objectUrl = URL.createObjectURL(selectedFile);
-      setPreview(objectUrl);
-
-      // Auto-fill name from filename if empty
-      if (!name) {
-        const fileName = selectedFile.name.replace(/\.[^/.]+$/, ""); // Remove extension
-        const formattedName = fileName
-          .replace(/[-_]/g, " ")
-          .replace(/\b\w/g, (c) => c.toUpperCase());
-        setName(formattedName);
-      }
-    }
-  }, [name]);
+    },
+    [name],
+  );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      "image/jpeg": [".jpg", ".jpeg"],
-      "image/png": [".png"],
-      "image/webp": [".webp"],
-      "image/gif": [".gif"],
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/png': ['.png'],
+      'image/webp': ['.webp'],
+      'image/gif': ['.gif'],
     },
     maxSize: MAX_FILE_SIZE,
     multiple: false,
@@ -125,12 +125,12 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
     e.preventDefault();
 
     if (!file) {
-      setUploadError("Please select an image to upload.");
+      setUploadError('Please select an image to upload.');
       return;
     }
 
     if (!name.trim()) {
-      setUploadError("Please enter a product name.");
+      setUploadError('Please enter a product name.');
       return;
     }
 
@@ -139,43 +139,43 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
 
     try {
       const formData = new FormData();
-      formData.append("image", file);
-      formData.append("name", name.trim());
+      formData.append('image', file);
+      formData.append('name', name.trim());
       if (category.trim()) {
-        formData.append("category", category.trim());
+        formData.append('category', category.trim());
       }
       if (description.trim()) {
-        formData.append("description", description.trim());
+        formData.append('description', description.trim());
       }
 
-      const response = await fetch("/api/products", {
-        method: "POST",
+      const response = await fetch('/api/products', {
+        method: 'POST',
         body: formData,
       });
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: "Upload failed" }));
-        throw new Error(error.message || "Failed to create product");
+        const error = await response.json().catch(() => ({ message: 'Upload failed' }));
+        throw new Error(error.message || 'Failed to create product');
       }
 
       const product = await response.json();
 
       // Invalidate products query to refresh the list
-      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
 
       toast({
-        title: "Product created",
+        title: 'Product created',
         description: `${product.name} has been added to your library.`,
       });
 
       handleClose();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to upload product";
+      const message = error instanceof Error ? error.message : 'Failed to upload product';
       setUploadError(message);
       toast({
-        title: "Upload failed",
+        title: 'Upload failed',
         description: message,
-        variant: "destructive",
+        variant: 'destructive',
       });
     } finally {
       setIsUploading(false);
@@ -187,9 +187,7 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Add New Product</DialogTitle>
-          <DialogDescription>
-            Upload a product image to add it to your library.
-          </DialogDescription>
+          <DialogDescription>Upload a product image to add it to your library.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -198,20 +196,17 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
             <Label>Product Image</Label>
             <AnimatePresence mode="wait">
               {!preview ? (
-                <motion.div
-                  key="dropzone"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
+                <motion.div key="dropzone" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                   <div
                     {...getRootProps()}
                     className={`
                       relative border-2 border-dashed rounded-xl p-8
                       transition-colors cursor-pointer
-                      ${isDragActive
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50 hover:bg-muted/50"}
+                      ${
+                        isDragActive
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                      }
                     `}
                   >
                     <input {...getInputProps()} />
@@ -221,7 +216,7 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
                       </div>
                       <div>
                         <p className="text-sm font-medium">
-                          {isDragActive ? "Drop the image here" : "Drag & drop an image"}
+                          {isDragActive ? 'Drop the image here' : 'Drag & drop an image'}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
                           or click to browse (JPG, PNG, WebP, GIF up to 10MB)
@@ -239,11 +234,7 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
                   className="relative"
                 >
                   <div className="relative aspect-video rounded-xl overflow-hidden bg-muted">
-                    <img
-                      src={preview}
-                      alt="Preview"
-                      className="w-full h-full object-contain"
-                    />
+                    <img src={preview} alt="Preview" className="w-full h-full object-contain" />
                     <button
                       type="button"
                       onClick={clearFile}
@@ -255,9 +246,7 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
                   <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
                     <Image className="w-4 h-4" />
                     <span className="truncate">{file?.name}</span>
-                    <span className="text-xs">
-                      ({(file?.size ? file.size / 1024 : 0).toFixed(1)} KB)
-                    </span>
+                    <span className="text-xs">({(file?.size ? file.size / 1024 : 0).toFixed(1)} KB)</span>
                   </div>
                 </motion.div>
               )}
@@ -313,12 +302,7 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
 
           {/* Footer */}
           <DialogFooter className="gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
-              disabled={isUploading}
-            >
+            <Button type="button" variant="outline" onClick={handleClose} disabled={isUploading}>
               Cancel
             </Button>
             <Button type="submit" disabled={isUploading || !file}>

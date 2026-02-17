@@ -39,7 +39,7 @@ export function useUrlState() {
     (key: string): string | null => {
       return searchParams.get(key);
     },
-    [searchParams]
+    [searchParams],
   );
 
   /**
@@ -49,7 +49,7 @@ export function useUrlState() {
     (key: string): string[] => {
       return searchParams.getAll(key);
     },
-    [searchParams]
+    [searchParams],
   );
 
   /**
@@ -59,7 +59,7 @@ export function useUrlState() {
     (key: string): boolean => {
       return searchParams.has(key);
     },
-    [searchParams]
+    [searchParams],
   );
 
   /**
@@ -77,13 +77,13 @@ export function useUrlState() {
       }
 
       const newSearch = newParams.toString();
-      const basePath = location.split('?')[0];
+      const basePath = location.split('?')[0] ?? '';
       const newLocation = newSearch ? `${basePath}?${newSearch}` : basePath;
 
       setLocation(newLocation);
-      setUrlVersion(v => v + 1); // Force searchParams re-computation
+      setUrlVersion((v) => v + 1); // Force searchParams re-computation
     },
-    [searchParams, location, setLocation]
+    [searchParams, location, setLocation],
   );
 
   /**
@@ -103,13 +103,13 @@ export function useUrlState() {
       }
 
       const newSearch = newParams.toString();
-      const basePath = location.split('?')[0];
+      const basePath = location.split('?')[0] ?? '';
       const newLocation = newSearch ? `${basePath}?${newSearch}` : basePath;
 
       setLocation(newLocation);
-      setUrlVersion(v => v + 1); // Force searchParams re-computation
+      setUrlVersion((v) => v + 1); // Force searchParams re-computation
     },
-    [searchParams, location, setLocation]
+    [searchParams, location, setLocation],
   );
 
   /**
@@ -124,7 +124,7 @@ export function useUrlState() {
         setParam(key, 'true');
       }
     },
-    [searchParams, setParam]
+    [searchParams, setParam],
   );
 
   /**
@@ -142,13 +142,13 @@ export function useUrlState() {
       }
 
       const newSearch = newParams.toString();
-      const basePath = location.split('?')[0];
+      const basePath = location.split('?')[0] ?? '';
       const newLocation = newSearch ? `${basePath}?${newSearch}` : basePath;
 
       setLocation(newLocation);
-      setUrlVersion(v => v + 1); // Force searchParams re-computation
+      setUrlVersion((v) => v + 1); // Force searchParams re-computation
     },
-    [searchParams, location, setLocation]
+    [searchParams, location, setLocation],
   );
 
   /**
@@ -156,9 +156,7 @@ export function useUrlState() {
    */
   const navigateWithParams = useCallback(
     (path: string, params?: Record<string, string | null>, preserveExisting = false) => {
-      const newParams = preserveExisting
-        ? new URLSearchParams(searchParams)
-        : new URLSearchParams();
+      const newParams = preserveExisting ? new URLSearchParams(searchParams) : new URLSearchParams();
 
       if (params) {
         for (const [key, value] of Object.entries(params)) {
@@ -174,9 +172,9 @@ export function useUrlState() {
       const newLocation = newSearch ? `${path}?${newSearch}` : path;
 
       setLocation(newLocation);
-      setUrlVersion(v => v + 1); // Force searchParams re-computation
+      setUrlVersion((v) => v + 1); // Force searchParams re-computation
     },
-    [searchParams, setLocation]
+    [searchParams, setLocation],
   );
 
   return {
@@ -225,7 +223,7 @@ export function useHistoryPanelUrl() {
     (id: string | null) => {
       setParam('generation', id);
     },
-    [setParam]
+    [setParam],
   );
 
   return {
@@ -250,14 +248,14 @@ export function useLibraryTabUrl() {
     (tab: string) => {
       setParam('tab', tab);
     },
-    [setParam]
+    [setParam],
   );
 
   const selectItem = useCallback(
     (id: string | null) => {
       setParam('item', id);
     },
-    [setParam]
+    [setParam],
   );
 
   return {
@@ -280,7 +278,7 @@ export function useSettingsSectionUrl() {
     (section: string) => {
       setParam('section', section);
     },
-    [setParam]
+    [setParam],
   );
 
   return {
