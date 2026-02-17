@@ -19,8 +19,8 @@
  * - comparison: Before/after or comparison images
  */
 
-import { storage } from "../storage";
-import type { BrandImage, Product, ProductAnalysis } from "@shared/schema";
+import { storage } from '../storage';
+import type { BrandImage, Product, ProductAnalysis } from '@shared/schema';
 
 // ============================================
 // TYPES
@@ -108,21 +108,21 @@ export interface CategorySuggestion {
  * Brand image categories (matches schema enum)
  */
 export type BrandImageCategory =
-  | "historical_ad"
-  | "product_hero"
-  | "installation"
-  | "detail"
-  | "lifestyle"
-  | "comparison";
+  | 'historical_ad'
+  | 'product_hero'
+  | 'installation'
+  | 'detail'
+  | 'lifestyle'
+  | 'comparison';
 
 // All available categories
 const ALL_CATEGORIES: BrandImageCategory[] = [
-  "historical_ad",
-  "product_hero",
-  "installation",
-  "detail",
-  "lifestyle",
-  "comparison",
+  'historical_ad',
+  'product_hero',
+  'installation',
+  'detail',
+  'lifestyle',
+  'comparison',
 ];
 
 // ============================================
@@ -134,73 +134,76 @@ const ALL_CATEGORIES: BrandImageCategory[] = [
  */
 const USE_CASE_CATEGORY_MAP: Record<string, BrandImageCategory[]> = {
   // Ad creation use cases
-  "ad creation": ["product_hero", "lifestyle", "historical_ad"],
-  "ad": ["product_hero", "lifestyle", "historical_ad"],
-  "advertisement": ["product_hero", "lifestyle", "historical_ad"],
-  "advertising": ["product_hero", "lifestyle", "historical_ad"],
+  'ad creation': ['product_hero', 'lifestyle', 'historical_ad'],
+  ad: ['product_hero', 'lifestyle', 'historical_ad'],
+  advertisement: ['product_hero', 'lifestyle', 'historical_ad'],
+  advertising: ['product_hero', 'lifestyle', 'historical_ad'],
 
   // Social media use cases
-  "social post": ["lifestyle", "product_hero", "detail"],
-  "social media": ["lifestyle", "product_hero", "detail"],
-  "instagram": ["lifestyle", "product_hero", "detail"],
-  "facebook": ["lifestyle", "product_hero", "historical_ad"],
-  "linkedin": ["product_hero", "installation", "comparison"],
-  "twitter": ["product_hero", "lifestyle"],
-  "tiktok": ["lifestyle", "installation", "detail"],
+  'social post': ['lifestyle', 'product_hero', 'detail'],
+  'social media': ['lifestyle', 'product_hero', 'detail'],
+  instagram: ['lifestyle', 'product_hero', 'detail'],
+  facebook: ['lifestyle', 'product_hero', 'historical_ad'],
+  linkedin: ['product_hero', 'installation', 'comparison'],
+  twitter: ['product_hero', 'lifestyle'],
+  tiktok: ['lifestyle', 'installation', 'detail'],
 
   // Email use cases
-  "email": ["product_hero", "lifestyle", "comparison"],
-  "email marketing": ["product_hero", "lifestyle", "comparison"],
-  "newsletter": ["product_hero", "lifestyle", "detail"],
+  email: ['product_hero', 'lifestyle', 'comparison'],
+  'email marketing': ['product_hero', 'lifestyle', 'comparison'],
+  newsletter: ['product_hero', 'lifestyle', 'detail'],
 
   // Product-focused use cases
-  "product showcase": ["product_hero", "detail", "comparison"],
-  "product detail": ["detail", "product_hero", "installation"],
-  "hero image": ["product_hero", "lifestyle"],
-  "feature highlight": ["detail", "comparison", "product_hero"],
+  'product showcase': ['product_hero', 'detail', 'comparison'],
+  'product detail': ['detail', 'product_hero', 'installation'],
+  'hero image': ['product_hero', 'lifestyle'],
+  'feature highlight': ['detail', 'comparison', 'product_hero'],
 
   // Context-focused use cases
-  "lifestyle": ["lifestyle", "installation"],
-  "inspiration": ["lifestyle", "historical_ad", "installation"],
-  "how-to": ["installation", "detail", "comparison"],
-  "tutorial": ["installation", "detail"],
-  "before after": ["comparison", "installation"],
-  "comparison": ["comparison", "detail"],
+  lifestyle: ['lifestyle', 'installation'],
+  inspiration: ['lifestyle', 'historical_ad', 'installation'],
+  'how-to': ['installation', 'detail', 'comparison'],
+  tutorial: ['installation', 'detail'],
+  'before after': ['comparison', 'installation'],
+  comparison: ['comparison', 'detail'],
 
   // Generic fallback
-  "default": ["product_hero", "lifestyle", "detail"],
+  default: ['product_hero', 'lifestyle', 'detail'],
 };
 
 /**
  * Maps platforms to preferred aspect ratios and image types
  */
-const PLATFORM_PREFERENCES: Record<string, {
-  preferredAspectRatios: string[];
-  preferredCategories: BrandImageCategory[];
-}> = {
+const PLATFORM_PREFERENCES: Record<
+  string,
+  {
+    preferredAspectRatios: string[];
+    preferredCategories: BrandImageCategory[];
+  }
+> = {
   instagram: {
-    preferredAspectRatios: ["1:1", "4:5", "9:16"],
-    preferredCategories: ["lifestyle", "product_hero", "detail"],
+    preferredAspectRatios: ['1:1', '4:5', '9:16'],
+    preferredCategories: ['lifestyle', 'product_hero', 'detail'],
   },
   facebook: {
-    preferredAspectRatios: ["1:1", "16:9", "4:5"],
-    preferredCategories: ["lifestyle", "product_hero", "historical_ad"],
+    preferredAspectRatios: ['1:1', '16:9', '4:5'],
+    preferredCategories: ['lifestyle', 'product_hero', 'historical_ad'],
   },
   linkedin: {
-    preferredAspectRatios: ["1:1", "16:9", "1.91:1"],
-    preferredCategories: ["product_hero", "installation", "comparison"],
+    preferredAspectRatios: ['1:1', '16:9', '1.91:1'],
+    preferredCategories: ['product_hero', 'installation', 'comparison'],
   },
   twitter: {
-    preferredAspectRatios: ["16:9", "1:1", "2:1"],
-    preferredCategories: ["product_hero", "lifestyle"],
+    preferredAspectRatios: ['16:9', '1:1', '2:1'],
+    preferredCategories: ['product_hero', 'lifestyle'],
   },
   tiktok: {
-    preferredAspectRatios: ["9:16"],
-    preferredCategories: ["lifestyle", "installation", "detail"],
+    preferredAspectRatios: ['9:16'],
+    preferredCategories: ['lifestyle', 'installation', 'detail'],
   },
   pinterest: {
-    preferredAspectRatios: ["2:3", "1:1", "9:16"],
-    preferredCategories: ["lifestyle", "product_hero", "installation"],
+    preferredAspectRatios: ['2:3', '1:1', '9:16'],
+    preferredCategories: ['lifestyle', 'product_hero', 'installation'],
   },
 };
 
@@ -208,16 +211,16 @@ const PLATFORM_PREFERENCES: Record<string, {
  * Maps moods to category preferences
  */
 const MOOD_CATEGORY_MAP: Record<string, BrandImageCategory[]> = {
-  luxury: ["product_hero", "lifestyle", "detail"],
-  cozy: ["lifestyle", "installation", "detail"],
-  professional: ["product_hero", "comparison", "installation"],
-  modern: ["product_hero", "lifestyle", "detail"],
-  rustic: ["lifestyle", "installation", "detail"],
-  minimalist: ["product_hero", "detail"],
-  vibrant: ["lifestyle", "product_hero", "historical_ad"],
-  industrial: ["installation", "detail", "product_hero"],
-  elegant: ["product_hero", "lifestyle", "detail"],
-  casual: ["lifestyle", "installation"],
+  luxury: ['product_hero', 'lifestyle', 'detail'],
+  cozy: ['lifestyle', 'installation', 'detail'],
+  professional: ['product_hero', 'comparison', 'installation'],
+  modern: ['product_hero', 'lifestyle', 'detail'],
+  rustic: ['lifestyle', 'installation', 'detail'],
+  minimalist: ['product_hero', 'detail'],
+  vibrant: ['lifestyle', 'product_hero', 'historical_ad'],
+  industrial: ['installation', 'detail', 'product_hero'],
+  elegant: ['product_hero', 'lifestyle', 'detail'],
+  casual: ['lifestyle', 'installation'],
 };
 
 // ============================================
@@ -234,19 +237,8 @@ const MOOD_CATEGORY_MAP: Record<string, BrandImageCategory[]> = {
  * - Product associations
  * - Tag relevance
  */
-export async function recommendImages(
-  context: RecommendationContext
-): Promise<RecommendationResponse> {
-  const {
-    productIds = [],
-    useCase,
-    platform,
-    mood,
-    userId,
-    maxResults = 5,
-    aspectRatio,
-    categoryFilter,
-  } = context;
+export async function recommendImages(context: RecommendationContext): Promise<RecommendationResponse> {
+  const { productIds = [], useCase, platform, mood, userId, maxResults = 5, aspectRatio, categoryFilter } = context;
 
   // Determine which categories to search
   const categoriesToSearch = categoryFilter || determineCategories(useCase, platform, mood);
@@ -266,12 +258,11 @@ export async function recommendImages(
     ]);
 
     // Get product analyses for better matching
-    const analyses = await Promise.all(
-      productIds.map((id) => storage.getProductAnalysisByProductId(id))
-    );
+    const analyses = await Promise.all(productIds.map((id) => storage.getProductAnalysisByProductId(id)));
     analyses.forEach((analysis, i) => {
-      if (analysis) {
-        productAnalyses.set(productIds[i], analysis);
+      const pid = productIds[i];
+      if (analysis && pid) {
+        productAnalyses.set(pid, analysis);
       }
     });
   }
@@ -288,12 +279,12 @@ export async function recommendImages(
     image,
     score: calculateRelevanceScore(image, {
       useCase,
-      platform,
-      mood,
+      ...(platform !== undefined && { platform }),
+      ...(mood !== undefined && { mood }),
       productIds,
       products,
       productAnalyses,
-      aspectRatio,
+      ...(aspectRatio !== undefined && { aspectRatio }),
       categoriesToSearch,
     }),
   }));
@@ -310,10 +301,10 @@ export async function recommendImages(
     relevanceScore: Math.round(score.total),
     suggestedUse: generateSuggestedUse(image, useCase, platform),
     reasoning: generateReasoning(score),
-    tags: image.tags || undefined,
-    description: image.description || undefined,
-    aspectRatio: image.aspectRatio || undefined,
-    associatedProductIds: image.productIds || undefined,
+    ...(image.tags != null && { tags: image.tags }),
+    ...(image.description != null && { description: image.description }),
+    ...(image.aspectRatio != null && { aspectRatio: image.aspectRatio }),
+    ...(image.productIds != null && { associatedProductIds: image.productIds }),
   }));
 
   return {
@@ -321,8 +312,8 @@ export async function recommendImages(
     totalConsidered: uniqueImages.length,
     matchContext: {
       useCase,
-      platform,
-      mood,
+      ...(platform !== undefined && { platform }),
+      ...(mood !== undefined && { mood }),
       productCount: productIds.length,
       categoriesSearched: categoriesToSearch,
     },
@@ -340,7 +331,7 @@ export async function matchImagesForProduct(
   options: {
     maxResults?: number;
     categoryFilter?: BrandImageCategory[];
-  } = {}
+  } = {},
 ): Promise<ImageRecommendation[]> {
   const { maxResults = 5, categoryFilter } = options;
 
@@ -386,10 +377,10 @@ export async function matchImagesForProduct(
     relevanceScore: Math.round(score.total),
     suggestedUse: generateProductSuggestedUse(image, product),
     reasoning: generateProductMatchReasoning(score, product),
-    tags: image.tags || undefined,
-    description: image.description || undefined,
-    aspectRatio: image.aspectRatio || undefined,
-    associatedProductIds: image.productIds || undefined,
+    ...(image.tags != null && { tags: image.tags }),
+    ...(image.description != null && { description: image.description }),
+    ...(image.aspectRatio != null && { aspectRatio: image.aspectRatio }),
+    ...(image.productIds != null && { associatedProductIds: image.productIds }),
   }));
 }
 
@@ -404,20 +395,22 @@ export function suggestImageCategory(
     platform?: string;
     mood?: string;
     maxSuggestions?: number;
-  } = {}
+  } = {},
 ): CategorySuggestion[] {
   const { platform, mood, maxSuggestions = 3 } = options;
   const normalizedUseCase = useCase.toLowerCase().trim();
 
   // Get base categories from use case
-  const useCaseCategories = USE_CASE_CATEGORY_MAP[normalizedUseCase] ||
-    USE_CASE_CATEGORY_MAP["default"];
+  const useCaseCategories = USE_CASE_CATEGORY_MAP[normalizedUseCase] || USE_CASE_CATEGORY_MAP['default'];
 
   // Score each category
-  const categoryScores: Map<BrandImageCategory, {
-    score: number;
-    reasons: string[];
-  }> = new Map();
+  const categoryScores: Map<
+    BrandImageCategory,
+    {
+      score: number;
+      reasons: string[];
+    }
+  > = new Map();
 
   // Initialize all categories
   ALL_CATEGORIES.forEach((cat) => {
@@ -425,12 +418,14 @@ export function suggestImageCategory(
   });
 
   // Score based on use case mapping
-  useCaseCategories.forEach((cat, index) => {
-    const entry = categoryScores.get(cat)!;
-    const boost = (useCaseCategories.length - index) * 20;
-    entry.score += boost;
-    entry.reasons.push(`Matches "${useCase}" use case`);
-  });
+  if (useCaseCategories) {
+    useCaseCategories.forEach((cat, index) => {
+      const entry = categoryScores.get(cat)!;
+      const boost = (useCaseCategories.length - index) * 20;
+      entry.score += boost;
+      entry.reasons.push(`Matches "${useCase}" use case`);
+    });
+  }
 
   // Boost based on platform
   if (platform) {
@@ -463,7 +458,7 @@ export function suggestImageCategory(
     .map(([category, { score, reasons }]) => ({
       category,
       confidence: Math.min(100, Math.round(score)),
-      reason: reasons.length > 0 ? reasons.join("; ") : "General recommendation",
+      reason: reasons.length > 0 ? reasons.join('; ') : 'General recommendation',
     }))
     .filter((s) => s.confidence > 0)
     .sort((a, b) => b.confidence - a.confidence)
@@ -479,13 +474,8 @@ export function suggestImageCategory(
 /**
  * Fetch user's brand images filtered by categories
  */
-async function fetchUserBrandImages(
-  userId: string,
-  categories: BrandImageCategory[]
-): Promise<BrandImage[]> {
-  const imagePromises = categories.map((cat) =>
-    storage.getBrandImagesByCategory(userId, cat)
-  );
+async function fetchUserBrandImages(userId: string, categories: BrandImageCategory[]): Promise<BrandImage[]> {
+  const imagePromises = categories.map((cat) => storage.getBrandImagesByCategory(userId, cat));
   const imageArrays = await Promise.all(imagePromises);
   return imageArrays.flat();
 }
@@ -493,18 +483,15 @@ async function fetchUserBrandImages(
 /**
  * Determine which categories to search based on context
  */
-function determineCategories(
-  useCase: string,
-  platform?: string,
-  mood?: string
-): BrandImageCategory[] {
+function determineCategories(useCase: string, platform?: string, mood?: string): BrandImageCategory[] {
   const normalizedUseCase = useCase.toLowerCase().trim();
   const categories = new Set<BrandImageCategory>();
 
   // Add use case categories
-  const useCaseCategories = USE_CASE_CATEGORY_MAP[normalizedUseCase] ||
-    USE_CASE_CATEGORY_MAP["default"];
-  useCaseCategories.forEach((cat) => categories.add(cat));
+  const useCaseCategories = USE_CASE_CATEGORY_MAP[normalizedUseCase] ?? USE_CASE_CATEGORY_MAP['default'];
+  if (useCaseCategories) {
+    useCaseCategories.forEach((cat) => categories.add(cat));
+  }
 
   // Add platform categories
   if (platform) {
@@ -530,27 +517,27 @@ function determineCategories(
  */
 function inferCategoriesFromProduct(
   product: Product,
-  analysis: ProductAnalysis | null | undefined
+  analysis: ProductAnalysis | null | undefined,
 ): BrandImageCategory[] {
   const categories = new Set<BrandImageCategory>();
 
   // Always include product hero and detail
-  categories.add("product_hero");
-  categories.add("detail");
+  categories.add('product_hero');
+  categories.add('detail');
 
   // Add lifestyle if we have context information
   if (analysis?.usageContext || product.description) {
-    categories.add("lifestyle");
+    categories.add('lifestyle');
   }
 
   // Add installation if product has installation info
   if (product.features || analysis?.materials) {
-    categories.add("installation");
+    categories.add('installation');
   }
 
   // Add comparison if product has comparison-worthy features
   if (product.benefits && product.benefits.length > 2) {
-    categories.add("comparison");
+    categories.add('comparison');
   }
 
   return Array.from(categories);
@@ -580,7 +567,7 @@ function calculateRelevanceScore(
     productAnalyses: Map<string, ProductAnalysis>;
     aspectRatio?: string;
     categoriesToSearch: BrandImageCategory[];
-  }
+  },
 ): ScoreBreakdown {
   let categoryScore = 0;
   let platformScore = 0;
@@ -590,9 +577,7 @@ function calculateRelevanceScore(
   let aspectRatioScore = 0;
 
   // Category relevance (max 30 points)
-  const categoryIndex = context.categoriesToSearch.indexOf(
-    image.category as BrandImageCategory
-  );
+  const categoryIndex = context.categoriesToSearch.indexOf(image.category as BrandImageCategory);
   if (categoryIndex !== -1) {
     categoryScore = Math.max(0, 30 - categoryIndex * 5);
   }
@@ -634,13 +619,10 @@ function calculateRelevanceScore(
       // Tag overlap with products
       const productTags = context.products.flatMap((p) => p.tags || []);
       const analysisData = Array.from(context.productAnalyses.values());
-      const analysisTags = analysisData.flatMap((a) => [
-        ...(a.materials || []),
-        ...(a.colors || []),
-        a.style,
-        a.category,
-        a.subcategory,
-      ].filter(Boolean) as string[]);
+      const analysisTags = analysisData.flatMap(
+        (a) =>
+          [...(a.materials || []), ...(a.colors || []), a.style, a.category, a.subcategory].filter(Boolean) as string[],
+      );
 
       const allProductTags = [...productTags, ...analysisTags].map((t) => t.toLowerCase());
       const imageTags = (image.tags || []).map((t) => t.toLowerCase());
@@ -654,7 +636,7 @@ function calculateRelevanceScore(
   const useCaseWords = context.useCase.toLowerCase().split(/\s+/);
   const imageTags = (image.tags || []).map((t) => t.toLowerCase());
   const tagMatches = imageTags.filter((tag) =>
-    useCaseWords.some((word) => tag.includes(word) || word.includes(tag))
+    useCaseWords.some((word) => tag.includes(word) || word.includes(tag)),
   ).length;
   tagScore = Math.min(10, tagMatches * 3);
 
@@ -682,7 +664,7 @@ function calculateRelevanceScore(
 function calculateProductMatchScore(
   image: BrandImage,
   product: Product,
-  analysis: ProductAnalysis | null | undefined
+  analysis: ProductAnalysis | null | undefined,
 ): ScoreBreakdown {
   let categoryScore = 0;
   let productScore = 0;
@@ -695,9 +677,9 @@ function calculateProductMatchScore(
 
   // Category relevance based on suggested use (max 20 points)
   const suggestedUses = image.suggestedUse || [];
-  if (suggestedUses.includes("hero") && image.category === "product_hero") {
+  if (suggestedUses.includes('hero') && image.category === 'product_hero') {
     categoryScore = 20;
-  } else if (suggestedUses.includes("detail") && image.category === "detail") {
+  } else if (suggestedUses.includes('detail') && image.category === 'detail') {
     categoryScore = 18;
   } else if (suggestedUses.length > 0) {
     categoryScore = 10;
@@ -715,7 +697,9 @@ function calculateProductMatchScore(
       analysis.style,
       analysis.category,
       analysis.subcategory,
-    ].filter(Boolean).map((t) => (t as string).toLowerCase());
+    ]
+      .filter(Boolean)
+      .map((t) => (t as string).toLowerCase());
     productTags.push(...analysisTags);
   }
 
@@ -748,35 +732,31 @@ function calculateProductMatchScore(
 /**
  * Generate suggested use text for an image
  */
-function generateSuggestedUse(
-  image: BrandImage,
-  useCase: string,
-  platform?: string
-): string {
+function generateSuggestedUse(image: BrandImage, _useCase: string, platform?: string): string {
   const category = image.category as BrandImageCategory;
 
   // Build suggestion based on category and context
   const categoryUsage: Record<BrandImageCategory, string> = {
-    historical_ad: "Reference for proven ad style and composition",
-    product_hero: "Main product showcase or hero image",
-    installation: "Show product in use or installation process",
-    detail: "Highlight specific features or quality details",
-    lifestyle: "Create aspirational context or lifestyle appeal",
-    comparison: "Demonstrate value or before/after transformation",
+    historical_ad: 'Reference for proven ad style and composition',
+    product_hero: 'Main product showcase or hero image',
+    installation: 'Show product in use or installation process',
+    detail: 'Highlight specific features or quality details',
+    lifestyle: 'Create aspirational context or lifestyle appeal',
+    comparison: 'Demonstrate value or before/after transformation',
   };
 
-  let suggestion = categoryUsage[category] || "General reference image";
+  let suggestion = categoryUsage[category] || 'General reference image';
 
   // Add platform-specific advice
   if (platform) {
     const platformAdvice: Record<string, string> = {
-      instagram: " - ideal for visually-driven storytelling",
-      linkedin: " - suitable for professional presentation",
-      facebook: " - good for engaging social content",
-      twitter: " - works for quick visual impact",
-      tiktok: " - can be used as background or reference",
+      instagram: ' - ideal for visually-driven storytelling',
+      linkedin: ' - suitable for professional presentation',
+      facebook: ' - good for engaging social content',
+      twitter: ' - works for quick visual impact',
+      tiktok: ' - can be used as background or reference',
     };
-    suggestion += platformAdvice[platform.toLowerCase()] || "";
+    suggestion += platformAdvice[platform.toLowerCase()] || '';
   }
 
   return suggestion;
@@ -789,17 +769,17 @@ function generateProductSuggestedUse(image: BrandImage, product: Product): strin
   const category = image.category as BrandImageCategory;
 
   switch (category) {
-    case "product_hero":
+    case 'product_hero':
       return `Hero shot for ${product.name} marketing materials`;
-    case "detail":
+    case 'detail':
       return `Close-up detail for showcasing ${product.name} quality`;
-    case "installation":
+    case 'installation':
       return `Installation reference for ${product.name}`;
-    case "lifestyle":
+    case 'lifestyle':
       return `Lifestyle context showing ${product.name} in use`;
-    case "comparison":
+    case 'comparison':
       return `Comparison image featuring ${product.name}`;
-    case "historical_ad":
+    case 'historical_ad':
       return `Previous advertising featuring ${product.name}`;
     default:
       return `Reference image for ${product.name}`;
@@ -813,38 +793,36 @@ function generateReasoning(score: ScoreBreakdown): string {
   const reasons: string[] = [];
 
   if (score.categoryScore > 20) {
-    reasons.push("Highly relevant category");
+    reasons.push('Highly relevant category');
   } else if (score.categoryScore > 10) {
-    reasons.push("Good category fit");
+    reasons.push('Good category fit');
   }
 
   if (score.platformScore > 15) {
-    reasons.push("Excellent platform compatibility");
+    reasons.push('Excellent platform compatibility');
   } else if (score.platformScore > 8) {
-    reasons.push("Compatible with target platform");
+    reasons.push('Compatible with target platform');
   }
 
   if (score.moodScore > 10) {
-    reasons.push("Strong mood alignment");
+    reasons.push('Strong mood alignment');
   }
 
   if (score.productScore > 20) {
-    reasons.push("Directly associated with product");
+    reasons.push('Directly associated with product');
   } else if (score.productScore > 10) {
-    reasons.push("Related to product attributes");
+    reasons.push('Related to product attributes');
   }
 
   if (score.tagScore > 6) {
-    reasons.push("Multiple tag matches");
+    reasons.push('Multiple tag matches');
   }
 
   if (score.aspectRatioScore > 0) {
-    reasons.push("Matches preferred aspect ratio");
+    reasons.push('Matches preferred aspect ratio');
   }
 
-  return reasons.length > 0
-    ? reasons.join("; ")
-    : "General relevance to request";
+  return reasons.length > 0 ? reasons.join('; ') : 'General relevance to request';
 }
 
 /**
@@ -856,26 +834,24 @@ function generateProductMatchReasoning(score: ScoreBreakdown, product: Product):
   if (score.productScore >= 40) {
     reasons.push(`Directly tagged with ${product.name}`);
   } else if (score.productScore > 20) {
-    reasons.push("Strong product association");
+    reasons.push('Strong product association');
   }
 
   if (score.categoryScore > 15) {
-    reasons.push("Optimal image type for product");
+    reasons.push('Optimal image type for product');
   }
 
   if (score.tagScore > 20) {
-    reasons.push("Many matching attributes");
+    reasons.push('Many matching attributes');
   } else if (score.tagScore > 10) {
-    reasons.push("Some matching attributes");
+    reasons.push('Some matching attributes');
   }
 
   if (score.aspectRatioScore > 0) {
-    reasons.push("Description mentions product");
+    reasons.push('Description mentions product');
   }
 
-  return reasons.length > 0
-    ? reasons.join("; ")
-    : "General product relevance";
+  return reasons.length > 0 ? reasons.join('; ') : 'General product relevance';
 }
 
 // ============================================

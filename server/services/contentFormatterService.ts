@@ -62,7 +62,7 @@ export async function formatContentForPlatform(
   caption: string,
   hashtags: string[],
   platform: string,
-  contentType?: ContentType
+  _contentType?: ContentType,
 ): Promise<FormattedContent> {
   const startTime = Date.now();
 
@@ -96,9 +96,7 @@ export async function formatContentForPlatform(
       const emojiResult = optimizeEmojis(processedCaption, specs);
       processedCaption = emojiResult.text;
       if (emojiResult.removed > 0) {
-        result.warnings.push(
-          `Removed ${emojiResult.removed} excessive emojis for professional platform`
-        );
+        result.warnings.push(`Removed ${emojiResult.removed} excessive emojis for professional platform`);
       }
     }
 
@@ -126,9 +124,7 @@ export async function formatContentForPlatform(
     result.characterCount = charLimitResult.count;
     result.truncated = charLimitResult.truncated;
     if (charLimitResult.truncated) {
-      result.warnings.push(
-        `Caption truncated from ${combinedText.length} to ${specs.caption.maxLength} characters`
-      );
+      result.warnings.push(`Caption truncated from ${combinedText.length} to ${specs.caption.maxLength} characters`);
     }
 
     // Step 7: Line break optimization
@@ -147,17 +143,19 @@ export async function formatContentForPlatform(
     result.isValid = result.errors.length === 0;
 
     // Log formatting
-    logger.debug({
-      platform,
-      characterCount: result.characterCount,
-      hashtagCount: result.hashtagCount,
-      truncated: result.truncated,
-      isValid: result.isValid,
-      duration: Date.now() - startTime,
-    }, 'Content formatted for platform');
+    logger.debug(
+      {
+        platform,
+        characterCount: result.characterCount,
+        hashtagCount: result.hashtagCount,
+        truncated: result.truncated,
+        isValid: result.isValid,
+        duration: Date.now() - startTime,
+      },
+      'Content formatted for platform',
+    );
 
     return result;
-
   } catch (error) {
     logger.error({ error, platform, caption }, 'Content formatting failed');
     return createErrorResult(caption, hashtags, platform, 'Formatting failed due to internal error');
@@ -168,15 +166,17 @@ export async function formatContentForPlatform(
  * Normalize hashtags: add/remove # symbol based on platform
  */
 function normalizeHashtags(hashtags: string[], specs: PlatformSpecs): string[] {
-  return hashtags.map(tag => {
-    const cleaned = tag.trim().replace(/^#+/, ''); // Remove existing #
+  return hashtags
+    .map((tag) => {
+      const cleaned = tag.trim().replace(/^#+/, ''); // Remove existing #
 
-    if (specs.hashtags.requiresSymbol) {
-      return `#${cleaned}`;
-    } else {
-      return cleaned;
-    }
-  }).filter(tag => tag.length > (specs.hashtags.requiresSymbol ? 1 : 0)); // Remove empty
+      if (specs.hashtags.requiresSymbol) {
+        return `#${cleaned}`;
+      } else {
+        return cleaned;
+      }
+    })
+    .filter((tag) => tag.length > (specs.hashtags.requiresSymbol ? 1 : 0)); // Remove empty
 }
 
 /**
@@ -188,7 +188,7 @@ function optimizeEmojis(text: string, specs: PlatformSpecs): { text: string; rem
   }
 
   // LinkedIn/professional: max 3 emojis total
-  const emojiRegex = /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu;
+  const emojiRegex = new RegExp('[\\u{1F300}-\\u{1F9FF}]|[\\u{2600}-\\u{26FF}]|[\\u{2700}-\\u{27BF}]', 'gu');
   const emojis = text.match(emojiRegex) || [];
 
   if (emojis.length <= 3) {
@@ -208,7 +208,10 @@ function optimizeEmojis(text: string, specs: PlatformSpecs): { text: string; rem
 /**
  * Handle links based on platform capabilities
  */
-function handleLinks(text: string, specs: PlatformSpecs): {
+function handleLinks(
+  text: string,
+  specs: PlatformSpecs,
+): {
   text: string;
   metadata: {
     linksDetected: number;
@@ -271,7 +274,10 @@ function handleLinks(text: string, specs: PlatformSpecs): {
 /**
  * Format hashtags according to platform rules
  */
-function formatHashtags(hashtags: string[], specs: PlatformSpecs): {
+function formatHashtags(
+  hashtags: string[],
+  specs: PlatformSpecs,
+): {
   formatted: string[];
   warnings: string[];
   errors: string[];
@@ -282,30 +288,30 @@ function formatHashtags(hashtags: string[], specs: PlatformSpecs): {
   // Validate hashtag count
   if (hashtags.length > specs.hashtags.max) {
     warnings.push(
-      `${hashtags.length} hashtags exceeds platform limit of ${specs.hashtags.max}. Using first ${specs.hashtags.max}.`
+      `${hashtags.length} hashtags exceeds platform limit of ${specs.hashtags.max}. Using first ${specs.hashtags.max}.`,
     );
     hashtags = hashtags.slice(0, specs.hashtags.max);
   }
 
   if (hashtags.length < specs.hashtags.min) {
-    errors.push(
-      `Platform requires at least ${specs.hashtags.min} hashtags, but ${hashtags.length} provided.`
-    );
+    errors.push(`Platform requires at least ${specs.hashtags.min} hashtags, but ${hashtags.length} provided.`);
   }
 
   // Validate hashtag format
-  const formatted = hashtags.map(tag => {
-    // Remove spaces
-    const noSpaces = tag.replace(/\s+/g, '');
+  const formatted = hashtags
+    .map((tag) => {
+      // Remove spaces
+      const noSpaces = tag.replace(/\s+/g, '');
 
-    // Validate characters (alphanumeric + underscore)
-    if (!/^#?[a-zA-Z0-9_]+$/.test(noSpaces)) {
-      warnings.push(`Invalid hashtag format: "${tag}" (special characters removed)`);
-      return noSpaces.replace(/[^a-zA-Z0-9_#]/g, '');
-    }
+      // Validate characters (alphanumeric + underscore)
+      if (!/^#?[a-zA-Z0-9_]+$/.test(noSpaces)) {
+        warnings.push(`Invalid hashtag format: "${tag}" (special characters removed)`);
+        return noSpaces.replace(/[^a-zA-Z0-9_#]/g, '');
+      }
 
-    return noSpaces;
-  }).filter(tag => tag.length > (specs.hashtags.requiresSymbol ? 1 : 0));
+      return noSpaces;
+    })
+    .filter((tag) => tag.length > (specs.hashtags.requiresSymbol ? 1 : 0));
 
   return { formatted, warnings, errors };
 }
@@ -345,7 +351,10 @@ function combineTextAndHashtags(text: string, hashtags: string[], specs: Platfor
 /**
  * Enforce character limit with smart truncation
  */
-function enforceCharacterLimit(text: string, specs: PlatformSpecs): {
+function enforceCharacterLimit(
+  text: string,
+  specs: PlatformSpecs,
+): {
   text: string;
   count: number;
   truncated: boolean;
@@ -407,7 +416,7 @@ function countCharacters(text: string): number {
  * Count emojis in text
  */
 function countEmojis(text: string): number {
-  const emojiRegex = /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu;
+  const emojiRegex = new RegExp('[\\u{1F300}-\\u{1F9FF}]|[\\u{2600}-\\u{26FF}]|[\\u{2700}-\\u{27BF}]', 'gu');
   const emojis = text.match(emojiRegex) || [];
   return emojis.length;
 }
@@ -416,7 +425,7 @@ function countEmojis(text: string): number {
  * Get image requirements for platform
  */
 function getImageRequirements(specs: PlatformSpecs) {
-  const recommended = specs.image.aspectRatios.find(ar => ar.recommended);
+  const recommended = specs.image.aspectRatios.find((ar) => ar.recommended);
 
   return {
     aspectRatio: recommended?.ratio || specs.image.aspectRatios[0]?.ratio || '1:1',
@@ -430,7 +439,10 @@ function getImageRequirements(specs: PlatformSpecs) {
 /**
  * Validate final content
  */
-function validateContent(result: FormattedContent, specs: PlatformSpecs): {
+function validateContent(
+  result: FormattedContent,
+  specs: PlatformSpecs,
+): {
   errors: string[];
   warnings: string[];
 } {
@@ -449,7 +461,7 @@ function validateContent(result: FormattedContent, specs: PlatformSpecs): {
   // Truncation warning
   if (specs.caption.truncationPoint && result.characterCount > specs.caption.truncationPoint) {
     warnings.push(
-      `Caption will be truncated in feed at ${specs.caption.truncationPoint} characters (current: ${result.characterCount})`
+      `Caption will be truncated in feed at ${specs.caption.truncationPoint} characters (current: ${result.characterCount})`,
     );
   }
 
@@ -465,7 +477,7 @@ function validateContent(result: FormattedContent, specs: PlatformSpecs): {
   // Recommended length warning
   if (result.characterCount > specs.caption.recommended * 1.5) {
     warnings.push(
-      `Caption is ${result.characterCount} characters. Platform recommends ${specs.caption.recommended} for optimal engagement.`
+      `Caption is ${result.characterCount} characters. Platform recommends ${specs.caption.recommended} for optimal engagement.`,
     );
   }
 
@@ -479,7 +491,7 @@ function createErrorResult(
   caption: string,
   hashtags: string[],
   platform: string,
-  errorMessage: string
+  errorMessage: string,
 ): FormattedContent {
   return {
     caption: caption,
@@ -506,7 +518,7 @@ function createErrorResult(
 export async function formatContentForMultiplePlatforms(
   caption: string,
   hashtags: string[],
-  platforms: string[]
+  platforms: string[],
 ): Promise<Record<string, FormattedContent>> {
   const results: Record<string, FormattedContent> = {};
 
@@ -523,10 +535,13 @@ export async function formatContentForMultiplePlatforms(
     results[platform] = formatted;
   });
 
-  logger.info({
-    platforms,
-    totalResults: Object.keys(results).length,
-  }, 'Batch content formatting completed');
+  logger.info(
+    {
+      platforms,
+      totalResults: Object.keys(results).length,
+    },
+    'Batch content formatting completed',
+  );
 
   return results;
 }
@@ -562,8 +577,3 @@ export function generateCaptionSuggestions(originalCaption: string, platform: st
 
   return [...new Set(suggestions)]; // Remove duplicates
 }
-
-/**
- * Export types
- */
-export type { FormattedContent, ContentType };

@@ -10,17 +10,17 @@
  * Human-in-the-loop: All AI-generated data requires user verification
  */
 
-import { generateContentWithRetry } from "../lib/geminiClient";
-import { storage } from "../storage";
-import { logger } from "../lib/logger";
-import { visionAnalysisService } from "./visionAnalysisService";
-import type { Product, InsertProduct } from "@shared/schema";
+import { generateContentWithRetry } from '../lib/geminiClient';
+import { storage } from '../storage';
+import { logger } from '../lib/logger';
+import { visionAnalysisService } from './visionAnalysisService';
+import type { Product, InsertProduct } from '@shared/schema';
 
 // ============================================
 // TYPES
 // ============================================
 
-export type EnrichmentStatus = "pending" | "draft" | "verified" | "complete";
+export type EnrichmentStatus = 'pending' | 'draft' | 'verified' | 'complete';
 
 export interface EnrichmentDraft {
   /** AI-generated description */
@@ -46,7 +46,7 @@ export interface EnrichmentDraft {
   confidence: number;
   /** Sources used for enrichment */
   sources: Array<{
-    type: "vision" | "web_search" | "kb";
+    type: 'vision' | 'web_search' | 'kb';
     detail: string;
   }>;
   /** Timestamp when draft was generated */
@@ -80,11 +80,9 @@ export interface VerificationInput {
 // Vision analysis uses Gemini 3 Pro - #1 on LMArena Vision leaderboard (Dec 2025)
 // Superior spatial reasoning and OCR for understanding product details
 // MODEL RECENCY RULE: Before changing any model ID, verify today's date and confirm the model is current within the last 3-4 weeks.
-const VISION_MODEL = process.env.GEMINI_VISION_MODEL || "gemini-3-pro-preview";
-
 // Enrichment draft also uses Gemini 3 Pro with grounding for better research (Dec 2025)
 // MODEL RECENCY RULE: Before changing any model ID, verify today's date and confirm the model is current within the last 3-4 weeks.
-const ENRICHMENT_MODEL = process.env.GEMINI_ENRICHMENT_MODEL || "gemini-3-pro-preview";
+const ENRICHMENT_MODEL = process.env['GEMINI_ENRICHMENT_MODEL'] || 'gemini-3-pro-preview';
 
 // Enable web search grounding for product research
 const ENABLE_GROUNDING = true;
@@ -97,14 +95,11 @@ const ENABLE_GROUNDING = true;
  * Generate an enrichment draft for a product using AI
  * This analyzes the product image and searches for additional context
  */
-export async function generateEnrichmentDraft(
-  productId: string,
-  userId: string
-): Promise<EnrichmentResult> {
+export async function generateEnrichmentDraft(productId: string, userId: string): Promise<EnrichmentResult> {
   // 1. Fetch product
   const product = await storage.getProductById(productId);
   if (!product) {
-    return { success: false, productId, error: "Product not found" };
+    return { success: false, productId, error: 'Product not found' };
   }
 
   // 2. Run vision analysis if not already done
@@ -134,7 +129,7 @@ export async function generateEnrichmentDraft(
   // 4. Save draft to product
   await storage.updateProduct(productId, {
     enrichmentDraft: draft as unknown as Record<string, unknown>,
-    enrichmentStatus: "draft",
+    enrichmentStatus: 'draft',
   });
 
   return {
@@ -149,23 +144,23 @@ export async function generateEnrichmentDraft(
  */
 export async function verifyEnrichment(
   input: VerificationInput,
-  userId: string
+  _userId: string,
 ): Promise<{ success: boolean; error?: string }> {
   const { productId, approvedAsIs } = input;
 
   // 1. Fetch product with draft
   const product = await storage.getProductById(productId);
   if (!product) {
-    return { success: false, error: "Product not found" };
+    return { success: false, error: 'Product not found' };
   }
 
-  if (product.enrichmentStatus !== "draft") {
-    return { success: false, error: "Product has no draft to verify" };
+  if (product.enrichmentStatus !== 'draft') {
+    return { success: false, error: 'Product has no draft to verify' };
   }
 
   const draft = product.enrichmentDraft as EnrichmentDraft | null;
   if (!draft) {
-    return { success: false, error: "No enrichment draft found" };
+    return { success: false, error: 'No enrichment draft found' };
   }
 
   // 2. Build update from user input or approved draft
@@ -176,9 +171,9 @@ export async function verifyEnrichment(
     specifications: approvedAsIs ? draft.specifications : (input.specifications ?? draft.specifications),
     tags: approvedAsIs ? draft.tags : (input.tags ?? draft.tags),
     sku: input.sku,
-    enrichmentStatus: "verified",
+    enrichmentStatus: 'verified',
     enrichmentVerifiedAt: new Date(),
-    enrichmentSource: "ai_vision",
+    enrichmentSource: 'ai_vision',
   };
 
   // 3. Save verified data
@@ -191,9 +186,7 @@ export async function verifyEnrichment(
  * Get products that need enrichment
  * Note: Currently products are global (no userId). Future: add userId filter.
  */
-export async function getProductsNeedingEnrichment(
-  status?: EnrichmentStatus
-): Promise<Product[]> {
+export async function getProductsNeedingEnrichment(status?: EnrichmentStatus): Promise<Product[]> {
   // Get all products
   const products = await storage.getProducts();
 
@@ -203,10 +196,8 @@ export async function getProductsNeedingEnrichment(
   }
 
   // Return products that are pending or draft (need attention)
-  return products.filter((p) =>
-    p.enrichmentStatus === "pending" ||
-    p.enrichmentStatus === "draft" ||
-    !p.enrichmentStatus
+  return products.filter(
+    (p) => p.enrichmentStatus === 'pending' || p.enrichmentStatus === 'draft' || !p.enrichmentStatus,
   );
 }
 
@@ -216,8 +207,8 @@ export async function getProductsNeedingEnrichment(
  */
 export function isProductReady(product: Product): boolean {
   return (
-    product.enrichmentStatus === "verified" ||
-    product.enrichmentStatus === "complete" ||
+    product.enrichmentStatus === 'verified' ||
+    product.enrichmentStatus === 'complete' ||
     // Legacy products with description are considered ready
     (!!product.description && product.description.length > 10)
   );
@@ -231,23 +222,23 @@ export function getEnrichmentCompleteness(product: Product): {
   missing: string[];
 } {
   const fields = [
-    { name: "description", value: product.description },
-    { name: "features", value: product.features },
-    { name: "benefits", value: product.benefits },
-    { name: "tags", value: product.tags },
+    { name: 'description', value: product.description },
+    { name: 'features', value: product.features },
+    { name: 'benefits', value: product.benefits },
+    { name: 'tags', value: product.tags },
   ];
 
   const missing: string[] = [];
   let filled = 0;
 
   for (const field of fields) {
-    const hasValue = field.value && (
-      typeof field.value === "string"
+    const hasValue =
+      field.value &&
+      (typeof field.value === 'string'
         ? field.value.length > 0
         : Array.isArray(field.value)
           ? field.value.length > 0
-          : Object.keys(field.value as object).length > 0
-    );
+          : Object.keys(field.value as object).length > 0);
 
     if (hasValue) {
       filled++;
@@ -270,10 +261,7 @@ export function getEnrichmentCompleteness(product: Product): {
  * Generate enrichment draft using LLM with product image and vision data
  * Uses Gemini 3 Pro with Google Search grounding for accurate product information
  */
-async function generateDraftViaLLM(
-  product: Product,
-  visionData: Record<string, unknown>
-): Promise<EnrichmentDraft> {
+async function generateDraftViaLLM(product: Product, visionData: Record<string, unknown>): Promise<EnrichmentDraft> {
   const prompt = buildEnrichmentPrompt(product, visionData);
 
   // Build config with optional grounding (web search)
@@ -284,42 +272,44 @@ async function generateDraftViaLLM(
 
   // Enable Google Search grounding for better product research
   if (ENABLE_GROUNDING) {
-    config.tools = [{ googleSearch: {} }];
+    config['tools'] = [{ googleSearch: {} }];
   }
 
-  const response = await generateContentWithRetry({
-    model: ENRICHMENT_MODEL,
-    contents: [
-      {
-        role: "user",
-        parts: [
-          { text: prompt },
-          {
-            inlineData: {
-              mimeType: "image/jpeg",
-              data: await fetchImageAsBase64(product.cloudinaryUrl),
+  const response = await generateContentWithRetry(
+    {
+      model: ENRICHMENT_MODEL,
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { text: prompt },
+            {
+              inlineData: {
+                mimeType: 'image/jpeg',
+                data: await fetchImageAsBase64(product.cloudinaryUrl),
+              },
             },
-          },
-        ],
-      },
-    ],
-    config,
-  }, { operation: 'product_enrichment' });
+          ],
+        },
+      ],
+      config,
+    },
+    { operation: 'product_enrichment' },
+  );
 
-  const text = response.text || "";
+  const text = response.text || '';
 
   // Extract grounding citations if available
-  const sources: EnrichmentDraft["sources"] = [
-    { type: "vision", detail: "Image analysis" }
-  ];
+  const sources: EnrichmentDraft['sources'] = [{ type: 'vision', detail: 'Image analysis' }];
 
   // Check for grounding metadata in response
-  const groundingMeta = (response as unknown as { candidates?: Array<{ groundingMetadata?: { webSearchQueries?: string[] } }> })
-    ?.candidates?.[0]?.groundingMetadata;
+  const groundingMeta = (
+    response as unknown as { candidates?: Array<{ groundingMetadata?: { webSearchQueries?: string[] } }> }
+  )?.candidates?.[0]?.groundingMetadata;
   if (groundingMeta?.webSearchQueries) {
     sources.push({
-      type: "web_search",
-      detail: `Searched: ${groundingMeta.webSearchQueries.join(", ")}`,
+      type: 'web_search',
+      detail: `Searched: ${groundingMeta.webSearchQueries.join(', ')}`,
     });
   }
 
@@ -330,7 +320,7 @@ async function generateDraftViaLLM(
   try {
     const parsed = JSON.parse(jsonContent);
     return {
-      description: parsed.description || "",
+      description: parsed.description || '',
       features: parsed.features || {},
       benefits: parsed.benefits || [],
       specifications: parsed.specifications || {},
@@ -345,13 +335,13 @@ async function generateDraftViaLLM(
     logger.error({ module: 'Enrichment', err }, 'Failed to parse LLM response');
     // Return basic draft from vision data
     return {
-      description: `${visionData.category || "Product"} - ${visionData.subcategory || ""}`.trim(),
+      description: `${visionData['category'] || 'Product'} - ${visionData['subcategory'] || ''}`.trim(),
       features: {},
       benefits: [],
       specifications: {},
-      tags: (visionData.materials as string[]) || [],
+      tags: (visionData['materials'] as string[]) || [],
       confidence: 30,
-      sources: [{ type: "vision", detail: "Basic vision analysis only" }],
+      sources: [{ type: 'vision', detail: 'Basic vision analysis only' }],
       generatedAt: new Date().toISOString(),
     };
   }
@@ -360,10 +350,7 @@ async function generateDraftViaLLM(
 /**
  * Build the enrichment prompt for LLM
  */
-function buildEnrichmentPrompt(
-  product: Product,
-  visionData: Record<string, unknown>
-): string {
+function buildEnrichmentPrompt(product: Product, visionData: Record<string, unknown>): string {
   return `You are a product information specialist. Analyze this product image and generate comprehensive product data for an advertising platform.
 
 ## Product Name
@@ -432,8 +419,8 @@ function normalizeImageUrl(url: string, width: number = 800): string {
   if (!url) return url;
 
   // Handle Shopify URLs with {width} placeholder (e.g., nextdaysteel.co.uk)
-  if (url.includes("{width}")) {
-    return url.replace("{width}", String(width));
+  if (url.includes('{width}')) {
+    return url.replace('{width}', String(width));
   }
 
   return url;
@@ -449,7 +436,7 @@ async function fetchImageAsBase64(url: string): Promise<string> {
   const response = await fetch(normalizedUrl);
   const arrayBuffer = await response.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
-  return buffer.toString("base64");
+  return buffer.toString('base64');
 }
 
 // ============================================

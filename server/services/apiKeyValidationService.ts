@@ -69,19 +69,19 @@ const FORMAT_PATTERNS: Record<ServiceName, RegExp> = {
 const FORMAT_ERROR_MESSAGES: Record<ServiceName, { error: string; solution: string }> = {
   gemini: {
     error: "Invalid Gemini API key format. Keys should start with 'AIza'.",
-    solution: "Get a valid Gemini API key at https://aistudio.google.com/apikey",
+    solution: 'Get a valid Gemini API key at https://aistudio.google.com/apikey',
   },
   cloudinary: {
-    error: "Invalid Cloudinary API key format. Keys should be 15-20 alphanumeric characters.",
-    solution: "Find your API credentials at https://console.cloudinary.com/settings/api-keys",
+    error: 'Invalid Cloudinary API key format. Keys should be 15-20 alphanumeric characters.',
+    solution: 'Find your API credentials at https://console.cloudinary.com/settings/api-keys',
   },
   firecrawl: {
     error: "Invalid Firecrawl API key format. Keys should start with 'fc-'.",
-    solution: "Get your API key at https://app.firecrawl.dev/api-keys",
+    solution: 'Get your API key at https://app.firecrawl.dev/api-keys',
   },
   redis: {
     error: "Invalid Redis URL format. Should start with 'redis://' or 'rediss://'.",
-    solution: "Use format: redis://[[username:]password@]host[:port][/database] or rediss:// for TLS",
+    solution: 'Use format: redis://[[username:]password@]host[:port][/database] or rediss:// for TLS',
   },
 };
 
@@ -143,21 +143,21 @@ export function validateCloudinaryFormat(params: CloudinaryParams): FormatValida
   if (!cloudName?.trim()) {
     return {
       valid: false,
-      error: "Cloud name is required",
+      error: 'Cloud name is required',
     };
   }
 
   if (!apiKey?.trim()) {
     return {
       valid: false,
-      error: "API key is required",
+      error: 'API key is required',
     };
   }
 
   if (!apiSecret?.trim()) {
     return {
       valid: false,
-      error: "API secret is required",
+      error: 'API secret is required',
     };
   }
 
@@ -165,7 +165,7 @@ export function validateCloudinaryFormat(params: CloudinaryParams): FormatValida
   if (!/^[a-z0-9_-]+$/i.test(cloudName.trim())) {
     return {
       valid: false,
-      error: "Invalid cloud name format",
+      error: 'Invalid cloud name format',
     };
   }
 
@@ -173,7 +173,7 @@ export function validateCloudinaryFormat(params: CloudinaryParams): FormatValida
   if (!/^\d{15,20}$/.test(apiKey.trim())) {
     return {
       valid: false,
-      error: "Invalid API key format. Should be 15-20 digits.",
+      error: 'Invalid API key format. Should be 15-20 digits.',
     };
   }
 
@@ -181,7 +181,7 @@ export function validateCloudinaryFormat(params: CloudinaryParams): FormatValida
   if (!/^[a-zA-Z0-9_-]{20,40}$/.test(apiSecret.trim())) {
     return {
       valid: false,
-      error: "Invalid API secret format",
+      error: 'Invalid API secret format',
     };
   }
 
@@ -203,7 +203,7 @@ export function validateCloudinaryFormat(params: CloudinaryParams): FormatValida
 export async function validateApiKey(
   service: ServiceName,
   key: string,
-  additionalParams?: Record<string, string>
+  additionalParams?: Record<string, string>,
 ): Promise<ValidationResult> {
   // Trim whitespace from key
   const trimmedKey = key.trim();
@@ -211,14 +211,14 @@ export async function validateApiKey(
   // First, validate format
   if (service === 'cloudinary' && additionalParams) {
     const formatResult = validateCloudinaryFormat({
-      cloudName: additionalParams.cloudName || '',
-      apiKey: additionalParams.apiKey || trimmedKey,
-      apiSecret: additionalParams.apiSecret || '',
+      cloudName: additionalParams['cloudName'] || '',
+      apiKey: additionalParams['apiKey'] || trimmedKey,
+      apiSecret: additionalParams['apiSecret'] || '',
     });
     if (!formatResult.valid) {
       return {
         valid: false,
-        error: formatResult.error,
+        ...(formatResult.error !== undefined && { error: formatResult.error }),
         errorCode: 'INVALID_FORMAT',
         solution: FORMAT_ERROR_MESSAGES.cloudinary.solution,
       };
@@ -228,7 +228,7 @@ export async function validateApiKey(
     if (!formatResult.valid) {
       return {
         valid: false,
-        error: formatResult.error,
+        ...(formatResult.error !== undefined && { error: formatResult.error }),
         errorCode: 'INVALID_FORMAT',
         solution: FORMAT_ERROR_MESSAGES[service]?.solution || `Check your ${service} key`,
       };
@@ -290,29 +290,29 @@ async function validateGeminiKey(apiKey: string): Promise<ValidationResult> {
           valid: false,
           error: `Invalid request: ${errorMessage}`,
           errorCode: 'INVALID_KEY',
-          solution: "Your API key appears malformed. Generate a new key at https://aistudio.google.com/apikey",
+          solution: 'Your API key appears malformed. Generate a new key at https://aistudio.google.com/apikey',
         };
       case 401:
         return {
           valid: false,
-          error: "API key is invalid or has been revoked",
+          error: 'API key is invalid or has been revoked',
           errorCode: 'INVALID_KEY',
-          solution: "Generate a new API key at https://aistudio.google.com/apikey",
+          solution: 'Generate a new API key at https://aistudio.google.com/apikey',
         };
       case 403:
         return {
           valid: false,
-          error: "API key lacks required permissions or the API is not enabled",
+          error: 'API key lacks required permissions or the API is not enabled',
           errorCode: 'INSUFFICIENT_PERMISSIONS',
-          solution: "Enable the Generative Language API in Google Cloud Console and ensure your key has access",
+          solution: 'Enable the Generative Language API in Google Cloud Console and ensure your key has access',
           details: { originalError: errorMessage },
         };
       case 429:
         return {
           valid: false,
-          error: "Rate limited during validation. Key may still be valid.",
+          error: 'Rate limited during validation. Key may still be valid.',
           errorCode: 'RATE_LIMITED',
-          solution: "Wait 60 seconds and try again. The key might be valid but rate limited.",
+          solution: 'Wait 60 seconds and try again. The key might be valid but rate limited.',
         };
       default:
         return {
@@ -328,7 +328,7 @@ async function validateGeminiKey(apiKey: string): Promise<ValidationResult> {
       valid: false,
       error: `Could not reach Gemini API: ${errorMessage}`,
       errorCode: 'SERVICE_UNAVAILABLE',
-      solution: "Check your network connection. Key saved but not validated - will retry automatically.",
+      solution: 'Check your network connection. Key saved but not validated - will retry automatically.',
     };
   }
 }
@@ -341,9 +341,9 @@ async function validateCloudinaryCredentials(params: CloudinaryParams): Promise<
   if (!params?.cloudName || !params?.apiKey || !params?.apiSecret) {
     return {
       valid: false,
-      error: "Cloudinary requires cloud_name, api_key, and api_secret",
+      error: 'Cloudinary requires cloud_name, api_key, and api_secret',
       errorCode: 'MISSING_PARAMS',
-      solution: "Provide all three Cloudinary credentials from https://console.cloudinary.com/settings/api-keys",
+      solution: 'Provide all three Cloudinary credentials from https://console.cloudinary.com/settings/api-keys',
     };
   }
 
@@ -360,7 +360,7 @@ async function validateCloudinaryCredentials(params: CloudinaryParams): Promise<
     const response = await fetch(endpoint, {
       method: 'GET',
       headers: {
-        'Authorization': `Basic ${authHeader}`,
+        Authorization: `Basic ${authHeader}`,
         'Content-Type': 'application/json',
       },
     });
@@ -384,16 +384,16 @@ async function validateCloudinaryCredentials(params: CloudinaryParams): Promise<
       case 401:
         return {
           valid: false,
-          error: "Invalid Cloudinary credentials",
+          error: 'Invalid Cloudinary credentials',
           errorCode: 'INVALID_KEY',
-          solution: "Check your API key and secret at https://console.cloudinary.com/settings/api-keys",
+          solution: 'Check your API key and secret at https://console.cloudinary.com/settings/api-keys',
         };
       case 403:
         return {
           valid: false,
-          error: "Cloudinary credentials lack required Admin API permissions",
+          error: 'Cloudinary credentials lack required Admin API permissions',
           errorCode: 'INSUFFICIENT_PERMISSIONS',
-          solution: "Ensure your API key has Admin API access enabled in Cloudinary settings",
+          solution: 'Ensure your API key has Admin API access enabled in Cloudinary settings',
           details: { originalError: errorMessage },
         };
       case 404:
@@ -401,21 +401,21 @@ async function validateCloudinaryCredentials(params: CloudinaryParams): Promise<
           valid: false,
           error: `Cloud name '${cloudName}' not found`,
           errorCode: 'INVALID_KEY',
-          solution: "Verify your cloud name at https://console.cloudinary.com/settings/account",
+          solution: 'Verify your cloud name at https://console.cloudinary.com/settings/account',
         };
       case 429:
         return {
           valid: false,
-          error: "Rate limited during validation. Credentials may still be valid.",
+          error: 'Rate limited during validation. Credentials may still be valid.',
           errorCode: 'RATE_LIMITED',
-          solution: "Wait 60 seconds and try again.",
+          solution: 'Wait 60 seconds and try again.',
         };
       default:
         return {
           valid: false,
           error: `Unexpected error (${status}): ${errorMessage}`,
           errorCode: 'SERVICE_UNAVAILABLE',
-          solution: "Check https://status.cloudinary.com for service status",
+          solution: 'Check https://status.cloudinary.com for service status',
         };
     }
   } catch (error) {
@@ -424,7 +424,7 @@ async function validateCloudinaryCredentials(params: CloudinaryParams): Promise<
       valid: false,
       error: `Could not reach Cloudinary: ${errorMessage}`,
       errorCode: 'SERVICE_UNAVAILABLE',
-      solution: "Check your network connection. Credentials saved but not validated.",
+      solution: 'Check your network connection. Credentials saved but not validated.',
     };
   }
 }
@@ -445,7 +445,7 @@ async function validateFirecrawlKey(apiKey: string): Promise<ValidationResult> {
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -479,39 +479,39 @@ async function validateFirecrawlKey(apiKey: string): Promise<ValidationResult> {
       case 401:
         return {
           valid: false,
-          error: "Invalid Firecrawl API key",
+          error: 'Invalid Firecrawl API key',
           errorCode: 'INVALID_KEY',
-          solution: "Get a valid API key at https://app.firecrawl.dev/api-keys",
+          solution: 'Get a valid API key at https://app.firecrawl.dev/api-keys',
         };
       case 402:
         // Payment required - but key is valid!
         return {
           valid: true,
           details: {
-            warning: "API key is valid but account may need credits",
+            warning: 'API key is valid but account may need credits',
           },
         };
       case 403:
         return {
           valid: false,
-          error: "API key lacks required permissions",
+          error: 'API key lacks required permissions',
           errorCode: 'INSUFFICIENT_PERMISSIONS',
-          solution: "Check your account permissions at https://app.firecrawl.dev",
+          solution: 'Check your account permissions at https://app.firecrawl.dev',
           details: { originalError: errorMessage },
         };
       case 429:
         return {
           valid: false,
-          error: "Rate limited during validation. Key may still be valid.",
+          error: 'Rate limited during validation. Key may still be valid.',
           errorCode: 'RATE_LIMITED',
-          solution: "Wait 60 seconds and try again.",
+          solution: 'Wait 60 seconds and try again.',
         };
       default:
         return {
           valid: false,
           error: `Unexpected error (${status}): ${errorMessage}`,
           errorCode: 'SERVICE_UNAVAILABLE',
-          solution: "Check https://status.firecrawl.dev for service status",
+          solution: 'Check https://status.firecrawl.dev for service status',
         };
     }
   } catch (error) {
@@ -520,7 +520,7 @@ async function validateFirecrawlKey(apiKey: string): Promise<ValidationResult> {
       valid: false,
       error: `Could not reach Firecrawl: ${errorMessage}`,
       errorCode: 'SERVICE_UNAVAILABLE',
-      solution: "Check your network connection. Key saved but not validated.",
+      solution: 'Check your network connection. Key saved but not validated.',
     };
   }
 }
@@ -566,7 +566,7 @@ async function validateRedisConnection(redisUrl: string): Promise<ValidationResu
       valid: false,
       error: `Unexpected ping response: ${pingResult}`,
       errorCode: 'SERVICE_UNAVAILABLE',
-      solution: "Redis server may be misconfigured",
+      solution: 'Redis server may be misconfigured',
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -575,43 +575,43 @@ async function validateRedisConnection(redisUrl: string): Promise<ValidationResu
     if (errorMessage.includes('NOAUTH') || errorMessage.includes('AUTH')) {
       return {
         valid: false,
-        error: "Redis authentication failed",
+        error: 'Redis authentication failed',
         errorCode: 'INVALID_KEY',
-        solution: "Check your Redis password in the connection URL",
+        solution: 'Check your Redis password in the connection URL',
       };
     }
 
     if (errorMessage.includes('ECONNREFUSED')) {
       return {
         valid: false,
-        error: "Could not connect to Redis server",
+        error: 'Could not connect to Redis server',
         errorCode: 'CONNECTION_FAILED',
-        solution: "Verify the Redis host and port are correct and the server is running",
+        solution: 'Verify the Redis host and port are correct and the server is running',
       };
     }
 
     if (errorMessage.includes('ENOTFOUND') || errorMessage.includes('getaddrinfo')) {
       return {
         valid: false,
-        error: "Redis host not found",
+        error: 'Redis host not found',
         errorCode: 'CONNECTION_FAILED',
-        solution: "Check the hostname in your Redis URL",
+        solution: 'Check the hostname in your Redis URL',
       };
     }
 
     if (errorMessage.includes('ETIMEDOUT') || errorMessage.includes('timeout')) {
       return {
         valid: false,
-        error: "Connection to Redis timed out",
+        error: 'Connection to Redis timed out',
         errorCode: 'SERVICE_UNAVAILABLE',
-        solution: "Redis server may be down or unreachable. Check firewall and network settings.",
+        solution: 'Redis server may be down or unreachable. Check firewall and network settings.',
       };
     }
 
     if (errorMessage.includes('certificate') || errorMessage.includes('TLS') || errorMessage.includes('SSL')) {
       return {
         valid: false,
-        error: "Redis TLS/SSL connection failed",
+        error: 'Redis TLS/SSL connection failed',
         errorCode: 'CONNECTION_FAILED',
         solution: "If using TLS, use 'rediss://' prefix. Check SSL certificate configuration.",
       };
@@ -621,7 +621,7 @@ async function validateRedisConnection(redisUrl: string): Promise<ValidationResu
       valid: false,
       error: `Redis connection failed: ${errorMessage}`,
       errorCode: 'CONNECTION_FAILED',
-      solution: "Check your Redis connection URL format and credentials",
+      solution: 'Check your Redis connection URL format and credentials',
     };
   } finally {
     // Always close the test connection

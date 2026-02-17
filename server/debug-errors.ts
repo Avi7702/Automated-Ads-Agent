@@ -7,7 +7,7 @@
 import 'dotenv/config';
 import { db } from './db';
 import { generations } from '../shared/schema';
-import { desc, sql } from 'drizzle-orm';
+import { desc } from 'drizzle-orm';
 
 async function findFailedGenerations() {
   console.log('Checking for failed or non-completed generations...\n');
@@ -38,10 +38,10 @@ async function findFailedGenerations() {
     });
 
     // Check for any non-completed status
-    const failedGens = recentGens.filter(g => g.status !== 'completed');
+    const failedGens = recentGens.filter((g) => g.status !== 'completed');
     if (failedGens.length > 0) {
       console.log(`\n⚠️  Found ${failedGens.length} non-completed generations:`);
-      failedGens.forEach(gen => {
+      failedGens.forEach((gen) => {
         console.log(`   - ${gen.id}: ${gen.status}`);
       });
     } else {
@@ -49,7 +49,6 @@ async function findFailedGenerations() {
       console.log('   This means any failures did not save to the database.');
       console.log('   Check server logs or monitoring dashboard for error details.');
     }
-
   } catch (error) {
     console.error('Error querying database:', error);
   } finally {

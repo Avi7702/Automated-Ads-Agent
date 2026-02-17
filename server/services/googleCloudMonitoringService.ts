@@ -99,8 +99,8 @@ let syncTimer: NodeJS.Timeout | null = null;
  */
 export function isGoogleCloudConfigured(): boolean {
   return !!(
-    process.env.GOOGLE_CLOUD_PROJECT &&
-    (process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.GOOGLE_CLOUD_CREDENTIALS_JSON)
+    process.env['GOOGLE_CLOUD_PROJECT'] &&
+    (process.env['GOOGLE_APPLICATION_CREDENTIALS'] || process.env['GOOGLE_CLOUD_CREDENTIALS_JSON'])
   );
 }
 
@@ -108,7 +108,7 @@ export function isGoogleCloudConfigured(): boolean {
  * Get the Google Cloud project ID
  */
 function getProjectId(): string {
-  const projectId = process.env.GOOGLE_CLOUD_PROJECT;
+  const projectId = process.env['GOOGLE_CLOUD_PROJECT'];
   if (!projectId) {
     throw new Error('GOOGLE_CLOUD_PROJECT environment variable is not set');
   }
@@ -124,9 +124,9 @@ function getProjectId(): string {
  */
 async function getAccessToken(): Promise<string> {
   // Try inline credentials first (for Railway/Render deployment)
-  if (process.env.GOOGLE_CLOUD_CREDENTIALS_JSON) {
+  if (process.env['GOOGLE_CLOUD_CREDENTIALS_JSON']) {
     try {
-      const credentials = JSON.parse(process.env.GOOGLE_CLOUD_CREDENTIALS_JSON);
+      const credentials = JSON.parse(process.env['GOOGLE_CLOUD_CREDENTIALS_JSON']);
       return await getAccessTokenFromServiceAccount(credentials);
     } catch (error) {
       logger.error({ module: 'GoogleCloudMonitoring', err: error }, 'Failed to parse inline credentials');
@@ -134,10 +134,10 @@ async function getAccessToken(): Promise<string> {
   }
 
   // Try Application Default Credentials
-  if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+  if (process.env['GOOGLE_APPLICATION_CREDENTIALS']) {
     try {
       const fs = await import('fs');
-      const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+      const credentialsPath = process.env['GOOGLE_APPLICATION_CREDENTIALS'];
       const credentialsJson = fs.readFileSync(credentialsPath, 'utf-8');
       const credentials = JSON.parse(credentialsJson);
       return await getAccessTokenFromServiceAccount(credentials);
@@ -324,9 +324,12 @@ export async function fetchGoogleQuotaSnapshot(): Promise<GoogleQuotaSnapshot> {
 
         // Get the most recent value
         let usage = 0;
-        if (timeSeries.length > 0 && timeSeries[0].points?.length > 0) {
-          const point = timeSeries[0].points[0];
-          usage = point.value.int64Value ? parseInt(point.value.int64Value, 10) : point.value.doubleValue || 0;
+        const firstSeries = timeSeries[0];
+        if (firstSeries && firstSeries.points?.length > 0) {
+          const point = firstSeries.points[0];
+          if (point) {
+            usage = point.value.int64Value ? parseInt(point.value.int64Value, 10) : point.value.doubleValue || 0;
+          }
         }
 
         // Query limit
@@ -355,7 +358,7 @@ export async function fetchGoogleQuotaSnapshot(): Promise<GoogleQuotaSnapshot> {
       service: 'generativelanguage.googleapis.com',
       quotas,
       syncStatus: errors.length === 0 ? 'success' : quotas.length > 0 ? 'partial' : 'failed',
-      errorMessage: errors.length > 0 ? errors.join('; ') : undefined,
+      ...(errors.length > 0 && { errorMessage: errors.join('; ') }),
       nextSyncAt,
     };
 
@@ -389,7 +392,7 @@ export async function fetchGoogleQuotaSnapshot(): Promise<GoogleQuotaSnapshot> {
 
     const result: GoogleQuotaSnapshot = {
       syncedAt,
-      projectId: process.env.GOOGLE_CLOUD_PROJECT || 'unknown',
+      projectId: process.env['GOOGLE_CLOUD_PROJECT'] || 'unknown',
       service: 'generativelanguage.googleapis.com',
       quotas: [],
       syncStatus: 'failed',
@@ -438,7 +441,7 @@ export function getSyncStatus(): {
     nextSyncAt: lastSyncResult.nextSyncAt,
     syncIntervalMs: SYNC_INTERVAL_MS,
     status: lastSyncResult.syncStatus,
-    errorMessage: lastSyncResult.errorMessage,
+    ...(lastSyncResult.errorMessage !== undefined && { errorMessage: lastSyncResult.errorMessage }),
   };
 }
 

@@ -17,7 +17,7 @@ import { eq } from 'drizzle-orm';
 import { approvalQueue, approvalAuditLog } from '@shared/schema';
 import { evaluateContent as evaluateConfidence, type ConfidenceScore } from './confidenceScoringService';
 // NOTE: contentSafetyService will be created next, using interface for now
-import type { ApprovalQueue, InsertApprovalQueue, InsertApprovalAuditLog, ApprovalSettings } from '@shared/schema';
+import type { ApprovalQueue, InsertApprovalQueue, ApprovalSettings } from '@shared/schema';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -262,8 +262,8 @@ export async function evaluateContent(content: GeneratedContent): Promise<AIEval
   const confidenceScore = await evaluateConfidence({
     caption: content.caption,
     platform: content.platform,
-    imageUrl: content.imageUrl,
-    hashtags: content.hashtags,
+    ...(content.imageUrl !== undefined && { imageUrl: content.imageUrl }),
+    ...(content.hashtags !== undefined && { hashtags: content.hashtags }),
     userId: content.userId,
   });
 
@@ -332,7 +332,12 @@ export async function addToQueue(content: GeneratedContent): Promise<ApprovalQue
     status: shouldAutoApprove ? 'approved' : 'pending_review',
     priority: evaluation.priority,
     aiConfidenceScore: evaluation.confidenceScore.overall,
-    aiRecommendation: evaluation.confidenceScore.recommendation,
+    aiRecommendation:
+      evaluation.confidenceScore.recommendation === 'manual_review'
+        ? 'human_review'
+        : evaluation.confidenceScore.recommendation === 'auto_reject'
+          ? 'reject'
+          : evaluation.confidenceScore.recommendation,
     aiReasoning: evaluation.confidenceScore.reasoning,
     safetyChecksPassed: {
       hateSpeech: evaluation.safetyChecks.hateSpeech,
@@ -349,10 +354,12 @@ export async function addToQueue(content: GeneratedContent): Promise<ApprovalQue
 
   // Step 5: Create queue item + audit log atomically
   const queueItem = await db.transaction(async (tx) => {
-    const [item] = await tx
+    const items = await tx
       .insert(approvalQueue)
       .values({ ...queueData, createdAt: new Date(), updatedAt: new Date() })
       .returning();
+    const item = items[0];
+    if (!item) throw new Error('Failed to insert approval queue item');
 
     await tx.insert(approvalAuditLog).values({
       approvalQueueId: item.id,
@@ -369,14 +376,16 @@ export async function addToQueue(content: GeneratedContent): Promise<ApprovalQue
       snapshot: {
         caption: content.caption,
         platform: content.platform,
-        imageUrl: content.imageUrl,
-        hashtags: content.hashtags,
+        ...(content.imageUrl !== undefined && { imageUrl: content.imageUrl }),
+        ...(content.hashtags !== undefined && { hashtags: content.hashtags }),
       },
       createdAt: new Date(),
     });
 
     return item;
   });
+
+  if (!queueItem) throw new Error('Transaction returned undefined');
 
   logger.info(
     {

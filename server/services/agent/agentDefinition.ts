@@ -81,11 +81,11 @@ export function createStudioAgent(storage: IStorage) {
   // Resolve API key from the env vars this app uses.
   // The ADK internally looks for GOOGLE_GENAI_API_KEY or GEMINI_API_KEY,
   // but this app stores the key in GOOGLE_API_KEY. Pass it explicitly.
-  const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY;
+  const apiKey = process.env['GOOGLE_API_KEY'] || process.env['GEMINI_API_KEY'] || process.env['GOOGLE_GENAI_API_KEY'];
 
   const model = new Gemini({
     model: 'gemini-3-pro-preview',
-    apiKey,
+    ...(apiKey !== undefined && { apiKey }),
   });
 
   return new LlmAgent({

@@ -14,12 +14,7 @@
 import { logger } from '../lib/logger';
 
 // Import all four services
-import {
-  getPlatformSpecs,
-  getAvailablePlatforms,
-  isPlatformSupported,
-  getRecommendedAspectRatio,
-} from '../services/platformSpecsService';
+import { getPlatformSpecs, getAvailablePlatforms, isPlatformSupported } from '../services/platformSpecsService';
 
 import {
   formatContentForPlatform,
@@ -27,18 +22,9 @@ import {
   generateCaptionSuggestions,
 } from '../services/contentFormatterService';
 
-import {
-  generatePlatformImages,
-  resizeImageForPlatform,
-  validateImageForPlatform,
-  extractPublicId,
-} from '../services/imageSizingService';
+import { generatePlatformImages, validateImageForPlatform } from '../services/imageSizingService';
 
-import {
-  postToN8n,
-  postToMultiplePlatforms,
-  validateN8nConfig,
-} from '../services/n8nPostingService';
+import { postToMultiplePlatforms, validateN8nConfig } from '../services/n8nPostingService';
 
 /**
  * Example 1: Check available platforms
@@ -73,7 +59,7 @@ async function example2_getPlatformSpecs() {
     console.log(`- Image formats: ${instagramSpecs.image.formats.join(', ')}`);
     console.log(`- Max file size: ${instagramSpecs.image.maxSizeMB}MB`);
     console.log(`- Aspect ratios:`);
-    instagramSpecs.image.aspectRatios.forEach(ar => {
+    instagramSpecs.image.aspectRatios.forEach((ar) => {
       console.log(`  - ${ar.name}: ${ar.ratio} (${ar.width}x${ar.height}px) ${ar.recommended ? '✅ RECOMMENDED' : ''}`);
     });
   }
@@ -127,12 +113,12 @@ Don't miss our limited-time launch offer! 💥`;
 
   if (formatted.warnings.length > 0) {
     console.log('\nWarnings:');
-    formatted.warnings.forEach(w => console.log(`  ⚠️  ${w}`));
+    formatted.warnings.forEach((w) => console.log(`  ⚠️  ${w}`));
   }
 
   if (formatted.errors.length > 0) {
     console.log('\nErrors:');
-    formatted.errors.forEach(e => console.log(`  ❌ ${e}`));
+    formatted.errors.forEach((e) => console.log(`  ❌ ${e}`));
   }
 
   console.log('\nFormatted Caption:');
@@ -243,21 +229,15 @@ async function example6_validateImage() {
   ];
 
   for (const test of testCases) {
-    const validation = validateImageForPlatform(
-      test.width,
-      test.height,
-      test.fileSizeMB,
-      test.format,
-      test.platform
-    );
+    const validation = validateImageForPlatform(test.width, test.height, test.fileSizeMB, test.format, test.platform);
 
     console.log(`${test.name}:`);
     console.log(`  Valid: ${validation.isValid ? '✅' : '❌'}`);
     if (validation.errors.length > 0) {
-      validation.errors.forEach(e => console.log(`  Error: ${e}`));
+      validation.errors.forEach((e) => console.log(`  Error: ${e}`));
     }
     if (validation.warnings.length > 0) {
-      validation.warnings.forEach(w => console.log(`  Warning: ${w}`));
+      validation.warnings.forEach((w) => console.log(`  Warning: ${w}`));
     }
     console.log('');
   }
@@ -274,7 +254,7 @@ async function example7_completeWorkflow() {
   const n8nValidation = validateN8nConfig();
   if (!n8nValidation.isValid) {
     console.log('❌ n8n configuration invalid:');
-    n8nValidation.errors.forEach(e => console.log(`  - ${e}`));
+    n8nValidation.errors.forEach((e) => console.log(`  - ${e}`));
     console.log('\nSkipping posting step (would work in production with N8N_BASE_URL configured)');
   } else {
     console.log('✅ n8n configuration valid');
@@ -291,15 +271,7 @@ Built for speed, designed for scale, loved by teams worldwide. ⚡️
 
 Try it now and see the difference!`;
 
-  const hashtags = [
-    'ProductLaunch',
-    'Innovation',
-    'Business',
-    'Tech',
-    'Startup',
-    'Entrepreneurship',
-    'Growth',
-  ];
+  const hashtags = ['ProductLaunch', 'Innovation', 'Business', 'Tech', 'Startup', 'Entrepreneurship', 'Growth'];
 
   const sourceImageUrl = 'https://res.cloudinary.com/demo/image/upload/sample.jpg';
   const platforms = ['instagram', 'linkedin', 'twitter', 'facebook'];
@@ -313,11 +285,7 @@ Try it now and see the difference!`;
 
   // Step 3: Format content for all platforms
   console.log('Step 3: Formatting content for each platform...');
-  const formattedContent = await formatContentForMultiplePlatforms(
-    caption,
-    hashtags,
-    platforms
-  );
+  const formattedContent = await formatContentForMultiplePlatforms(caption, hashtags, platforms);
 
   console.log('✅ Content formatted for', Object.keys(formattedContent).length, 'platforms');
   console.log('');
@@ -338,18 +306,11 @@ Try it now and see the difference!`;
   if (n8nValidation.isValid) {
     console.log('Step 5: Posting to n8n webhooks...');
 
-    const postResults = await postToMultiplePlatforms(
-      platforms,
-      formattedContent,
-      imageUrls,
-      userId,
-      scheduledPostId,
-      {
-        generationId: 'gen_789',
-        scheduledFor: new Date(),
-        callbackUrl: 'https://api.example.com/n8n/callback',
-      }
-    );
+    const postResults = await postToMultiplePlatforms(platforms, formattedContent, imageUrls, userId, scheduledPostId, {
+      generationId: 'gen_789',
+      scheduledFor: new Date(),
+      callbackUrl: 'https://api.example.com/n8n/callback',
+    });
 
     console.log('✅ Posts submitted to n8n\n');
 
@@ -368,8 +329,10 @@ Try it now and see the difference!`;
     console.log('Step 5: Posting skipped (n8n not configured)');
     console.log('');
     console.log('Would post to these endpoints:');
-    platforms.forEach(platform => {
-      console.log(`  - ${platform}: ${process.env.N8N_BASE_URL || 'https://n8n.example.com'}/webhook/post/${platform}`);
+    platforms.forEach((platform) => {
+      console.log(
+        `  - ${platform}: ${process.env['N8N_BASE_URL'] || 'https://n8n.example.com'}/webhook/post/${platform}`,
+      );
     });
     console.log('');
   }
@@ -426,7 +389,7 @@ async function runAllExamples() {
 if (require.main === module) {
   runAllExamples()
     .then(() => process.exit(0))
-    .catch(error => {
+    .catch((error) => {
       console.error('Fatal error:', error);
       process.exit(1);
     });

@@ -984,7 +984,7 @@ export function getRecommendedAspectRatio(platform: string) {
   const specs = getPlatformSpecs(platform);
   if (!specs) return undefined;
 
-  return specs.image.aspectRatios.find(ar => ar.recommended);
+  return specs.image.aspectRatios.find((ar) => ar.recommended);
 }
 
 /**
@@ -1000,5 +1000,5 @@ export function getAspectRatios(platform: string) {
 
 /**
  * Export types for use in other services
+ * Note: PlatformSpecs is already exported at its interface definition above.
  */
-export type { PlatformSpecs };

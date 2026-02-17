@@ -1,16 +1,9 @@
 /* eslint-disable no-console */
-import "dotenv/config";
-import { db } from "../db";
-import {
-  products,
-  productRelationships,
-  installationScenarios,
-  brandImages,
-  productAnalyses,
-} from "@shared/schema";
-import { eq, sql, or, isNotNull } from "drizzle-orm";
-import * as fs from "fs";
-import * as path from "path";
+import 'dotenv/config';
+import { db } from '../db';
+import { products, productRelationships, installationScenarios, brandImages, productAnalyses } from '@shared/schema';
+import * as fs from 'fs';
+import * as path from 'path';
 
 /**
  * Coverage Dashboard - Phase 1A
@@ -37,15 +30,15 @@ interface ProductCoverage {
   hasTags: boolean;
   hasSku: boolean;
   // Relationships - separate columns for clarity
-  relationshipsAsSourceCount: number;   // Where product is source
-  relationshipsAsTargetCount: number;   // Where product is target
-  relationshipsAnyCount: number;        // Source OR target (for summary)
+  relationshipsAsSourceCount: number; // Where product is source
+  relationshipsAsTargetCount: number; // Where product is target
+  relationshipsAnyCount: number; // Source OR target (for summary)
   // Scenarios - separate columns for clarity
-  scenariosPrimaryCount: number;        // Where product is primary
-  scenariosSecondaryCount: number;      // Where product is in secondaryProductIds
-  scenariosAnyCount: number;            // Primary OR secondary (for summary)
-  scenariosActiveCount: number;         // Only isActive=true (in RAG)
-  scenariosInactiveCount: number;       // isActive=false drafts (NOT in RAG)
+  scenariosPrimaryCount: number; // Where product is primary
+  scenariosSecondaryCount: number; // Where product is in secondaryProductIds
+  scenariosAnyCount: number; // Primary OR secondary (for summary)
+  scenariosActiveCount: number; // Only isActive=true (in RAG)
+  scenariosInactiveCount: number; // isActive=false drafts (NOT in RAG)
   brandImagesCount: number;
   hasProductAnalysis: boolean;
   lastVerifiedAt: string | null;
@@ -53,10 +46,10 @@ interface ProductCoverage {
 }
 
 async function runCoverageDashboard() {
-  console.log("═".repeat(80));
-  console.log("  COVERAGE DASHBOARD - Phase 1A");
+  console.log('═'.repeat(80));
+  console.log('  COVERAGE DASHBOARD - Phase 1A');
   console.log("  Single source of truth for 'what's missing'");
-  console.log("═".repeat(80));
+  console.log('═'.repeat(80));
 
   // ========================================
   // 1. FETCH ALL DATA
@@ -70,9 +63,7 @@ async function runCoverageDashboard() {
   // Check if productAnalyses table exists and has data
   let allAnalyses: { productId: string }[] = [];
   try {
-    allAnalyses = await db
-      .select({ productId: productAnalyses.productId })
-      .from(productAnalyses);
+    allAnalyses = await db.select({ productId: productAnalyses.productId }).from(productAnalyses);
   } catch {
     // Table may not exist or be empty
   }
@@ -119,12 +110,12 @@ async function runCoverageDashboard() {
   for (const rel of allRelationships) {
     relationshipsAsSourcePerProduct.set(
       rel.sourceProductId,
-      (relationshipsAsSourcePerProduct.get(rel.sourceProductId) || 0) + 1
+      (relationshipsAsSourcePerProduct.get(rel.sourceProductId) || 0) + 1,
     );
     if (rel.targetProductId) {
       relationshipsAsTargetPerProduct.set(
         rel.targetProductId,
-        (relationshipsAsTargetPerProduct.get(rel.targetProductId) || 0) + 1
+        (relationshipsAsTargetPerProduct.get(rel.targetProductId) || 0) + 1,
       );
     }
   }
@@ -141,18 +132,18 @@ async function runCoverageDashboard() {
     if (scenario.primaryProductId) {
       scenariosPrimaryPerProduct.set(
         scenario.primaryProductId,
-        (scenariosPrimaryPerProduct.get(scenario.primaryProductId) || 0) + 1
+        (scenariosPrimaryPerProduct.get(scenario.primaryProductId) || 0) + 1,
       );
       // Track active/inactive for primary product
       if (isActive) {
         scenariosActivePerProduct.set(
           scenario.primaryProductId,
-          (scenariosActivePerProduct.get(scenario.primaryProductId) || 0) + 1
+          (scenariosActivePerProduct.get(scenario.primaryProductId) || 0) + 1,
         );
       } else {
         scenariosInactivePerProduct.set(
           scenario.primaryProductId,
-          (scenariosInactivePerProduct.get(scenario.primaryProductId) || 0) + 1
+          (scenariosInactivePerProduct.get(scenario.primaryProductId) || 0) + 1,
         );
       }
     }
@@ -160,21 +151,12 @@ async function runCoverageDashboard() {
     const secondaryIds = scenario.secondaryProductIds as string[] | null;
     if (secondaryIds && Array.isArray(secondaryIds)) {
       for (const id of secondaryIds) {
-        scenariosSecondaryPerProduct.set(
-          id,
-          (scenariosSecondaryPerProduct.get(id) || 0) + 1
-        );
+        scenariosSecondaryPerProduct.set(id, (scenariosSecondaryPerProduct.get(id) || 0) + 1);
         // Track active/inactive for secondary products too
         if (isActive) {
-          scenariosActivePerProduct.set(
-            id,
-            (scenariosActivePerProduct.get(id) || 0) + 1
-          );
+          scenariosActivePerProduct.set(id, (scenariosActivePerProduct.get(id) || 0) + 1);
         } else {
-          scenariosInactivePerProduct.set(
-            id,
-            (scenariosInactivePerProduct.get(id) || 0) + 1
-          );
+          scenariosInactivePerProduct.set(id, (scenariosInactivePerProduct.get(id) || 0) + 1);
         }
       }
     }
@@ -184,9 +166,7 @@ async function runCoverageDashboard() {
   const brandImagesPerProduct = new Map<string, number>();
   for (const product of allProducts) {
     const categoryImages = allBrandImages.filter(
-      (img) =>
-        img.category === product.category ||
-        (img.tags && img.tags.includes(product.category || ""))
+      (img) => img.category === product.category || (img.tags && img.tags.includes(product.category || '')),
     );
     brandImagesPerProduct.set(product.id, categoryImages.length);
   }
@@ -211,13 +191,12 @@ async function runCoverageDashboard() {
     const coverage: ProductCoverage = {
       productId: product.id,
       name: product.name,
-      category: product.category || "uncategorized",
-      enrichmentStatus: product.enrichmentStatus || "pending",
+      category: product.category || 'uncategorized',
+      enrichmentStatus: product.enrichmentStatus || 'pending',
       hasDescription: !!product.description && product.description.length > 10,
       hasFeatures: !!product.features && Object.keys(product.features).length > 0,
       hasBenefits: !!product.benefits && (product.benefits as string[]).length > 0,
-      hasSpecs:
-        !!product.specifications && Object.keys(product.specifications).length > 0,
+      hasSpecs: !!product.specifications && Object.keys(product.specifications).length > 0,
       hasTags: !!product.tags && (product.tags as string[]).length > 0,
       hasSku: !!product.sku && product.sku.length > 0,
       // Relationships - separate columns
@@ -232,10 +211,8 @@ async function runCoverageDashboard() {
       scenariosInactiveCount: scenInactive,
       brandImagesCount: brandImagesPerProduct.get(product.id) || 0,
       hasProductAnalysis: productsWithAnalysis.has(product.id),
-      lastVerifiedAt: product.enrichmentVerifiedAt
-        ? product.enrichmentVerifiedAt.toISOString()
-        : null,
-      createdAt: product.createdAt ? product.createdAt.toISOString() : "unknown",
+      lastVerifiedAt: product.enrichmentVerifiedAt ? product.enrichmentVerifiedAt.toISOString() : null,
+      createdAt: product.createdAt ? product.createdAt.toISOString() : 'unknown',
     };
     coverageData.push(coverage);
   }
@@ -260,27 +237,25 @@ async function runCoverageDashboard() {
   const productsWithScenarioPrimaryOnly = productsWithScenarioAsPrimary.size;
   const productsWithScenarioSecondaryOnly = productsWithScenarioAsSecondary.size;
   // Active vs inactive scenarios
-  const totalActiveScenarios = allScenarios.filter(s => s.isActive !== false).length;
-  const totalInactiveScenarios = allScenarios.filter(s => s.isActive === false).length;
-  const productsWithActiveScenario = coverageData.filter(p => p.scenariosActiveCount > 0).length;
+  const totalActiveScenarios = allScenarios.filter((s) => s.isActive !== false).length;
+  const totalInactiveScenarios = allScenarios.filter((s) => s.isActive === false).length;
+  const productsWithActiveScenario = coverageData.filter((p) => p.scenariosActiveCount > 0).length;
   const productsWithInactiveOnlyScenario = coverageData.filter(
-    p => p.scenariosInactiveCount > 0 && p.scenariosActiveCount === 0
+    (p) => p.scenariosInactiveCount > 0 && p.scenariosActiveCount === 0,
   ).length;
-  const productsWithAnalysisCount = coverageData.filter(
-    (p) => p.hasProductAnalysis
-  ).length;
+  const productsWithAnalysisCount = coverageData.filter((p) => p.hasProductAnalysis).length;
 
   // By category
   const byCategory = new Map<string, number>();
   for (const product of allProducts) {
-    const cat = product.category || "uncategorized";
+    const cat = product.category || 'uncategorized';
     byCategory.set(cat, (byCategory.get(cat) || 0) + 1);
   }
 
   // By enrichment status
   const byStatus = new Map<string, number>();
   for (const product of allProducts) {
-    const status = product.enrichmentStatus || "pending";
+    const status = product.enrichmentStatus || 'pending';
     byStatus.set(status, (byStatus.get(status) || 0) + 1);
   }
 
@@ -289,31 +264,31 @@ async function runCoverageDashboard() {
   // ========================================
 
   const csvHeader = [
-    "productId",
-    "name",
-    "category",
-    "enrichmentStatus",
-    "hasDescription",
-    "hasFeatures",
-    "hasBenefits",
-    "hasSpecs",
-    "hasTags",
-    "hasSku",
+    'productId',
+    'name',
+    'category',
+    'enrichmentStatus',
+    'hasDescription',
+    'hasFeatures',
+    'hasBenefits',
+    'hasSpecs',
+    'hasTags',
+    'hasSku',
     // Relationships - separate columns
-    "relationshipsAsSourceCount",
-    "relationshipsAsTargetCount",
-    "relationshipsAnyCount",
+    'relationshipsAsSourceCount',
+    'relationshipsAsTargetCount',
+    'relationshipsAnyCount',
     // Scenarios - separate columns
-    "scenariosPrimaryCount",
-    "scenariosSecondaryCount",
-    "scenariosAnyCount",
-    "scenariosActiveCount",
-    "scenariosInactiveCount",
-    "brandImagesCount",
-    "hasProductAnalysis",
-    "lastVerifiedAt",
-    "createdAt",
-  ].join(",");
+    'scenariosPrimaryCount',
+    'scenariosSecondaryCount',
+    'scenariosAnyCount',
+    'scenariosActiveCount',
+    'scenariosInactiveCount',
+    'brandImagesCount',
+    'hasProductAnalysis',
+    'lastVerifiedAt',
+    'createdAt',
+  ].join(',');
 
   const csvRows = coverageData.map((p) =>
     [
@@ -339,13 +314,13 @@ async function runCoverageDashboard() {
       p.scenariosInactiveCount,
       p.brandImagesCount,
       p.hasProductAnalysis,
-      p.lastVerifiedAt || "",
+      p.lastVerifiedAt || '',
       p.createdAt,
-    ].join(",")
+    ].join(','),
   );
 
-  const csvContent = [csvHeader, ...csvRows].join("\n");
-  const csvPath = path.join(process.cwd(), "coverage-report.csv");
+  const csvContent = [csvHeader, ...csvRows].join('\n');
+  const csvPath = path.join(process.cwd(), 'coverage-report.csv');
   fs.writeFileSync(csvPath, csvContent);
   console.log(`\n✓ CSV saved to: ${csvPath}`);
 
@@ -355,9 +330,9 @@ async function runCoverageDashboard() {
 
   const pct = (n: number) => ((n / totalProducts) * 100).toFixed(1);
 
-  console.log("\n" + "─".repeat(80));
-  console.log("SUMMARY METRICS");
-  console.log("─".repeat(80));
+  console.log('\n' + '─'.repeat(80));
+  console.log('SUMMARY METRICS');
+  console.log('─'.repeat(80));
 
   console.log(`
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -399,16 +374,16 @@ async function runCoverageDashboard() {
 └─────────────────────────────────────────────────────────────────────────────┘
 `);
 
-  console.log("─".repeat(80));
-  console.log("BY CATEGORY");
-  console.log("─".repeat(80));
+  console.log('─'.repeat(80));
+  console.log('BY CATEGORY');
+  console.log('─'.repeat(80));
   for (const [cat, count] of Array.from(byCategory.entries()).sort()) {
     console.log(`  ${cat.padEnd(20)} ${count.toString().padStart(5)} products`);
   }
 
-  console.log("\n" + "─".repeat(80));
-  console.log("BY ENRICHMENT STATUS");
-  console.log("─".repeat(80));
+  console.log('\n' + '─'.repeat(80));
+  console.log('BY ENRICHMENT STATUS');
+  console.log('─'.repeat(80));
   for (const [status, count] of Array.from(byStatus.entries()).sort()) {
     console.log(`  ${status.padEnd(20)} ${count.toString().padStart(5)} products`);
   }
@@ -417,29 +392,25 @@ async function runCoverageDashboard() {
   // 7. POST-DELETE SAFETY AUDIT
   // ========================================
 
-  console.log("\n" + "═".repeat(80));
-  console.log("POST-DELETE SAFETY AUDIT");
-  console.log("═".repeat(80));
+  console.log('\n' + '═'.repeat(80));
+  console.log('POST-DELETE SAFETY AUDIT');
+  console.log('═'.repeat(80));
 
   // Check for orphaned relationships (reference non-existent products)
   const productIds = new Set(allProducts.map((p) => p.id));
   const orphanedRelationships = allRelationships.filter(
-    (r) =>
-      !productIds.has(r.sourceProductId) ||
-      (r.targetProductId && !productIds.has(r.targetProductId))
+    (r) => !productIds.has(r.sourceProductId) || (r.targetProductId && !productIds.has(r.targetProductId)),
   );
 
   // Check for orphaned scenarios
-  const orphanedScenarios = allScenarios.filter(
-    (s) => s.primaryProductId && !productIds.has(s.primaryProductId)
-  );
+  const orphanedScenarios = allScenarios.filter((s) => s.primaryProductId && !productIds.has(s.primaryProductId));
 
   console.log(`
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  DELETION AUDIT                                                              │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│  Orphaned relationships:            ${orphanedRelationships.length.toString().padStart(5)} ${orphanedRelationships.length === 0 ? "✓ None" : "⚠ NEEDS FIX"}          │
-│  Orphaned scenarios:                ${orphanedScenarios.length.toString().padStart(5)} ${orphanedScenarios.length === 0 ? "✓ None" : "⚠ NEEDS FIX"}          │
+│  Orphaned relationships:            ${orphanedRelationships.length.toString().padStart(5)} ${orphanedRelationships.length === 0 ? '✓ None' : '⚠ NEEDS FIX'}          │
+│  Orphaned scenarios:                ${orphanedScenarios.length.toString().padStart(5)} ${orphanedScenarios.length === 0 ? '✓ None' : '⚠ NEEDS FIX'}          │
 │                                                                              │
 │  Note: Deletion was DB-only. Cloudinary images were NOT deleted.            │
 │  Source image URLs preserved in specifications.sourceImageUrls field.       │
@@ -447,7 +418,7 @@ async function runCoverageDashboard() {
 `);
 
   if (orphanedRelationships.length > 0) {
-    console.log("\nOrphaned relationship IDs:");
+    console.log('\nOrphaned relationship IDs:');
     for (const r of orphanedRelationships.slice(0, 10)) {
       console.log(`  - ${r.id} (source: ${r.sourceProductId})`);
     }
@@ -457,7 +428,7 @@ async function runCoverageDashboard() {
   }
 
   if (orphanedScenarios.length > 0) {
-    console.log("\nOrphaned scenario IDs:");
+    console.log('\nOrphaned scenario IDs:');
     for (const s of orphanedScenarios.slice(0, 10)) {
       console.log(`  - ${s.id} (primary: ${s.primaryProductId})`);
     }
@@ -470,9 +441,9 @@ async function runCoverageDashboard() {
   // 8. GAP ANALYSIS
   // ========================================
 
-  console.log("\n" + "═".repeat(80));
-  console.log("GAP ANALYSIS - Products Needing Work");
-  console.log("═".repeat(80));
+  console.log('\n' + '═'.repeat(80));
+  console.log('GAP ANALYSIS - Products Needing Work');
+  console.log('═'.repeat(80));
 
   const noRelationships = coverageData.filter((p) => p.relationshipsAnyCount === 0);
   const noScenarios = coverageData.filter((p) => p.scenariosAnyCount === 0);
@@ -487,7 +458,7 @@ async function runCoverageDashboard() {
 `);
 
   // Show sample of products without relationships (by category)
-  console.log("\nSample products without relationships (by category):");
+  console.log('\nSample products without relationships (by category):');
   const noRelByCategory = new Map<string, ProductCoverage[]>();
   for (const p of noRelationships) {
     if (!noRelByCategory.has(p.category)) {
@@ -496,18 +467,16 @@ async function runCoverageDashboard() {
     noRelByCategory.get(p.category)!.push(p);
   }
 
-  for (const [cat, prods] of Array.from(noRelByCategory.entries())
-    .sort()
-    .slice(0, 5)) {
+  for (const [cat, prods] of Array.from(noRelByCategory.entries()).sort().slice(0, 5)) {
     console.log(`  ${cat}: ${prods.length} products`);
     for (const p of prods.slice(0, 2)) {
       console.log(`    - ${p.name.substring(0, 50)}`);
     }
   }
 
-  console.log("\n" + "═".repeat(80));
-  console.log("  DASHBOARD COMPLETE");
-  console.log("═".repeat(80));
+  console.log('\n' + '═'.repeat(80));
+  console.log('  DASHBOARD COMPLETE');
+  console.log('═'.repeat(80));
 
   return {
     totalProducts,
@@ -522,10 +491,10 @@ async function runCoverageDashboard() {
 // Run the dashboard
 runCoverageDashboard()
   .then((result) => {
-    console.log("\nResult:", JSON.stringify(result, null, 2));
+    console.log('\nResult:', JSON.stringify(result, null, 2));
     process.exit(0);
   })
   .catch((err) => {
-    console.error("Error:", err);
+    console.error('Error:', err);
     process.exit(1);
   });

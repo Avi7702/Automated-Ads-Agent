@@ -70,8 +70,8 @@ export const calendarRouter: RouterFactory = (ctx: RouterContext): Router => {
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const userId = (req as any).user?.id;
-        const year = parseInt(req.query.year as string, 10);
-        const month = parseInt(req.query.month as string, 10);
+        const year = parseInt(String(req.query['year']), 10);
+        const month = parseInt(String(req.query['month']), 10);
 
         if (!year || !month || month < 1 || month > 12) {
           return res.status(400).json({ error: 'Valid year and month (1-12) query params required' });
@@ -93,7 +93,7 @@ export const calendarRouter: RouterFactory = (ctx: RouterContext): Router => {
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const userId = (req as any).user?.id;
-        const post = await getScheduledPostById(req.params.id, userId);
+        const post = await getScheduledPostById(String(req.params['id']), userId);
 
         if (!post) {
           return res.status(404).json({ error: 'Post not found' });
@@ -181,7 +181,7 @@ export const calendarRouter: RouterFactory = (ctx: RouterContext): Router => {
           return res.status(400).json({ error: 'Invalid scheduledFor date format' });
         }
 
-        const post = await reschedulePost(req.params.id, userId, newDate);
+        const post = await reschedulePost(String(req.params['id']), userId, newDate);
 
         if (!post) {
           return res.status(404).json({ error: 'Post not found' });
@@ -203,7 +203,7 @@ export const calendarRouter: RouterFactory = (ctx: RouterContext): Router => {
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const userId = (req as any).user?.id;
-        const post = await cancelScheduledPost(req.params.id, userId);
+        const post = await cancelScheduledPost(String(req.params['id']), userId);
 
         if (!post) {
           return res.status(404).json({ error: 'Post not found' });

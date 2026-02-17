@@ -23,8 +23,8 @@ export async function createApprovalQueue(data: InsertApprovalQueue): Promise<Ap
     })
     .returning();
 
-  logger.info({ userId: data.userId, queueItemId: item.id }, 'Approval queue item created');
-  return item;
+  logger.info({ userId: data.userId, queueItemId: item!.id }, 'Approval queue item created');
+  return item!;
 }
 
 export async function getApprovalQueue(id: string): Promise<ApprovalQueue | null> {
@@ -113,7 +113,7 @@ export async function createApprovalAuditLog(data: InsertApprovalAuditLog): Prom
     .returning();
 
   logger.info({ approvalQueueId: data.approvalQueueId, eventType: data.eventType }, 'Audit log created');
-  return log;
+  return log!;
 }
 
 export async function getApprovalAuditLog(approvalQueueId: string): Promise<ApprovalAuditLog[]> {
@@ -146,7 +146,7 @@ export async function updateApprovalSettings(
       .where(eq(approvalSettings.userId, userId))
       .returning();
 
-    return updated;
+    return updated!;
   }
 
   const [created] = await db
@@ -160,5 +160,5 @@ export async function updateApprovalSettings(
     .returning();
 
   logger.info({ userId }, 'Approval settings created');
-  return created;
+  return created!;
 }

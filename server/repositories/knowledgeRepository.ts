@@ -20,7 +20,7 @@ export async function createInstallationScenario(
   insertScenario: InsertInstallationScenario,
 ): Promise<InstallationScenario> {
   const [scenario] = await db.insert(installationScenarios).values(insertScenario).returning();
-  return scenario;
+  return scenario!;
 }
 
 export async function getInstallationScenarioById(id: string): Promise<InstallationScenario | undefined> {
@@ -74,7 +74,7 @@ export async function updateInstallationScenario(
     .set(updates)
     .where(eq(installationScenarios.id, id))
     .returning();
-  return scenario;
+  return scenario!;
 }
 
 export async function deleteInstallationScenario(id: string): Promise<void> {
@@ -89,7 +89,7 @@ export async function createProductRelationship(
   insertRelationship: InsertProductRelationship,
 ): Promise<ProductRelationship> {
   const [relationship] = await db.insert(productRelationships).values(insertRelationship).returning();
-  return relationship;
+  return relationship!;
 }
 
 export async function getProductRelationships(productIds: string[]): Promise<ProductRelationship[]> {
@@ -132,7 +132,7 @@ export async function deleteProductRelationship(id: string): Promise<void> {
 
 export async function createBrandImage(insertImage: InsertBrandImage): Promise<BrandImage> {
   const [image] = await db.insert(brandImages).values(insertImage).returning();
-  return image;
+  return image!;
 }
 
 export async function getBrandImagesByUser(
@@ -171,7 +171,7 @@ export async function getBrandImagesByCategory(userId: string, category: string)
 
 export async function updateBrandImage(id: string, updates: Partial<InsertBrandImage>): Promise<BrandImage> {
   const [image] = await db.update(brandImages).set(updates).where(eq(brandImages.id, id)).returning();
-  return image;
+  return image!;
 }
 
 export async function deleteBrandImage(id: string): Promise<void> {

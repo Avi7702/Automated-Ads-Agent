@@ -1,8 +1,8 @@
 /* eslint-disable no-console */
-import "dotenv/config";
-import { db } from "../db";
-import { products, productRelationships, users } from "@shared/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import 'dotenv/config';
+import { db } from '../db';
+import { products, productRelationships, users } from '@shared/schema';
+import { eq, inArray } from 'drizzle-orm';
 
 /**
  * Generate Baseline Relationships - Phase 1C
@@ -24,10 +24,10 @@ import { eq, and, inArray } from "drizzle-orm";
 
 // Representative spacer products - most commonly used covers
 const SPACER_REPRESENTATIVES = {
-  "25mm_cover": "20892a3c-d163-4a35-a893-111769fa2c64",  // Concrete Spacers - 25mm Cover
-  "40mm_cover": "08a14358-16af-4f1b-a78f-9d59b5bda41e",  // Concrete Spacers - 40mm Cover
-  "50mm_cover": "1a24f20b-fa03-4093-98da-3d7e89f4134d",  // Concrete Spacers - 50mm Cover
-  "chair_spacers": "5835728d-c1ed-4b8f-bf7d-cd2cb6bd868d", // Chair Spacers - Heavy Duty
+  '25mm_cover': '20892a3c-d163-4a35-a893-111769fa2c64', // Concrete Spacers - 25mm Cover
+  '40mm_cover': '08a14358-16af-4f1b-a78f-9d59b5bda41e', // Concrete Spacers - 40mm Cover
+  '50mm_cover': '1a24f20b-fa03-4093-98da-3d7e89f4134d', // Concrete Spacers - 50mm Cover
+  chair_spacers: '5835728d-c1ed-4b8f-bf7d-cd2cb6bd868d', // Chair Spacers - Heavy Duty
 };
 
 // Category rules - conservative, concept-level relationships
@@ -45,33 +45,36 @@ interface CategoryRule {
 const CATEGORY_RULES: CategoryRule[] = [
   // Rebar needs spacers for cover
   {
-    sourceCategories: ["rebar"],
-    targetCategory: "spacers",
-    targetProductId: SPACER_REPRESENTATIVES["25mm_cover"],
-    relationshipType: "pairs_with",  // Use existing type, not inventing new ones
+    sourceCategories: ['rebar'],
+    targetCategory: 'spacers',
+    targetProductId: SPACER_REPRESENTATIVES['25mm_cover'],
+    relationshipType: 'pairs_with', // Use existing type, not inventing new ones
     isRequired: false,
-    descriptionText: "Choose appropriate cover spacer per structural drawing (typically 25-50mm). Spacers maintain concrete cover to rebar per BS4449.",
-    reasoning: "BS4449 cover requirement - concrete cover to rebar must be maintained",
+    descriptionText:
+      'Choose appropriate cover spacer per structural drawing (typically 25-50mm). Spacers maintain concrete cover to rebar per BS4449.',
+    reasoning: 'BS4449 cover requirement - concrete cover to rebar must be maintained',
   },
   // Mesh needs spacers for cover
   {
-    sourceCategories: ["mesh"],
-    targetCategory: "spacers",
-    targetProductId: SPACER_REPRESENTATIVES["chair_spacers"],
-    relationshipType: "pairs_with",
+    sourceCategories: ['mesh'],
+    targetCategory: 'spacers',
+    targetProductId: SPACER_REPRESENTATIVES['chair_spacers'],
+    relationshipType: 'pairs_with',
     isRequired: false,
-    descriptionText: "Choose appropriate cover spacer per structural drawing. Chair spacers position mesh at correct cover depth per BS4449.",
-    reasoning: "BS4449 cover requirement - mesh must be positioned at correct cover depth",
+    descriptionText:
+      'Choose appropriate cover spacer per structural drawing. Chair spacers position mesh at correct cover depth per BS4449.',
+    reasoning: 'BS4449 cover requirement - mesh must be positioned at correct cover depth',
   },
   // Cut & bent is processed rebar, same requirement
   {
-    sourceCategories: ["cut-bent"],
-    targetCategory: "spacers",
-    targetProductId: SPACER_REPRESENTATIVES["25mm_cover"],
-    relationshipType: "pairs_with",
+    sourceCategories: ['cut-bent'],
+    targetCategory: 'spacers',
+    targetProductId: SPACER_REPRESENTATIVES['25mm_cover'],
+    relationshipType: 'pairs_with',
     isRequired: false,
-    descriptionText: "Choose appropriate cover spacer per structural drawing (typically 25-50mm). Spacers maintain concrete cover per BS4449.",
-    reasoning: "BS4449 cover requirement - cut & bent rebar requires same cover as straight rebar",
+    descriptionText:
+      'Choose appropriate cover spacer per structural drawing (typically 25-50mm). Spacers maintain concrete cover per BS4449.',
+    reasoning: 'BS4449 cover requirement - cut & bent rebar requires same cover as straight rebar',
   },
 ];
 
@@ -93,12 +96,12 @@ async function parseArgs(): Promise<{ dryRun: boolean; userId: string | null }> 
   let userId: string | null = null;
 
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === "--apply") {
+    if (args[i] === '--apply') {
       dryRun = false;
-    } else if (args[i] === "--dry-run") {
+    } else if (args[i] === '--dry-run') {
       dryRun = true;
-    } else if (args[i] === "--user-id" && args[i + 1]) {
-      userId = args[i + 1];
+    } else if (args[i] === '--user-id' && args[i + 1]) {
+      userId = args[i + 1] ?? null;
       i++;
     }
   }
@@ -107,20 +110,22 @@ async function parseArgs(): Promise<{ dryRun: boolean; userId: string | null }> 
 }
 
 async function generateBaselineRelationships() {
-  console.log("=".repeat(80));
-  console.log("  BASELINE RELATIONSHIP GENERATOR - Phase 1C");
-  console.log("=".repeat(80));
+  console.log('='.repeat(80));
+  console.log('  BASELINE RELATIONSHIP GENERATOR - Phase 1C');
+  console.log('='.repeat(80));
 
   const { dryRun, userId } = await parseArgs();
 
   // Validate userId
   if (!userId) {
-    console.error("\nERROR: --user-id is REQUIRED");
-    console.log("\nUsage:");
-    console.log("  npx tsx server/seeds/generateBaselineRelationships.ts --dry-run --user-id <uuid>");
-    console.log("  npx tsx server/seeds/generateBaselineRelationships.ts --apply --user-id <uuid>");
-    console.log("\nTo get a valid userId:");
-    console.log("  npx tsx -e \"require('dotenv/config'); const {db} = require('./server/db'); const {users} = require('@shared/schema'); db.select({id: users.id, email: users.email}).from(users).limit(5).then(u => console.log(JSON.stringify(u, null, 2)))\"");
+    console.error('\nERROR: --user-id is REQUIRED');
+    console.log('\nUsage:');
+    console.log('  npx tsx server/seeds/generateBaselineRelationships.ts --dry-run --user-id <uuid>');
+    console.log('  npx tsx server/seeds/generateBaselineRelationships.ts --apply --user-id <uuid>');
+    console.log('\nTo get a valid userId:');
+    console.log(
+      "  npx tsx -e \"require('dotenv/config'); const {db} = require('./server/db'); const {users} = require('@shared/schema'); db.select({id: users.id, email: users.email}).from(users).limit(5).then(u => console.log(JSON.stringify(u, null, 2)))\"",
+    );
     process.exit(1);
   }
 
@@ -131,10 +136,10 @@ async function generateBaselineRelationships() {
     process.exit(1);
   }
   console.log(`\n  User ID: ${userId}`);
-  console.log(`  Mode: ${dryRun ? "DRY-RUN (preview only)" : "APPLY (will write to DB)"}`);
+  console.log(`  Mode: ${dryRun ? 'DRY-RUN (preview only)' : 'APPLY (will write to DB)'}`);
 
   // Verify target products exist
-  console.log("\n  Verifying target spacer products...");
+  console.log('\n  Verifying target spacer products...');
   const targetIds = Object.values(SPACER_REPRESENTATIVES);
   const targetProducts = await db
     .select({ id: products.id, name: products.name })
@@ -142,18 +147,21 @@ async function generateBaselineRelationships() {
     .where(inArray(products.id, targetIds));
 
   if (targetProducts.length !== targetIds.length) {
-    console.error("\nERROR: Some target spacer products not found in database");
-    console.log("  Expected:", targetIds);
-    console.log("  Found:", targetProducts.map(p => p.id));
+    console.error('\nERROR: Some target spacer products not found in database');
+    console.log('  Expected:', targetIds);
+    console.log(
+      '  Found:',
+      targetProducts.map((p) => p.id),
+    );
     process.exit(1);
   }
 
-  const targetProductMap = new Map(targetProducts.map(p => [p.id, p.name]));
-  console.log("  All target products verified");
+  const targetProductMap = new Map(targetProducts.map((p) => [p.id, p.name]));
+  console.log('  All target products verified');
 
   // Get all source products
-  const sourceCategories = [...new Set(CATEGORY_RULES.flatMap(r => r.sourceCategories))];
-  console.log(`\n  Source categories: ${sourceCategories.join(", ")}`);
+  const sourceCategories = [...new Set(CATEGORY_RULES.flatMap((r) => r.sourceCategories))];
+  console.log(`\n  Source categories: ${sourceCategories.join(', ')}`);
 
   const sourceProducts = await db
     .select({ id: products.id, name: products.name, category: products.category })
@@ -170,16 +178,14 @@ async function generateBaselineRelationships() {
     })
     .from(productRelationships);
 
-  const existingSet = new Set(
-    existingRelationships.map(r => `${r.sourceProductId}→${r.targetProductId}`)
-  );
+  const existingSet = new Set(existingRelationships.map((r) => `${r.sourceProductId}→${r.targetProductId}`));
 
   // Build proposed relationships
   const proposed: ProposedRelationship[] = [];
 
   for (const rule of CATEGORY_RULES) {
     for (const sourceProduct of sourceProducts) {
-      if (!rule.sourceCategories.includes(sourceProduct.category || "")) {
+      if (!rule.sourceCategories.includes(sourceProduct.category || '')) {
         continue;
       }
 
@@ -194,9 +200,9 @@ async function generateBaselineRelationships() {
       proposed.push({
         sourceProductId: sourceProduct.id,
         sourceProductName: sourceProduct.name,
-        sourceCategory: sourceProduct.category || "unknown",
+        sourceCategory: sourceProduct.category || 'unknown',
         targetProductId: rule.targetProductId,
-        targetProductName: targetProductMap.get(rule.targetProductId) || "Unknown",
+        targetProductName: targetProductMap.get(rule.targetProductId) || 'Unknown',
         relationshipType: rule.relationshipType,
         description: humanReadableDescription,
         rule: `${sourceProduct.category}→spacers`,
@@ -206,13 +212,11 @@ async function generateBaselineRelationships() {
   }
 
   // Calculate metrics
-  const newRelationships = proposed.filter(p => !p.alreadyExists);
-  const skippedRelationships = proposed.filter(p => p.alreadyExists);
+  const newRelationships = proposed.filter((p) => !p.alreadyExists);
+  const skippedRelationships = proposed.filter((p) => p.alreadyExists);
 
   // Get unique source products that would have relationships
-  const uniqueSourceProducts = new Set(newRelationships.map(p => p.sourceProductId));
-  const uniqueSourceProductsExisting = new Set(skippedRelationships.map(p => p.sourceProductId));
-
+  const uniqueSourceProducts = new Set(newRelationships.map((p) => p.sourceProductId));
   // Get current coverage
   const allProducts = await db.select({ id: products.id }).from(products);
   const totalProducts = allProducts.length;
@@ -233,9 +237,9 @@ async function generateBaselineRelationships() {
     productsWithNewRel.add(rel.targetProductId);
   }
 
-  console.log("\n" + "=".repeat(80));
-  console.log("  DRY-RUN PROJECTION");
-  console.log("=".repeat(80));
+  console.log('\n' + '='.repeat(80));
+  console.log('  DRY-RUN PROJECTION');
+  console.log('='.repeat(80));
 
   console.log(`
   CURRENT STATE:
@@ -254,9 +258,9 @@ async function generateBaselineRelationships() {
 `);
 
   // Show sample of new relationships by category
-  console.log("=".repeat(80));
-  console.log("  SAMPLE RELATIONSHIPS (first 5 per category)");
-  console.log("=".repeat(80));
+  console.log('='.repeat(80));
+  console.log('  SAMPLE RELATIONSHIPS (first 5 per category)');
+  console.log('='.repeat(80));
 
   const byCategory = new Map<string, ProposedRelationship[]>();
   for (const rel of newRelationships) {
@@ -279,9 +283,9 @@ async function generateBaselineRelationships() {
   }
 
   // Show target product IDs being used
-  console.log("\n" + "=".repeat(80));
-  console.log("  TARGET PRODUCT IDs USED");
-  console.log("=".repeat(80));
+  console.log('\n' + '='.repeat(80));
+  console.log('  TARGET PRODUCT IDs USED');
+  console.log('='.repeat(80));
   const usedTargets = new Map<string, number>();
   for (const rel of newRelationships) {
     usedTargets.set(rel.targetProductId, (usedTargets.get(rel.targetProductId) || 0) + 1);
@@ -293,13 +297,13 @@ async function generateBaselineRelationships() {
   }
 
   if (dryRun) {
-    console.log("\n" + "=".repeat(80));
-    console.log("  DRY-RUN COMPLETE - NO CHANGES MADE");
-    console.log("=".repeat(80));
-    console.log("\nTo apply these changes, run:");
+    console.log('\n' + '='.repeat(80));
+    console.log('  DRY-RUN COMPLETE - NO CHANGES MADE');
+    console.log('='.repeat(80));
+    console.log('\nTo apply these changes, run:');
     console.log(`  npx tsx server/seeds/generateBaselineRelationships.ts --apply --user-id ${userId}`);
     return {
-      mode: "dry-run",
+      mode: 'dry-run',
       proposed: newRelationships.length,
       skipped: skippedRelationships.length,
       projectedCoverage: productsWithNewRel.size,
@@ -308,9 +312,9 @@ async function generateBaselineRelationships() {
   }
 
   // APPLY MODE - Write to database
-  console.log("\n" + "=".repeat(80));
-  console.log("  APPLYING CHANGES TO DATABASE");
-  console.log("=".repeat(80));
+  console.log('\n' + '='.repeat(80));
+  console.log('  APPLYING CHANGES TO DATABASE');
+  console.log('='.repeat(80));
 
   let inserted = 0;
   const errors: string[] = [];
@@ -355,9 +359,9 @@ async function generateBaselineRelationships() {
     }
   }
 
-  console.log("\n" + "=".repeat(80));
-  console.log("  FINAL STATE");
-  console.log("=".repeat(80));
+  console.log('\n' + '='.repeat(80));
+  console.log('  FINAL STATE');
+  console.log('='.repeat(80));
   console.log(`
     Total products:                 ${totalProducts}
     Products with >=1 relationship: ${finalProductsWithRel.size} (${((finalProductsWithRel.size / totalProducts) * 100).toFixed(1)}%)
@@ -365,7 +369,7 @@ async function generateBaselineRelationships() {
 `);
 
   return {
-    mode: "apply",
+    mode: 'apply',
     inserted,
     errors: errors.length,
     finalCoverage: finalProductsWithRel.size,
@@ -375,10 +379,10 @@ async function generateBaselineRelationships() {
 
 generateBaselineRelationships()
   .then((result) => {
-    console.log("\nResult:", JSON.stringify(result, null, 2));
+    console.log('\nResult:', JSON.stringify(result, null, 2));
     process.exit(0);
   })
   .catch((err) => {
-    console.error("Error:", err);
+    console.error('Error:', err);
     process.exit(1);
   });

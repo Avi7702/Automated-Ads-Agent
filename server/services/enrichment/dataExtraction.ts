@@ -5,15 +5,9 @@
  * Uses AI to intelligently parse and structure information.
  */
 
-import { logger } from "../../lib/logger";
-import { aiExtractProductData } from "./aiHelpers";
-import type {
-  ExtractedData,
-  SourceSearchResult,
-  AggregatedData,
-  ConfidenceLevel,
-  FieldSource,
-} from "./types";
+import { logger } from '../../lib/logger';
+import { aiExtractProductData } from './aiHelpers';
+import type { ExtractedData, SourceSearchResult, AggregatedData, ConfidenceLevel, FieldSource } from './types';
 
 // ============================================
 // MAIN EXTRACTION FUNCTION
@@ -22,15 +16,9 @@ import type {
 /**
  * Extract structured data from a source
  */
-export async function extractFromSource(
-  source: SourceSearchResult,
-  productNameHint?: string
-): Promise<ExtractedData> {
+export async function extractFromSource(source: SourceSearchResult, productNameHint?: string): Promise<ExtractedData> {
   // Use AI to extract structured data
-  const extracted = await aiExtractProductData(
-    source.pageContent,
-    productNameHint || source.extractedProductName
-  );
+  const extracted = await aiExtractProductData(source.pageContent, productNameHint || source.extractedProductName);
 
   return {
     ...extracted,
@@ -44,26 +32,25 @@ export async function extractFromSource(
  */
 export async function extractFromSourcesBatch(
   sources: SourceSearchResult[],
-  productNameHint?: string
+  productNameHint?: string,
 ): Promise<ExtractedData[]> {
   const results = await Promise.all(
-    sources.map(source =>
-      extractFromSource(source, productNameHint)
-        .catch(err => {
-          logger.error({ module: 'DataExtraction', url: source.url, err }, 'Extraction failed');
-          // Return minimal extraction on error
-          return {
-            sourceUrl: source.url,
-            productName: source.extractedProductName || "",
-            description: "",
-            specifications: {},
-            relatedProducts: [],
-            installationInfo: "",
-            certifications: [],
-            rawExtract: source.pageContent,
-          };
-        })
-    )
+    sources.map((source) =>
+      extractFromSource(source, productNameHint).catch((err) => {
+        logger.error({ module: 'DataExtraction', url: source.url, err }, 'Extraction failed');
+        // Return minimal extraction on error
+        return {
+          sourceUrl: source.url,
+          productName: source.extractedProductName || '',
+          description: '',
+          specifications: {},
+          relatedProducts: [],
+          installationInfo: '',
+          certifications: [],
+          rawExtract: source.pageContent,
+        };
+      }),
+    ),
   );
 
   return results;
@@ -78,12 +65,12 @@ export async function extractFromSourcesBatch(
  */
 export function aggregateExtractions(
   extractions: ExtractedData[],
-  sourceTrustLevels: Map<string, number>
+  sourceTrustLevels: Map<string, number>,
 ): AggregatedData {
   if (extractions.length === 0) {
     return {
-      productName: "",
-      description: "",
+      productName: '',
+      description: '',
       specifications: {},
       sources: [],
       fieldSources: {},
@@ -91,23 +78,23 @@ export function aggregateExtractions(
   }
 
   const fieldSources: Record<string, FieldSource> = {};
-  const sources = extractions.map(e => e.sourceUrl);
+  const sources = extractions.map((e) => e.sourceUrl);
 
   // ============================================
   // 1. Aggregate product name (use highest trust)
   // ============================================
   const productName = selectBestValueByTrust(
     extractions
-      .filter(e => e.productName)
-      .map(e => ({
+      .filter((e) => e.productName)
+      .map((e) => ({
         value: e.productName,
         source: e.sourceUrl,
         trustLevel: sourceTrustLevels.get(e.sourceUrl) || 4,
-      }))
+      })),
   );
 
   if (productName.value) {
-    fieldSources["productName"] = {
+    fieldSources['productName'] = {
       value: productName.value,
       agreedBy: productName.agreedBy,
       confidence: calculateFieldConfidence(productName.agreedBy.length),
@@ -119,16 +106,16 @@ export function aggregateExtractions(
   // ============================================
   const description = selectBestValueByTrust(
     extractions
-      .filter(e => e.description && e.description.length > 20)
-      .map(e => ({
+      .filter((e) => e.description && e.description.length > 20)
+      .map((e) => ({
         value: e.description,
         source: e.sourceUrl,
         trustLevel: sourceTrustLevels.get(e.sourceUrl) || 4,
-      }))
+      })),
   );
 
   if (description.value) {
-    fieldSources["description"] = {
+    fieldSources['description'] = {
       value: description.value,
       agreedBy: description.agreedBy,
       confidence: calculateFieldConfidence(description.agreedBy.length),
@@ -149,9 +136,9 @@ export function aggregateExtractions(
 
   for (const specKey of Array.from(allSpecKeys)) {
     const specValues = extractions
-      .filter(e => e.specifications[specKey])
-      .map(e => ({
-        value: e.specifications[specKey] || "",
+      .filter((e) => e.specifications[specKey])
+      .map((e) => ({
+        value: e.specifications[specKey] || '',
         source: e.sourceUrl,
         trustLevel: sourceTrustLevels.get(e.sourceUrl) || 4,
       }));
@@ -172,8 +159,8 @@ export function aggregateExtractions(
   // 4. Aggregate installation info
   // ============================================
   const installationInfos = extractions
-    .filter(e => e.installationInfo && e.installationInfo.length > 20)
-    .map(e => ({
+    .filter((e) => e.installationInfo && e.installationInfo.length > 20)
+    .map((e) => ({
       value: e.installationInfo,
       source: e.sourceUrl,
       trustLevel: sourceTrustLevels.get(e.sourceUrl) || 4,
@@ -181,7 +168,7 @@ export function aggregateExtractions(
 
   if (installationInfos.length > 0) {
     const selected = selectBestValueByTrust(installationInfos);
-    fieldSources["installationInfo"] = {
+    fieldSources['installationInfo'] = {
       value: selected.value,
       agreedBy: selected.agreedBy,
       confidence: calculateFieldConfidence(selected.agreedBy.length),
@@ -201,10 +188,10 @@ export function aggregateExtractions(
   }
 
   if (allCertifications.size > 0) {
-    fieldSources["certifications"] = {
-      value: Array.from(allCertifications).join(", "),
+    fieldSources['certifications'] = {
+      value: Array.from(allCertifications).join(', '),
       agreedBy: sources,
-      confidence: "MEDIUM",
+      confidence: 'MEDIUM',
     };
   }
 
@@ -221,10 +208,10 @@ export function aggregateExtractions(
   }
 
   if (allRelatedProducts.size > 0) {
-    fieldSources["relatedProducts"] = {
-      value: Array.from(allRelatedProducts).join(", "),
+    fieldSources['relatedProducts'] = {
+      value: Array.from(allRelatedProducts).join(', '),
       agreedBy: sources,
-      confidence: "MEDIUM",
+      confidence: 'MEDIUM',
     };
   }
 
@@ -257,7 +244,7 @@ interface SelectedValue {
  */
 function selectBestValueByTrust(values: ValueWithSource[]): SelectedValue {
   if (values.length === 0) {
-    return { value: "", agreedBy: [] };
+    return { value: '', agreedBy: [] };
   }
 
   // Group by normalized value
@@ -272,7 +259,7 @@ function selectBestValueByTrust(values: ValueWithSource[]): SelectedValue {
   }
 
   // Find the group with highest combined trust
-  let bestValue = "";
+  let bestValue = '';
   let bestScore = 0;
   let bestAgreedBy: string[] = [];
 
@@ -287,7 +274,7 @@ function selectBestValueByTrust(values: ValueWithSource[]): SelectedValue {
       bestScore = score;
       // Use the original value from highest trust source
       const sortedGroup = [...group].sort((a, b) => b.trustLevel - a.trustLevel);
-      bestValue = sortedGroup[0].value;
+      bestValue = sortedGroup[0]?.value ?? '';
       bestAgreedBy = group.map((v: ValueWithSource) => v.source);
     }
   }
@@ -301,8 +288,8 @@ function selectBestValueByTrust(values: ValueWithSource[]): SelectedValue {
 function normalizeValue(value: string): string {
   return value
     .toLowerCase()
-    .replace(/\s+/g, " ")
-    .replace(/[^\w\s\d.-]/g, "")
+    .replace(/\s+/g, ' ')
+    .replace(/[^\w\s\d.-]/g, '')
     .trim();
 }
 
@@ -310,9 +297,9 @@ function normalizeValue(value: string): string {
  * Calculate confidence level based on agreement count
  */
 function calculateFieldConfidence(agreementCount: number): ConfidenceLevel {
-  if (agreementCount >= 3) return "HIGH";
-  if (agreementCount >= 2) return "MEDIUM";
-  return "LOW";
+  if (agreementCount >= 3) return 'HIGH';
+  if (agreementCount >= 2) return 'MEDIUM';
+  return 'LOW';
 }
 
 // ============================================
@@ -324,12 +311,12 @@ function calculateFieldConfidence(agreementCount: number): ConfidenceLevel {
  */
 export function extractFeatures(
   specifications: Record<string, string>,
-  description: string
+  description: string,
 ): Record<string, string | string[]> {
   const features: Record<string, string | string[]> = {};
 
   // Map specifications to features
-  const featureKeys = ["material", "finish", "dimensions", "weight", "color", "pattern"];
+  const featureKeys = ['material', 'finish', 'dimensions', 'weight', 'color', 'pattern'];
 
   for (const key of featureKeys) {
     const value = specifications[key];
@@ -344,20 +331,20 @@ export function extractFeatures(
 
   // Installation methods
   const installationMethods: string[] = [];
-  if (descLower.includes("nail") || descLower.includes("nailing")) {
-    installationMethods.push("nail");
+  if (descLower.includes('nail') || descLower.includes('nailing')) {
+    installationMethods.push('nail');
   }
-  if (descLower.includes("glue") || descLower.includes("adhesive")) {
-    installationMethods.push("glue");
+  if (descLower.includes('glue') || descLower.includes('adhesive')) {
+    installationMethods.push('glue');
   }
-  if (descLower.includes("float") || descLower.includes("floating")) {
-    installationMethods.push("float");
+  if (descLower.includes('float') || descLower.includes('floating')) {
+    installationMethods.push('float');
   }
-  if (descLower.includes("stapl")) {
-    installationMethods.push("staple");
+  if (descLower.includes('stapl')) {
+    installationMethods.push('staple');
   }
   if (installationMethods.length > 0) {
-    features["installation"] = installationMethods;
+    features['installation'] = installationMethods;
   }
 
   return features;
@@ -408,44 +395,44 @@ export function extractBenefits(description: string): string[] {
 export function extractTags(
   specifications: Record<string, string>,
   description: string,
-  productName: string
+  productName: string,
 ): string[] {
   const tags = new Set<string>();
 
   // Add material as tag
-  if (specifications.material) {
-    tags.add(specifications.material.toLowerCase());
+  if (specifications['material']) {
+    tags.add(specifications['material'].toLowerCase());
   }
 
   // Add color as tag
-  if (specifications.color) {
-    tags.add(specifications.color.toLowerCase());
+  if (specifications['color']) {
+    tags.add(specifications['color'].toLowerCase());
   }
 
   // Add style as tag
-  if (specifications.style) {
-    tags.add(specifications.style.toLowerCase());
+  if (specifications['style']) {
+    tags.add(specifications['style'].toLowerCase());
   }
 
   // Extract words from product name that could be tags
   const nameWords = productName.toLowerCase().split(/\s+/);
   for (const word of nameWords) {
     // Skip common non-descriptive words
-    if (word.length >= 4 && !["with", "from", "the", "and", "for"].includes(word)) {
+    if (word.length >= 4 && !['with', 'from', 'the', 'and', 'for'].includes(word)) {
       tags.add(word);
     }
   }
 
   // Common category tags from description
   const categoryKeywords = [
-    "construction",
-    "industrial",
-    "commercial",
-    "residential",
-    "outdoor",
-    "indoor",
-    "heavy-duty",
-    "professional",
+    'construction',
+    'industrial',
+    'commercial',
+    'residential',
+    'outdoor',
+    'indoor',
+    'heavy-duty',
+    'professional',
   ];
 
   const descLower = description.toLowerCase();
@@ -473,21 +460,21 @@ export function validateExtraction(extracted: ExtractedData): {
 
   // Check required fields
   if (!extracted.productName || extracted.productName.length < 3) {
-    issues.push("Product name is missing or too short");
+    issues.push('Product name is missing or too short');
   }
 
   if (!extracted.description || extracted.description.length < 20) {
-    issues.push("Description is missing or too short");
+    issues.push('Description is missing or too short');
   }
 
   // Check for placeholder or error content
   const placeholder = /lorem ipsum|example|placeholder|not found|error/i;
   if (placeholder.test(extracted.description)) {
-    issues.push("Description appears to contain placeholder text");
+    issues.push('Description appears to contain placeholder text');
   }
 
   if (placeholder.test(extracted.productName)) {
-    issues.push("Product name appears to contain placeholder text");
+    issues.push('Product name appears to contain placeholder text');
   }
 
   return {

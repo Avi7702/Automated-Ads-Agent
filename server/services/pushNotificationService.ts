@@ -39,9 +39,9 @@ async function getWebPush(): Promise<any> {
   if (vapidConfigured) return webpush;
   vapidConfigured = true;
 
-  const publicKey = process.env.VAPID_PUBLIC_KEY;
-  const privateKey = process.env.VAPID_PRIVATE_KEY;
-  const email = process.env.VAPID_EMAIL;
+  const publicKey = process.env['VAPID_PUBLIC_KEY'];
+  const privateKey = process.env['VAPID_PRIVATE_KEY'];
+  const email = process.env['VAPID_EMAIL'];
 
   if (!publicKey || !privateKey || !email) {
     logger.debug({ module: 'Push' }, 'Web Push disabled (VAPID keys not set)');
@@ -146,5 +146,5 @@ export async function sendNotification(
  * Get the VAPID public key for client-side subscription.
  */
 export function getVapidPublicKey(): string | null {
-  return process.env.VAPID_PUBLIC_KEY ?? null;
+  return process.env['VAPID_PUBLIC_KEY'] ?? null;
 }

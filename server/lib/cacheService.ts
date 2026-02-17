@@ -52,16 +52,13 @@ export class CacheService {
   private closed: boolean = false;
 
   constructor(redisUrl?: string) {
-    const url = redisUrl || process.env.REDIS_URL || 'redis://localhost:6379';
+    const url = redisUrl || process.env['REDIS_URL'] || 'redis://localhost:6379';
 
     this.redis = new Redis(url, {
       maxRetriesPerRequest: 3,
       retryStrategy: (times) => {
         if (times > 3) {
-          logger.error(
-            { module: 'CacheService', retries: times },
-            'Redis connection failed after 3 retries'
-          );
+          logger.error({ module: 'CacheService', retries: times }, 'Redis connection failed after 3 retries');
           return null;
         }
         return Math.min(times * 100, 3000);
@@ -96,17 +93,11 @@ export class CacheService {
       try {
         return JSON.parse(value) as T;
       } catch (parseError) {
-        logger.warn(
-          { module: 'CacheService', key, parseError },
-          'Failed to parse cached value as JSON'
-        );
+        logger.warn({ module: 'CacheService', key, parseError }, 'Failed to parse cached value as JSON');
         return null;
       }
     } catch (error) {
-      logger.error(
-        { module: 'CacheService', key, error },
-        'Failed to get value from cache'
-      );
+      logger.error({ module: 'CacheService', key, error }, 'Failed to get value from cache');
       return null;
     }
   }
@@ -121,10 +112,7 @@ export class CacheService {
   async set<T>(key: string, value: T, ttlSeconds: number): Promise<void> {
     const serialized = JSON.stringify(value);
     await this.redis.set(key, serialized, 'EX', ttlSeconds);
-    logger.debug(
-      { module: 'CacheService', key, ttlSeconds },
-      'Value cached'
-    );
+    logger.debug({ module: 'CacheService', key, ttlSeconds }, 'Value cached');
   }
 
   /**
@@ -142,16 +130,10 @@ export class CacheService {
       }
 
       const deleted = await this.redis.del(...keys);
-      logger.info(
-        { module: 'CacheService', pattern, keysDeleted: deleted },
-        'Cache keys invalidated'
-      );
+      logger.info({ module: 'CacheService', pattern, keysDeleted: deleted }, 'Cache keys invalidated');
       return deleted;
     } catch (error) {
-      logger.error(
-        { module: 'CacheService', pattern, error },
-        'Failed to invalidate cache keys'
-      );
+      logger.error({ module: 'CacheService', pattern, error }, 'Failed to invalidate cache keys');
       return 0;
     }
   }
@@ -168,21 +150,14 @@ export class CacheService {
    * @param fn - The async function to execute on cache miss
    * @returns The cached or computed value
    */
-  async wrap<T>(
-    key: string,
-    ttlSeconds: number,
-    fn: () => Promise<T>
-  ): Promise<T> {
+  async wrap<T>(key: string, ttlSeconds: number, fn: () => Promise<T>): Promise<T> {
     // Try to get from cache
     let cached: T | null = null;
     try {
       cached = await this.get<T>(key);
     } catch (error) {
       // Cache get failed, will execute function
-      logger.debug(
-        { module: 'CacheService', key, error },
-        'Cache get failed, executing function'
-      );
+      logger.debug({ module: 'CacheService', key, error }, 'Cache get failed, executing function');
     }
 
     if (cached !== null) {
@@ -199,10 +174,7 @@ export class CacheService {
     try {
       await this.set(key, result, ttlSeconds);
     } catch (cacheError) {
-      logger.warn(
-        { module: 'CacheService', key, error: cacheError },
-        'Failed to cache result'
-      );
+      logger.warn({ module: 'CacheService', key, error: cacheError }, 'Failed to cache result');
     }
 
     return result;
@@ -230,10 +202,7 @@ export class CacheService {
       this.closed = true;
       logger.info({ module: 'CacheService' }, 'Redis connection closed');
     } catch (error) {
-      logger.warn(
-        { module: 'CacheService', error },
-        'Error closing Redis connection'
-      );
+      logger.warn({ module: 'CacheService', error }, 'Error closing Redis connection');
       this.closed = true;
     }
   }

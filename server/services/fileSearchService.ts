@@ -24,8 +24,22 @@ const FILE_SEARCH_STORE_NAME = 'nds-copywriting-rag';
 
 // Allowed file types for File Search (Google supports 100+ formats)
 export const ALLOWED_FILE_EXTENSIONS = [
-  '.pdf', '.docx', '.doc', '.txt', '.md', '.csv', '.xlsx', '.xls',
-  '.pptx', '.ppt', '.json', '.xml', '.yaml', '.yml', '.html', '.htm'
+  '.pdf',
+  '.docx',
+  '.doc',
+  '.txt',
+  '.md',
+  '.csv',
+  '.xlsx',
+  '.xls',
+  '.pptx',
+  '.ppt',
+  '.json',
+  '.xml',
+  '.yaml',
+  '.yml',
+  '.html',
+  '.htm',
 ];
 
 // Dangerous extensions that should be blocked (security check)
@@ -48,16 +62,12 @@ export function validateFile(filePath: string, stats: { size: number }): void {
 
   // Check file extension is in allowed list
   if (!ALLOWED_FILE_EXTENSIONS.includes(ext)) {
-    throw new Error(
-      `Unsupported file type: ${ext}. Allowed types: ${ALLOWED_FILE_EXTENSIONS.join(', ')}`
-    );
+    throw new Error(`Unsupported file type: ${ext}. Allowed types: ${ALLOWED_FILE_EXTENSIONS.join(', ')}`);
   }
 
   // Check file size
   if (stats.size > MAX_FILE_SIZE_BYTES) {
-    throw new Error(
-      `File too large: ${(stats.size / 1024 / 1024).toFixed(2)}MB (max: ${MAX_FILE_SIZE_MB}MB)`
-    );
+    throw new Error(`File too large: ${(stats.size / 1024 / 1024).toFixed(2)}MB (max: ${MAX_FILE_SIZE_MB}MB)`);
   }
 }
 
@@ -101,9 +111,7 @@ export async function initializeFileSearchStore(): Promise<any | null> {
       return null;
     }
 
-    const existingStore = stores.find(
-      (store: any) => store.config?.displayName === FILE_SEARCH_STORE_NAME
-    );
+    const existingStore = stores.find((store: any) => store.config?.displayName === FILE_SEARCH_STORE_NAME);
 
     if (existingStore) {
       logger.info({ module: 'FileSearch', storeName: existingStore.name }, 'Found existing File Search Store');
@@ -208,7 +216,7 @@ export async function uploadReferenceFile(params: {
       category,
       success,
       durationMs,
-      errorType,
+      ...(errorType !== undefined && { errorType }),
     });
   }
 }
@@ -224,11 +232,8 @@ export async function listReferenceFiles(category?: FileCategory) {
     });
 
     if (category) {
-      return files.filter(
-        (file: any) =>
-          file.config?.customMetadata?.find(
-            (m: any) => m.key === 'category' && m.stringValue === category
-          )
+      return files.filter((file: any) =>
+        file.config?.customMetadata?.find((m: any) => m.key === 'category' && m.stringValue === category),
       );
     }
 
@@ -267,7 +272,7 @@ export async function queryFileSearchStore(params: {
   category?: FileCategory;
   maxResults?: number;
 }): Promise<{ context: string; citations: any[] } | null> {
-  const { query, category, maxResults = 5 } = params;
+  const { query, category, maxResults: _maxResults = 5 } = params;
   const startTime = Date.now();
   let success = false;
   let errorType: string | undefined;
@@ -287,18 +292,21 @@ export async function queryFileSearchStore(params: {
     // Use Gemini's File Search tool with new SDK pattern
     // Note: File Search tools may not be fully typed in the SDK yet
     // MODEL RECENCY RULE: Before changing any model ID, verify today's date and confirm the model is current within the last 3-4 weeks.
-    const response = await (generateContentWithRetry as any)({
-      model: 'gemini-3-flash-preview',
-      contents: [{ role: 'user', parts: [{ text: query }] }],
-      tools: [
-        {
-          fileSearch: {
-            fileSearchStoreNames: [store.name],
-            ...(metadataFilter && { metadataFilter }),
+    const response = await (generateContentWithRetry as any)(
+      {
+        model: 'gemini-3-flash-preview',
+        contents: [{ role: 'user', parts: [{ text: query }] }],
+        tools: [
+          {
+            fileSearch: {
+              fileSearchStoreNames: [store.name],
+              ...(metadataFilter && { metadataFilter }),
+            },
           },
-        },
-      ],
-    }, { operation: 'rag_query' });
+        ],
+      },
+      { operation: 'rag_query' },
+    );
 
     const citations = (response as any).citations || [];
     resultsCount = citations.length;
@@ -319,11 +327,11 @@ export async function queryFileSearchStore(params: {
     // Track query metrics
     const durationMs = Date.now() - startTime;
     telemetry.trackFileSearchQuery({
-      category,
+      ...(category !== undefined && { category }),
       success,
       durationMs,
       resultsCount,
-      errorType,
+      ...(errorType !== undefined && { errorType }),
     });
   }
 }

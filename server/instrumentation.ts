@@ -28,12 +28,12 @@ let metrics: any;
 // =============================================================================
 // Configuration from environment variables
 // =============================================================================
-const OTEL_ENABLED = OTEL_PACKAGES_AVAILABLE && process.env.OTEL_ENABLED !== 'false';
-const OTEL_ENDPOINT = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4318';
-const OTEL_HEADERS = process.env.OTEL_EXPORTER_OTLP_HEADERS || '';
-const SERVICE_NAME = process.env.OTEL_SERVICE_NAME || 'automated-ads-agent';
-const SERVICE_VERSION = process.env.npm_package_version || '1.0.0';
-const DEPLOYMENT_ENV = process.env.NODE_ENV || 'development';
+const OTEL_ENABLED = OTEL_PACKAGES_AVAILABLE && process.env['OTEL_ENABLED'] !== 'false';
+const OTEL_ENDPOINT = process.env['OTEL_EXPORTER_OTLP_ENDPOINT'] || 'http://localhost:4318';
+const OTEL_HEADERS = process.env['OTEL_EXPORTER_OTLP_HEADERS'] || '';
+const SERVICE_NAME = process.env['OTEL_SERVICE_NAME'] || 'automated-ads-agent';
+const SERVICE_VERSION = process.env['npm_package_version'] || '1.0.0';
+const DEPLOYMENT_ENV = process.env['NODE_ENV'] || 'development';
 
 // =============================================================================
 // Custom Metrics - Exported for use in services
@@ -164,19 +164,19 @@ function initializeCustomMetrics() {
 // Gemini pricing (as of Dec 2024) - adjust as needed
 const GEMINI_PRICING = {
   'gemini-3-pro-image-preview': {
-    inputPerMillion: 0.00, // Free during preview
-    outputPerMillion: 0.00,
+    inputPerMillion: 0.0, // Free during preview
+    outputPerMillion: 0.0,
     imageGeneration: 0.04, // $0.04 per image (estimate)
   },
   'gemini-1.5-pro': {
-    inputPerMillion: 3.50,
-    outputPerMillion: 10.50,
-    imageGeneration: 0.00,
+    inputPerMillion: 3.5,
+    outputPerMillion: 10.5,
+    imageGeneration: 0.0,
   },
   'gemini-1.5-flash': {
     inputPerMillion: 0.075,
-    outputPerMillion: 0.30,
-    imageGeneration: 0.00,
+    outputPerMillion: 0.3,
+    imageGeneration: 0.0,
   },
 };
 
@@ -197,11 +197,12 @@ export const telemetry = {
     if (!OTEL_ENABLED || !geminiRequestsCounter) return;
 
     const { model, operation, inputTokens = 0, outputTokens = 0, durationMs, userId, success, errorType } = params;
-    const pricing = GEMINI_PRICING[model as keyof typeof GEMINI_PRICING] || GEMINI_PRICING['gemini-3-pro-image-preview'];
+    const pricing =
+      GEMINI_PRICING[model as keyof typeof GEMINI_PRICING] || GEMINI_PRICING['gemini-3-pro-image-preview'];
 
     // Calculate cost
-    const tokenCost = (inputTokens / 1_000_000) * pricing.inputPerMillion +
-                      (outputTokens / 1_000_000) * pricing.outputPerMillion;
+    const tokenCost =
+      (inputTokens / 1_000_000) * pricing.inputPerMillion + (outputTokens / 1_000_000) * pricing.outputPerMillion;
     const imageCost = success ? pricing.imageGeneration : 0;
     const totalCost = tokenCost + imageCost;
 
@@ -270,11 +271,7 @@ export const telemetry = {
   /**
    * Track rate limit hits
    */
-  trackRateLimit(params: {
-    endpoint: string;
-    userId?: string;
-    ip?: string;
-  }) {
+  trackRateLimit(params: { endpoint: string; userId?: string; ip?: string }) {
     if (!OTEL_ENABLED || !rateLimitHitsCounter) return;
 
     rateLimitHitsCounter.add(1, {
@@ -285,12 +282,7 @@ export const telemetry = {
   /**
    * Track API errors
    */
-  trackError(params: {
-    endpoint: string;
-    errorType: string;
-    statusCode: number;
-    userId?: string;
-  }) {
+  trackError(params: { endpoint: string; errorType: string; statusCode: number; userId?: string }) {
     if (!OTEL_ENABLED || !apiErrorsCounter) return;
 
     apiErrorsCounter.add(1, {
@@ -322,12 +314,7 @@ export const telemetry = {
   /**
    * Track File Search file uploads
    */
-  trackFileSearchUpload(params: {
-    category: string;
-    success: boolean;
-    durationMs: number;
-    errorType?: string;
-  }) {
+  trackFileSearchUpload(params: { category: string; success: boolean; durationMs: number; errorType?: string }) {
     if (!OTEL_ENABLED || !fileSearchUploadsCounter) return;
 
     const { category, success, durationMs, errorType } = params;
@@ -399,7 +386,7 @@ if (OTEL_ENABLED && OTEL_PACKAGES_AVAILABLE) {
   const resources = require('@opentelemetry/resources');
   const semConv = require('@opentelemetry/semantic-conventions');
   const otelApi = require('@opentelemetry/api');
-  
+
   NodeSDK = sdk.NodeSDK;
   getNodeAutoInstrumentations = autoInstr.getNodeAutoInstrumentations;
   OTLPTraceExporter = traceExport.OTLPTraceExporter;
@@ -411,17 +398,19 @@ if (OTEL_ENABLED && OTEL_PACKAGES_AVAILABLE) {
   SEMRESATTRS_SERVICE_VERSION = semConv.SEMRESATTRS_SERVICE_VERSION;
   SEMRESATTRS_DEPLOYMENT_ENVIRONMENT = semConv.SEMRESATTRS_DEPLOYMENT_ENVIRONMENT;
   metrics = otelApi.metrics;
-  
-  const resource = defaultResource().merge(resourceFromAttributes({
-    [SEMRESATTRS_SERVICE_NAME]: SERVICE_NAME,
-    [SEMRESATTRS_SERVICE_VERSION]: SERVICE_VERSION,
-    [SEMRESATTRS_DEPLOYMENT_ENVIRONMENT]: DEPLOYMENT_ENV,
-  }));
+
+  const resource = defaultResource().merge(
+    resourceFromAttributes({
+      [SEMRESATTRS_SERVICE_NAME]: SERVICE_NAME,
+      [SEMRESATTRS_SERVICE_VERSION]: SERVICE_VERSION,
+      [SEMRESATTRS_DEPLOYMENT_ENVIRONMENT]: DEPLOYMENT_ENV,
+    }),
+  );
 
   // Parse headers for authentication (e.g., Grafana Cloud, New Relic)
   const headers: Record<string, string> = {};
   if (OTEL_HEADERS) {
-    OTEL_HEADERS.split(',').forEach(header => {
+    OTEL_HEADERS.split(',').forEach((header) => {
       const [key, value] = header.split('=');
       if (key && value) {
         headers[key.trim()] = value.trim();
@@ -484,14 +473,17 @@ if (OTEL_ENABLED && OTEL_PACKAGES_AVAILABLE) {
   // Initialize custom metrics after SDK starts
   initializeCustomMetrics();
 
-  logger.info({
-    module: 'otel',
-    serviceName: SERVICE_NAME,
-    serviceVersion: SERVICE_VERSION,
-    environment: DEPLOYMENT_ENV,
-    endpoint: OTEL_ENDPOINT,
-    authHeaders: Object.keys(headers).length > 0 ? Object.keys(headers) : undefined
-  }, 'OpenTelemetry initialized');
+  logger.info(
+    {
+      module: 'otel',
+      serviceName: SERVICE_NAME,
+      serviceVersion: SERVICE_VERSION,
+      environment: DEPLOYMENT_ENV,
+      endpoint: OTEL_ENDPOINT,
+      authHeaders: Object.keys(headers).length > 0 ? Object.keys(headers) : undefined,
+    },
+    'OpenTelemetry initialized',
+  );
 
   // Graceful shutdown
   process.on('SIGTERM', () => {
@@ -506,8 +498,3 @@ if (OTEL_ENABLED && OTEL_PACKAGES_AVAILABLE) {
 }
 
 export {};
-
-
-
-
-

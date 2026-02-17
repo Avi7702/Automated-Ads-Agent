@@ -3,14 +3,22 @@
  * Creates the dependency injection context for all routers
  */
 
-import type { RouterContext, RouterServices, RouterMiddleware, RouterDomainServices, RouterUploads, RouterSchemas, RouterUtils } from '../../types/router';
+import type {
+  RouterContext,
+  RouterServices,
+  RouterMiddleware,
+  RouterDomainServices,
+  RouterUploads,
+  RouterSchemas,
+  RouterUtils,
+} from '../../types/router';
 import { storage } from '../../storage';
 import { genAI } from '../../lib/gemini';
 import { v2 as cloudinary } from 'cloudinary';
 import { logger } from '../../lib/logger';
 import { telemetry } from '../../instrumentation';
 import { generationQueue, generationQueueEvents } from '../../lib/queue';
-import { db, pool } from '../../db';
+import { pool } from '../../db';
 import { requireAuth, optionalAuth } from '../../middleware/auth';
 import { validate } from '../../middleware/validate';
 import { extendedTimeout, haltOnTimeout } from '../../middleware/timeout';
@@ -25,7 +33,7 @@ import {
   insertProductSchema,
   insertPromptTemplateSchema,
   insertInstallationScenarioSchema,
-  insertProductRelationshipSchema
+  insertProductRelationshipSchema,
 } from '@shared/schema';
 import {
   saveApiKeySchema,
@@ -37,7 +45,7 @@ import {
   generateCompletePostSchema,
   saveN8nConfigSchema,
   n8nCallbackSchema,
-  syncAccountSchema
+  syncAccountSchema,
 } from '../../validation/schemas';
 
 // File utilities
@@ -65,9 +73,9 @@ import * as pricingEstimator from '../../services/pricingEstimator';
  */
 function isCloudinaryConfigured(): boolean {
   return !!(
-    process.env.CLOUDINARY_CLOUD_NAME &&
-    process.env.CLOUDINARY_API_KEY &&
-    process.env.CLOUDINARY_API_SECRET
+    process.env['CLOUDINARY_CLOUD_NAME'] &&
+    process.env['CLOUDINARY_API_KEY'] &&
+    process.env['CLOUDINARY_API_SECRET']
   );
 }
 
@@ -79,8 +87,8 @@ function createUploader(): multer.Multer {
     storage: multer.memoryStorage(),
     limits: {
       fileSize: 10 * 1024 * 1024, // 10MB per file
-      files: 6 // Max 6 files
-    }
+      files: 6, // Max 6 files
+    },
   });
 }
 
@@ -108,9 +116,9 @@ export function buildRouterContext(): RouterContext {
   let cloudinaryClient: typeof cloudinary | null = null;
   if (isCloudinaryConfigured()) {
     cloudinary.config({
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET,
+      cloud_name: process.env['CLOUDINARY_CLOUD_NAME'] ?? '',
+      api_key: process.env['CLOUDINARY_API_KEY'] ?? '',
+      api_secret: process.env['CLOUDINARY_API_SECRET'] ?? '',
     });
     cloudinaryClient = cloudinary;
   }
@@ -124,7 +132,7 @@ export function buildRouterContext(): RouterContext {
     telemetry,
     generationQueue,
     generationQueueEvents,
-    pool
+    pool,
   };
 
   const middleware: RouterMiddleware = {
@@ -137,13 +145,13 @@ export function buildRouterContext(): RouterContext {
     validateFileType,
     uploadPatternLimiter,
     checkPatternQuota,
-    createRateLimiter
+    createRateLimiter,
   };
 
   const uploads: RouterUploads = {
     standard: upload,
     single: (fieldName: string) => upload.single(fieldName),
-    array: (fieldName: string, maxCount: number) => upload.array(fieldName, maxCount)
+    array: (fieldName: string, maxCount: number) => upload.array(fieldName, maxCount),
   };
 
   const schemas: RouterSchemas = {
@@ -161,7 +169,7 @@ export function buildRouterContext(): RouterContext {
     generateCompletePost: generateCompletePostSchema,
     saveN8nConfig: saveN8nConfigSchema,
     n8nCallback: n8nCallbackSchema,
-    syncAccount: syncAccountSchema
+    syncAccount: syncAccountSchema,
   };
 
   const utils: RouterUtils = {
@@ -170,7 +178,7 @@ export function buildRouterContext(): RouterContext {
     deleteFile,
     toGenerationDTO,
     toGenerationDTOArray,
-    isServerShuttingDown
+    isServerShuttingDown,
   };
 
   const domainServices: RouterDomainServices = {
@@ -187,7 +195,7 @@ export function buildRouterContext(): RouterContext {
     apiKeyValidation,
     authService,
     pricingEstimator,
-    getGoogleCloudService
+    getGoogleCloudService,
   };
 
   return {
@@ -196,6 +204,6 @@ export function buildRouterContext(): RouterContext {
     middleware,
     uploads,
     schemas,
-    utils
+    utils,
   };
 }

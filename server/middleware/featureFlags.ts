@@ -15,5 +15,5 @@ export const featureFlags = {
    *
    * Related: Phase 2 Task 2 - Prompt Endpoint Duplication Removal
    */
-  USE_LEGACY_PROMPT_ENDPOINT: process.env.USE_LEGACY_PROMPT_ENDPOINT === 'true'
+  USE_LEGACY_PROMPT_ENDPOINT: process.env['USE_LEGACY_PROMPT_ENDPOINT'] === 'true',
 };

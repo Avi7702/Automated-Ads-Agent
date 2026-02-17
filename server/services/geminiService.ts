@@ -31,7 +31,7 @@ export interface GenerateOptions {
 }
 
 export class GeminiService {
-  private readonly modelName = process.env.GEMINI_MODEL || 'gemini-3-pro-image-preview';
+  private readonly modelName = process.env['GEMINI_MODEL'] || 'gemini-3-pro-image-preview';
 
   async generateImage(prompt: string, options?: GenerateOptions, userId?: string): Promise<GenerateResult> {
     const startTime = Date.now();
@@ -126,7 +126,7 @@ export class GeminiService {
         imageBase64: imageData,
         conversationHistory,
         model: this.modelName,
-        usageMetadata: response.usageMetadata,
+        ...(response.usageMetadata !== undefined && { usageMetadata: response.usageMetadata }),
       };
     } catch (error) {
       errorType = errorType || (error instanceof Error ? error.name : 'unknown');
@@ -140,9 +140,9 @@ export class GeminiService {
         inputTokens: prompt.length * 0.25, // Rough estimate: ~4 chars per token
         outputTokens: 0, // Image output
         durationMs,
-        userId,
+        ...(userId !== undefined && { userId }),
         success,
-        errorType,
+        ...(errorType !== undefined && { errorType }),
       });
     }
   }
@@ -226,7 +226,7 @@ export class GeminiService {
         imageBase64: imageData,
         conversationHistory: newHistory,
         model: this.modelName,
-        usageMetadata: response.usageMetadata,
+        ...(response.usageMetadata !== undefined && { usageMetadata: response.usageMetadata }),
       };
     } catch (error) {
       errorType = errorType || (error instanceof Error ? error.name : 'unknown');
@@ -240,9 +240,9 @@ export class GeminiService {
         inputTokens: editPrompt.length * 0.25, // Rough estimate
         outputTokens: 0,
         durationMs,
-        userId,
+        ...(userId !== undefined && { userId }),
         success,
-        errorType,
+        ...(errorType !== undefined && { errorType }),
       });
     }
   }

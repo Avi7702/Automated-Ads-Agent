@@ -13,7 +13,7 @@ import { logger } from '../lib/logger';
 export function validateN8nWebhook(req: Request, res: Response, next: NextFunction) {
   try {
     const signature = req.headers['x-n8n-signature'];
-    const secret = process.env.N8N_WEBHOOK_SECRET;
+    const secret = process.env['N8N_WEBHOOK_SECRET'];
 
     // Check if signature header exists
     if (!signature || typeof signature !== 'string') {

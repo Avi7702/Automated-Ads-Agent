@@ -13,7 +13,7 @@ import crypto from 'crypto';
 import { generateContentWithRetry } from '../lib/geminiClient';
 import { sanitizeOutputString } from '../lib/promptSanitizer';
 
-const VISION_MODEL = process.env.GEMINI_VISION_MODEL || 'gemini-3-pro-preview';
+const VISION_MODEL = process.env['GEMINI_VISION_MODEL'] || 'gemini-3-pro-preview';
 
 export interface StyleElements {
   colors: string[];

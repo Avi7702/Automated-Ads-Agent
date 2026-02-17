@@ -24,13 +24,13 @@ const SAFETY_MODEL = 'gemini-3-flash-preview';
  * All boolean flags: true = PASSED (safe), false = FAILED (unsafe)
  */
 export interface SafetyChecks {
-  hateSpeech: boolean;          // true = no hate speech detected
-  violence: boolean;            // true = no violence detected
-  sexualContent: boolean;       // true = no sexual content detected
-  piiDetection: boolean;        // true = no PII detected
-  prohibitedWords: string[];    // List of prohibited words found
+  hateSpeech: boolean; // true = no hate speech detected
+  violence: boolean; // true = no violence detected
+  sexualContent: boolean; // true = no sexual content detected
+  piiDetection: boolean; // true = no PII detected
+  prohibitedWords: string[]; // List of prohibited words found
   competitorMentions: string[]; // List of competitor brands mentioned
-  brandSafetyScore: number;     // 0-100 (100 = perfect, 0 = multiple critical issues)
+  brandSafetyScore: number; // 0-100 (100 = perfect, 0 = multiple critical issues)
 }
 
 /**
@@ -38,7 +38,7 @@ export interface SafetyChecks {
  */
 export interface CheckSafetyParams {
   caption: string;
-  imageUrl?: string;  // Optional: for future image-based safety checks
+  imageUrl?: string; // Optional: for future image-based safety checks
   userId: string;
 }
 
@@ -82,10 +82,13 @@ function detectPII(text: string): boolean {
   for (const [type, pattern] of Object.entries(PII_PATTERNS)) {
     const matches = text.match(pattern);
     if (matches && matches.length > 0) {
-      logger.warn({
-        piiType: type,
-        matchCount: matches.length,
-      }, 'PII detected in content');
+      logger.warn(
+        {
+          piiType: type,
+          matchCount: matches.length,
+        },
+        'PII detected in content',
+      );
       return false;
     }
   }
@@ -142,7 +145,7 @@ function detectCompetitors(text: string): string[] {
  */
 async function checkGeminiSafety(
   caption: string,
-  imageUrl?: string
+  imageUrl?: string,
 ): Promise<{
   hateSpeech: boolean;
   violence: boolean;
@@ -151,9 +154,7 @@ async function checkGeminiSafety(
 }> {
   try {
     // Build contents array
-    const parts: Array<{ text?: string; fileData?: { mimeType: string; fileUri: string } }> = [
-      { text: caption },
-    ];
+    const parts: Array<{ text?: string; fileData?: { mimeType: string; fileUri: string } }> = [{ text: caption }];
 
     // Add image if provided (for future image safety checks)
     if (imageUrl) {
@@ -199,7 +200,7 @@ async function checkGeminiSafety(
           temperature: 0,
         },
       },
-      { operation: 'content_safety_check' }
+      { operation: 'content_safety_check' },
     );
 
     // Check safety ratings
@@ -250,13 +251,16 @@ async function checkGeminiSafety(
     // FAIL-CLOSED: If Gemini Safety API fails, default to BLOCK (all flags false = unsafe).
     // This prevents unsafe content from passing through on API failures.
     // Set SAFETY_FAIL_OPEN=true in non-production environments to bypass this.
-    const failOpen = process.env.SAFETY_FAIL_OPEN === 'true' && process.env.NODE_ENV !== 'production';
+    const failOpen = process.env['SAFETY_FAIL_OPEN'] === 'true' && process.env['NODE_ENV'] !== 'production';
 
-    logger.warn({
-      err: error,
-      errorMessage: error?.message,
-      failOpen,
-    }, `Gemini Safety API failed, defaulting to ${failOpen ? 'PASS (dev override)' : 'BLOCK (fail-closed)'}`);
+    logger.warn(
+      {
+        err: error,
+        errorMessage: error?.message,
+        failOpen,
+      },
+      `Gemini Safety API failed, defaulting to ${failOpen ? 'PASS (dev override)' : 'BLOCK (fail-closed)'}`,
+    );
 
     return {
       hateSpeech: failOpen,
@@ -323,16 +327,17 @@ function calculateBrandSafetyScore(checks: {
  * }
  * ```
  */
-export async function checkContentSafety(
-  params: CheckSafetyParams
-): Promise<SafetyChecks> {
+export async function checkContentSafety(params: CheckSafetyParams): Promise<SafetyChecks> {
   const { caption, imageUrl, userId } = params;
 
-  logger.info({
-    userId,
-    captionLength: caption.length,
-    hasImage: !!imageUrl,
-  }, 'Starting content safety check');
+  logger.info(
+    {
+      userId,
+      captionLength: caption.length,
+      hasImage: !!imageUrl,
+    },
+    'Starting content safety check',
+  );
 
   // STEP 1: Gemini Safety API check
   const geminiChecks = await checkGeminiSafety(caption, imageUrl);
@@ -349,10 +354,13 @@ export async function checkContentSafety(
       prohibitedWords = voice.wordsToAvoid || [];
     }
   } catch (error: any) {
-    logger.warn({
-      err: error,
-      userId,
-    }, 'Failed to fetch brand profile for prohibited words check');
+    logger.warn(
+      {
+        err: error,
+        userId,
+      },
+      'Failed to fetch brand profile for prohibited words check',
+    );
   }
 
   // STEP 4: Prohibited words detection
@@ -379,10 +387,13 @@ export async function checkContentSafety(
     brandSafetyScore,
   };
 
-  logger.info({
-    userId,
-    result,
-  }, 'Content safety check completed');
+  logger.info(
+    {
+      userId,
+      result,
+    },
+    'Content safety check completed',
+  );
 
   return result;
 }

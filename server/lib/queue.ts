@@ -10,8 +10,8 @@
  * - Workers are defined separately in server/workers/
  */
 
-import { Queue, QueueEvents, Job } from 'bullmq';
-import { RedisOptions } from 'ioredis';
+import { Queue, QueueEvents, type ConnectionOptions, Job } from 'bullmq';
+import { type RedisOptions } from 'ioredis';
 import { logger } from './logger';
 import {
   GenerationJobData,
@@ -29,12 +29,17 @@ interface RedisConnectionOptions extends RedisOptions {
   port: number;
 }
 
+/** Helper to cast our options to BullMQ ConnectionOptions */
+function asConnectionOptions(opts: RedisConnectionOptions): ConnectionOptions {
+  return opts as unknown as ConnectionOptions;
+}
+
 /**
  * Parse Redis URL into connection options for BullMQ
  * Handles both redis:// URLs and individual host/port config
  */
 function getConnectionOptions(): RedisConnectionOptions {
-  const redisUrl = process.env.REDIS_URL;
+  const redisUrl = process.env['REDIS_URL'];
 
   if (redisUrl) {
     // Parse redis:// URL format
@@ -49,18 +54,15 @@ function getConnectionOptions(): RedisConnectionOptions {
         tls: url.protocol === 'rediss:' ? {} : undefined,
       };
     } catch {
-      logger.warn(
-        { module: 'Queue', redisUrl },
-        'Failed to parse REDIS_URL, falling back to host/port config'
-      );
+      logger.warn({ module: 'Queue', redisUrl }, 'Failed to parse REDIS_URL, falling back to host/port config');
     }
   }
 
   // Fallback to individual host/port config
   return {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379'),
-    password: process.env.REDIS_PASSWORD || undefined,
+    host: process.env['REDIS_HOST'] || 'localhost',
+    port: parseInt(process.env['REDIS_PORT'] || '6379'),
+    password: process.env['REDIS_PASSWORD'] || undefined,
   };
 }
 
@@ -72,18 +74,17 @@ const connection = getConnectionOptions();
  *
  * Supports job types: generate, edit, variation, copy
  */
-export const generationQueue = new Queue<GenerationJobData, GenerationJobResult>(
-  QUEUE_NAMES.GENERATION,
-  {
-    connection,
-    defaultJobOptions: {
-      attempts: DEFAULT_JOB_OPTIONS.attempts,
-      backoff: DEFAULT_JOB_OPTIONS.backoff,
+export const generationQueue = new Queue<GenerationJobData, GenerationJobResult>(QUEUE_NAMES.GENERATION, {
+  connection: asConnectionOptions(connection),
+  defaultJobOptions: {
+    ...(DEFAULT_JOB_OPTIONS.attempts !== undefined && { attempts: DEFAULT_JOB_OPTIONS.attempts }),
+    ...(DEFAULT_JOB_OPTIONS.backoff !== undefined && { backoff: DEFAULT_JOB_OPTIONS.backoff }),
+    ...(DEFAULT_JOB_OPTIONS.removeOnComplete !== undefined && {
       removeOnComplete: DEFAULT_JOB_OPTIONS.removeOnComplete,
-      removeOnFail: DEFAULT_JOB_OPTIONS.removeOnFail,
-    },
-  }
-);
+    }),
+    ...(DEFAULT_JOB_OPTIONS.removeOnFail !== undefined && { removeOnFail: DEFAULT_JOB_OPTIONS.removeOnFail }),
+  },
+});
 
 /**
  * Dead Letter Queue for jobs that have exhausted all retries
@@ -91,16 +92,13 @@ export const generationQueue = new Queue<GenerationJobData, GenerationJobResult>
  * Stores failed job data + error context for admin review and potential retry.
  * Jobs are automatically moved here when they fail after all retry attempts.
  */
-export const deadLetterQueue = new Queue<DeadLetterJobData>(
-  QUEUE_NAMES.DEAD_LETTER,
-  {
-    connection,
-    defaultJobOptions: {
-      removeOnComplete: { count: 500 }, // Keep last 500 resolved DLQ items
-      removeOnFail: false, // Never auto-remove DLQ failures
-    },
-  }
-);
+export const deadLetterQueue = new Queue<DeadLetterJobData>(QUEUE_NAMES.DEAD_LETTER, {
+  connection: asConnectionOptions(connection),
+  defaultJobOptions: {
+    removeOnComplete: { count: 500 }, // Keep last 500 resolved DLQ items
+    removeOnFail: false, // Never auto-remove DLQ failures
+  },
+});
 
 /**
  * Move a failed job to the Dead Letter Queue
@@ -108,7 +106,7 @@ export const deadLetterQueue = new Queue<DeadLetterJobData>(
  */
 export async function moveToDeadLetterQueue(
   job: Job<GenerationJobData, GenerationJobResult>,
-  error: Error
+  error: Error,
 ): Promise<void> {
   try {
     const dlqData: DeadLetterJobData = {
@@ -116,13 +114,13 @@ export async function moveToDeadLetterQueue(
       jobId: job.id ?? 'unknown',
       jobData: job.data,
       error: error.message,
-      stackTrace: error.stack,
+      ...(error.stack !== undefined && { stackTrace: error.stack }),
       failedAt: new Date().toISOString(),
       attempts: job.attemptsMade,
       maxAttempts: (job.opts.attempts ?? DEFAULT_JOB_OPTIONS.attempts) as number,
     };
 
-    await deadLetterQueue.add('failed-job', dlqData, {
+    await (deadLetterQueue as Queue).add('failed-job', dlqData, {
       jobId: `dlq-${job.id ?? Date.now()}`,
     });
 
@@ -135,7 +133,7 @@ export async function moveToDeadLetterQueue(
         attempts: job.attemptsMade,
         error: error.message,
       },
-      'Job moved to dead letter queue'
+      'Job moved to dead letter queue',
     );
   } catch (dlqError) {
     logger.error(
@@ -145,7 +143,7 @@ export async function moveToDeadLetterQueue(
         originalJobId: job.id,
         dlqError,
       },
-      'Failed to move job to dead letter queue'
+      'Failed to move job to dead letter queue',
     );
   }
 }
@@ -153,7 +151,9 @@ export async function moveToDeadLetterQueue(
 /**
  * Retry a job from the Dead Letter Queue by re-adding it to the original queue
  */
-export async function retryDeadLetterJob(dlqJobId: string): Promise<{ success: boolean; newJobId?: string; error?: string }> {
+export async function retryDeadLetterJob(
+  dlqJobId: string,
+): Promise<{ success: boolean; newJobId?: string; error?: string }> {
   try {
     const dlqJob = await deadLetterQueue.getJob(dlqJobId);
     if (!dlqJob) {
@@ -163,16 +163,14 @@ export async function retryDeadLetterJob(dlqJobId: string): Promise<{ success: b
     const dlqData = dlqJob.data;
 
     // Re-add to the original generation queue
-    const newJob = await generationQueue.add(
-      dlqData.jobData.jobType,
-      dlqData.jobData,
-      {
-        attempts: DEFAULT_JOB_OPTIONS.attempts,
-        backoff: DEFAULT_JOB_OPTIONS.backoff,
+    const newJob = await (generationQueue as Queue).add(dlqData.jobData.jobType, dlqData.jobData, {
+      ...(DEFAULT_JOB_OPTIONS.attempts !== undefined && { attempts: DEFAULT_JOB_OPTIONS.attempts }),
+      ...(DEFAULT_JOB_OPTIONS.backoff !== undefined && { backoff: DEFAULT_JOB_OPTIONS.backoff }),
+      ...(DEFAULT_JOB_OPTIONS.removeOnComplete !== undefined && {
         removeOnComplete: DEFAULT_JOB_OPTIONS.removeOnComplete,
-        removeOnFail: DEFAULT_JOB_OPTIONS.removeOnFail,
-      }
-    );
+      }),
+      ...(DEFAULT_JOB_OPTIONS.removeOnFail !== undefined && { removeOnFail: DEFAULT_JOB_OPTIONS.removeOnFail }),
+    });
 
     // Remove from DLQ after successful re-queue
     await dlqJob.remove();
@@ -185,16 +183,13 @@ export async function retryDeadLetterJob(dlqJobId: string): Promise<{ success: b
         newJobId: newJob.id,
         jobType: dlqData.jobData.jobType,
       },
-      'DLQ job retried successfully'
+      'DLQ job retried successfully',
     );
 
-    return { success: true, newJobId: newJob.id };
+    return { success: true, ...(newJob.id !== undefined && { newJobId: newJob.id }) };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    logger.error(
-      { module: 'Queue', event: 'dead-letter-retry-error', dlqJobId, error },
-      'Failed to retry DLQ job'
-    );
+    logger.error({ module: 'Queue', event: 'dead-letter-retry-error', dlqJobId, error }, 'Failed to retry DLQ job');
     return { success: false, error: message };
   }
 }
@@ -204,7 +199,7 @@ export async function retryDeadLetterJob(dlqJobId: string): Promise<{ success: b
  */
 export async function listDeadLetterJobs(
   start = 0,
-  end = 19
+  end = 19,
 ): Promise<{
   jobs: Array<{
     id: string | undefined;
@@ -241,7 +236,7 @@ export async function listDeadLetterJobs(
  * - stalled: Job stalled (worker died mid-processing)
  */
 export const generationQueueEvents = new QueueEvents(QUEUE_NAMES.GENERATION, {
-  connection,
+  connection: asConnectionOptions(connection),
 });
 
 // Set up event listeners for logging and monitoring
@@ -253,7 +248,7 @@ generationQueueEvents.on('completed', ({ jobId, returnvalue }) => {
       jobId,
       result: returnvalue,
     },
-    'Job completed successfully'
+    'Job completed successfully',
   );
 });
 
@@ -265,7 +260,7 @@ generationQueueEvents.on('failed', ({ jobId, failedReason }) => {
       jobId,
       reason: failedReason,
     },
-    'Job failed'
+    'Job failed',
   );
 });
 
@@ -277,7 +272,7 @@ generationQueueEvents.on('progress', ({ jobId, data }) => {
       jobId,
       progress: data,
     },
-    'Job progress update'
+    'Job progress update',
   );
 });
 
@@ -288,7 +283,7 @@ generationQueueEvents.on('stalled', ({ jobId }) => {
       event: 'stalled',
       jobId,
     },
-    'Job stalled - worker may have died'
+    'Job stalled - worker may have died',
   );
 });
 
@@ -299,7 +294,7 @@ generationQueueEvents.on('active', ({ jobId }) => {
       event: 'active',
       jobId,
     },
-    'Job started processing'
+    'Job started processing',
   );
 });
 
@@ -311,17 +306,10 @@ export async function closeQueues(): Promise<void> {
   logger.info({ module: 'Queue' }, 'Closing queue connections...');
 
   try {
-    await Promise.all([
-      generationQueue.close(),
-      generationQueueEvents.close(),
-      deadLetterQueue.close(),
-    ]);
+    await Promise.all([generationQueue.close(), generationQueueEvents.close(), deadLetterQueue.close()]);
     logger.info({ module: 'Queue' }, 'Queue connections closed (including DLQ)');
   } catch (error) {
-    logger.error(
-      { module: 'Queue', error },
-      'Error closing queue connections'
-    );
+    logger.error({ module: 'Queue', error }, 'Error closing queue connections');
     throw error;
   }
 }
@@ -376,5 +364,5 @@ logger.info(
     host: connection.host,
     port: connection.port,
   },
-  'Queue infrastructure initialized (with DLQ)'
+  'Queue infrastructure initialized (with DLQ)',
 );

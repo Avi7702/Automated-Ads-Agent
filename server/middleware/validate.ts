@@ -6,7 +6,7 @@ export function validate(schema: ZodSchema, source: 'body' | 'query' = 'body') {
     try {
       const parsed = schema.parse(source === 'query' ? req.query : req.body);
       if (source === 'query') {
-        (req as Record<string, unknown>).validatedQuery = parsed;
+        (req as unknown as Record<string, unknown>)['validatedQuery'] = parsed;
       } else {
         req.body = parsed;
       }

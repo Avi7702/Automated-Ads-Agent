@@ -15,7 +15,7 @@ import { generateContentWithRetry } from '../lib/geminiClient';
 import { logger } from '../lib/logger';
 
 // Model for privacy scanning (use flash for speed/cost)
-const PRIVACY_SCAN_MODEL = process.env.GEMINI_PRIVACY_MODEL || 'gemini-3-flash';
+const PRIVACY_SCAN_MODEL = process.env['GEMINI_PRIVACY_MODEL'] || 'gemini-3-flash';
 
 /**
  * Privacy scan result returned by the service
@@ -276,7 +276,7 @@ Do NOT describe the ad content or products - ONLY report privacy-relevant elemen
       hasFaces: scanResult.hasFaces || false,
       hasContactInfo: scanResult.hasContactInfo || false,
       isSafeToProcess,
-      rejectionReason,
+      ...(rejectionReason !== undefined && { rejectionReason }),
       warnings,
     };
   } catch (error) {
@@ -341,39 +341,51 @@ export function sanitizeExtractedPattern(pattern: ExtractedPatternData): Extract
   const sanitized: ExtractedPatternData = {};
 
   if (pattern.layoutPattern) {
+    const lp = pattern.layoutPattern;
+    const structure = sanitize(lp.structure);
+    const visualHierarchy = lp.visualHierarchy?.map((v) => sanitize(v)).filter((v): v is string => !!v);
+    const focalPointPosition = sanitize(lp.focalPointPosition);
     sanitized.layoutPattern = {
-      structure: sanitize(pattern.layoutPattern.structure),
-      visualHierarchy: pattern.layoutPattern.visualHierarchy?.map((v) => sanitize(v)).filter((v): v is string => !!v),
-      whitespaceUsage: pattern.layoutPattern.whitespaceUsage,
-      focalPointPosition: sanitize(pattern.layoutPattern.focalPointPosition),
+      ...(structure !== undefined && { structure }),
+      ...(visualHierarchy !== undefined && { visualHierarchy }),
+      ...(lp.whitespaceUsage !== undefined && { whitespaceUsage: lp.whitespaceUsage }),
+      ...(focalPointPosition !== undefined && { focalPointPosition }),
     };
   }
 
   if (pattern.colorPsychology) {
+    const cp = pattern.colorPsychology;
+    const dominantMood = sanitize(cp.dominantMood);
+    const emotionalTone = sanitize(cp.emotionalTone);
     sanitized.colorPsychology = {
-      dominantMood: sanitize(pattern.colorPsychology.dominantMood),
-      colorScheme: pattern.colorPsychology.colorScheme,
-      contrastLevel: pattern.colorPsychology.contrastLevel,
-      emotionalTone: sanitize(pattern.colorPsychology.emotionalTone),
+      ...(dominantMood !== undefined && { dominantMood }),
+      ...(cp.colorScheme !== undefined && { colorScheme: cp.colorScheme }),
+      ...(cp.contrastLevel !== undefined && { contrastLevel: cp.contrastLevel }),
+      ...(emotionalTone !== undefined && { emotionalTone }),
     };
   }
 
   if (pattern.hookPatterns) {
+    const hp = pattern.hookPatterns;
+    const hookType = sanitize(hp.hookType);
+    const headlineFormula = sanitize(hp.headlineFormula);
+    const persuasionTechnique = sanitize(hp.persuasionTechnique);
     sanitized.hookPatterns = {
-      hookType: sanitize(pattern.hookPatterns.hookType),
-      headlineFormula: sanitize(pattern.hookPatterns.headlineFormula),
-      ctaStyle: pattern.hookPatterns.ctaStyle,
-      persuasionTechnique: sanitize(pattern.hookPatterns.persuasionTechnique),
+      ...(hookType !== undefined && { hookType }),
+      ...(headlineFormula !== undefined && { headlineFormula }),
+      ...(hp.ctaStyle !== undefined && { ctaStyle: hp.ctaStyle }),
+      ...(persuasionTechnique !== undefined && { persuasionTechnique }),
     };
   }
 
   if (pattern.visualElements) {
+    const ve = pattern.visualElements;
     sanitized.visualElements = {
-      imageStyle: pattern.visualElements.imageStyle,
-      humanPresence: pattern.visualElements.humanPresence,
-      productVisibility: pattern.visualElements.productVisibility,
-      iconography: pattern.visualElements.iconography,
-      backgroundType: pattern.visualElements.backgroundType,
+      ...(ve.imageStyle !== undefined && { imageStyle: ve.imageStyle }),
+      ...(ve.humanPresence !== undefined && { humanPresence: ve.humanPresence }),
+      ...(ve.productVisibility !== undefined && { productVisibility: ve.productVisibility }),
+      ...(ve.iconography !== undefined && { iconography: ve.iconography }),
+      ...(ve.backgroundType !== undefined && { backgroundType: ve.backgroundType }),
     };
   }
 
@@ -390,6 +402,6 @@ export async function isImageSafeForExtraction(
   const result = await scanForPrivateContent(imageBuffer, mimeType);
   return {
     safe: result.isSafeToProcess,
-    reason: result.rejectionReason,
+    ...(result.rejectionReason !== undefined && { reason: result.rejectionReason }),
   };
 }
