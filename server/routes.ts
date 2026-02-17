@@ -14,6 +14,7 @@ import { buildRouterContext } from './routes/utils/buildContext';
 import { deleteFile } from './fileStorage';
 import { insertInstallationScenarioSchema, insertProductRelationshipSchema } from '@shared/schema';
 import { validate } from './middleware/validate';
+import { forgotPasswordSchema, resetPasswordSchema, verifyEmailSchema } from './validation/schemas';
 import express from 'express';
 import path from 'path';
 import { v2 as cloudinary } from 'cloudinary';
@@ -440,12 +441,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/auth/forgot-password — Request password reset
-  app.post('/api/auth/forgot-password', async (req, res) => {
+  app.post('/api/auth/forgot-password', validate(forgotPasswordSchema), async (req, res) => {
     try {
       const { email } = req.body;
-      if (!email) {
-        return res.status(400).json({ error: 'Email is required' });
-      }
       // Always return success to avoid email enumeration
       logger.info({ module: 'Auth', action: 'forgot-password', email }, 'Password reset requested');
       res.json({ message: 'If an account exists with that email, a reset link has been sent.' });
@@ -456,15 +454,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/auth/reset-password — Reset password with token
-  app.post('/api/auth/reset-password', async (req, res) => {
+  app.post('/api/auth/reset-password', validate(resetPasswordSchema), async (req, res) => {
     try {
-      const { token, newPassword } = req.body;
-      if (!token || !newPassword) {
-        return res.status(400).json({ error: 'Token and new password are required' });
-      }
-      if (newPassword.length < 8) {
-        return res.status(400).json({ error: 'Password must be at least 8 characters' });
-      }
+      const { token: _token, newPassword: _newPassword } = req.body;
       // Token validation will be implemented when email service is added
       logger.info({ module: 'Auth', action: 'reset-password' }, 'Password reset attempted');
       res.status(501).json({ error: 'Email service not configured. Contact administrator.' });
@@ -475,12 +467,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/auth/verify-email — Verify email with token
-  app.post('/api/auth/verify-email', async (req, res) => {
+  app.post('/api/auth/verify-email', validate(verifyEmailSchema), async (req, res) => {
     try {
-      const { token } = req.body;
-      if (!token) {
-        return res.status(400).json({ error: 'Verification token is required' });
-      }
+      const { token: _verifyToken } = req.body;
       logger.info({ module: 'Auth', action: 'verify-email' }, 'Email verification attempted');
       res.status(501).json({ error: 'Email service not configured. Contact administrator.' });
     } catch (error: any) {
