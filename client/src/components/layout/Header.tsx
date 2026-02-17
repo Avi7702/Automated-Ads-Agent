@@ -1,11 +1,17 @@
-import { useState, memo, useMemo } from 'react';
+import { useState, memo, useMemo, useCallback } from 'react';
 import { Link, useLocation } from 'wouter';
+import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { LogOut, Menu } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useAuth } from '@/contexts/AuthContext';
+
+const PREFETCH_MAP: Record<string, Array<{ queryKey: string[]; url: string }>> = {
+  '/gallery': [{ queryKey: ['generations'], url: '/api/generations' }],
+  '/library': [{ queryKey: ['products'], url: '/api/products' }],
+};
 
 interface HeaderProps {
   currentPage?:
@@ -23,6 +29,25 @@ export function Header({ currentPage }: HeaderProps) {
   const [location] = useLocation();
   const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const queryClient = useQueryClient();
+
+  const prefetchRouteData = useCallback(
+    (href: string) => {
+      const entries = PREFETCH_MAP[href];
+      if (!entries) return;
+      for (const { queryKey, url } of entries) {
+        void queryClient.prefetchQuery({
+          queryKey,
+          queryFn: async () => {
+            const res = await fetch(url, { credentials: 'include' });
+            if (!res.ok) throw new Error(`Prefetch failed: ${res.status}`);
+            return res.json() as Promise<unknown>;
+          },
+        });
+      }
+    },
+    [queryClient],
+  );
 
   // Determine active page from location if not provided
   // Unified Studio: 4 main routes
@@ -83,6 +108,7 @@ export function Header({ currentPage }: HeaderProps) {
           {navItems.map((item) => (
             <Link key={item.id} href={item.href} aria-current={activePage === item.id ? 'page' : undefined}>
               <span
+                onMouseEnter={() => prefetchRouteData(item.href)}
                 className={cn(
                   'px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer',
                   activePage === item.id
