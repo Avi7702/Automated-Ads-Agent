@@ -31,7 +31,7 @@ import {
 
 // Search model - uses Google Search grounding
 // MODEL RECENCY RULE: Before changing any model ID, verify today's date and confirm the model is current within the last 3-4 weeks.
-const SEARCH_MODEL = process.env.GEMINI_SEARCH_MODEL || 'gemini-3-flash';
+const SEARCH_MODEL = process.env['GEMINI_SEARCH_MODEL'] || 'gemini-3-flash';
 
 // Known trusted domains for construction products
 const TRUSTED_DOMAINS = [
@@ -336,13 +336,13 @@ function analyzeSourceUrl(url: string): SourceInfo {
     return {
       type: 'tertiary',
       name: formatSourceName(domain),
-      trustLevel: SOURCE_TRUST_LEVELS['default'],
+      trustLevel: SOURCE_TRUST_LEVELS['default'] ?? 3,
     };
   } catch {
     return {
       type: 'tertiary',
       name: 'Unknown Source',
-      trustLevel: SOURCE_TRUST_LEVELS['default'],
+      trustLevel: SOURCE_TRUST_LEVELS['default'] ?? 3,
     };
   }
 }
@@ -533,7 +533,8 @@ function extractImagesFromHtml(html: string, baseUrl: string): string[] {
   let match;
 
   while ((match = imgPattern.exec(html)) !== null) {
-    let imgUrl = match[1];
+    const imgUrl = match[1];
+    if (!imgUrl) continue;
 
     // Skip data URIs and tiny images
     if (imgUrl.startsWith('data:')) continue;
@@ -541,8 +542,8 @@ function extractImagesFromHtml(html: string, baseUrl: string): string[] {
 
     // Convert relative URLs to absolute
     try {
-      imgUrl = new URL(imgUrl, baseUrl).href;
-      images.push(imgUrl);
+      const absoluteUrl = new URL(imgUrl, baseUrl).href;
+      images.push(absoluteUrl);
     } catch {
       // Invalid URL, skip
     }

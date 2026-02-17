@@ -78,7 +78,7 @@ function parseKeyToBuffer(keyString: string): Buffer {
  * Throws EncryptionConfigError if not configured or invalid.
  */
 function getMasterKey(): Buffer {
-  const keyString = process.env.API_KEY_ENCRYPTION_KEY;
+  const keyString = process.env['API_KEY_ENCRYPTION_KEY'];
 
   if (!keyString) {
     throw new EncryptionConfigError(
@@ -100,7 +100,7 @@ function getMasterKey(): Buffer {
  * First key is current, rest are legacy (for rotation support).
  */
 function getAllKeys(): Buffer[] {
-  const keyString = process.env.API_KEY_ENCRYPTION_KEY;
+  const keyString = process.env['API_KEY_ENCRYPTION_KEY'];
 
   if (!keyString) {
     throw new EncryptionConfigError('API_KEY_ENCRYPTION_KEY environment variable is not configured.');

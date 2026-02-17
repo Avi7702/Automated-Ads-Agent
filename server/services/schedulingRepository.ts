@@ -10,7 +10,7 @@
 
 import { db, pool } from '../db';
 import { scheduledPosts } from '@shared/schema';
-import { eq, and, gte, lte, sql, desc } from 'drizzle-orm';
+import { eq, and, gte, lte, sql } from 'drizzle-orm';
 import { logger } from '../lib/logger';
 
 /* ------------------------------------------------------------------ */

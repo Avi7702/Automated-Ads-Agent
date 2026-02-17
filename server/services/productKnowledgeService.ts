@@ -16,15 +16,10 @@
  * This data changes infrequently and is expensive to compute.
  */
 
-import { storage } from "../storage";
-import { logger } from "../lib/logger";
-import { getCacheService, CACHE_TTL } from "../lib/cacheService";
-import type {
-  Product,
-  ProductRelationship,
-  InstallationScenario,
-  BrandImage,
-} from "@shared/schema";
+import { storage } from '../storage';
+import { logger } from '../lib/logger';
+import { getCacheService, CACHE_TTL } from '../lib/cacheService';
+import type { Product, ProductRelationship, InstallationScenario, BrandImage } from '@shared/schema';
 
 // ============================================
 // TYPES
@@ -97,10 +92,7 @@ export interface BrandImageInfo {
  * Build enhanced context for a single product
  * Uses Redis cache with 24-hour TTL to avoid repeated database queries
  */
-export async function buildEnhancedContext(
-  productId: string,
-  userId: string
-): Promise<EnhancedProductContext | null> {
+export async function buildEnhancedContext(productId: string, userId: string): Promise<EnhancedProductContext | null> {
   const cache = getCacheService();
   const cacheKey = cache.kbKey(productId);
 
@@ -132,21 +124,15 @@ export async function buildEnhancedContext(
 
   // 3. Fetch related product details
   const relatedProductIds = relationships.map((r) =>
-    r.sourceProductId === productId ? r.targetProductId : r.sourceProductId
+    r.sourceProductId === productId ? r.targetProductId : r.sourceProductId,
   );
-  const relatedProducts = relatedProductIds.length > 0
-    ? await storage.getProductsByIds(relatedProductIds)
-    : [];
+  const relatedProducts = relatedProductIds.length > 0 ? await storage.getProductsByIds(relatedProductIds) : [];
 
   // 4. Build product info
   const productInfo = mapProductToInfo(product);
 
   // 5. Build related products with relationship context
-  const relatedProductsInfo = buildRelatedProductsInfo(
-    relationships,
-    relatedProducts,
-    productId
-  );
+  const relatedProductsInfo = buildRelatedProductsInfo(relationships, relatedProducts, productId);
 
   // 6. Map installation scenarios
   const installationScenariosInfo = scenarios.map(mapScenarioToInfo);
@@ -186,20 +172,16 @@ export async function buildEnhancedContext(
  */
 export async function buildMultiProductContext(
   productIds: string[],
-  userId: string
+  userId: string,
 ): Promise<EnhancedProductContext[]> {
-  const contexts = await Promise.all(
-    productIds.map((id) => buildEnhancedContext(id, userId))
-  );
+  const contexts = await Promise.all(productIds.map((id) => buildEnhancedContext(id, userId)));
   return contexts.filter((c): c is EnhancedProductContext => c !== null);
 }
 
 /**
  * Get product relationships formatted for display
  */
-export async function getFormattedRelationships(
-  productId: string
-): Promise<{
+export async function getFormattedRelationships(productId: string): Promise<{
   pairsWith: RelatedProductInfo[];
   requires: RelatedProductInfo[];
   completes: RelatedProductInfo[];
@@ -207,29 +189,24 @@ export async function getFormattedRelationships(
 }> {
   const relationships = await storage.getProductRelationships([productId]);
   const relatedIds = relationships.map((r) =>
-    r.sourceProductId === productId ? r.targetProductId : r.sourceProductId
+    r.sourceProductId === productId ? r.targetProductId : r.sourceProductId,
   );
-  const relatedProducts = relatedIds.length > 0
-    ? await storage.getProductsByIds(relatedIds)
-    : [];
+  const relatedProducts = relatedIds.length > 0 ? await storage.getProductsByIds(relatedIds) : [];
 
   const relatedInfo = buildRelatedProductsInfo(relationships, relatedProducts, productId);
 
   return {
-    pairsWith: relatedInfo.filter((r) => r.relationshipType === "pairs_with"),
-    requires: relatedInfo.filter((r) => r.relationshipType === "requires"),
-    completes: relatedInfo.filter((r) => r.relationshipType === "completes"),
-    upgrades: relatedInfo.filter((r) => r.relationshipType === "upgrades"),
+    pairsWith: relatedInfo.filter((r) => r.relationshipType === 'pairs_with'),
+    requires: relatedInfo.filter((r) => r.relationshipType === 'requires'),
+    completes: relatedInfo.filter((r) => r.relationshipType === 'completes'),
+    upgrades: relatedInfo.filter((r) => r.relationshipType === 'upgrades'),
   };
 }
 
 /**
  * Search products by tag and return enhanced context
  */
-export async function searchProductsByTagWithContext(
-  tag: string,
-  userId: string
-): Promise<EnhancedProductContext[]> {
+export async function searchProductsByTagWithContext(tag: string, userId: string): Promise<EnhancedProductContext[]> {
   const products = await storage.searchProductsByTag(tag);
   const productIds = products.map((p) => p.id);
   return buildMultiProductContext(productIds, userId);
@@ -238,9 +215,7 @@ export async function searchProductsByTagWithContext(
 /**
  * Get installation scenarios for a room type
  */
-export async function getScenariosByRoomType(
-  roomType: string
-): Promise<InstallationScenarioInfo[]> {
+export async function getScenariosByRoomType(roomType: string): Promise<InstallationScenarioInfo[]> {
   const scenarios = await storage.getScenariosByRoomType(roomType);
   return scenarios.map(mapScenarioToInfo);
 }
@@ -253,40 +228,39 @@ function mapProductToInfo(product: Product): ProductInfo {
   return {
     id: product.id,
     name: product.name,
-    description: product.description || undefined,
-    features: product.features as Record<string, unknown> | undefined,
-    benefits: product.benefits || undefined,
-    specifications: product.specifications as Record<string, unknown> | undefined,
-    tags: product.tags || undefined,
-    sku: product.sku || undefined,
-    category: product.category || undefined,
+    ...(product.description != null && { description: product.description }),
+    ...(product.features != null && { features: product.features as Record<string, unknown> }),
+    ...(product.benefits != null && { benefits: product.benefits }),
+    ...(product.specifications != null && { specifications: product.specifications as Record<string, unknown> }),
+    ...(product.tags != null && { tags: product.tags }),
+    ...(product.sku != null && { sku: product.sku }),
+    ...(product.category != null && { category: product.category }),
     cloudinaryUrl: product.cloudinaryUrl,
-    enrichmentDraft: product.enrichmentDraft as Record<string, unknown> | undefined,
+    ...(product.enrichmentDraft != null && { enrichmentDraft: product.enrichmentDraft as Record<string, unknown> }),
   };
 }
 
 function buildRelatedProductsInfo(
   relationships: ProductRelationship[],
   relatedProducts: Product[],
-  primaryProductId: string
+  primaryProductId: string,
 ): RelatedProductInfo[] {
   const productMap = new Map(relatedProducts.map((p) => [p.id, p]));
 
   return relationships.map((rel) => {
-    const relatedId =
-      rel.sourceProductId === primaryProductId
-        ? rel.targetProductId
-        : rel.sourceProductId;
+    const relatedId = rel.sourceProductId === primaryProductId ? rel.targetProductId : rel.sourceProductId;
     const product = productMap.get(relatedId);
 
     return {
-      product: product ? mapProductToInfo(product) : {
-        id: relatedId,
-        name: "Unknown Product",
-        cloudinaryUrl: "",
-      },
+      product: product
+        ? mapProductToInfo(product)
+        : {
+            id: relatedId,
+            name: 'Unknown Product',
+            cloudinaryUrl: '',
+          },
       relationshipType: rel.relationshipType,
-      relationshipDescription: rel.description || undefined,
+      ...(rel.description != null && { relationshipDescription: rel.description }),
       isRequired: rel.isRequired || false,
     };
   });
@@ -298,15 +272,17 @@ function mapScenarioToInfo(scenario: InstallationScenario): InstallationScenario
     title: scenario.title,
     description: scenario.description,
     scenarioType: scenario.scenarioType,
-    roomTypes: scenario.roomTypes || undefined,
-    styleTags: scenario.styleTags || undefined,
-    installationSteps: scenario.installationSteps || undefined,
-    requiredAccessories: scenario.requiredAccessories || undefined,
-    referenceImages: scenario.referenceImages as Array<{
-      cloudinaryUrl: string;
-      publicId: string;
-      caption?: string;
-    }> | undefined,
+    ...(scenario.roomTypes != null && { roomTypes: scenario.roomTypes }),
+    ...(scenario.styleTags != null && { styleTags: scenario.styleTags }),
+    ...(scenario.installationSteps != null && { installationSteps: scenario.installationSteps }),
+    ...(scenario.requiredAccessories != null && { requiredAccessories: scenario.requiredAccessories }),
+    ...(scenario.referenceImages != null && {
+      referenceImages: scenario.referenceImages as Array<{
+        cloudinaryUrl: string;
+        publicId: string;
+        caption?: string;
+      }>,
+    }),
   };
 }
 
@@ -315,9 +291,9 @@ function mapBrandImageToInfo(image: BrandImage): BrandImageInfo {
     id: image.id,
     cloudinaryUrl: image.cloudinaryUrl,
     category: image.category,
-    tags: image.tags || undefined,
-    description: image.description || undefined,
-    suggestedUse: image.suggestedUse || undefined,
+    ...(image.tags != null && { tags: image.tags }),
+    ...(image.description != null && { description: image.description }),
+    ...(image.suggestedUse != null && { suggestedUse: image.suggestedUse }),
   };
 }
 
@@ -341,7 +317,7 @@ function formatContextForLLM(context: {
 
   // Features
   if (product.features && Object.keys(product.features).length > 0) {
-    parts.push("\n### Features:");
+    parts.push('\n### Features:');
     for (const [key, value] of Object.entries(product.features)) {
       parts.push(`- ${key}: ${value}`);
     }
@@ -349,13 +325,13 @@ function formatContextForLLM(context: {
 
   // Benefits
   if (product.benefits && product.benefits.length > 0) {
-    parts.push("\n### Benefits:");
+    parts.push('\n### Benefits:');
     product.benefits.forEach((b) => parts.push(`- ${b}`));
   }
 
   // Specifications
   if (product.specifications && Object.keys(product.specifications).length > 0) {
-    parts.push("\n### Specifications:");
+    parts.push('\n### Specifications:');
     for (const [key, value] of Object.entries(product.specifications)) {
       parts.push(`- ${key}: ${value}`);
     }
@@ -363,30 +339,30 @@ function formatContextForLLM(context: {
 
   // Tags
   if (product.tags && product.tags.length > 0) {
-    parts.push(`\nTags: ${product.tags.join(", ")}`);
+    parts.push(`\nTags: ${product.tags.join(', ')}`);
   }
 
   // Enrichment draft data (scraped from NDS website)
   const draft = product.enrichmentDraft;
   if (draft) {
-    if (draft.installationContext) {
-      parts.push(`\n### Installation Context:\n${draft.installationContext}`);
+    if (draft['installationContext']) {
+      parts.push(`\n### Installation Context:\n${draft['installationContext']}`);
     }
-    if (Array.isArray(draft.useCases) && draft.useCases.length > 0) {
-      parts.push("\n### Real-World Use Cases:");
-      (draft.useCases as string[]).forEach((uc) => parts.push(`- ${uc}`));
+    if (Array.isArray(draft['useCases']) && draft['useCases'].length > 0) {
+      parts.push('\n### Real-World Use Cases:');
+      (draft['useCases'] as string[]).forEach((uc) => parts.push(`- ${uc}`));
     }
-    if (Array.isArray(draft.targetAudience) && draft.targetAudience.length > 0) {
-      parts.push(`\nTarget Audience: ${(draft.targetAudience as string[]).join(", ")}`);
+    if (Array.isArray(draft['targetAudience']) && draft['targetAudience'].length > 0) {
+      parts.push(`\nTarget Audience: ${(draft['targetAudience'] as string[]).join(', ')}`);
     }
-    if (Array.isArray(draft.relatedCategories) && draft.relatedCategories.length > 0) {
-      parts.push(`\nRelated Categories: ${(draft.relatedCategories as string[]).join(", ")}`);
+    if (Array.isArray(draft['relatedCategories']) && draft['relatedCategories'].length > 0) {
+      parts.push(`\nRelated Categories: ${(draft['relatedCategories'] as string[]).join(', ')}`);
     }
   }
 
   // Related products
   if (relatedProducts.length > 0) {
-    parts.push("\n## Related Products:");
+    parts.push('\n## Related Products:');
     relatedProducts.forEach((rp) => {
       const typeLabel = formatRelationshipType(rp.relationshipType);
       parts.push(`- ${rp.product.name} (${typeLabel})`);
@@ -398,51 +374,51 @@ function formatContextForLLM(context: {
 
   // Installation scenarios
   if (installationScenarios.length > 0) {
-    parts.push("\n## Installation Scenarios:");
+    parts.push('\n## Installation Scenarios:');
     installationScenarios.forEach((scenario) => {
       parts.push(`\n### ${scenario.title}`);
       parts.push(scenario.description);
       if (scenario.roomTypes && scenario.roomTypes.length > 0) {
-        parts.push(`Room types: ${scenario.roomTypes.join(", ")}`);
+        parts.push(`Room types: ${scenario.roomTypes.join(', ')}`);
       }
       if (scenario.styleTags && scenario.styleTags.length > 0) {
-        parts.push(`Style: ${scenario.styleTags.join(", ")}`);
+        parts.push(`Style: ${scenario.styleTags.join(', ')}`);
       }
       if (scenario.requiredAccessories && scenario.requiredAccessories.length > 0) {
-        parts.push(`Required accessories: ${scenario.requiredAccessories.join(", ")}`);
+        parts.push(`Required accessories: ${scenario.requiredAccessories.join(', ')}`);
       }
     });
   }
 
   // Brand images reference
   if (brandImages.length > 0) {
-    parts.push("\n## Available Brand Images:");
-    const groupedByCategory = groupBy(brandImages, "category");
+    parts.push('\n## Available Brand Images:');
+    const groupedByCategory = groupBy(brandImages, 'category');
     for (const [category, images] of Object.entries(groupedByCategory)) {
       parts.push(`- ${formatCategory(category)}: ${images.length} images`);
     }
   }
 
-  return parts.join("\n");
+  return parts.join('\n');
 }
 
 function formatRelationshipType(type: string): string {
   const labels: Record<string, string> = {
-    pairs_with: "pairs with",
-    requires: "requires",
-    replaces: "replaces",
-    matches: "matches",
-    completes: "completes",
-    upgrades: "upgrades to",
+    pairs_with: 'pairs with',
+    requires: 'requires',
+    replaces: 'replaces',
+    matches: 'matches',
+    completes: 'completes',
+    upgrades: 'upgrades to',
   };
   return labels[type] || type;
 }
 
 function formatCategory(category: string): string {
   return category
-    .split("_")
+    .split('_')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
+    .join(' ');
 }
 
 function groupBy<T>(arr: T[], key: keyof T): Record<string, T[]> {
@@ -453,7 +429,7 @@ function groupBy<T>(arr: T[], key: keyof T): Record<string, T[]> {
       acc[k].push(item);
       return acc;
     },
-    {} as Record<string, T[]>
+    {} as Record<string, T[]>,
   );
 }
 
@@ -489,7 +465,10 @@ export async function invalidateMultiProductKnowledgeCache(productIds: string[])
       const deleted = await cache.invalidate(`kb:${productId}:*`);
       totalDeleted += deleted;
     }
-    logger.info({ module: 'ProductKnowledge', productIds, totalKeysDeleted: totalDeleted }, 'Multiple product knowledge caches invalidated');
+    logger.info(
+      { module: 'ProductKnowledge', productIds, totalKeysDeleted: totalDeleted },
+      'Multiple product knowledge caches invalidated',
+    );
   } catch (err) {
     logger.error({ module: 'ProductKnowledge', err }, 'Failed to invalidate product knowledge caches');
   }

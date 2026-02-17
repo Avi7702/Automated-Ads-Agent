@@ -167,9 +167,9 @@ export async function updateExperimentStatus(
   };
 
   if (status === 'running') {
-    updateData.startedAt = new Date();
+    updateData['startedAt'] = new Date();
   } else if (status === 'completed') {
-    updateData.endedAt = new Date();
+    updateData['endedAt'] = new Date();
   }
 
   await db.update(experiments).set(updateData).where(eq(experiments.id, experimentId));
