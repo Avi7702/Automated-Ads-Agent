@@ -1,0 +1,141 @@
+# Quality Gate — lean required checks for a private, low-volume app.
+# Required checks block merge; report-only jobs never block.
+#
+# Required (must pass):  typecheck, core-tests, build, lint-changed
+# Report-only:           full-lint, coverage, audit
+
+name: Quality Gate
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: quality-${{ github.head_ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # --------------------------------------------------
+  # REQUIRED — blocks merge
+  # --------------------------------------------------
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+
+  core-tests:
+    name: Core Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Run all tests
+        run: npm test
+        env:
+          CI: true
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [typecheck, core-tests]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+  lint-changed:
+    name: Lint Changed Files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Lint only changed TS/TSX files
+        run: |
+          CHANGED=$(git diff --name-only --diff-filter=ACMR origin/main...HEAD -- '*.ts' '*.tsx' | tr '\n' ' ')
+          if [ -z "$CHANGED" ]; then
+            echo "No TS/TSX files changed — skipping lint."
+          else
+            echo "Linting: $CHANGED"
+            npx eslint --max-warnings 0 $CHANGED
+          fi
+
+  # --------------------------------------------------
+  # REPORT-ONLY — never blocks merge
+  # --------------------------------------------------
+
+  full-lint:
+    name: Full Lint (report only)
+    runs-on: ubuntu-latest
+    if: always()
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run lint || true
+
+  coverage:
+    name: Coverage (report only)
+    runs-on: ubuntu-latest
+    needs: [core-tests]
+    if: always()
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Run tests with coverage
+        run: npm run test:coverage || true
+        env:
+          CI: true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+
+  audit:
+    name: Security Audit (report only)
+    runs-on: ubuntu-latest
+    if: always()
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm audit --audit-level=high || true
