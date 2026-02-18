@@ -759,4 +759,56 @@ export const handlers = [
       ],
     });
   }),
+
+  // ============ Style References Endpoints ============
+  http.get('/api/style-references', () => {
+    return HttpResponse.json([
+      {
+        id: 'sr-1',
+        userId: 'user-1',
+        cloudinaryUrl: 'https://res.cloudinary.com/demo/image/upload/style1.jpg',
+        cloudinaryPublicId: 'style1',
+        name: 'Modern Minimalist',
+        category: 'style',
+        tags: ['minimal', 'clean'],
+        styleDescription: 'Clean minimalist aesthetic',
+        extractedElements: null,
+        confidence: 0.92,
+        imageFingerprint: 'fp-001',
+        analyzedAt: new Date().toISOString(),
+        usageCount: 3,
+        lastUsedAt: new Date().toISOString(),
+        isActive: true,
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+  }),
+
+  http.post('/api/style-references', async () => {
+    return HttpResponse.json(
+      {
+        id: 'sr-new',
+        userId: 'user-1',
+        cloudinaryUrl: 'https://res.cloudinary.com/demo/image/upload/new-style.jpg',
+        cloudinaryPublicId: 'new-style',
+        name: 'Uploaded Style',
+        category: 'style',
+        tags: null,
+        styleDescription: null,
+        extractedElements: null,
+        confidence: 0,
+        imageFingerprint: 'fp-new',
+        analyzedAt: null,
+        usageCount: 0,
+        lastUsedAt: null,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+      },
+      { status: 201 },
+    );
+  }),
+
+  http.delete('/api/style-references/:id', () => {
+    return HttpResponse.json({ success: true });
+  }),
 ];
