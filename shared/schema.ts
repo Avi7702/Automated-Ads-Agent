@@ -386,6 +386,10 @@ export const installationScenarios = pgTable(
     scenarioTypeIdx: index('installation_scenarios_scenario_type_idx').on(table.scenarioType),
     primaryProductIdIdx: index('installation_scenarios_primary_product_id_idx').on(table.primaryProductId),
     isActiveIdx: index('installation_scenarios_is_active_idx').on(table.isActive),
+    secondaryProductsGinIdx: index('installation_scenarios_secondary_products_gin_idx').using(
+      'gin',
+      table.secondaryProductIds,
+    ),
   }),
 );
 
@@ -469,6 +473,7 @@ export const brandImages = pgTable(
     categoryIdx: index('brand_images_category_idx').on(table.category),
     scenarioIdIdx: index('brand_images_scenario_id_idx').on(table.scenarioId),
     createdAtIdx: index('brand_images_created_at_idx').on(table.createdAt),
+    productIdsGinIdx: index('brand_images_product_ids_gin_idx').using('gin', table.productIds),
   }),
 );
 
@@ -549,6 +554,18 @@ export const performingAdTemplates = pgTable(
     isActiveIdx: index('performing_ad_templates_is_active_idx').on(table.isActive),
     isFeaturedIdx: index('performing_ad_templates_is_featured_idx').on(table.isFeatured),
     createdAtIdx: index('performing_ad_templates_created_at_idx').on(table.createdAt),
+    targetPlatformsGinIdx: index('performing_ad_templates_target_platforms_gin_idx').using(
+      'gin',
+      table.targetPlatforms,
+    ),
+    bestForIndustriesGinIdx: index('performing_ad_templates_best_for_industries_gin_idx').using(
+      'gin',
+      table.bestForIndustries,
+    ),
+    bestForObjectivesGinIdx: index('performing_ad_templates_best_for_objectives_gin_idx').using(
+      'gin',
+      table.bestForObjectives,
+    ),
   }),
 );
 
