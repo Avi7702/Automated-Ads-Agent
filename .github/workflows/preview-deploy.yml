@@ -1,5 +1,6 @@
 # Preview Deployments - Deploy PRs to isolated Railway environments
 # Deploys when a PR is opened/updated, cleans up when PR is closed
+# Skips docs-only and CI-only changes (no app code to preview)
 
 name: Preview Deploy
 
@@ -7,6 +8,11 @@ on:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, closed]
+    paths-ignore:
+      - 'docs/**'
+      - '.github/workflows/**'
+      - '*.md'
+      - 'LICENSE'
 
 env:
   NODE_VERSION: '20'

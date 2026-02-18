@@ -1,0 +1,176 @@
+# Deploy Pipeline — staging ➜ approval ➜ production
+# Triggered on merge to main. Uses Railway for hosting.
+#
+# Flow:
+#   1. Deploy to staging (automatic)
+#   2. Run staging smoke checks
+#   3. Wait for manual approval (environment: production)
+#   4. Deploy to production
+#   5. Run production smoke checks
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false   # never cancel an in-flight deploy
+
+env:
+  NODE_VERSION: '20'
+  RAILWAY_SERVICE_ID: '28ce02bc-f4ad-4ea7-aab6-bffc98a47e2f'
+  PRODUCTION_URL: 'https://automated-ads-agent-production.up.railway.app'
+
+jobs:
+  # --------------------------------------------------
+  # 1. Deploy to staging
+  # --------------------------------------------------
+  deploy-staging:
+    name: Deploy Staging
+    runs-on: ubuntu-latest
+    outputs:
+      staging_url: ${{ steps.deploy.outputs.staging_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy to staging environment
+        id: deploy
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          echo "Deploying to staging environment..."
+          railway up \
+            --service "$RAILWAY_SERVICE_ID" \
+            --environment staging \
+            --detach 2>&1 || true
+
+          STAGING_URL="https://automated-ads-agent-staging.up.railway.app"
+          echo "staging_url=$STAGING_URL" >> "$GITHUB_OUTPUT"
+          echo "Staging URL: $STAGING_URL"
+
+      - name: Wait for staging to be healthy
+        run: |
+          URL="${{ steps.deploy.outputs.staging_url }}"
+          echo "Waiting for $URL/api/health ..."
+          for i in $(seq 1 30); do
+            STATUS=$(curl -s -o /dev/null -w '%{http_code}' "$URL/api/health" 2>/dev/null || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "Staging is healthy (attempt $i)"
+              exit 0
+            fi
+            echo "  attempt $i — status $STATUS, retrying in 10s..."
+            sleep 10
+          done
+          echo "::error::Staging failed to become healthy after 5 minutes"
+          exit 1
+
+  # --------------------------------------------------
+  # 2. Staging smoke checks
+  # --------------------------------------------------
+  smoke-staging:
+    name: Staging Smoke Checks
+    runs-on: ubuntu-latest
+    needs: [deploy-staging]
+    steps:
+      - name: Health endpoint
+        run: |
+          URL="${{ needs.deploy-staging.outputs.staging_url }}"
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' "$URL/api/health")
+          echo "GET /api/health → $STATUS"
+          [ "$STATUS" = "200" ] || { echo "::error::Health check failed"; exit 1; }
+
+      - name: Login page serves HTML
+        run: |
+          URL="${{ needs.deploy-staging.outputs.staging_url }}"
+          BODY=$(curl -s "$URL/")
+          echo "$BODY" | grep -q '<div id="root"' \
+            && echo "Login page OK" \
+            || { echo "::error::Login page missing root div"; exit 1; }
+
+      - name: Protected API returns 401
+        run: |
+          URL="${{ needs.deploy-staging.outputs.staging_url }}"
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' "$URL/api/products")
+          echo "GET /api/products (no auth) → $STATUS"
+          [ "$STATUS" = "401" ] || { echo "::error::Expected 401, got $STATUS"; exit 1; }
+
+  # --------------------------------------------------
+  # 3. Manual approval gate
+  # --------------------------------------------------
+  approve-production:
+    name: Approve Production Deploy
+    runs-on: ubuntu-latest
+    needs: [smoke-staging]
+    environment: production          # requires manual approval in GitHub settings
+    steps:
+      - run: echo "Production deploy approved."
+
+  # --------------------------------------------------
+  # 4. Deploy to production
+  # --------------------------------------------------
+  deploy-production:
+    name: Deploy Production
+    runs-on: ubuntu-latest
+    needs: [approve-production]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy to production
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          echo "Deploying to production..."
+          railway up \
+            --service "$RAILWAY_SERVICE_ID" \
+            --environment production \
+            --detach 2>&1 || true
+
+      - name: Wait for production to be healthy
+        run: |
+          echo "Waiting for $PRODUCTION_URL/api/health ..."
+          for i in $(seq 1 30); do
+            STATUS=$(curl -s -o /dev/null -w '%{http_code}' "$PRODUCTION_URL/api/health" 2>/dev/null || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "Production is healthy (attempt $i)"
+              exit 0
+            fi
+            echo "  attempt $i — status $STATUS, retrying in 10s..."
+            sleep 10
+          done
+          echo "::error::Production failed to become healthy after 5 minutes"
+          exit 1
+
+  # --------------------------------------------------
+  # 5. Production smoke checks
+  # --------------------------------------------------
+  smoke-production:
+    name: Production Smoke Checks
+    runs-on: ubuntu-latest
+    needs: [deploy-production]
+    steps:
+      - name: Health endpoint
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' "$PRODUCTION_URL/api/health")
+          echo "GET /api/health → $STATUS"
+          [ "$STATUS" = "200" ] || { echo "::error::Health check failed"; exit 1; }
+
+      - name: Login page serves HTML
+        run: |
+          BODY=$(curl -s "$PRODUCTION_URL/")
+          echo "$BODY" | grep -q '<div id="root"' \
+            && echo "Login page OK" \
+            || { echo "::error::Login page missing root div"; exit 1; }
+
+      - name: Protected API returns 401
+        run: |
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' "$PRODUCTION_URL/api/products")
+          echo "GET /api/products (no auth) → $STATUS"
+          [ "$STATUS" = "401" ] || { echo "::error::Expected 401, got $STATUS"; exit 1; }
