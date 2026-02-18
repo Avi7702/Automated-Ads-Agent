@@ -1,0 +1,24 @@
+task_id,title,severity,owner,estimate,dependency,done_criteria
+S2-01,Migrate /api/transform handler (195 lines) to generations.router.ts,HIGH,unassigned,4h,,Handler extracted to router; service method created; route tests pass
+S2-02,Migrate /api/settings/api-keys/* (3 handlers 360+ lines) to admin.router.ts,HIGH,unassigned,6h,,All 3 key management routes in admin.router; encryption logic in service
+S2-03,Migrate /api/generations/:id/edit (90+ lines) to generations.router.ts,HIGH,unassigned,3h,,Edit handler in router; no inline business logic
+S2-04,Fix 11 CI-excluded test files (mock DB deps),HIGH,unassigned,8h,,Zero test files in vitest exclude list; npm test passes in CI
+S2-05,Remove @ts-nocheck from 10 server services/routes,MEDIUM,unassigned,8h,S2-04,Server @ts-nocheck count = 0; npm run check passes
+S2-06,Migrate medium route handlers (35 routes: products enrichment relationships content-planner installation),MEDIUM,unassigned,10h,S2-01,35 routes moved to domain routers; routes.ts reduced by 35 handlers
+S2-07,Fix 7 router files with eslint no-explicit-any disables,MEDIUM,unassigned,4h,S2-05,Zero eslint-disable in server/routes/*.router.ts
+S2-08,Remove @ts-nocheck from 25 Studio components,MEDIUM,unassigned,12h,S2-05,Studio component @ts-nocheck count = 0; build passes
+S2-09,Remove @ts-nocheck from 15 other client components,MEDIUM,unassigned,8h,S2-08,Non-UI client component @ts-nocheck count = 0
+S2-10,Studio state: document component consumption map,MEDIUM,unassigned,2h,,Markdown doc showing which components use which state source
+S2-11,Studio state: expand StudioContext reducer with orchestrator-only fields,HIGH,unassigned,8h,S2-10,All 65+ state fields in unified reducer; no dual state
+S2-12,Studio state: convert 10 orch-prop components to useStudioState,HIGH,unassigned,6h,S2-11,Zero components receiving orch prop; all use useStudioState
+S2-13,Studio state: delete or reduce useStudioOrchestrator to <100 lines,MEDIUM,unassigned,2h,S2-12,File deleted or reduced to query-only hook
+S2-14,Add unit tests for top 5 untested server services,HIGH,unassigned,12h,S2-04,ideaBankService contentFormatterService approvalQueueService apiKeyValidationService generationPipelineService all have test files
+S2-15,Add unit tests for top 5 untested client components,MEDIUM,unassigned,8h,S2-09,AdaptiveUploadZone ProductEnrichmentForm BeforeAfterBuilder ContentPlannerGuidance TextOnlyMode all have test files
+S2-16,Migrate small route handlers (126 routes: admin seeding quota monitoring CRUD),LOW,unassigned,10h,S2-06,routes.ts deleted or empty orchestrator only
+S2-17,Remove @ts-nocheck from 10 client hooks,MEDIUM,unassigned,6h,S2-08,Client hook @ts-nocheck count = 0
+S2-18,Remove @ts-nocheck from pages/libs/test files (15 files),LOW,unassigned,6h,S2-17,Non-UI @ts-nocheck total <= 36 (UI-only remain)
+S2-19,Add route-level integration tests for migrated routes,MEDIUM,unassigned,8h,S2-16,All router files have corresponding test file
+S2-20,Fix remaining eslint warnings: run eslint --max-warnings 50,LOW,unassigned,4h,S2-07,eslint --max-warnings 50 passes
+S2-21,Configure coverage thresholds to match actual capacity,LOW,unassigned,2h,S2-14,CI passes with realistic thresholds; no test exclusions
+S2-22,Studio state: add E2E tests for unified state,MEDIUM,unassigned,4h,S2-13,E2E test covers: generate flow + history + template selection
+S2-23,Final verification pass: tsc + build + lint + test,HIGH,unassigned,2h,S2-18 S2-21,npm run check && npm run build && npm test all green
