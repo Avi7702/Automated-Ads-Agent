@@ -1239,9 +1239,64 @@ console.error('Failed to refresh CSRF token:', refreshError);
 
 ---
 
+### Issue #018: In-memory Filtering on Large Datasets
+
+**Timestamp:** 2026-01-27 10:45 UTC
+
+**Subject:** Performance Degradation Due to In-memory Filtering in Repositories
+
+**Severity:** HIGH
+
+**Status:** Fixed (pending deployment)
+
+**Description:**
+Multiple repository functions fetch all records from a table and filter them in JavaScript instead of using SQL `WHERE` clauses. This causes excessive memory usage, high CPU load on the server, and slow API responses as the database grows.
+
+**Root Cause:**
+Repository functions like `getBrandImagesForProducts` in `knowledgeRepository.ts`, and `getPerformingAdTemplatesByPlatform` and `searchPerformingAdTemplates` in `templateRepository.ts` fetch the entire table and then use `.filter()` in memory.
+
+**Impact:**
+- API latency increases linearly with table size
+- High memory pressure on Node.js process
+- Inefficient database utilization (fetching data that is immediately discarded)
+
+**Investigation Method:**
+- Code review of `server/repositories/knowledgeRepository.ts` and `server/repositories/templateRepository.ts`
+- Found `.filter()` calls on results of `db.select().from(...)` without `where` clauses
+
+**Solution Applied:**
+1. Refactored `getBrandImagesForProducts` in `knowledgeRepository.ts` to use database-level filtering with PostgreSQL array overlap operator (`&&`).
+2. Refactored `getPerformingAdTemplatesByPlatform` and `searchPerformingAdTemplates` in `templateRepository.ts` to use database-level filtering with `arrayContains` and dynamic `where` clauses.
+3. Added GIN indexes to `shared/schema.ts` for all frequently queried array columns: `installation_scenarios.secondary_product_ids`, `brand_images.product_ids`, `performing_ad_templates.target_platforms`, `performing_ad_templates.best_for_industries`, and `performing_ad_templates.best_for_objectives`.
+4. Verified functionality with new test suite `server/__tests__/performanceOptimizations.test.ts`.
+
+**Files Modified:**
+- `shared/schema.ts` (added GIN indexes)
+- `server/repositories/knowledgeRepository.ts` (refactored `getBrandImagesForProducts`)
+- `server/repositories/templateRepository.ts` (refactored search functions)
+- `server/__tests__/performanceOptimizations.test.ts` (new tests)
+
+**Commit Hash:** TBD
+
+**Prevention:**
+1. **Mandatory code review** for all new repository functions to ensure database-level filtering
+2. **Performance linting** or rules against fetching all records without `limit` or `where`
+3. **Use GIN indexes** for all frequently queried array columns
+4. **Training** for developers on PostgreSQL array performance patterns
+
+**Related Issues:**
+- Issue #007: Performance optimizations incomplete
+
+**Lessons Learned:**
+- Baseline performance for small datasets hides scalability issues
+- In-memory filtering is a major anti-pattern in database-backed applications
+- Always use SQL `WHERE` clauses for filtering whenever possible
+
+---
+
 ## Statistics
 
-**Total Issues:** 17
+**Total Issues:** 18
 **Critical:** 4 (24%)
 **High:** 5 (29%)
 **Medium:** 7 (41%)
