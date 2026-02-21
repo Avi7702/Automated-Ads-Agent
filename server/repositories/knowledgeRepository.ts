@@ -152,13 +152,21 @@ export async function getBrandImagesByUser(
 export async function getBrandImagesForProducts(productIds: string[], userId: string): Promise<BrandImage[]> {
   if (productIds.length === 0) return [];
 
-  const allImages = await db
+  // Use PostgreSQL array overlap operator (&&) to filter at the database level.
+  // This avoids loading all user images into memory and improves performance for large datasets.
+  return await db
     .select()
     .from(brandImages)
-    .where(eq(brandImages.userId, userId))
+    .where(
+      and(
+        eq(brandImages.userId, userId),
+        sql`${brandImages.productIds} && ARRAY[${sql.join(
+          productIds.map((id) => sql`${id}`),
+          sql`, `,
+        )}]::text[]`,
+      ),
+    )
     .orderBy(desc(brandImages.createdAt));
-
-  return allImages.filter((img) => img.productIds?.some((pid) => productIds.includes(pid)));
 }
 
 export async function getBrandImagesByCategory(userId: string, category: string): Promise<BrandImage[]> {

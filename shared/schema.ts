@@ -386,6 +386,10 @@ export const installationScenarios = pgTable(
     scenarioTypeIdx: index('installation_scenarios_scenario_type_idx').on(table.scenarioType),
     primaryProductIdIdx: index('installation_scenarios_primary_product_id_idx').on(table.primaryProductId),
     isActiveIdx: index('installation_scenarios_is_active_idx').on(table.isActive),
+    secondaryProductsIdx: index('installation_scenarios_secondary_products_gin_idx').using(
+      'gin',
+      table.secondaryProductIds,
+    ),
   }),
 );
 
@@ -469,6 +473,7 @@ export const brandImages = pgTable(
     categoryIdx: index('brand_images_category_idx').on(table.category),
     scenarioIdIdx: index('brand_images_scenario_id_idx').on(table.scenarioId),
     createdAtIdx: index('brand_images_created_at_idx').on(table.createdAt),
+    productIdsIdx: index('brand_images_product_ids_gin_idx').using('gin', table.productIds),
   }),
 );
 
