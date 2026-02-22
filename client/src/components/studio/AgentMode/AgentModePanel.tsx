@@ -153,7 +153,8 @@ export function AgentModePanel({ orch }: AgentModePanelProps) {
               <ExecutionView
                 steps={agent.executionSteps}
                 isComplete={agent.stage === 'complete'}
-                onRetry={agent.approvePlan}
+                onRetry={agent.retryFailedSteps}
+                onCancel={agent.cancelExecution}
                 onDone={agent.reset}
               />
             </motion.div>

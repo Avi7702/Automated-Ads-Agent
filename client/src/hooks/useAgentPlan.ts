@@ -80,6 +80,8 @@ export interface UseAgentPlanReturn {
   submitAnswers: () => Promise<void>;
   approvePlan: () => Promise<void>;
   revisePlan: (feedback: string) => Promise<void>;
+  cancelExecution: () => Promise<void>;
+  retryFailedSteps: () => Promise<void>;
   reset: () => void;
 }
 
@@ -101,6 +103,7 @@ export function useAgentPlan(): UseAgentPlanReturn {
   const [executionSteps, setExecutionSteps] = useState<ExecutionStep[]>(draft.current?.executionSteps ?? []);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [executionId, setExecutionId] = useState<string | null>(null);
 
   // Ref for polling interval cleanup
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -197,6 +200,53 @@ export function useAgentPlan(): UseAgentPlanReturn {
     }
   }, [selectedSuggestion, answers]);
 
+  // ── Polling Helper (reusable for execute + retry) ────────
+  const startPolling = useCallback((execId: string) => {
+    pollCountRef.current = 0;
+
+    // Clear any existing polling interval
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+    }
+
+    pollingIntervalRef.current = setInterval(async () => {
+      pollCountRef.current += 1;
+
+      // Timeout after MAX_POLLS
+      if (pollCountRef.current >= MAX_POLLS) {
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+        setError('Execution timed out. Please check back later.');
+        return;
+      }
+
+      try {
+        const pollRes = await apiRequest('GET', `/api/agent/execution/${execId}`);
+        const pollData = await pollRes.json();
+        const polledSteps: ExecutionStep[] = pollData.steps ?? [];
+        setExecutionSteps(polledSteps);
+
+        if (pollData.status === 'complete') {
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
+          setStage('complete');
+        } else if (pollData.status === 'failed') {
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
+          setError(pollData.errorMessage || 'Execution failed');
+        }
+      } catch (pollErr) {
+        // Silently ignore individual poll failures — will retry next interval
+      }
+    }, POLL_INTERVAL_MS);
+  }, []);
+
   // ── Approve & Execute ────────────────────────────────────
   const approvePlan = useCallback(async () => {
     if (!planBrief) return;
@@ -213,61 +263,56 @@ export function useAgentPlan(): UseAgentPlanReturn {
         idempotencyKey,
       });
       const data = await res.json();
-      const executionId = data.executionId;
+      const execId = data.executionId;
       const steps: ExecutionStep[] = data.steps ?? [];
+      setExecutionId(execId);
       setExecutionSteps(steps);
       setIsLoading(false);
 
       // Start polling for execution progress
-      pollCountRef.current = 0;
-
-      // Clear any existing polling interval
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-      }
-
-      pollingIntervalRef.current = setInterval(async () => {
-        pollCountRef.current += 1;
-
-        // Timeout after MAX_POLLS
-        if (pollCountRef.current >= MAX_POLLS) {
-          if (pollingIntervalRef.current) {
-            clearInterval(pollingIntervalRef.current);
-            pollingIntervalRef.current = null;
-          }
-          setError('Execution timed out. Please check back later.');
-          return;
-        }
-
-        try {
-          const pollRes = await apiRequest('GET', `/api/agent/execution/${executionId}`);
-          const pollData = await pollRes.json();
-          const polledSteps: ExecutionStep[] = pollData.steps ?? [];
-          setExecutionSteps(polledSteps);
-
-          if (pollData.status === 'complete') {
-            if (pollingIntervalRef.current) {
-              clearInterval(pollingIntervalRef.current);
-              pollingIntervalRef.current = null;
-            }
-            setStage('complete');
-          } else if (pollData.status === 'failed') {
-            if (pollingIntervalRef.current) {
-              clearInterval(pollingIntervalRef.current);
-              pollingIntervalRef.current = null;
-            }
-            setError(pollData.errorMessage || 'Execution failed');
-          }
-        } catch (pollErr) {
-          // Silently ignore individual poll failures — will retry next interval
-        }
-      }, POLL_INTERVAL_MS);
+      startPolling(execId);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to execute plan');
       setIsLoading(false);
       // Stay on executing so user can see which step failed
     }
-  }, [planBrief]);
+  }, [planBrief, startPolling]);
+
+  // ── Cancel Execution ───────────────────────────────────────
+  const cancelExecution = useCallback(async () => {
+    if (!executionId) return;
+    try {
+      await apiRequest('POST', `/api/agent/execution/${executionId}/cancel`);
+      // Stop polling
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      setError('Execution cancelled');
+      setIsLoading(false);
+    } catch (err) {
+      setError('Failed to cancel execution');
+    }
+  }, [executionId]);
+
+  // ── Retry Failed Steps ─────────────────────────────────────
+  const retryFailedSteps = useCallback(async () => {
+    if (!executionId) return;
+    try {
+      setError(null);
+      setIsLoading(true);
+      const res = await apiRequest('POST', `/api/agent/execution/${executionId}/retry`);
+      const data = await res.json();
+      setExecutionSteps(data.steps || []);
+      setStage('executing');
+      setIsLoading(false);
+      // Restart polling
+      startPolling(executionId);
+    } catch (err) {
+      setError('Failed to retry execution');
+      setIsLoading(false);
+    }
+  }, [executionId, startPolling]);
 
   // ── Revise Plan ──────────────────────────────────────────
   const revisePlan = useCallback(
@@ -308,6 +353,7 @@ export function useAgentPlan(): UseAgentPlanReturn {
     setAnswers({});
     setPlanBrief(null);
     setExecutionSteps([]);
+    setExecutionId(null);
     setError(null);
     setIsLoading(false);
     clearDraft();
@@ -329,6 +375,8 @@ export function useAgentPlan(): UseAgentPlanReturn {
     submitAnswers,
     approvePlan,
     revisePlan,
+    cancelExecution,
+    retryFailedSteps,
     reset,
   };
 }

@@ -1,26 +1,26 @@
 /**
  * Studio Agent Definition
- * System prompt + tool declaration/executor aggregators for @google/genai SDK
- * Model: gemini-3.1-pro-preview
+ * Uses @google/adk LlmAgent with FunctionTool declarations.
+ * Model: gemini-2.5-flash (ADK-recommended, proven stable)
  */
 
-import type { FunctionDeclaration } from '@google/genai';
+import { LlmAgent } from '@google/adk';
 import type { IStorage } from '../../storage';
-import { declarations as productDecl, createExecutors as createProductExec } from './tools/productTools';
-import { declarations as generationDecl, createExecutors as createGenerationExec } from './tools/generationTools';
-import { declarations as copyDecl, createExecutors as createCopyExec } from './tools/copyTools';
-import { declarations as schedulingDecl, createExecutors as createSchedulingExec } from './tools/schedulingTools';
-import { declarations as knowledgeDecl, createExecutors as createKnowledgeExec } from './tools/knowledgeTools';
-
-/** Tool executor function signature — all tools conform to this shape */
-export type ToolExecutor = (args: Record<string, unknown>, userId: string) => Promise<Record<string, unknown>>;
+import { createProductTools } from './tools/productTools';
+import { createGenerationTools } from './tools/generationTools';
+import { createCopyTools } from './tools/copyTools';
+import { createSchedulingTools } from './tools/schedulingTools';
+import { createKnowledgeTools } from './tools/knowledgeTools';
 
 /**
- * Returns the Gemini 3.1 system instruction for the Studio Assistant.
- * Uses XML-style tags (Gemini 3.1 best practice) for structured prompting.
+ * Returns the Gemini system instruction for the Studio Assistant.
+ * Uses XML-style tags for structured prompting.
  */
 export function getSystemInstruction(): string {
-  return `<role>
+  return SYSTEM_INSTRUCTION;
+}
+
+const SYSTEM_INSTRUCTION = `<role>
 You are the Studio Assistant for Next Day Steel (NDS), an AI-powered marketing content creation platform.
 You help NDS staff create professional marketing visuals, ad copy, and manage their content calendar
 through natural conversation. You are an expert marketing collaborator who understands the UK
@@ -180,27 +180,25 @@ Priority 4 — LOW:
 - When presenting multiple options, use numbered lists
 - For technical content (rebar specs, etc.), be precise and use industry-standard notation
 </output_format>`;
-}
 
 /**
- * Aggregates FunctionDeclaration arrays from all tool modules.
+ * Creates the Studio LlmAgent with all tools attached.
+ * ADK reads GOOGLE_API_KEY from environment automatically — no apiKey in code.
  */
-export function getToolDeclarations(): FunctionDeclaration[] {
-  return [...productDecl, ...generationDecl, ...copyDecl, ...schedulingDecl, ...knowledgeDecl];
-}
+export function createStudioAgent(storage: IStorage): LlmAgent {
+  const tools = [
+    ...createProductTools(storage),
+    ...createGenerationTools(storage),
+    ...createCopyTools(),
+    ...createSchedulingTools(storage),
+    ...createKnowledgeTools(storage),
+  ];
 
-/**
- * Aggregates tool executor maps from all tool modules.
- * Each executor takes (args, userId) and returns a JSON-serializable result object.
- */
-export function getToolExecutors(storage: IStorage): Map<string, ToolExecutor> {
-  const all = new Map<string, ToolExecutor>();
-
-  for (const [k, v] of createProductExec(storage)) all.set(k, v);
-  for (const [k, v] of createGenerationExec(storage)) all.set(k, v);
-  for (const [k, v] of createCopyExec()) all.set(k, v);
-  for (const [k, v] of createSchedulingExec(storage)) all.set(k, v);
-  for (const [k, v] of createKnowledgeExec(storage)) all.set(k, v);
-
-  return all;
+  return new LlmAgent({
+    name: 'studio_assistant',
+    model: 'gemini-2.5-flash',
+    description: 'AI marketing assistant for Next Day Steel Studio',
+    instruction: SYSTEM_INSTRUCTION,
+    tools,
+  });
 }

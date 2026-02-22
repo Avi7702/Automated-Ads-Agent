@@ -12,7 +12,7 @@
  */
 
 import { motion } from 'framer-motion';
-import { CheckCircle2, XCircle, Loader2, Circle, RefreshCcw } from 'lucide-react';
+import { CheckCircle2, XCircle, Loader2, Circle, RefreshCcw, StopCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -22,6 +22,7 @@ interface ExecutionViewProps {
   steps: ExecutionStep[];
   isComplete: boolean;
   onRetry?: () => void;
+  onCancel?: () => void;
   onDone?: () => void;
 }
 
@@ -39,13 +40,15 @@ const STATUS_COLOR = {
   failed: 'text-red-500',
 };
 
-export function ExecutionView({ steps, isComplete, onRetry, onDone }: ExecutionViewProps) {
+export function ExecutionView({ steps, isComplete, onRetry, onCancel, onDone }: ExecutionViewProps) {
   const completedCount = steps.filter((s) => s.status === 'complete').length;
   const failedCount = steps.filter((s) => s.status === 'failed').length;
   const runningCount = steps.filter((s) => s.status === 'running').length;
   const total = steps.length;
   const progressValue = total > 0 ? (completedCount / total) * 100 : 0;
   const isQueued = total > 0 && steps.every((s) => s.status === 'pending') && !isComplete;
+  const hasFailed = failedCount > 0;
+  const isRunning = runningCount > 0 || (!isComplete && !hasFailed && !isQueued && completedCount < total);
 
   return (
     <motion.div
@@ -86,6 +89,33 @@ export function ExecutionView({ steps, isComplete, onRetry, onDone }: ExecutionV
           {completedCount}/{total} complete
         </p>
       </div>
+
+      {/* Action buttons: Cancel (running) / Retry (failed) */}
+      {(isRunning || (hasFailed && !isComplete)) && (
+        <div className="flex items-center gap-2">
+          {isRunning && onCancel && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs gap-1.5 border-red-300 text-red-600 hover:bg-red-50"
+              onClick={onCancel}
+            >
+              <StopCircle className="h-3.5 w-3.5" />
+              Cancel
+            </Button>
+          )}
+          {hasFailed && !isComplete && onRetry && (
+            <Button
+              size="sm"
+              className="h-8 text-xs gap-1.5 bg-blue-500 text-white hover:bg-blue-600"
+              onClick={onRetry}
+            >
+              <RefreshCcw className="h-3.5 w-3.5" />
+              Retry Failed Steps
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* Step list */}
       <div className="space-y-1">

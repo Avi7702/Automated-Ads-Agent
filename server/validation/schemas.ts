@@ -462,9 +462,20 @@ export const executionIdParamSchema = z.object({
   executionId: z.string().uuid('Invalid execution ID'),
 });
 
+/** GET /api/agent/plans */
+export const planHistoryQuerySchema = z.object({
+  limit: z
+    .string()
+    .regex(/^\d+$/)
+    .transform(Number)
+    .refine((n) => n >= 1 && n <= 50, 'Limit must be 1-50')
+    .optional(),
+});
+
 // Agent Plan types
 export type AgentSuggestionsQuery = z.infer<typeof agentSuggestionsQuerySchema>;
 export type PlanPreviewInput = z.infer<typeof planPreviewSchema>;
 export type PlanExecuteInput = z.infer<typeof planExecuteSchema>;
 export type PlanReviseInput = z.infer<typeof planReviseSchema>;
 export type ExecutionIdParam = z.infer<typeof executionIdParamSchema>;
+export type PlanHistoryQuery = z.infer<typeof planHistoryQuerySchema>;

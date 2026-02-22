@@ -9,6 +9,9 @@
  * - POST /api/agent/plan/execute        — Execute an approved plan (idempotent)
  * - POST /api/agent/plan/revise         — Revise a plan with user feedback
  * - GET  /api/agent/execution/:executionId — Poll execution status
+ * - GET  /api/agent/plans               — Plan history for current user
+ * - POST /api/agent/execution/:executionId/cancel — Cancel running execution
+ * - POST /api/agent/execution/:executionId/retry  — Retry failed steps
  */
 
 import type { Router, Request, Response } from 'express';
@@ -20,6 +23,9 @@ import {
   executePlan,
   revisePlan,
   getExecution,
+  listPlans,
+  cancelExecution,
+  retryFailedSteps,
   PlanNotFoundError,
 } from '../services/agent/orchestratorService';
 import {
@@ -28,6 +34,7 @@ import {
   planExecuteSchema,
   planReviseSchema,
   executionIdParamSchema,
+  planHistoryQuerySchema,
 } from '../validation/schemas';
 
 export const agentPlanRouter: RouterFactory = (ctx: RouterContext): Router => {
@@ -186,6 +193,96 @@ export const agentPlanRouter: RouterFactory = (ctx: RouterContext): Router => {
     }),
   );
 
+  /**
+   * GET /plans
+   * Plan history for the current user
+   */
+  router.get(
+    '/plans',
+    requireAuth,
+    asyncHandler(async (req: Request, res: Response) => {
+      const parsed = planHistoryQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        return res.status(400).json({
+          error: 'Invalid query parameters',
+          details: parsed.error.flatten().fieldErrors,
+        });
+      }
+
+      const userId = req.user!.id;
+      const limit = Math.min(parsed.data.limit ?? 20, 50);
+
+      try {
+        const plans = await listPlans(storage, userId, limit);
+        res.json({ plans });
+      } catch (err) {
+        handleRouteError(res, err, 'agentPlan.listPlans');
+      }
+    }),
+  );
+
+  /**
+   * POST /execution/:executionId/cancel
+   * Cancel a running or queued execution
+   */
+  router.post(
+    '/execution/:executionId/cancel',
+    requireAuth,
+    asyncHandler(async (req: Request, res: Response) => {
+      const parsed = executionIdParamSchema.safeParse(req.params);
+      if (!parsed.success) {
+        return res.status(400).json({
+          error: 'Invalid execution ID',
+          details: parsed.error.flatten().fieldErrors,
+        });
+      }
+
+      const userId = req.user!.id;
+      const { executionId } = parsed.data;
+
+      try {
+        await cancelExecution(storage, executionId, userId);
+        res.json({ success: true, message: 'Execution cancelled' });
+      } catch (err) {
+        if (err instanceof PlanNotFoundError) {
+          return res.status(404).json({ error: err.message });
+        }
+        handleRouteError(res, err, 'agentPlan.cancelExecution');
+      }
+    }),
+  );
+
+  /**
+   * POST /execution/:executionId/retry
+   * Retry failed steps in an execution
+   */
+  router.post(
+    '/execution/:executionId/retry',
+    requireAuth,
+    asyncHandler(async (req: Request, res: Response) => {
+      const parsed = executionIdParamSchema.safeParse(req.params);
+      if (!parsed.success) {
+        return res.status(400).json({
+          error: 'Invalid execution ID',
+          details: parsed.error.flatten().fieldErrors,
+        });
+      }
+
+      const userId = req.user!.id;
+      const { executionId } = parsed.data;
+
+      try {
+        const result = await retryFailedSteps(storage, executionId, userId);
+        res.json(result);
+      } catch (err) {
+        if (err instanceof PlanNotFoundError) {
+          return res.status(404).json({ error: err.message });
+        }
+        handleRouteError(res, err, 'agentPlan.retryFailedSteps');
+      }
+    }),
+  );
+
   return router;
 };
 
@@ -193,7 +290,7 @@ export const agentPlanRouterModule: RouterModule = {
   prefix: '/api/agent',
   factory: agentPlanRouter,
   description: 'Agent Mode planning & execution pipeline',
-  endpointCount: 5,
+  endpointCount: 8,
   requiresAuth: true,
   tags: ['agent', 'planning', 'ai'],
 };

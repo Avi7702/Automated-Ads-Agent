@@ -26,6 +26,12 @@ import type {
   ExecutionStep,
 } from '../../../shared/types/agentPlan';
 
+// Phase 3: Real service integrations for plan execution
+import { geminiService } from '../geminiService';
+import { saveGeneratedImage } from '../../fileStorage';
+import { copywritingService } from '../copywritingService';
+import { addToQueue } from '../approvalQueueService';
+
 // Model — same as ideaBankService
 const REASONING_MODEL = process.env['GEMINI_REASONING_MODEL'] || 'gemini-3-flash-preview';
 
@@ -207,8 +213,8 @@ Limit posts to 12 maximum. JSON only, no markdown fences.`;
       return { plan: dbPlanToBrief(dbPlan) };
     }
 
-    // Stage 3 scoring inline
-    const score = scorePlan(parsed);
+    // Stage 3 scoring inline (Phase 4: LLM-based with heuristic fallback)
+    const score = await scorePlan(parsed, storage, userId);
 
     const contentMix = Array.isArray(parsed.contentMix)
       ? parsed.contentMix.map((m: any) => ({ type: String(m.type), count: Number(m.count) || 1 }))
@@ -382,7 +388,7 @@ Shape:
       return existing;
     }
 
-    const score = scorePlan(parsed);
+    const score = await scorePlan(parsed, storage, userId);
 
     const updatedPlan = await storage.updateAgentPlan(planId, {
       objective: String(parsed.objective || existing.objective),
@@ -455,7 +461,14 @@ export async function getExecution(
 // Stage 3 — Approval Optimizer (scoring)
 // ---------------------------------------------------------------------------
 
-function scorePlan(parsed: any): { total: number; breakdown: { criterion: string; score: number; max: number }[] } {
+/**
+ * Heuristic scoring fallback (renamed from original scorePlan).
+ * Used when LLM scoring fails or is unavailable.
+ */
+function heuristicScorePlan(parsed: any): {
+  total: number;
+  breakdown: { criterion: string; score: number; max: number }[];
+} {
   const breakdown: { criterion: string; score: number; max: number }[] = [];
 
   // Brand alignment: check if objective and hooks are present
@@ -479,6 +492,62 @@ function scorePlan(parsed: any): { total: number; breakdown: { criterion: string
 
   const total = breakdown.reduce((sum, b) => sum + b.score, 0);
   return { total, breakdown };
+}
+
+/**
+ * LLM-based plan scoring with heuristic fallback.
+ * Calls Gemini for semantic evaluation of the campaign plan.
+ */
+async function scorePlan(
+  parsed: any,
+  storage: IStorage,
+  userId: string,
+): Promise<{ total: number; breakdown: { criterion: string; score: number; max: number }[] }> {
+  const brandProfile = await storage.getBrandProfileByUserId(userId);
+
+  const prompt = `You are a marketing campaign quality evaluator. Score this campaign plan:
+
+Plan: ${JSON.stringify({ objective: parsed.objective, cadence: parsed.cadence, platform: parsed.platform, contentMix: parsed.contentMix, postCount: (parsed.posts || []).length }, null, 2)}
+${brandProfile ? `Brand: ${brandProfile.brandName}, Industry: ${brandProfile.industry}` : ''}
+
+Score each criterion 0-25. Return ONLY JSON, no markdown:
+{
+  "breakdown": [
+    { "criterion": "Brand Alignment", "score": <0-25>, "max": 25 },
+    { "criterion": "Platform Fit", "score": <0-25>, "max": 25 },
+    { "criterion": "Content Diversity", "score": <0-25>, "max": 25 },
+    { "criterion": "Timing & Cadence", "score": <0-25>, "max": 25 }
+  ]
+}`;
+
+  try {
+    const response = await generateContentWithRetry(
+      {
+        model: REASONING_MODEL,
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: { temperature: 0.3, maxOutputTokens: 1500 },
+      },
+      { operation: 'agent_plan_scoring' },
+    );
+
+    const text = (response.text || '').trim();
+    const result = parseJsonObject(text);
+
+    if (result?.breakdown && Array.isArray(result.breakdown)) {
+      const breakdown = result.breakdown.map((b: any) => ({
+        criterion: String(b.criterion),
+        score: Math.max(0, Math.min(25, Number(b.score) || 0)),
+        max: 25,
+      }));
+      const total = breakdown.reduce((sum: number, b: any) => sum + b.score, 0);
+      return { total, breakdown };
+    }
+  } catch (err) {
+    logger.warn({ module: 'AgentOrchestrator', err }, 'LLM scoring failed, using heuristic fallback');
+  }
+
+  // Fallback to heuristic
+  return heuristicScorePlan(parsed);
 }
 
 // ---------------------------------------------------------------------------
@@ -626,42 +695,326 @@ function buildFallbackSuggestions(products: any[], limit: number): AgentSuggesti
   }));
 }
 
+// ---------------------------------------------------------------------------
+// Phase 3 — Execution Helpers
+// ---------------------------------------------------------------------------
+
+function aspectRatioForPlatform(platform) {
+  const map = {
+    instagram: '1:1',
+    linkedin: '16:9',
+    facebook: '1:1',
+    twitter: '16:9',
+    tiktok: '9:16',
+  };
+  return map[platform] || '1:1';
+}
+
+function mapObjective(objective) {
+  const lower = (objective || '').toLowerCase();
+  if (lower.includes('conversion') || lower.includes('sales')) return 'conversion';
+  if (lower.includes('consideration') || lower.includes('interest')) return 'consideration';
+  if (lower.includes('engagement') || lower.includes('interact')) return 'engagement';
+  return 'awareness';
+}
+
+async function getProductContext(storage, productIds) {
+  if (!productIds || productIds.length === 0) {
+    return { name: 'Product', description: 'Product advertisement' };
+  }
+  try {
+    const products = [];
+    for (const pid of productIds) {
+      const product = await storage.getProductById(String(pid));
+      if (product) products.push(product);
+    }
+    if (products.length > 0) {
+      return {
+        name: products.map((p) => p.name).join(' + '),
+        description: products.map((p) => p.description || p.name).join('. '),
+      };
+    }
+  } catch (err) {
+    logger.warn({ module: 'AgentOrchestrator', err }, 'Failed to fetch product context, using defaults');
+  }
+  return { name: 'Product', description: 'Product advertisement' };
+}
+
+// ---------------------------------------------------------------------------
+// Phase 3 — Per-Post Execution (image → upload → DB → copy → DB → queue)
+// ---------------------------------------------------------------------------
+
+async function executePostStep(storage, post, plan, userId) {
+  // Phase 4: Fetch brand profile for context enrichment
+  const brandProfile = await storage.getBrandProfileByUserId(userId);
+
+  // A. Generate image via Gemini — enrich prompt with brand style
+  let imagePrompt = post.prompt;
+  if (brandProfile) {
+    const style = brandProfile.preferredStyles
+      ? Array.isArray(brandProfile.preferredStyles)
+        ? brandProfile.preferredStyles.join(', ')
+        : brandProfile.preferredStyles
+      : 'Professional';
+    imagePrompt = `Brand: ${brandProfile.brandName || 'Brand'}. Style: ${style}.\n\n${post.prompt}`;
+  }
+
+  const imageResult = await geminiService.generateImage(
+    imagePrompt,
+    {
+      aspectRatio: aspectRatioForPlatform(post.platform),
+    },
+    userId,
+  );
+
+  // B. Upload to Cloudinary (or local fallback)
+  const cloudinaryUrl = await saveGeneratedImage(imageResult.imageBase64, 'png');
+
+  // C. Save generation record to DB
+  const generation = await storage.saveGeneration({
+    userId,
+    prompt: post.prompt,
+    originalImagePaths: [],
+    generatedImagePath: cloudinaryUrl,
+    imagePath: cloudinaryUrl,
+    aspectRatio: aspectRatioForPlatform(post.platform),
+    status: 'completed',
+    conversationHistory: imageResult.conversationHistory,
+    productIds: (post.productIds || []).map(String),
+    generationMode: 'standard',
+    mediaType: 'image',
+    updatedAt: new Date(),
+  });
+
+  // D. Look up product context for copy generation
+  const { name: productName, description: productDesc } = await getProductContext(storage, post.productIds);
+
+  // Phase 4: Extract brand context for copy enrichment
+  const industry = brandProfile?.industry || 'General';
+  const brandVoice = brandProfile?.voice
+    ? {
+        principles: brandProfile.voice.principles || [],
+        wordsToAvoid: brandProfile.voice.wordsToAvoid || [],
+        wordsToUse: brandProfile.voice.wordsToUse || [],
+      }
+    : undefined;
+  const targetAudience = brandProfile?.targetAudience
+    ? {
+        demographics: String(brandProfile.targetAudience.demographics || brandProfile.targetAudience),
+        psychographics: String(brandProfile.targetAudience.psychographics || 'Decision-makers'),
+        painPoints: Array.isArray(brandProfile.targetAudience.painPoints)
+          ? brandProfile.targetAudience.painPoints
+          : ['Quality', 'Reliability'],
+      }
+    : undefined;
+
+  // E. Generate ad copy via copywriting service
+  const copyResults = await copywritingService.generateCopy(
+    {
+      generationId: generation.id,
+      platform: post.platform,
+      tone: 'authentic',
+      framework: 'auto',
+      campaignObjective: mapObjective(plan.objective),
+      productName,
+      productDescription: productDesc,
+      industry,
+      brandVoice,
+      targetAudience,
+      variations: 1,
+    },
+    {
+      productId: post.productIds?.[0]?.toString(),
+      userId,
+    },
+  );
+
+  const copy = copyResults[0];
+  if (!copy) {
+    throw new Error('Copywriting service returned no results');
+  }
+
+  // F. Save ad copy to DB
+  const adCopy = await storage.saveAdCopy({
+    generationId: generation.id,
+    userId,
+    headline: copy.headline,
+    hook: copy.hook,
+    bodyText: copy.bodyText,
+    cta: copy.cta,
+    caption: copy.caption,
+    hashtags: copy.hashtags,
+    platform: post.platform,
+    tone: 'authentic',
+    framework: copy.framework,
+    productName,
+    productDescription: productDesc,
+    industry,
+    qualityScore: copy.qualityScore,
+    characterCounts: copy.characterCounts,
+    variationNumber: 1,
+  });
+
+  // G. Submit to approval queue
+  const queueItem = await addToQueue({
+    caption: copy.caption,
+    platform: post.platform,
+    imageUrl: cloudinaryUrl,
+    hashtags: copy.hashtags,
+    userId,
+    adCopyId: adCopy.id,
+    generationId: generation.id,
+    scheduledFor: post.scheduledDate ? new Date(post.scheduledDate) : undefined,
+  });
+
+  return {
+    generationId: generation.id,
+    adCopyId: adCopy.id,
+    approvalQueueId: queueItem.id,
+    imageUrl: cloudinaryUrl,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Execution Runner (replaces placeholder sleep loop)
+// ---------------------------------------------------------------------------
+
 async function runExecutionSteps(
   storage: IStorage,
   executionId: string,
   planId: string,
   userId: string,
 ): Promise<void> {
-  const execution = await storage.getAgentExecutionById(executionId);
-  if (!execution) return;
+  // 1. Load the plan from DB to get posts
+  const planRecord = await storage.getAgentPlanById(planId);
+  if (!planRecord) {
+    logger.error({ module: 'AgentOrchestrator', planId }, 'Plan not found for execution');
+    await storage.updateAgentExecution(executionId, {
+      status: 'failed',
+      errorMessage: `Plan ${planId} not found`,
+      completedAt: new Date(),
+    });
+    return;
+  }
 
-  const steps = execution.steps as ExecutionStep[];
-
-  // Mark as running
+  // 2. Mark execution as running
   await storage.updateAgentExecution(executionId, { status: 'running', startedAt: new Date() });
   await storage.updateAgentPlan(planId, { status: 'executing' });
 
-  try {
-    for (const step of steps) {
-      step.status = 'running';
-      await storage.updateAgentExecution(executionId, { steps });
+  // 3. Get current execution to read steps
+  const execution = await storage.getAgentExecutionById(executionId);
+  if (!execution) return;
 
-      // Simulate generation work — in production, this would call the generation queue
-      await new Promise((resolve) => setTimeout(resolve, 100));
+  const steps = [...(execution.steps as ExecutionStep[])];
+  const posts = (planRecord.posts || []) as PlanPost[];
 
-      step.status = 'complete';
-      step.result = { generated: true, postIndex: step.index };
-      await storage.updateAgentExecution(executionId, { steps });
+  // 4. Track created IDs across all steps
+  const allGenerationIds: string[] = [];
+  const allAdCopyIds: string[] = [];
+  const allApprovalQueueIds: string[] = [];
+
+  let hasFailure = false;
+
+  // 5. Execute each post
+  for (let i = 0; i < posts.length; i++) {
+    const post = posts[i];
+    const step = steps[i];
+    if (!post || !step) continue;
+
+    // Skip already completed steps (needed for retry)
+    if (step.status === 'complete') {
+      // Collect existing IDs from completed steps
+      if (step.result?.generationId) allGenerationIds.push(step.result.generationId);
+      if (step.result?.adCopyId) allAdCopyIds.push(step.result.adCopyId);
+      if (step.result?.approvalQueueId) allApprovalQueueIds.push(step.result.approvalQueueId);
+      continue;
     }
 
-    await storage.updateAgentExecution(executionId, { status: 'complete', completedAt: new Date(), steps });
-    await storage.updateAgentPlan(planId, { status: 'completed' });
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : 'Unknown execution error';
-    await storage.updateAgentExecution(executionId, { status: 'failed', errorMessage, completedAt: new Date(), steps });
-    await storage.updateAgentPlan(planId, { status: 'failed' });
-    throw err;
+    // Check if execution was cancelled externally
+    const currentExec = await storage.getAgentExecutionById(executionId);
+    if (currentExec?.status === 'failed') {
+      logger.info({ module: 'AgentOrchestrator', executionId }, 'Execution cancelled externally, stopping');
+      break;
+    }
+
+    // Mark step as running
+    step.status = 'running';
+    await storage.updateAgentExecution(executionId, { steps });
+
+    try {
+      const result = await executePostStep(storage, post, planRecord, userId);
+
+      // Mark step as complete with result IDs
+      step.status = 'complete';
+      step.result = {
+        generationId: result.generationId,
+        adCopyId: result.adCopyId,
+        approvalQueueId: result.approvalQueueId,
+        imageUrl: result.imageUrl,
+        postIndex: step.index,
+      };
+
+      allGenerationIds.push(result.generationId);
+      allAdCopyIds.push(result.adCopyId);
+      allApprovalQueueIds.push(result.approvalQueueId);
+
+      logger.info(
+        { module: 'AgentOrchestrator', executionId, stepIndex: i, generationId: result.generationId },
+        `Step ${i + 1}/${posts.length} complete`,
+      );
+    } catch (err) {
+      // Mark step as failed but continue with remaining steps
+      const errorMessage = err instanceof Error ? err.message : 'Unknown step error';
+      step.status = 'failed';
+      step.result = { error: errorMessage, postIndex: step.index };
+      hasFailure = true;
+
+      logger.error(
+        { module: 'AgentOrchestrator', executionId, stepIndex: i, err },
+        `Step ${i + 1}/${posts.length} failed`,
+      );
+    }
+
+    // Persist steps + accumulated IDs after each step
+    await storage.updateAgentExecution(executionId, {
+      steps,
+      generationIds: allGenerationIds,
+      adCopyIds: allAdCopyIds,
+      approvalQueueIds: allApprovalQueueIds,
+    });
+
+    // Brief delay between steps to avoid rate limits
+    if (i < posts.length - 1) {
+      await new Promise((r) => setTimeout(r, 1000));
+    }
   }
+
+  // 6. Determine final status
+  const finalStatus = hasFailure ? 'failed' : 'complete';
+  await storage.updateAgentExecution(executionId, {
+    status: finalStatus,
+    completedAt: new Date(),
+    steps,
+    generationIds: allGenerationIds,
+    adCopyIds: allAdCopyIds,
+    approvalQueueIds: allApprovalQueueIds,
+    ...(hasFailure && { errorMessage: 'One or more steps failed — see individual step results' }),
+  });
+
+  // 7. Update plan status
+  await storage.updateAgentPlan(planId, { status: hasFailure ? 'failed' : 'completed' });
+
+  logger.info(
+    {
+      module: 'AgentOrchestrator',
+      executionId,
+      finalStatus,
+      totalSteps: posts.length,
+      succeeded: allGenerationIds.length,
+      failed: posts.length - allGenerationIds.length,
+    },
+    'Execution run complete',
+  );
 }
 
 function parseJsonArray(text: string): any[] | null {
@@ -708,6 +1061,88 @@ function parseJsonObject(text: string): any | null {
     }
     return null;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Phase 5 — Plan History, Cancel, Retry
+// ---------------------------------------------------------------------------
+
+export async function listPlans(storage: IStorage, userId: string, limit = 20) {
+  const plans = await storage.getAgentPlansByUserId(userId, limit);
+  return plans.map((p: any) => ({
+    id: p.id,
+    objective: p.objective,
+    platform: p.platform,
+    status: p.status,
+    approvalScore: p.approvalScore,
+    postCount: Array.isArray(p.posts) ? p.posts.length : 0,
+    createdAt: p.createdAt,
+    updatedAt: p.updatedAt,
+  }));
+}
+
+export async function cancelExecution(storage: IStorage, executionId: string, userId: string) {
+  const execution = await storage.getAgentExecutionById(executionId);
+  if (!execution || execution.userId !== userId) {
+    throw new PlanNotFoundError(executionId);
+  }
+  if (execution.status !== 'running' && execution.status !== 'queued') {
+    throw new Error('Cannot cancel execution that is not running or queued');
+  }
+
+  // Mark as failed with cancellation message
+  // The runExecutionSteps loop checks for status === 'failed' before each step
+  await storage.updateAgentExecution(executionId, {
+    status: 'failed',
+    errorMessage: 'Cancelled by user',
+    completedAt: new Date(),
+  });
+
+  // Also update the plan status
+  await storage.updateAgentPlan(execution.planId, {
+    status: 'cancelled',
+  });
+
+  logger.info({ executionId, userId }, 'Execution cancelled by user');
+}
+
+export async function retryFailedSteps(storage: IStorage, executionId: string, userId: string) {
+  const execution = await storage.getAgentExecutionById(executionId);
+  if (!execution || execution.userId !== userId) {
+    throw new PlanNotFoundError(executionId);
+  }
+  if (execution.status !== 'failed') {
+    throw new Error('Can only retry failed executions');
+  }
+
+  const plan = await storage.getAgentPlanById(execution.planId);
+  if (!plan) {
+    throw new PlanNotFoundError(execution.planId);
+  }
+
+  // Reset failed steps to pending
+  const steps = ((execution.steps || []) as ExecutionStep[]).map((s) =>
+    s.status === 'failed' ? { ...s, status: 'pending' as const, result: undefined } : s,
+  );
+
+  await storage.updateAgentExecution(executionId, {
+    status: 'running',
+    steps,
+    errorMessage: null,
+    completedAt: null,
+  });
+
+  // Update plan status back to executing
+  await storage.updateAgentPlan(plan.id, {
+    status: 'executing',
+  });
+
+  // Fire-and-forget: re-run execution (the loop will skip completed steps)
+  runExecutionSteps(storage, executionId, execution.planId, userId).catch((err) => {
+    logger.error({ err, executionId }, 'Retry execution failed');
+  });
+
+  return { executionId, status: 'running', steps };
 }
 
 // Custom error for missing plans
