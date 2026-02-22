@@ -1,4 +1,4 @@
-# Deploy Pipeline — staging ➜ approval ➜ production
+# Deploy Pipeline - staging -> approval -> production
 # Triggered on merge to main. Uses Railway for hosting.
 #
 # Flow:
@@ -27,7 +27,9 @@ jobs:
   # --------------------------------------------------
   # 1. Deploy to staging
   # --------------------------------------------------
-  
+  deploy-staging:
+    name: Deploy Staging
+    runs-on: ubuntu-latest
     continue-on-error: true
     outputs:
       staging_url: ${{ steps.deploy.outputs.staging_url }}
@@ -62,7 +64,7 @@ jobs:
               echo "Staging is healthy (attempt $i)"
               exit 0
             fi
-            echo "  attempt $i — status $STATUS, retrying in 10s..."
+            echo "  attempt $i - status $STATUS, retrying in 10s..."
             sleep 10
           done
           echo "::error::Staging failed to become healthy after 5 minutes"
@@ -71,7 +73,9 @@ jobs:
   # --------------------------------------------------
   # 2. Staging smoke checks
   # --------------------------------------------------
-  
+  smoke-staging:
+    name: Staging Smoke Checks
+    runs-on: ubuntu-latest
     continue-on-error: true
     needs: [deploy-staging]
     steps:
@@ -79,7 +83,7 @@ jobs:
         run: |
           URL="${{ needs.deploy-staging.outputs.staging_url }}"
           STATUS=$(curl -s -o /dev/null -w '%{http_code}' "$URL/api/health")
-          echo "GET /api/health → $STATUS"
+          echo "GET /api/health -> $STATUS"
           [ "$STATUS" = "200" ] || { echo "::error::Health check failed"; exit 1; }
 
       - name: Login page serves HTML
@@ -94,7 +98,7 @@ jobs:
         run: |
           URL="${{ needs.deploy-staging.outputs.staging_url }}"
           STATUS=$(curl -s -o /dev/null -w '%{http_code}' "$URL/api/products")
-          echo "GET /api/products (no auth) → $STATUS"
+          echo "GET /api/products (no auth) -> $STATUS"
           [ "$STATUS" = "401" ] || { echo "::error::Expected 401, got $STATUS"; exit 1; }
 
   # --------------------------------------------------
@@ -140,7 +144,7 @@ jobs:
               echo "Production is healthy (attempt $i)"
               exit 0
             fi
-            echo "  attempt $i — status $STATUS, retrying in 10s..."
+            echo "  attempt $i - status $STATUS, retrying in 10s..."
             sleep 10
           done
           echo "::error::Production failed to become healthy after 5 minutes"
@@ -157,7 +161,7 @@ jobs:
       - name: Health endpoint
         run: |
           STATUS=$(curl -s -o /dev/null -w '%{http_code}' "$PRODUCTION_URL/api/health")
-          echo "GET /api/health → $STATUS"
+          echo "GET /api/health -> $STATUS"
           [ "$STATUS" = "200" ] || { echo "::error::Health check failed"; exit 1; }
 
       - name: Login page serves HTML
@@ -170,6 +174,5 @@ jobs:
       - name: Protected API returns 401
         run: |
           STATUS=$(curl -s -o /dev/null -w '%{http_code}' "$PRODUCTION_URL/api/products")
-          echo "GET /api/products (no auth) → $STATUS"
+          echo "GET /api/products (no auth) -> $STATUS"
           [ "$STATUS" = "401" ] || { echo "::error::Expected 401, got $STATUS"; exit 1; }
-
