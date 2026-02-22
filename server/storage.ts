@@ -73,6 +73,11 @@ import {
   type InsertBrandDNA,
   type GenerationPerformance,
   type InsertGenerationPerformance,
+  // Agent Mode types
+  type AgentPlan,
+  type InsertAgentPlan,
+  type AgentExecution,
+  type InsertAgentExecution,
 } from '@shared/schema';
 
 // Repository imports
@@ -92,6 +97,7 @@ import {
   styleReferenceRepo,
   trainingRepo,
   intelligenceRepo,
+  agentPlanRepo,
 } from './repositories';
 
 export interface IStorage {
@@ -414,6 +420,18 @@ export interface IStorage {
   // ============================================
   getGenerationPerformance(generationId: string): Promise<GenerationPerformance[]>;
   saveGenerationPerformance(data: InsertGenerationPerformance): Promise<GenerationPerformance>;
+
+  // ============================================
+  // AGENT MODE — PLAN & EXECUTION OPERATIONS
+  // ============================================
+  createAgentPlan(data: InsertAgentPlan): Promise<AgentPlan>;
+  getAgentPlanById(planId: string): Promise<AgentPlan | undefined>;
+  getAgentPlansByUserId(userId: string, limit?: number): Promise<AgentPlan[]>;
+  updateAgentPlan(planId: string, updates: Partial<InsertAgentPlan>): Promise<AgentPlan>;
+  createAgentExecution(data: InsertAgentExecution): Promise<AgentExecution>;
+  getAgentExecutionById(executionId: string): Promise<AgentExecution | undefined>;
+  getAgentExecutionByIdempotencyKey(planId: string, key: string): Promise<AgentExecution | undefined>;
+  updateAgentExecution(executionId: string, updates: Partial<InsertAgentExecution>): Promise<AgentExecution>;
 }
 
 export class DbStorage implements IStorage {
@@ -1061,6 +1079,34 @@ export class DbStorage implements IStorage {
   }
   async saveGenerationPerformance(data: InsertGenerationPerformance): Promise<GenerationPerformance> {
     return intelligenceRepo.saveGenerationPerformance(data);
+  }
+
+  // ============================================
+  // AGENT MODE — PLAN & EXECUTION OPERATIONS
+  // ============================================
+  async createAgentPlan(data: InsertAgentPlan): Promise<AgentPlan> {
+    return agentPlanRepo.createPlan(data);
+  }
+  async getAgentPlanById(planId: string): Promise<AgentPlan | undefined> {
+    return agentPlanRepo.getPlanById(planId);
+  }
+  async getAgentPlansByUserId(userId: string, limit?: number): Promise<AgentPlan[]> {
+    return agentPlanRepo.getPlansByUserId(userId, limit);
+  }
+  async updateAgentPlan(planId: string, updates: Partial<InsertAgentPlan>): Promise<AgentPlan> {
+    return agentPlanRepo.updatePlan(planId, updates);
+  }
+  async createAgentExecution(data: InsertAgentExecution): Promise<AgentExecution> {
+    return agentPlanRepo.createExecution(data);
+  }
+  async getAgentExecutionById(executionId: string): Promise<AgentExecution | undefined> {
+    return agentPlanRepo.getExecutionById(executionId);
+  }
+  async getAgentExecutionByIdempotencyKey(planId: string, key: string): Promise<AgentExecution | undefined> {
+    return agentPlanRepo.getExecutionByIdempotencyKey(planId, key);
+  }
+  async updateAgentExecution(executionId: string, updates: Partial<InsertAgentExecution>): Promise<AgentExecution> {
+    return agentPlanRepo.updateExecution(executionId, updates);
   }
 }
 

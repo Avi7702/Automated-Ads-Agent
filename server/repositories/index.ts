@@ -13,3 +13,4 @@ export * as socialRepo from './socialRepository';
 export * as styleReferenceRepo from './styleReferenceRepository';
 export * as trainingRepo from './trainingRepository';
 export * as intelligenceRepo from './intelligenceRepository';
+export * as agentPlanRepo from './agentPlanRepository';
