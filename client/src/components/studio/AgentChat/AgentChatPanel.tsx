@@ -383,6 +383,13 @@ export function AgentChatPanel({
   const hasSpeech =
     typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
   return (
     <div className={cn('w-full mb-6', className)}>
       <button
@@ -392,28 +399,30 @@ export function AgentChatPanel({
           }
         }}
         className={cn(
-          'w-full flex items-center justify-between px-4 py-3 rounded-xl',
-          'bg-card/50 border border-border hover:bg-card/80 transition-colors',
+          'w-full flex items-center justify-between px-5 py-4 rounded-2xl',
+          'bg-card/60 border border-border/60 hover:bg-card/80 transition-all',
           isOpen && 'rounded-b-none border-b-0',
           !isCollapseEnabled && 'cursor-default',
         )}
       >
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center">
-            <Bot className="w-4 h-4 text-white" />
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-violet-500/20">
+            <Bot className="w-5 h-5 text-white" />
           </div>
-          <span className="text-sm font-medium">{title}</span>
-          {messages.length > 0 && (
-            <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
-              {messages.length} msg{messages.length !== 1 ? 's' : ''}
+          <div className="text-left">
+            <span className="text-base font-semibold block leading-tight">{title}</span>
+            <span className="text-xs text-muted-foreground">
+              {messages.length > 0
+                ? `${messages.length} message${messages.length !== 1 ? 's' : ''}`
+                : 'Ask anything about your ads'}
             </span>
-          )}
+          </div>
         </div>
         {isCollapseEnabled &&
           (isOpen ? (
-            <ChevronUp className="w-4 h-4 text-muted-foreground" />
+            <ChevronUp className="w-5 h-5 text-muted-foreground" />
           ) : (
-            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            <ChevronDown className="w-5 h-5 text-muted-foreground" />
           ))}
       </button>
 
@@ -426,10 +435,10 @@ export function AgentChatPanel({
             transition={{ duration: 0.2, ease: 'easeInOut' }}
             className="overflow-hidden"
           >
-            <div className="border border-t-0 border-border rounded-b-xl bg-card/30 backdrop-blur-sm">
-              <div className={cn(bodyMaxHeightClassName, 'overflow-y-auto p-4 space-y-3 scrollbar-hide')}>
+            <div className="border border-t-0 border-border/60 rounded-b-2xl bg-card/40 backdrop-blur-md">
+              <div className={cn(bodyMaxHeightClassName, 'overflow-y-auto px-5 py-4 space-y-4 scrollbar-hide')}>
                 {(ideaBankBridgeState === 'waiting' || ideaBankBridgeState === 'sent' || ideaBankContext?.status) && (
-                  <div className="text-xs rounded-lg border border-border bg-muted/40 px-3 py-2 text-muted-foreground">
+                  <div className="text-sm rounded-xl border border-border bg-muted/40 px-4 py-3 text-muted-foreground">
                     {ideaBankBridgeState === 'waiting' && 'Idea Bank is running. I will use the results when ready.'}
                     {ideaBankBridgeState === 'sent' && 'Idea Bank results were sent to this chat.'}
                     {ideaBankBridgeState !== 'waiting' &&
@@ -442,16 +451,21 @@ export function AgentChatPanel({
                 )}
 
                 {orch.tempUploads.length > 0 && (
-                  <div className="text-xs rounded-lg border border-border bg-muted/40 px-3 py-2 text-muted-foreground">
+                  <div className="text-sm rounded-xl border border-border bg-muted/40 px-4 py-3 text-muted-foreground">
                     {orch.tempUploads.length} uploaded reference image
                     {orch.tempUploads.length !== 1 ? 's' : ''} ready for generation.
                   </div>
                 )}
 
                 {messages.length === 0 && (
-                  <p className="text-center text-xs text-muted-foreground py-6">
-                    Ask me to generate ads, find products, write copy, or set up your campaign.
-                  </p>
+                  <div className="text-center py-10 space-y-3">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center mx-auto">
+                      <Bot className="w-6 h-6 text-violet-400" />
+                    </div>
+                    <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+                      Ask me to generate ads, find products, write copy, or set up your campaign.
+                    </p>
+                  </div>
                 )}
 
                 {messages.map((msg) => (
@@ -459,94 +473,125 @@ export function AgentChatPanel({
                 ))}
 
                 {isStreaming && (
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground py-1">
+                    <div className="flex gap-1">
+                      <div
+                        className="w-2 h-2 rounded-full bg-violet-400 animate-bounce"
+                        style={{ animationDelay: '0ms' }}
+                      />
+                      <div
+                        className="w-2 h-2 rounded-full bg-violet-400 animate-bounce"
+                        style={{ animationDelay: '150ms' }}
+                      />
+                      <div
+                        className="w-2 h-2 rounded-full bg-violet-400 animate-bounce"
+                        style={{ animationDelay: '300ms' }}
+                      />
+                    </div>
                     Thinking...
                   </div>
                 )}
 
                 {error && (
-                  <div className="text-xs text-destructive bg-destructive/10 rounded-lg px-3 py-2">{error}</div>
+                  <div className="text-sm text-destructive bg-destructive/10 rounded-xl px-4 py-3">{error}</div>
                 )}
                 <div ref={messagesEndRef} />
               </div>
 
-              <form onSubmit={handleSubmit} className="flex items-center gap-2 p-3 border-t border-border">
-                <input
-                  ref={uploadInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleUploadInputChange}
-                  className="hidden"
-                />
+              <form onSubmit={handleSubmit} className="p-4 border-t border-border/60">
+                <div className="flex items-end gap-3 rounded-xl bg-muted/50 border border-border/40 px-4 py-3 focus-within:border-violet-500/50 focus-within:ring-1 focus-within:ring-violet-500/20 transition-all">
+                  <input
+                    ref={uploadInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleUploadInputChange}
+                    className="hidden"
+                  />
 
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => uploadInputRef.current?.click()}
-                  disabled={isStreaming || isUploading || remainingUploadSlots <= 0}
-                  className="h-8 w-8 p-0"
-                  title={
-                    remainingUploadSlots > 0
-                      ? `Upload images (${remainingUploadSlots} slot${remainingUploadSlots === 1 ? '' : 's'} left)`
-                      : 'Image upload limit reached'
-                  }
-                >
-                  {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
-                </Button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => uploadInputRef.current?.click()}
+                      disabled={isStreaming || isUploading || remainingUploadSlots <= 0}
+                      className="h-9 w-9 p-0 rounded-lg hover:bg-background/60"
+                      title={
+                        remainingUploadSlots > 0
+                          ? `Upload images (${remainingUploadSlots} slot${remainingUploadSlots === 1 ? '' : 's'} left)`
+                          : 'Image upload limit reached'
+                      }
+                    >
+                      {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+                    </Button>
 
-                {hasSpeech && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={toggleVoice}
-                    className={cn('h-8 w-8 p-0', isListening && 'text-red-500')}
-                  >
-                    {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                  </Button>
-                )}
+                    {hasSpeech && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={toggleVoice}
+                        className={cn('h-9 w-9 p-0 rounded-lg hover:bg-background/60', isListening && 'text-red-500')}
+                      >
+                        {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                      </Button>
+                    )}
+                  </div>
 
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder={isListening ? 'Listening...' : isUploading ? 'Uploading images...' : 'Type a message...'}
-                  disabled={isStreaming}
-                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-                />
+                  <textarea
+                    ref={inputRef as unknown as React.RefObject<HTMLTextAreaElement>}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder={
+                      isListening
+                        ? 'Listening...'
+                        : isUploading
+                          ? 'Uploading images...'
+                          : 'Type a message... (Enter to send, Shift+Enter for new line)'
+                    }
+                    disabled={isStreaming}
+                    rows={2}
+                    className="flex-1 bg-transparent text-base leading-relaxed outline-none placeholder:text-muted-foreground resize-none min-h-[52px] max-h-[120px] py-1"
+                  />
 
-                {messages.length > 0 && !isStreaming && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={clearMessages}
-                    className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                    title="Clear chat"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-                )}
+                  <div className="flex items-center gap-1 shrink-0">
+                    {messages.length > 0 && !isStreaming && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={clearMessages}
+                        className="h-9 w-9 p-0 rounded-lg text-muted-foreground hover:text-foreground hover:bg-background/60"
+                        title="Clear chat"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
 
-                {isStreaming ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={stopStreaming}
-                    className="h-8 w-8 p-0 text-destructive"
-                  >
-                    <Square className="w-3.5 h-3.5" />
-                  </Button>
-                ) : (
-                  <Button type="submit" variant="ghost" size="sm" disabled={!input.trim()} className="h-8 w-8 p-0">
-                    <Send className="w-3.5 h-3.5" />
-                  </Button>
-                )}
+                    {isStreaming ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={stopStreaming}
+                        className="h-9 w-9 p-0 rounded-lg text-destructive hover:bg-destructive/10"
+                      >
+                        <Square className="w-4 h-4" />
+                      </Button>
+                    ) : (
+                      <Button
+                        type="submit"
+                        size="sm"
+                        disabled={!input.trim()}
+                        className="h-9 w-9 p-0 rounded-lg bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-30"
+                      >
+                        <Send className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
               </form>
             </div>
           </motion.div>

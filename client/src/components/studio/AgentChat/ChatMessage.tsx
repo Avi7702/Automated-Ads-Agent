@@ -27,28 +27,30 @@ export function ChatMessage({ message }: { message: ChatMessageType }) {
   const isUser = message.role === 'user';
 
   return (
-    <div className={cn('flex gap-2.5', isUser ? 'flex-row-reverse' : 'flex-row')}>
+    <div className={cn('flex gap-3', isUser ? 'flex-row-reverse' : 'flex-row')}>
       {/* Avatar */}
       <div
         className={cn(
-          'flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs',
-          isUser ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground',
+          'flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mt-0.5',
+          isUser
+            ? 'bg-primary text-primary-foreground'
+            : 'bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-md shadow-violet-500/20',
         )}
       >
-        {isUser ? <User className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5" />}
+        {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
       </div>
 
       {/* Content */}
-      <div className={cn('flex flex-col gap-1 max-w-[85%]', isUser ? 'items-end' : 'items-start')}>
+      <div className={cn('flex flex-col gap-1.5 max-w-[85%]', isUser ? 'items-end' : 'items-start')}>
         {/* Tool calls */}
         {message.toolCalls && message.toolCalls.length > 0 && (
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-1.5">
             {message.toolCalls.map((tc, i) => (
               <span
                 key={i}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-medium"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-medium"
               >
-                <Wrench className="w-2.5 h-2.5" />
+                <Wrench className="w-3 h-3" />
                 {TOOL_LABELS[tc.name] ?? tc.name}
               </span>
             ))}
@@ -59,8 +61,8 @@ export function ChatMessage({ message }: { message: ChatMessageType }) {
         {message.content && (
           <div
             className={cn(
-              'rounded-2xl px-3.5 py-2 text-sm leading-relaxed',
-              isUser ? 'bg-primary text-primary-foreground rounded-br-md' : 'bg-muted text-foreground rounded-bl-md',
+              'rounded-2xl px-4 py-3 text-[15px] leading-relaxed whitespace-pre-wrap',
+              isUser ? 'bg-primary text-primary-foreground rounded-br-md' : 'bg-muted/80 text-foreground rounded-bl-md',
             )}
           >
             {message.content}
