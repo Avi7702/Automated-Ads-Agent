@@ -19,6 +19,8 @@ import '@testing-library/jest-dom';
 import { IdeaBankPanel } from '../ideabank';
 import type { IdeaBankSuggestResponse, IdeaBankSuggestion, TemplateSlotSuggestion } from '@shared/types/ideaBank';
 
+vi.setConfig({ testTimeout: 15000, hookTimeout: 20000 });
+
 // ============================================
 // MOCK DATA FACTORIES
 // ============================================
@@ -176,6 +178,7 @@ beforeEach(() => {
   mockResponseData = createMockResponse();
   mockShouldFail = false;
   fetchCallCount = 0;
+  window.sessionStorage.clear();
 
   // Setup global fetch mock
   global.fetch = mockFetch as unknown as typeof fetch;

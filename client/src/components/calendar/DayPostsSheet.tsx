@@ -25,7 +25,7 @@ import {
   Globe,
 } from 'lucide-react';
 import { PostStatusBadge } from './PostStatusBadge';
-import { useCancelPost } from '@/hooks/useScheduledPosts';
+import { useCancelPost, useRetryPost } from '@/hooks/useScheduledPosts';
 import type { ScheduledPost } from '@/hooks/useScheduledPosts';
 import { useToast } from '@/hooks/use-toast';
 
@@ -78,8 +78,10 @@ function getDayLabel(day: Date): string {
 
 export function DayPostsSheet({ open, onOpenChange, day, posts }: DayPostsSheetProps) {
   const cancelPost = useCancelPost();
+  const retryPost = useRetryPost();
   const { toast } = useToast();
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
 
   const handleCancel = useCallback(
     async (postId: string) => {
@@ -102,13 +104,21 @@ export function DayPostsSheet({ open, onOpenChange, day, posts }: DayPostsSheetP
 
   const handleRetry = useCallback(
     async (postId: string) => {
-      // Retry = cancel and re-schedule or re-trigger — for now, toast guidance
-      toast({
-        title: 'Retry requested',
-        description: 'Please reschedule this post from the calendar.',
-      });
+      setRetryingId(postId);
+      try {
+        await retryPost.mutateAsync({ postId });
+        toast({ title: 'Post rescheduled for retry', description: 'The post has been queued for retry.' });
+      } catch (err: any) {
+        toast({
+          title: 'Failed to retry',
+          description: err.message || 'Something went wrong. Please try again.',
+          variant: 'destructive',
+        });
+      } finally {
+        setRetryingId(null);
+      }
     },
-    [toast],
+    [retryPost, toast],
   );
 
   if (!day) return null;
@@ -203,6 +213,7 @@ export function DayPostsSheet({ open, onOpenChange, day, posts }: DayPostsSheetP
                     onCancel={handleCancel}
                     onRetry={handleRetry}
                     isCancelling={cancellingId === post.id}
+                    isRetrying={retryingId === post.id}
                   />
                 ))}
               </div>
@@ -232,12 +243,14 @@ function TimelinePostCard({
   onCancel,
   onRetry,
   isCancelling,
+  isRetrying,
 }: {
   post: ScheduledPost;
   index: number;
   onCancel: (id: string) => void;
   onRetry: (id: string) => void;
   isCancelling: boolean;
+  isRetrying: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const time = format(parseISO(post.scheduledFor), 'h:mm a');
@@ -424,9 +437,10 @@ function TimelinePostCard({
                 size="sm"
                 className="h-7 text-xs text-amber-600 dark:text-amber-400 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-900/20 gap-1.5"
                 onClick={() => onRetry(post.id)}
+                disabled={isRetrying}
               >
-                <RotateCcw className="h-3 w-3" />
-                Retry
+                {isRetrying ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}
+                {isRetrying ? 'Retrying...' : 'Retry'}
               </Button>
             )}
             {canCancel && (

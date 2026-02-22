@@ -15,6 +15,7 @@ import {
   Facebook,
   Instagram,
   Twitter,
+  CalendarClock,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -36,6 +37,7 @@ interface QueueCardProps {
   };
   onReview: () => void;
   onQuickApprove: () => void;
+  onApproveAndSchedule?: () => void;
   onDelete: () => void;
   isSelected?: boolean;
   onSelect?: (selected: boolean) => void;
@@ -53,6 +55,7 @@ export function QueueCard({
   item,
   onReview,
   onQuickApprove,
+  onApproveAndSchedule,
   onDelete,
   isSelected = false,
   onSelect,
@@ -156,7 +159,7 @@ export function QueueCard({
               )}
 
               {/* Actions */}
-              <div className="flex gap-2 pt-1">
+              <div className="flex gap-2 pt-1 flex-wrap">
                 <Button
                   onClick={onQuickApprove}
                   size="sm"
@@ -164,8 +167,19 @@ export function QueueCard({
                   className="flex-1 bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600"
                 >
                   <CheckCircle2 className="w-3 h-3 mr-1" />
-                  Quick Approve
+                  Approve
                 </Button>
+                {onApproveAndSchedule && (
+                  <Button
+                    onClick={onApproveAndSchedule}
+                    size="sm"
+                    variant="outline"
+                    className="flex-1 border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-900/20"
+                  >
+                    <CalendarClock className="w-3 h-3 mr-1" />
+                    Approve & Schedule
+                  </Button>
+                )}
                 <Button onClick={onReview} size="sm" variant="outline" className="flex-1">
                   <Eye className="w-3 h-3 mr-1" />
                   Review

@@ -20,6 +20,7 @@ import { InspectorPanel } from '@/components/studio/InspectorPanel';
 import { IdeaBankBar } from '@/components/studio/IdeaBankBar';
 import { HistoryPanel } from '@/components/studio/HistoryPanel';
 import { AgentChatPanel } from '@/components/studio/AgentChat';
+import { AgentModePanel } from '@/components/studio/AgentMode';
 import { SaveToCatalogDialog } from '@/components/SaveToCatalogDialog';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Button } from '@/components/ui/button';
@@ -395,18 +396,25 @@ export default function Studio() {
           </motion.div>
 
           {workspaceMode === 'agent' && (
-            <div className="mx-auto max-w-5xl">
-              <AgentChatPanel
-                orch={orch}
-                title="Ad Assistant"
-                forceExpanded
-                showCollapseToggle={false}
-                bodyMaxHeightClassName="max-h-[calc(100vh-320px)]"
-                ideaBankContext={ideaBankContext}
-                ideaBankBridgeState={ideaBankBridgeState}
-                externalMessage={agentExternalMessage}
-                onExternalMessageConsumed={handleExternalMessageConsumed}
-              />
+            <div className="mx-auto max-w-5xl grid gap-6 xl:grid-cols-[1fr_380px]">
+              <div className="min-w-0">
+                <AgentModePanel orch={orch} />
+              </div>
+              <div className="min-w-0 hidden xl:block">
+                <div className="xl:sticky xl:top-24">
+                  <AgentChatPanel
+                    orch={orch}
+                    title="Ad Assistant"
+                    forceExpanded
+                    showCollapseToggle={false}
+                    bodyMaxHeightClassName="max-h-[calc(100vh-320px)]"
+                    ideaBankContext={ideaBankContext}
+                    ideaBankBridgeState={ideaBankBridgeState}
+                    externalMessage={agentExternalMessage}
+                    onExternalMessageConsumed={handleExternalMessageConsumed}
+                  />
+                </div>
+              </div>
             </div>
           )}
 

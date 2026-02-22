@@ -393,6 +393,7 @@ export function createMockScheduledPost(overrides: Partial<ScheduledPost> = {}):
     nextRetryAt: null,
     generationId: null,
     templateId: null,
+    publishIdempotencyKey: null,
     createdAt: now,
     updatedAt: now,
     ...overrides,

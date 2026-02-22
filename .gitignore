@@ -57,3 +57,9 @@ C*Usersavibm*eslint_*.txt
 C*Usersavibm*eslint_*.json
 C*Usersavibm*staged_files.txt
 docs/verification-group-*.md
+
+# Cross-project quarantine and generated local artifacts
+.tmp-agentic-ads-agent-cf-*/
+docs/generated-posts/
+scripts/nds-image-gen.py
+docs/NDS-BRAND-CHEATSHEET.md

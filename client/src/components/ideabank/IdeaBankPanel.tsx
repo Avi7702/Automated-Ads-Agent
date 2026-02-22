@@ -90,8 +90,8 @@ function IdeaBankPanelComponent({
           prompt: suggestion.prompt,
           reasoning: suggestion.reasoning,
           confidence: suggestion.confidence,
-          recommendedPlatform: suggestion.recommendedPlatform,
-          recommendedAspectRatio: suggestion.recommendedAspectRatio,
+          ...(suggestion.recommendedPlatform ? { recommendedPlatform: suggestion.recommendedPlatform } : {}),
+          ...(suggestion.recommendedAspectRatio ? { recommendedAspectRatio: suggestion.recommendedAspectRatio } : {}),
         })) ?? [],
     });
   }, [contextStatus, error, mergedPrompt, mode, onContextChange, response?.suggestions, slotSuggestions]);

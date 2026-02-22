@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Approval Queue Router
  * Human-in-the-loop approval workflow for AI-generated content
@@ -20,7 +20,7 @@ import type { RouterContext, RouterFactory, RouterModule } from '../types/router
 import { createRouter, asyncHandler } from './utils/createRouter';
 import * as approvalQueueService from '../services/approvalQueueService';
 import { validate } from '../middleware/validate';
-import { approvalQueueQuerySchema } from '../validation/schemas';
+import { approvalQueueQuerySchema, approveWithScheduleSchema } from '../validation/schemas';
 
 export const approvalQueueRouter: RouterFactory = (ctx: RouterContext): Router => {
   const router = createRouter();
@@ -126,15 +126,19 @@ export const approvalQueueRouter: RouterFactory = (ctx: RouterContext): Router =
   );
 
   /**
-   * POST /:id/approve - Approve a queue item
+   * POST /:id/approve - Approve a queue item, optionally scheduling it in one step
+   *
+   * Body: { notes?: string, schedule?: { connectionId, scheduledFor, timezone? } }
+   * When `schedule` is provided, the item is approved AND a scheduled post is created.
    */
   router.post(
     '/:id/approve',
     requireAuth,
+    validate(approveWithScheduleSchema, 'body'),
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const id = String(req.params['id']);
-        const { notes } = req.body;
+        const { notes, schedule } = req.body;
 
         // Verify ownership
         const item = await storage.getApprovalQueue(id);
@@ -154,6 +158,21 @@ export const approvalQueueRouter: RouterFactory = (ctx: RouterContext): Router =
 
         await approvalQueueService.approveContent(id, req.user!.id, notes);
 
+        if (schedule) {
+          const scheduledPost = await approvalQueueService.scheduleApprovedContent(id, req.user!.id, schedule);
+
+          logger.info(
+            { userId: req.user!.id, queueItemId: id, scheduledPostId: scheduledPost.id },
+            'Content approved and scheduled',
+          );
+
+          return res.json({
+            success: true,
+            message: 'Content approved and scheduled',
+            scheduledPost,
+          });
+        }
+
         logger.info({ userId: req.user!.id, queueItemId: id }, 'Content approved');
 
         res.json({
@@ -161,6 +180,10 @@ export const approvalQueueRouter: RouterFactory = (ctx: RouterContext): Router =
           message: 'Content approved',
         });
       } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+        if (code === '403') {
+          return res.status(403).json({ success: false, error: (error as Error).message });
+        }
         logger.error({ module: 'ApprovalQueue', err: error, id: req.params['id'] }, 'Failed to approve content');
         res.status(500).json({
           success: false,

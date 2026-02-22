@@ -10,6 +10,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { format } from 'date-fns';
 import { useQuery } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,6 +28,8 @@ import {
   ImageOff,
   Hash,
   ExternalLink,
+  GalleryHorizontal,
+  CheckCircle2,
 } from 'lucide-react';
 import { useSchedulePost } from '@/hooks/useScheduledPosts';
 import { useToast } from '@/hooks/use-toast';
@@ -106,10 +109,12 @@ export function SchedulePostDialog({ open, onOpenChange, defaultDate, prefill }:
   const [connectionId, setConnectionId] = useState('');
   const [caption, setCaption] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [imagePublicId, setImagePublicId] = useState('');
   const [hashtags, setHashtags] = useState('');
   const [errors, setErrors] = useState<FormErrors>({});
   const [imageError, setImageError] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState(false);
 
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
@@ -125,6 +130,21 @@ export function SchedulePostDialog({ open, onOpenChange, defaultDate, prefill }:
   });
 
   const activeAccounts = useMemo(() => accounts.filter((a) => a.isActive), [accounts]);
+
+  // Gallery query — fetched lazily when the popover opens
+  const { data: galleryImages = [], isFetching: galleryLoading } = useQuery<
+    { id: string; generatedImagePath: string; imagePublicId?: string; prompt?: string }[]
+  >({
+    queryKey: ['gallery-recent'],
+    queryFn: async () => {
+      const res = await fetch('/api/generations?limit=12&status=completed', { credentials: 'include' });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.generations ?? data.data ?? data ?? [];
+    },
+    enabled: galleryOpen,
+    staleTime: 30_000,
+  });
 
   // Selected account's platform (for character limit)
   const selectedAccount = useMemo(
@@ -154,11 +174,13 @@ export function SchedulePostDialog({ open, onOpenChange, defaultDate, prefill }:
       setTime('10:00');
       setCaption(prefill?.caption ?? '');
       setImageUrl(prefill?.imageUrl ?? '');
+      setImagePublicId(prefill?.imagePublicId ?? '');
       setHashtags('');
       setConnectionId('');
       setErrors({});
       setImageError(false);
       setSubmitted(false);
+      setGalleryOpen(false);
     }
   }, [open, defaultDate, prefill]);
 
@@ -216,7 +238,7 @@ export function SchedulePostDialog({ open, onOpenChange, defaultDate, prefill }:
         caption: caption.trim(),
         hashtags: hashtagList.length > 0 ? hashtagList : undefined,
         imageUrl: imageUrl || undefined,
-        imagePublicId: prefill?.imagePublicId,
+        imagePublicId: imagePublicId || undefined,
         scheduledFor,
         timezone,
         generationId: prefill?.generationId,
@@ -443,9 +465,56 @@ export function SchedulePostDialog({ open, onOpenChange, defaultDate, prefill }:
 
             {/* ---- Image Section ---- */}
             <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                Image (optional)
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                  Image (optional)
+                </div>
+                <Popover open={galleryOpen} onOpenChange={setGalleryOpen}>
+                  <PopoverTrigger asChild>
+                    <Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1.5">
+                      <GalleryHorizontal className="h-3.5 w-3.5" />
+                      Pick from Gallery
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-72 p-2" align="end">
+                    {galleryLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : galleryImages.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-4">No gallery images found.</p>
+                    ) : (
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {galleryImages.map((img) => (
+                          <button
+                            key={img.id}
+                            type="button"
+                            className="relative rounded-md overflow-hidden aspect-square focus:outline-none focus:ring-2 focus:ring-primary group"
+                            onClick={() => {
+                              setImageUrl(img.generatedImagePath);
+                              setImagePublicId(img.imagePublicId ?? '');
+                              setImageError(false);
+                              setGalleryOpen(false);
+                            }}
+                          >
+                            <img
+                              src={img.generatedImagePath}
+                              alt={img.prompt ?? 'Gallery image'}
+                              className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                              loading="lazy"
+                            />
+                            {imageUrl === img.generatedImagePath && (
+                              <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                                <CheckCircle2 className="h-5 w-5 text-primary" />
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div className="space-y-1.5">
@@ -454,6 +523,7 @@ export function SchedulePostDialog({ open, onOpenChange, defaultDate, prefill }:
                   value={imageUrl}
                   onChange={(e) => {
                     setImageUrl(e.target.value);
+                    setImagePublicId('');
                     setImageError(false);
                   }}
                   placeholder="https://example.com/image.jpg"

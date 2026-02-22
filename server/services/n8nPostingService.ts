@@ -1,12 +1,12 @@
 /**
+ * @deprecated This service is deprecated. Use publishingService.ts instead.
+ * Kept temporarily for /api/n8n/callback rollout compatibility.
+ * TODO: Remove after rollout is confirmed stable.
+ *
  * n8n Posting Service
  *
  * Handles posting to n8n webhooks for multi-platform social media automation.
  * Manages callbacks, error handling, and post status tracking.
- *
- * Usage:
- *   import { postToN8n, handleN8nCallback } from './services/n8nPostingService';
- *   const result = await postToN8n('instagram', content, imageUrl, userId, scheduledPostId);
  */
 
 import { logger } from '../lib/logger';

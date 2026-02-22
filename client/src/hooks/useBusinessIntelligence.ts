@@ -64,6 +64,10 @@ export interface OnboardingStatus {
   hasPriorities: boolean;
 }
 
+interface UseOnboardingStatusOptions {
+  enabled?: boolean;
+}
+
 export interface ProductStats {
   productId: string;
   productName: string;
@@ -170,11 +174,24 @@ export function useBulkSetPriorities() {
 /**
  * Check if the user has completed onboarding.
  */
-export function useOnboardingStatus() {
+export function useOnboardingStatus(options: UseOnboardingStatusOptions = {}) {
+  const { enabled = true } = options;
+
   return useQuery<OnboardingStatus>({
     queryKey: ['intelligence', 'onboarding-status'],
+    enabled,
     queryFn: async () => {
       const res = await fetch('/api/intelligence/onboarding-status', { credentials: 'include' });
+
+      // When logged out, avoid noisy console errors and treat onboarding as effectively complete.
+      if (res.status === 401) {
+        return {
+          onboardingComplete: true,
+          hasBusinessData: false,
+          hasPriorities: false,
+        };
+      }
+
       if (!res.ok) throw new Error('Failed to fetch onboarding status');
       return res.json();
     },

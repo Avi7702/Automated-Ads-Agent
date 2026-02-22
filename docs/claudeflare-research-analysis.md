@@ -1,8 +1,9 @@
-# ClaudeFLARE Research Analysis — Cloudflare Architecture Patterns Extracted from Factory Research
+# ClaudeFLARE Research Analysis - Cloudflare Architecture Patterns Extracted from Factory Research
 
 **Date:** 2026-02-13
 **Source:** 13 factory-research documents in `docs/`
 **Purpose:** Extract every Cloudflare-related architecture pattern, deployment workflow, code example, and design decision for the Automated Ads Agent migration
+**Note:** External project identifiers were sanitized to avoid cross-project leakage into this repository.
 
 ---
 
@@ -31,15 +32,15 @@ Across 13 factory-research documents, **three distinct Cloudflare-native project
 
 ### Projects Using Cloudflare
 
-| Project                         | Stack                                        | Cloudflare Services                                                        | Status                         |
-| ------------------------------- | -------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------ |
-| **NextDaySteelHub (NDS)**       | React + Cloudflare Pages Functions + D1 + R2 | Pages, D1, R2, KV, AI Gateway, Workers, Durable Objects, Browser Rendering | Production (archived Jan 2026) |
-| **Hebrew Image (manus-deploy)** | Next.js 16 on Cloudflare Pages               | Pages, D1, R2, KV, Workers AI                                              | Active development             |
-| **NDS-WEB-BUILD**               | Astro 5 + Tailwind                           | Cloudflare Pages                                                           | Schema components delivered    |
-| **LLM Pages Factory**           | Next.js 16 + Supabase + Inngest              | Cloudflare Pages (deployment target only)                                  | Abandoned prototype            |
-| **page-factory**                | Node.js CLI                                  | Shopify deployment (not Cloudflare)                                        | Production (58 pages)          |
-| **Local_Workflow**              | TypeScript orchestrator                      | Cloudflare Pages (Phase 5 delivery)                                        | Architecture only              |
-| **industrial-seo-factory**      | Claude Code plugin                           | Cloudflare deployment scripts                                              | QA tooling only                |
+| Project                                      | Stack                                        | Cloudflare Services                                                        | Status                         |
+| -------------------------------------------- | -------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------ |
+| **NextDaySteelHub (NDS)**                    | React + Cloudflare Pages Functions + D1 + R2 | Pages, D1, R2, KV, AI Gateway, Workers, Durable Objects, Browser Rendering | Production (archived Jan 2026) |
+| **Reference Image App (external-reference)** | Next.js 16 on Cloudflare Pages               | Pages, D1, R2, KV, Workers AI                                              | Active development             |
+| **NDS-WEB-BUILD**                            | Astro 5 + Tailwind                           | Cloudflare Pages                                                           | Schema components delivered    |
+| **LLM Pages Factory**                        | Next.js 16 + Supabase + Inngest              | Cloudflare Pages (deployment target only)                                  | Abandoned prototype            |
+| **page-factory**                             | Node.js CLI                                  | Shopify deployment (not Cloudflare)                                        | Production (58 pages)          |
+| **Local_Workflow**                           | TypeScript orchestrator                      | Cloudflare Pages (Phase 5 delivery)                                        | Architecture only              |
+| **industrial-seo-factory**                   | Claude Code plugin                           | Cloudflare deployment scripts                                              | QA tooling only                |
 
 ### Key Finding
 
@@ -65,14 +66,14 @@ The **NDS Content Factory** (NextDaySteelHub-archive) is the most comprehensive 
 | `GeminiRateLimiter`    | Durable Object    | Global rate limiter                    | 20 RPM Gemini coordination                  |
 | `InjectionQueue`       | Durable Object    | Claude Code bypass                     | Async response injection                    |
 
-### Hebrew Image Resources
+### Reference Image App Resources
 
-| Resource               | Type         | Purpose                                      |
-| ---------------------- | ------------ | -------------------------------------------- |
-| `hebrew-image-db`      | D1 Database  | Users, projects, images, credit transactions |
-| `hebrew-image-storage` | R2 Bucket    | Generated image storage                      |
-| `CACHE`                | KV Namespace | Caching and rate limiting                    |
-| Workers AI             | AI Binding   | Image generation (backup to Gemini)          |
+| Resource                      | Type         | Purpose                                      |
+| ----------------------------- | ------------ | -------------------------------------------- |
+| `reference-image-app-db`      | D1 Database  | Users, projects, images, credit transactions |
+| `reference-image-app-storage` | R2 Bucket    | Generated image storage                      |
+| `CACHE`                       | KV Namespace | Caching and rate limiting                    |
+| Workers AI                    | AI Binding   | Image generation (backup to Gemini)          |
 
 ---
 
@@ -97,11 +98,11 @@ interface CloudflareEnv {
 # wrangler.toml
 [[d1_databases]]
 binding = "DB"
-database_name = "hebrew-image-db"
+database_name = "reference-image-app-db"
 database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 ```
 
-### 3.2 Raw SQL D1Service Class Pattern (Hebrew Image)
+### 3.2 Raw SQL D1Service Class Pattern (Reference Image App)
 
 From `factory-research-manus.md` -- a clean class-based pattern for D1 without ORM:
 
@@ -142,7 +143,7 @@ export function createStorage(db: D1Database) {
 }
 ```
 
-### 3.4 D1 Schema Design (Hebrew Image)
+### 3.4 D1 Schema Design (Reference Image App)
 
 ```sql
 -- schema.sql
@@ -172,7 +173,7 @@ CREATE TABLE images (
   prompt TEXT,
   user_input TEXT,
   style TEXT,
-  hebrew_text TEXT,
+  localized_text TEXT,
   image_url TEXT,
   r2_key TEXT,
   model TEXT DEFAULT 'lucid-origin',
@@ -210,7 +211,7 @@ From `factory-research-nds-workflows.md`:
 
 ### 3.6 Dual Database Strategy
 
-Hebrew Image uses a dual approach:
+Reference Image App uses a dual approach:
 
 - **Production:** Cloudflare D1 (SQLite on the edge) via raw SQL in `D1Service`
 - **Development:** Local `better-sqlite3` via Drizzle ORM with WAL mode
@@ -231,7 +232,7 @@ await seedDatabase(context.env.DB);
 
 ### 4.1 R2 Bucket Organization
 
-From `factory-research-manus.md` -- Hebrew Image R2 structure:
+From `factory-research-manus.md` -- Reference Image App R2 structure:
 
 ```
 users/{userId}/images/{imageId}.{extension}
@@ -266,7 +267,7 @@ From `factory-research-nds-workflows.md`:
 # wrangler.toml
 [[r2_buckets]]
 binding = "IMAGES"
-bucket_name = "hebrew-image-storage"
+bucket_name = "reference-image-app-storage"
 ```
 
 ---
@@ -283,7 +284,7 @@ From `factory-research-nds-evolution.md`:
 
 Used by `nds-prerender` Worker for caching AI crawler-rendered pages via headless Chrome (Cloudflare Browser Rendering).
 
-### 5.2 Hebrew Image KV
+### 5.2 Reference Image App KV
 
 ```toml
 # wrangler.toml
@@ -374,7 +375,7 @@ From `factory-research-manus.md`:
 
 ```toml
 # wrangler.toml
-name = "hebrew-image"
+name = "reference-image-app"
 compatibility_date = "2026-02-03"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = ".vercel/output/static"
@@ -514,22 +515,22 @@ Every AI stage has a fallback chain routed through AI Gateway:
 
 ## 9. Deployment & Wrangler Patterns
 
-### 9.1 Wrangler Configuration (Hebrew Image)
+### 9.1 Wrangler Configuration (Reference Image App)
 
 ```toml
-name = "hebrew-image"
+name = "reference-image-app"
 compatibility_date = "2026-02-03"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = ".vercel/output/static"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "hebrew-image-db"
+database_name = "reference-image-app-db"
 database_id = "..."
 
 [[r2_buckets]]
 binding = "IMAGES"
-bucket_name = "hebrew-image-storage"
+bucket_name = "reference-image-app-storage"
 
 [[kv_namespaces]]
 binding = "CACHE"
@@ -551,7 +552,7 @@ Uses Wrangler v4.54.0 with pnpm package manager.
 
 ### 9.3 Next.js on Cloudflare Pages
 
-Hebrew Image pattern: Build with Next.js, output to `.vercel/output/static`, deploy to Cloudflare Pages via `wrangler pages deploy`.
+Reference Image App pattern: Build with Next.js, output to `.vercel/output/static`, deploy to Cloudflare Pages via `wrangler pages deploy`.
 
 ### 9.4 Astro on Cloudflare Pages
 
@@ -579,7 +580,7 @@ From `factory-research-original.md` -- LLM Pages Factory deployment module:
 **Important finding:** None of the 13 factory-research documents mention Hono. The projects use:
 
 - **NDS Dashboard:** Cloudflare Pages Functions (file-based routing, no framework)
-- **Hebrew Image:** Next.js 16 App Router on Cloudflare Pages
+- **Reference Image App:** Next.js 16 App Router on Cloudflare Pages
 - **NDS-WEB-BUILD:** Astro 5 on Cloudflare Pages
 - **LLM Pages Factory:** Next.js 16 on Vercel (Cloudflare for deployment target only)
 - **NDS Content Factory Worker:** Raw Cloudflare Worker with `WorkflowEntrypoint` class
@@ -589,7 +590,7 @@ From `factory-research-original.md` -- LLM Pages Factory deployment module:
 | Project                | Framework                      | Reason                                         |
 | ---------------------- | ------------------------------ | ---------------------------------------------- |
 | NDS Dashboard          | Pages Functions (no framework) | Simple API + static frontend                   |
-| Hebrew Image           | Next.js 16                     | Rich React app with SSR                        |
+| Reference Image App    | Next.js 16                     | Rich React app with SSR                        |
 | NDS-WEB-BUILD          | Astro 5                        | Static site with zero-JS output                |
 | Content Factory Worker | Raw Worker                     | Workflow orchestration, no HTTP routing needed |
 
@@ -605,12 +606,12 @@ From `factory-research-nds-design.md`:
 - Admin access gated via `AdminPinGate` component (PIN stored in localStorage)
 - No heavy auth framework -- simple PIN check
 
-### 11.2 Header-Based Auth (Hebrew Image)
+### 11.2 Header-Based Auth (Reference Image App)
 
 - `x-user-id` header for user identification in API routes
 - No full auth system -- simplified for single-user/development
 
-### 11.3 Credit-Based Billing (Hebrew Image)
+### 11.3 Credit-Based Billing (Reference Image App)
 
 - Users start with 10 free credits
 - Plans: free, basic, pro, business
@@ -695,8 +696,8 @@ API client tracks subrequests (API, D1, R2) for debugging Cloudflare Worker limi
 
 ### 13.2 Resource Naming Conventions
 
-- **D1 Databases:** `{project}-db` (e.g., `nds-tracker-db`, `hebrew-image-db`)
-- **R2 Buckets:** `{project}-{purpose}` (e.g., `nds-tracker-files`, `hebrew-image-storage`)
+- **D1 Databases:** `{project}-db` (e.g., `nds-tracker-db`, `reference-image-app-db`)
+- **R2 Buckets:** `{project}-{purpose}` (e.g., `nds-tracker-files`, `reference-image-app-storage`)
 - **KV Namespaces:** `{PURPOSE}_CACHE` (e.g., `PRERENDER_CACHE`)
 - **Workers:** `{project}-{function}` (e.g., `nds-workflow-worker`, `nds-prerender`)
 - **Pages Projects:** `{project}-{suffix}` (e.g., `nds-tracker-9la`)
@@ -756,29 +757,19 @@ Based on the research, the recommended Cloudflare architecture mirrors NDS but s
 ```
 Automated Ads Agent on Cloudflare:
 
-┌─────────────────────────────────────────────┐
-│  Cloudflare Pages (Frontend)                │
-│  - React/Vite SPA (Studio, Gallery, etc.)   │
-│  - Static assets on CDN                      │
-└──────────────┬──────────────────────────────┘
-               │
-┌──────────────▼──────────────────────────────┐
-│  Cloudflare Worker (API + Backend)           │
-│  - Hono framework (recommended) OR           │
-│    Pages Functions (file-based routing)       │
-│  - All Express routes migrated here           │
-└──────────────┬──────────────────────────────┘
-               │
-    ┌──────────┼──────────┬───────────┐
-    ▼          ▼          ▼           ▼
-┌───────┐ ┌───────┐ ┌────────┐ ┌──────────┐
-│  D1   │ │  R2   │ │   KV   │ │    AI    │
-│       │ │       │ │        │ │ Gateway  │
-│ Users │ │Images │ │ Cache  │ │ Gemini,  │
-│ Posts │ │Assets │ │ Rate   │ │ OpenAI,  │
-│ Copy  │ │ Docs  │ │ Limits │ │ Claude   │
-│ etc.  │ │       │ │        │ │          │
-└───────┘ └───────┘ └────────┘ └──────────┘
+Cloudflare Pages (Frontend)
+  -> React/Vite SPA (Studio, Gallery, etc.)
+  -> Static assets on CDN
+
+Cloudflare Worker (API + Backend)
+  -> Hono framework (recommended) OR Pages Functions
+  -> All Express routes migrated here
+
+Backing services
+  -> D1: users, posts, copy, workflow data
+  -> R2: images, assets, uploaded docs
+  -> KV: cache + rate limits
+  -> AI Gateway: Gemini/OpenAI/Claude routing
 ```
 
 ### 14.2 Database Migration Strategy
@@ -788,7 +779,7 @@ Target: Cloudflare D1 (SQLite)
 
 Patterns to adopt:
 
-1. **D1Service class** from Hebrew Image for type-safe raw SQL
+1. **D1Service class** from Reference Image App for type-safe raw SQL
 2. **Factory function pattern** from NDS for clean CRUD separation
 3. **Boolean mapping** (`Boolean(row.completed)` since D1 stores 0/1)
 4. **UUID via `crypto.randomUUID()`**
@@ -846,21 +837,21 @@ Benefits:
 
 ## Appendix: Source Document Index
 
-| Document                            | Cloudflare Relevance                            | Key Patterns Extracted                                                      |
-| ----------------------------------- | ----------------------------------------------- | --------------------------------------------------------------------------- |
-| `factory-research-manus.md`         | HIGH -- Hebrew Image full Cloudflare stack      | D1 schema, R2 service, KV caching, wrangler.toml, env types                 |
-| `factory-research-nds-design.md`    | HIGH -- NDS Dashboard on Pages Functions        | File-based routing, factory storage, CORS middleware, env interface         |
-| `factory-research-nds-workflows.md` | CRITICAL -- Complete content factory on Workers | Workflows, Durable Objects, AI Gateway, D1 schema, stage pipeline           |
-| `factory-research-nds-evolution.md` | HIGH -- 3 project versions showing migration    | Replit->Cloudflare migration path, resource inventory, KV prerender         |
-| `factory-research-variants.md`      | MEDIUM -- Multiple factory variants             | NDS-WEB-BUILD (Astro on Pages), Local_Workflow (Cloudflare delivery target) |
-| `factory-research-plans-3.md`       | LOW -- Business strategy, minimal Cloudflare    | Hosting choice: Vercel or Cloudflare Pages                                  |
-| `factory-research-plans-2.md`       | LOW -- Feature inventory, minimal Cloudflare    | Cloudflare mentioned as deployment target                                   |
-| `factory-research-clients.md`       | LOW -- Client engagement docs                   | Cloudflare Pages hosting for NDS tracker                                    |
-| `factory-research-nds-analysis.md`  | MEDIUM -- NDS client application                | "Zero monthly cost" rationale for Cloudflare                                |
-| `factory-research-original.md`      | MEDIUM -- Original LLM Pages Factory            | Cloudflare Pages deployment module (177 lines)                              |
-| `factory-research-industrial.md`    | LOW -- Claude Code plugin framework             | MCP configs for Cloudflare Docs/Workers/Observability                       |
-| `factory-research-aiseo.md`         | LOW -- AI SEO version of factory                | Cloudflare Pages as deployment target, Supabase primary                     |
-| `factory-research-temp.md`          | LOW -- Factory temp analysis                    | Cloudflare Pages deployment planned but not wired                           |
+| Document                            | Cloudflare Relevance                              | Key Patterns Extracted                                                      |
+| ----------------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------- |
+| `factory-research-manus.md`         | HIGH -- Reference Image App full Cloudflare stack | D1 schema, R2 service, KV caching, wrangler.toml, env types                 |
+| `factory-research-nds-design.md`    | HIGH -- NDS Dashboard on Pages Functions          | File-based routing, factory storage, CORS middleware, env interface         |
+| `factory-research-nds-workflows.md` | CRITICAL -- Complete content factory on Workers   | Workflows, Durable Objects, AI Gateway, D1 schema, stage pipeline           |
+| `factory-research-nds-evolution.md` | HIGH -- 3 project versions showing migration      | Replit->Cloudflare migration path, resource inventory, KV prerender         |
+| `factory-research-variants.md`      | MEDIUM -- Multiple factory variants               | NDS-WEB-BUILD (Astro on Pages), Local_Workflow (Cloudflare delivery target) |
+| `factory-research-plans-3.md`       | LOW -- Business strategy, minimal Cloudflare      | Hosting choice: Vercel or Cloudflare Pages                                  |
+| `factory-research-plans-2.md`       | LOW -- Feature inventory, minimal Cloudflare      | Cloudflare mentioned as deployment target                                   |
+| `factory-research-clients.md`       | LOW -- Client engagement docs                     | Cloudflare Pages hosting for NDS tracker                                    |
+| `factory-research-nds-analysis.md`  | MEDIUM -- NDS client application                  | "Zero monthly cost" rationale for Cloudflare                                |
+| `factory-research-original.md`      | MEDIUM -- Original LLM Pages Factory              | Cloudflare Pages deployment module (177 lines)                              |
+| `factory-research-industrial.md`    | LOW -- Claude Code plugin framework               | MCP configs for Cloudflare Docs/Workers/Observability                       |
+| `factory-research-aiseo.md`         | LOW -- AI SEO version of factory                  | Cloudflare Pages as deployment target, Supabase primary                     |
+| `factory-research-temp.md`          | LOW -- Factory temp analysis                      | Cloudflare Pages deployment planned but not wired                           |
 
 ---
 

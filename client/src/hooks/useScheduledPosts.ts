@@ -280,14 +280,14 @@ export function useRetryPost() {
   return useMutation<ScheduledPost, CalendarApiError, { postId: string; scheduledFor?: string }>({
     mutationFn: async ({ postId, scheduledFor }) => {
       const csrfToken = await fetchCsrfToken();
-      const res = await fetch('/api/calendar/schedule', {
+      const res = await fetch(`/api/calendar/posts/${postId}/retry`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-csrf-token': csrfToken,
         },
         credentials: 'include',
-        body: JSON.stringify({ retryPostId: postId, scheduledFor }),
+        body: JSON.stringify(scheduledFor ? { scheduledFor } : {}),
       });
       if (!res.ok) {
         throw await parseApiError(res, 'Failed to retry post');

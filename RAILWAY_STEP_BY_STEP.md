@@ -1,7 +1,9 @@
 # Railway Deployment - Step-by-Step Guide
 
 ## Architecture Note
+
 **Frontend + Backend = ONE Service**
+
 - This is a **monolith** - the React frontend is compiled and served by the Express backend.
 - You only deploy **one service** to Railway.
 - The build process (`npm run build`) creates `dist/public/` with the frontend, and the backend serves it.
@@ -53,10 +55,10 @@ git push origin main
 2. Go to **Variables** tab
 3. Click **New Variable** and add:
 
-| Variable Name | Value |
-|---------------|-------|
-| `GOOGLE_API_KEY` | `AIzaSyDPs30seC2nPbHoy1ZE2InIAO8WCjVYbEo` |
-| `NODE_ENV` | `production` |
+| Variable Name    | Value                                                |
+| ---------------- | ---------------------------------------------------- |
+| `GOOGLE_API_KEY` | `your-gemini-api-key`                                |
+| `NODE_ENV`       | `production`                                         |
 | `SESSION_SECRET` | (Click "Generate" or use any random 32+ char string) |
 
 > **Note**: `DATABASE_URL`, `REDIS_URL`, and `PORT` are auto-injected by Railway. Don't add them manually.
@@ -66,6 +68,7 @@ git push origin main
 ## Step 6: Wait for Deployment
 
 Railway will:
+
 1. ✅ Install dependencies (`npm install`)
 2. ✅ Build the app (`npm run build` - compiles frontend + backend)
 3. ✅ Start the server (`npm start`)
@@ -97,14 +100,17 @@ Watch the **Deploy Logs** tab for progress.
 ## Troubleshooting
 
 ### Build Fails
+
 - Check **Deploy Logs** for errors
 - Common issue: Missing `GOOGLE_API_KEY` → Add it in Variables
 
 ### App Loads but AI Fails
+
 - Verify `GOOGLE_API_KEY` is correct
 - Check if the key has quota/billing enabled in Google Cloud Console
 
 ### Database Connection Error
+
 - Ensure PostgreSQL service is **healthy** (green dot)
 - Railway should auto-inject `DATABASE_URL`
 
@@ -124,6 +130,7 @@ dist/
 ```
 
 When you visit the Railway URL:
+
 1. The Express backend serves `dist/public/index.html`
 2. The React app loads in your browser
 3. It makes API calls to the same domain (`/api/*`)
@@ -135,15 +142,18 @@ No separate frontend deployment needed!
 ## Post-Deployment
 
 ### Custom Domain (Optional)
+
 1. Go to **Settings** → **Domains**
 2. Add your custom domain
 3. Update DNS records as instructed
 
 ### Monitoring
+
 - **Logs**: Click **Observability** → **Logs**
 - **Metrics**: CPU, Memory, Network usage available in Railway dashboard
 
 ### Auto-Deployments
+
 Every `git push` to `main` triggers a new deployment automatically.
 
 ---
@@ -153,6 +163,6 @@ Every `git push` to `main` triggers a new deployment automatically.
 ✅ **One Service**: Frontend + Backend bundled together  
 ✅ **Three Components**: Web Service + PostgreSQL + Redis  
 ✅ **One Environment Variable**: `GOOGLE_API_KEY`  
-✅ **Auto-Deploy**: Push to GitHub = New deployment  
+✅ **Auto-Deploy**: Push to GitHub = New deployment
 
 **Your app URL**: Check Railway dashboard after deployment completes.

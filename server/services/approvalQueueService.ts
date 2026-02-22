@@ -16,8 +16,9 @@ import { db } from '../db';
 import { eq } from 'drizzle-orm';
 import { approvalQueue, approvalAuditLog } from '@shared/schema';
 import { evaluateContent as evaluateConfidence, type ConfidenceScore } from './confidenceScoringService';
+import * as schedulingRepository from './schedulingRepository';
 // NOTE: contentSafetyService will be created next, using interface for now
-import type { ApprovalQueue, InsertApprovalQueue, ApprovalSettings } from '@shared/schema';
+import type { ApprovalQueue, InsertApprovalQueue, ApprovalSettings, ScheduledPost } from '@shared/schema';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -409,6 +410,122 @@ export async function getQueueForUser(userId: string, filters?: QueueFilters): P
   const items = await storage.getApprovalQueueForUser(userId, filters);
 
   return items as ApprovalQueueItem[];
+}
+
+// ============================================================================
+// APPROVAL → SCHEDULE BRIDGE
+// ============================================================================
+
+export interface ScheduleParams {
+  connectionId: string;
+  scheduledFor: string; // ISO 8601
+  timezone?: string;
+}
+
+/**
+ * Schedule an already-approved queue item.
+ * Fetches content from adCopy or generation, creates a scheduled post,
+ * updates queue status to 'scheduled', and logs an audit entry.
+ */
+export async function scheduleApprovedContent(
+  queueItemId: string,
+  userId: string,
+  scheduleParams: ScheduleParams,
+): Promise<ScheduledPost> {
+  logger.info({ module: 'ApprovalQueue', queueItemId, userId }, 'Scheduling approved content');
+
+  // Step 1: Fetch the queue item
+  const queueItem = await storage.getApprovalQueue(queueItemId);
+  if (!queueItem) {
+    throw new Error(`Approval queue item ${queueItemId} not found`);
+  }
+
+  // Step 2: Verify ownership and status
+  if (queueItem.userId !== userId) {
+    const err = new Error('Unauthorized: You do not own this item');
+    (err as NodeJS.ErrnoException).code = '403';
+    throw err;
+  }
+  if (queueItem.status !== 'approved') {
+    throw new Error(`Cannot schedule item with status '${queueItem.status}'. Item must be approved first.`);
+  }
+
+  // Step 3: Prevent double-scheduling (queue item already moved to 'scheduled')
+  // The status check above covers this: once scheduled, status = 'scheduled', not 'approved'
+
+  // Step 4: Resolve caption, hashtags, imageUrl from linked content
+  let caption = '';
+  let hashtags: string[] = [];
+  let imageUrl: string | undefined;
+  let generationId: string | undefined;
+
+  if (queueItem.adCopyId) {
+    const adCopy = await storage.getAdCopyById(queueItem.adCopyId);
+    if (!adCopy) {
+      throw new Error(`AdCopy ${queueItem.adCopyId} not found`);
+    }
+    caption = adCopy.caption;
+    hashtags = adCopy.hashtags ?? [];
+  }
+
+  if (queueItem.generationId) {
+    const generation = await storage.getGenerationById(queueItem.generationId);
+    if (!generation) {
+      throw new Error(`Generation ${queueItem.generationId} not found`);
+    }
+    imageUrl = generation.generatedImagePath;
+    generationId = generation.id;
+  }
+
+  if (!caption) {
+    throw new Error('No caption found: queue item must have an associated adCopy');
+  }
+
+  // Step 5: Create the scheduled post
+  const scheduleInput: Parameters<typeof schedulingRepository.schedulePost>[0] = {
+    userId,
+    connectionId: scheduleParams.connectionId,
+    caption,
+    hashtags,
+    scheduledFor: new Date(scheduleParams.scheduledFor),
+    timezone: scheduleParams.timezone ?? 'UTC',
+  };
+  if (imageUrl !== undefined) {
+    scheduleInput.imageUrl = imageUrl;
+  }
+  if (generationId !== undefined) {
+    scheduleInput.generationId = generationId;
+  }
+  const scheduledPost = await schedulingRepository.schedulePost(scheduleInput);
+
+  // Step 6: Update queue status to 'scheduled' + audit log
+  const previousStatus = queueItem.status;
+  await db.transaction(async (tx) => {
+    await tx
+      .update(approvalQueue)
+      .set({ status: 'scheduled', updatedAt: new Date() })
+      .where(eq(approvalQueue.id, queueItemId));
+
+    await tx.insert(approvalAuditLog).values({
+      approvalQueueId: queueItemId,
+      eventType: 'scheduled',
+      userId,
+      userName: null,
+      userRole: null,
+      isSystemAction: false,
+      previousStatus,
+      newStatus: 'scheduled',
+      decision: null,
+      decisionReason: null,
+      decisionNotes: `Scheduled for ${scheduleParams.scheduledFor}`,
+      snapshot: null,
+      createdAt: new Date(),
+    });
+  });
+
+  logger.info({ module: 'ApprovalQueue', queueItemId, scheduledPostId: scheduledPost.id }, 'Content scheduled');
+
+  return scheduledPost;
 }
 
 /**

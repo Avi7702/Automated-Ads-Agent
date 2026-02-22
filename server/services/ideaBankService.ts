@@ -62,6 +62,7 @@ export interface IdeaBankRequest {
   // Template mode support
   mode?: IdeaBankMode; // 'freestyle' (default) or 'template'
   templateId?: string; // Required when mode = 'template'
+  skipRateLimitCheck?: boolean; // Internal use: avoid double-counting in aggregated multi-product requests
 }
 
 export interface IdeaBankError {
@@ -117,11 +118,12 @@ export async function generateSuggestions(
     uploadDescriptions = [],
     mode = 'freestyle',
     templateId,
+    skipRateLimitCheck = false,
   } = request;
   const buildStartTime = Date.now(); // Track for recipe debug timing
 
   // Rate limit check
-  if (!checkRateLimit(userId)) {
+  if (!skipRateLimitCheck && !checkRateLimit(userId)) {
     return {
       success: false,
       error: {
@@ -394,11 +396,14 @@ export async function generateSuggestions(
     }
   } catch (err) {
     logger.error({ module: 'IdeaBank', err }, 'LLM generation failed');
+    const message = err instanceof Error ? err.message : 'Failed to generate suggestions';
+    const isRateLimited = /rate limit|429/i.test(message);
+
     return {
       success: false,
       error: {
-        code: 'LLM_ERROR',
-        message: err instanceof Error ? err.message : 'Failed to generate suggestions',
+        code: isRateLimited ? 'RATE_LIMITED' : 'LLM_ERROR',
+        message: isRateLimited ? 'AI service is rate limited right now. Please wait a moment and try again.' : message,
       },
     };
   }

@@ -9,21 +9,25 @@ This document outlines the complete development environment setup needed for imp
 ## Required Claude Code Plugins
 
 ### 1. **code-review** (Already Enabled ✅)
+
 - **Purpose:** Multi-agent PR review with confidence scoring
 - **Usage:** `/code-review` after implementing RAG fixes
 - **Why needed:** Validate SDK migration, error handling, and RAG integration quality
 
 ### 2. **commit-commands** (Already Enabled ✅)
+
 - **Purpose:** Streamlined git commit workflow
 - **Usage:** `/commit` after each phase
 - **Why needed:** Quick commits during rapid ASAP implementation
 
 ### 3. **pr-review-toolkit** (Already Enabled ✅)
+
 - **Purpose:** Enhanced PR review capabilities
 - **Usage:** `/review-pr [PR#]` before merging RAG changes
 - **Why needed:** Ensure RAG implementation meets quality standards
 
 ### 4. **security-guidance** (Already Enabled ✅)
+
 - **Purpose:** PreToolUse hook monitoring security patterns
 - **Why needed:**
   - File upload security (validate file types, prevent malicious PDFs)
@@ -37,17 +41,20 @@ This document outlines the complete development environment setup needed for imp
 ### 1. **Puppeteer MCP** (Already Configured ✅)
 
 **Why needed:**
+
 - Scrape competitor ads from Instagram/LinkedIn/Facebook
 - Automated screenshot capture for ad collection
 - Navigate Facebook Ad Library programmatically
 
 **Current capabilities:**
+
 - `puppeteer_navigate` - Visit competitor pages
 - `puppeteer_screenshot` - Capture ad visuals + text
 - `puppeteer_click` - Interact with ad libraries
 - `puppeteer_fill` - Search for brands in ad databases
 
 **Example usage for competitor ad collection:**
+
 ```typescript
 // Navigate to Nike Instagram
 await puppeteer_navigate({ url: 'https://instagram.com/nike' });
@@ -55,23 +62,25 @@ await puppeteer_navigate({ url: 'https://instagram.com/nike' });
 // Screenshot top post
 await puppeteer_screenshot({
   name: 'nike-instagram-post-1',
-  selector: 'article'
+  selector: 'article',
 });
 
 // Navigate to Facebook Ad Library
 await puppeteer_navigate({
-  url: 'https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=US&q=Nike'
+  url: 'https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=US&q=Nike',
 });
 ```
 
 ### 2. **Filesystem MCP** (Recommended - NEW)
 
 **Why needed:**
+
 - Manage reference-materials directory structure
 - Bulk file operations for competitor ad PDFs
 - Cleanup temporary files after upload
 
 **Installation:**
+
 ```json
 // .claude/mcp.json
 {
@@ -85,6 +94,7 @@ await puppeteer_navigate({
 ```
 
 **Use cases:**
+
 - Create subdirectories for each platform
 - List PDFs before bulk upload
 - Organize competitor ads by brand/platform
@@ -92,11 +102,13 @@ await puppeteer_navigate({
 ### 3. **Memory MCP** (Recommended - NEW)
 
 **Why needed:**
+
 - Track competitor ad collection progress
 - Remember which brands/platforms collected
 - Store competitor ad metadata across sessions
 
 **Installation:**
+
 ```json
 {
   "mcpServers": {
@@ -109,27 +121,30 @@ await puppeteer_navigate({
 ```
 
 **Use cases:**
+
 ```typescript
 // Track collection progress
 await memory.store({
-  key: "competitor-ads-progress",
+  key: 'competitor-ads-progress',
   value: {
     nike_instagram: 5,
     adidas_instagram: 5,
     nike_linkedin: 3,
     // ... etc
-  }
+  },
 });
 ```
 
 ### 4. **Brave Search MCP** (Optional)
 
 **Why needed:**
+
 - Find competitor ad examples online
 - Search for "Nike Instagram ads 2025"
 - Discover high-performing competitor campaigns
 
 **Installation:**
+
 ```json
 {
   "mcpServers": {
@@ -147,11 +162,13 @@ await memory.store({
 ### 5. **Google Drive MCP** (Optional)
 
 **Why needed:**
+
 - Store collected competitor ads in Google Drive
 - Share reference materials with team
 - Backup RAG knowledge base
 
 **Installation:**
+
 ```json
 {
   "mcpServers": {
@@ -168,11 +185,13 @@ await memory.store({
 ## Recommended VS Code Extensions
 
 ### 1. **REST Client**
+
 - **Purpose:** Test File Search API endpoints
 - **Install:** `ext install humao.rest-client`
 - **Usage:** Create `.http` files for API testing
 
 **Example:** `test-file-search.http`
+
 ```http
 ### Initialize File Search Store
 POST http://localhost:3000/api/file-search/initialize
@@ -195,16 +214,19 @@ ad_examples
 ```
 
 ### 2. **Thunder Client** (Alternative to Postman)
+
 - **Purpose:** API testing GUI
 - **Install:** `ext install rangav.vscode-thunder-client`
 - **Why:** Lightweight, built into VS Code
 
 ### 3. **Markdown All in One**
+
 - **Purpose:** Edit RAG documentation
 - **Install:** `ext install yzhang.markdown-all-in-one`
 - **Why:** Preview docs while writing
 
 ### 4. **PDF Viewer**
+
 - **Purpose:** Preview competitor ad PDFs in VS Code
 - **Install:** `ext install tomoki1207.pdf`
 - **Why:** Quick review of collected ads
@@ -216,11 +238,13 @@ ad_examples
 ### 1. **Competitor Ad Scraping Tools**
 
 **Facebook Ad Library Scraper:**
+
 ```bash
 npm install --save-dev puppeteer
 ```
 
 **Create scraper script:** `scripts/scrape-competitor-ads.ts`
+
 ```typescript
 import puppeteer from 'puppeteer';
 
@@ -236,7 +260,7 @@ async function scrapeFacebookAdLibrary(brand: string) {
 
   // Extract ad text
   const ads = await page.$$eval('[data-testid="ad-card"]', (elements) => {
-    return elements.slice(0, 5).map(el => ({
+    return elements.slice(0, 5).map((el) => ({
       text: el.textContent,
       // ... extract more data
     }));
@@ -250,20 +274,17 @@ async function scrapeFacebookAdLibrary(brand: string) {
 ### 2. **PDF Generation from Screenshots**
 
 **Install html-pdf or puppeteer-pdf:**
+
 ```bash
 npm install --save-dev puppeteer
 ```
 
 **Convert screenshot + text to PDF:**
+
 ```typescript
 import puppeteer from 'puppeteer';
 
-async function createAdPDF(adData: {
-  brand: string;
-  platform: string;
-  text: string;
-  imageUrl: string;
-}) {
+async function createAdPDF(adData: { brand: string; platform: string; text: string; imageUrl: string }) {
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
 
@@ -277,7 +298,7 @@ async function createAdPDF(adData: {
   // Save as PDF
   await page.pdf({
     path: `./competitor-ads/${adData.brand}-${adData.platform}.pdf`,
-    format: 'A4'
+    format: 'A4',
   });
 
   await browser.close();
@@ -287,6 +308,7 @@ async function createAdPDF(adData: {
 ### 3. **Bulk File Upload Script**
 
 **Create:** `scripts/bulk-upload-ads.ts`
+
 ```typescript
 import fs from 'fs/promises';
 import path from 'path';
@@ -299,7 +321,7 @@ async function bulkUploadCompetitorAds() {
     if (file.endsWith('.pdf')) {
       const response = await fetch('http://localhost:3000/api/file-search/upload', {
         method: 'POST',
-        body: createFormData(path.join(adsDir, file))
+        body: createFormData(path.join(adsDir, file)),
       });
 
       console.log(`✅ Uploaded: ${file}`);
@@ -311,6 +333,7 @@ async function bulkUploadCompetitorAds() {
 ### 4. **RAG Testing Script**
 
 **Create:** `scripts/test-rag-generation.ts`
+
 ```typescript
 async function testRAGGeneration() {
   // Generate copy WITHOUT RAG (baseline)
@@ -319,8 +342,8 @@ async function testRAGGeneration() {
     body: JSON.stringify({
       productName: 'Trail Runner Pro',
       platform: 'instagram',
-      variations: 1
-    })
+      variations: 1,
+    }),
   });
 
   // Upload competitor ads
@@ -332,8 +355,8 @@ async function testRAGGeneration() {
     body: JSON.stringify({
       productName: 'Trail Runner Pro',
       platform: 'instagram',
-      variations: 1
-    })
+      variations: 1,
+    }),
   });
 
   // Compare quality
@@ -347,10 +370,11 @@ async function testRAGGeneration() {
 ## Environment Variables to Add
 
 **Update `.env`:**
+
 ```bash
 # Gemini API (already set)
-GEMINI_API_KEY=AIzaSyDQ63zIo1JeOYWzinc077npETNwB-evHcI
-GOOGLE_API_KEY=AIzaSyDQ63zIo1JeOYWzinc077npETNwB-evHcI  # Fallback
+GEMINI_API_KEY=your-gemini-api-key
+GOOGLE_API_KEY=your-gemini-api-key  # Fallback
 
 # File Search Configuration
 FILESEARCH_CHUNK_SIZE=500
@@ -370,6 +394,7 @@ BRAVE_API_KEY=your-brave-api-key      # For Brave Search MCP
 ## Package Dependencies to Install
 
 ### Core Dependencies (Already Installed ✅)
+
 ```json
 {
   "@google/genai": "^1.30.0"
@@ -379,24 +404,28 @@ BRAVE_API_KEY=your-brave-api-key      # For Brave Search MCP
 ### Additional Dependencies Needed
 
 **For competitor ad scraping:**
+
 ```bash
 npm install --save-dev puppeteer
 npm install --save-dev @types/puppeteer
 ```
 
 **For PDF generation:**
+
 ```bash
 npm install --save-dev pdf-lib
 npm install html-pdf-node  # Alternative
 ```
 
 **For file upload testing:**
+
 ```bash
 npm install --save-dev form-data
 npm install --save-dev @types/form-data
 ```
 
 **Update package.json:**
+
 ```json
 {
   "devDependencies": {
@@ -415,6 +444,7 @@ npm install --save-dev @types/form-data
 ## Hookify Rules to Add
 
 **Create:** `.claude/hookify.rag-safety.local.md`
+
 ```yaml
 ---
 name: rag-file-upload-safety
@@ -434,6 +464,7 @@ If blocked, suggest using proper file validation middleware.
 ```
 
 **Create:** `.claude/hookify.competitor-scraping.local.md`
+
 ```yaml
 ---
 name: competitor-scraping-ethics
@@ -457,6 +488,7 @@ Competitor research is legal, but be respectful.
 ## MCP Configuration File
 
 **Create/Update:** `.claude/mcp.json`
+
 ```json
 {
   "mcpServers": {
@@ -487,6 +519,7 @@ Competitor research is legal, but be respectful.
 ### Phase 0: Environment Setup (30 minutes)
 
 - [ ] Install recommended VS Code extensions
+
   ```bash
   code --install-extension humao.rest-client
   code --install-extension rangav.vscode-thunder-client
@@ -495,17 +528,20 @@ Competitor research is legal, but be respectful.
   ```
 
 - [ ] Install MCP servers
+
   ```bash
   # Add to .claude/mcp.json (see above)
   # Restart Claude Code
   ```
 
 - [ ] Install npm dependencies
+
   ```bash
   npm install --save-dev puppeteer @types/puppeteer pdf-lib html-pdf-node form-data @types/form-data
   ```
 
 - [ ] Create scripts directory
+
   ```bash
   mkdir -p scripts
   mkdir -p competitor-ads
@@ -513,6 +549,7 @@ Competitor research is legal, but be respectful.
   ```
 
 - [ ] Add hookify rules for safety
+
   ```bash
   # Create .claude/hookify.rag-safety.local.md
   # Create .claude/hookify.competitor-scraping.local.md
@@ -526,12 +563,14 @@ Competitor research is legal, but be respectful.
 ### Phase 1: Test Environment (15 minutes)
 
 - [ ] Test Puppeteer MCP
+
   ```bash
   # In Claude Code
   # Try: puppeteer_navigate({ url: 'https://instagram.com/nike' })
   ```
 
 - [ ] Test File Search API
+
   ```bash
   curl -X POST http://localhost:3000/api/file-search/seed
   ```
@@ -556,7 +595,9 @@ Competitor research is legal, but be respectful.
 ## Troubleshooting
 
 ### Issue: Puppeteer MCP not working
+
 **Solution:**
+
 ```bash
 # Ensure Puppeteer MCP server is running
 npx @puppeteer/mcp-server-puppeteer --help
@@ -566,7 +607,9 @@ npx @puppeteer/mcp-server-puppeteer --help
 ```
 
 ### Issue: File Search Store initialization fails
+
 **Solution:**
+
 ```bash
 # Verify GEMINI_API_KEY is set
 echo $GEMINI_API_KEY
@@ -578,7 +621,9 @@ curl -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro
 ```
 
 ### Issue: Competitor ad PDFs too large (>100MB)
+
 **Solution:**
+
 ```bash
 # Compress PDFs before upload
 npm install --save-dev pdf-lib
@@ -593,7 +638,7 @@ npx tsx scripts/compress-pdfs.ts
 
 1. **Complete Phase 0 setup** (30 min)
 2. **Run Phase 1 tests** (15 min)
-3. **Begin Day 1 implementation** from [playful-watching-gray.md](C:\Users\avibm\.claude\plans\playful-watching-gray.md)
+3. **Begin Day 1 implementation** from [playful-watching-gray.md](C:\Users\avibm.claude\plans\playful-watching-gray.md)
 
 **Total setup time: ~45 minutes**
 

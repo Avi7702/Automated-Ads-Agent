@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Header } from '@/components/layout/Header';
 
@@ -7,12 +7,28 @@ interface ApprovalQueueProps {
 }
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { QueueCard } from '@/components/approval/QueueCard';
 import { ReviewModal } from '@/components/approval/ReviewModal';
 import { BulkActions } from '@/components/approval/BulkActions';
-import { Filter, RefreshCw, CheckCircle2, Clock, BarChart3, TrendingUp, Flame, AlertCircle } from 'lucide-react';
+import {
+  Filter,
+  RefreshCw,
+  CheckCircle2,
+  Clock,
+  BarChart3,
+  TrendingUp,
+  Flame,
+  AlertCircle,
+  CalendarClock,
+  Loader2,
+} from 'lucide-react';
+import { format } from 'date-fns';
+import { useQuery } from '@tanstack/react-query';
 
 interface ApprovalQueueItem {
   id: string;
@@ -77,6 +93,28 @@ export default function ApprovalQueue({ embedded = false }: ApprovalQueueProps) 
   // Review modal
   const [reviewingItem, setReviewingItem] = useState<ApprovalQueueItem | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Approve & Schedule dialog
+  const [scheduleDialogItemId, setScheduleDialogItemId] = useState<string | null>(null);
+  const [scheduleConnectionId, setScheduleConnectionId] = useState('');
+  const [scheduleDate, setScheduleDate] = useState('');
+  const [scheduleTime, setScheduleTime] = useState('10:00');
+  const [scheduleTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
+  const [isScheduling, setIsScheduling] = useState(false);
+
+  // Fetch social accounts for the schedule dialog
+  const { data: socialAccounts = [] } = useQuery<
+    { id: string; platform: string; accountName: string; isActive: boolean }[]
+  >({
+    queryKey: ['social-accounts'],
+    queryFn: async () => {
+      const res = await fetch('/api/social/accounts', { credentials: 'include' });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    staleTime: 60_000,
+  });
+  const activeAccounts = socialAccounts.filter((a) => a.isActive);
 
   useEffect(() => {
     fetchQueue();
@@ -180,7 +218,7 @@ export default function ApprovalQueue({ embedded = false }: ApprovalQueueProps) 
 
       toast({
         title: 'Success',
-        description: 'Content approved and scheduled',
+        description: 'Content approved',
         variant: 'default',
       });
 
@@ -194,6 +232,47 @@ export default function ApprovalQueue({ embedded = false }: ApprovalQueueProps) 
       });
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const openScheduleDialog = useCallback((itemId: string) => {
+    setScheduleDialogItemId(itemId);
+    setScheduleConnectionId('');
+    setScheduleDate(format(new Date(), 'yyyy-MM-dd'));
+    setScheduleTime('10:00');
+  }, []);
+
+  const handleApproveAndSchedule = async () => {
+    if (!scheduleDialogItemId || !scheduleConnectionId || !scheduleDate) return;
+
+    setIsScheduling(true);
+    try {
+      const scheduledFor = new Date(`${scheduleDate}T${scheduleTime}:00`).toISOString();
+
+      const response = await fetch(`/api/approval-queue/${scheduleDialogItemId}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          schedule: { connectionId: scheduleConnectionId, scheduledFor, timezone: scheduleTimezone },
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to approve and schedule');
+      }
+
+      const formatted =
+        format(new Date(scheduledFor), 'MMM d, yyyy') + ' at ' + format(new Date(scheduledFor), 'h:mm a');
+      toast({ title: 'Approved & scheduled', description: `Content approved and scheduled for ${formatted}.` });
+      setScheduleDialogItemId(null);
+      setReviewingItem(null);
+      fetchQueue();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to approve and schedule', variant: 'destructive' });
+    } finally {
+      setIsScheduling(false);
     }
   };
 
@@ -583,6 +662,7 @@ export default function ApprovalQueue({ embedded = false }: ApprovalQueueProps) 
                   item={item}
                   onReview={() => setReviewingItem(item)}
                   onQuickApprove={() => handleQuickApprove(item.id)}
+                  onApproveAndSchedule={() => openScheduleDialog(item.id)}
                   onDelete={() => handleDelete(item.id)}
                   isSelected={selectedIds.has(item.id)}
                   onSelect={(selected) => toggleSelection(item.id, selected)}
@@ -607,6 +687,7 @@ export default function ApprovalQueue({ embedded = false }: ApprovalQueueProps) 
                   item={item}
                   onReview={() => setReviewingItem(item)}
                   onQuickApprove={() => handleQuickApprove(item.id)}
+                  onApproveAndSchedule={() => openScheduleDialog(item.id)}
                   onDelete={() => handleDelete(item.id)}
                   isSelected={selectedIds.has(item.id)}
                   onSelect={(selected) => toggleSelection(item.id, selected)}
@@ -631,6 +712,7 @@ export default function ApprovalQueue({ embedded = false }: ApprovalQueueProps) 
                   item={item}
                   onReview={() => setReviewingItem(item)}
                   onQuickApprove={() => handleQuickApprove(item.id)}
+                  onApproveAndSchedule={() => openScheduleDialog(item.id)}
                   onDelete={() => handleDelete(item.id)}
                   isSelected={selectedIds.has(item.id)}
                   onSelect={(selected) => toggleSelection(item.id, selected)}
@@ -654,6 +736,78 @@ export default function ApprovalQueue({ embedded = false }: ApprovalQueueProps) 
           />
         )}
       </div>
+
+      {/* Approve & Schedule Dialog */}
+      <Dialog
+        open={scheduleDialogItemId !== null}
+        onOpenChange={(open) => {
+          if (!open) setScheduleDialogItemId(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarClock className="h-5 w-5 text-primary" />
+              Approve &amp; Schedule
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Social account */}
+            <div className="space-y-1.5">
+              <Label htmlFor="aps-account">Social Account</Label>
+              {activeAccounts.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No connected accounts found.</p>
+              ) : (
+                <Select value={scheduleConnectionId} onValueChange={setScheduleConnectionId}>
+                  <SelectTrigger id="aps-account">
+                    <SelectValue placeholder="Select account..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {activeAccounts.map((acc) => (
+                      <SelectItem key={acc.id} value={acc.id}>
+                        {acc.platform} — {acc.accountName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+
+            {/* Date */}
+            <div className="space-y-1.5">
+              <Label htmlFor="aps-date">Date</Label>
+              <Input
+                id="aps-date"
+                type="date"
+                value={scheduleDate}
+                min={format(new Date(), 'yyyy-MM-dd')}
+                onChange={(e) => setScheduleDate(e.target.value)}
+              />
+            </div>
+
+            {/* Time */}
+            <div className="space-y-1.5">
+              <Label htmlFor="aps-time">Time ({scheduleTimezone})</Label>
+              <Input id="aps-time" type="time" value={scheduleTime} onChange={(e) => setScheduleTime(e.target.value)} />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setScheduleDialogItemId(null)} disabled={isScheduling}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleApproveAndSchedule}
+              disabled={isScheduling || !scheduleConnectionId || !scheduleDate}
+              className="gap-2"
+            >
+              {isScheduling ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarClock className="h-4 w-4" />}
+              {isScheduling ? 'Scheduling...' : 'Approve & Schedule'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

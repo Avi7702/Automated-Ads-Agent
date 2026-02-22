@@ -26,8 +26,11 @@ export const ideaBankRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/suggest',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        // Use authenticated userId or default system user for single-tenant mode
-        const userId = (req.session as any)?.userId || 'system-user';
+        // Use authenticated user ID, otherwise scope anonymous requests by session/IP
+        // so one shared "system-user" key doesn't trigger global rate-limit collisions.
+        const sessionUserId = (req.session as any)?.userId as string | undefined;
+        const anonBase = String(req.sessionID || req.ip || 'unknown').replace(/[^a-zA-Z0-9_-]/g, '_');
+        const userId = sessionUserId || `anon-${anonBase}`;
         const {
           productId,
           productIds,
@@ -65,6 +68,7 @@ export const ideaBankRouter: RouterFactory = (ctx: RouterContext): Router => {
             ids.slice(0, 6).map(
               (
                 id: string, // Limit to 6 products max
+                index: number,
               ) =>
                 ideaBank.generateSuggestions({
                   productId: id,
@@ -75,6 +79,7 @@ export const ideaBankRouter: RouterFactory = (ctx: RouterContext): Router => {
                   maxSuggestions: 2, // Fewer per product when multiple
                   mode,
                   templateId,
+                  skipRateLimitCheck: index > 0, // Count once per API request, not once per product in batch
                 }),
             ),
           );

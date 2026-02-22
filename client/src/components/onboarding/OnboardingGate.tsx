@@ -21,7 +21,9 @@ export function OnboardingGate({ children }: OnboardingGateProps) {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: status, isLoading: statusLoading } = useOnboardingStatus();
+  const { data: status, isLoading: statusLoading } = useOnboardingStatus({
+    enabled: isAuthenticated && !authLoading,
+  });
 
   // Allow user to dismiss the onboarding without completing
   const [dismissed, setDismissed] = useState(false);

@@ -77,6 +77,8 @@ import { toGenerationDTO, toGenerationDTOArray } from './dto/generationDTO';
 import { processUploadForPatterns, formatPatternsForPrompt } from './services/patternExtractionService';
 import { startPatternCleanupScheduler } from './jobs/patternCleanupJob';
 import { startPostingJobScheduler } from './jobs/postingJob';
+import { startTokenRefreshScheduler } from './jobs/tokenRefreshJob';
+import { handleN8nCallback } from './services/n8nPostingService';
 import { generationQueue, generationQueueEvents } from './lib/queue';
 import { JobType, JobProgress } from './jobs/types';
 import { visionAnalysisService } from './services/visionAnalysisService';
@@ -775,16 +777,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const parsedRecipe = recipe;
         const effectiveRecipe =
           recipeProductsFromIds.length > 0 &&
-          (!Array.isArray(parsedRecipe?.products) || parsedRecipe.products.length === 0)
+          (!Array.isArray(parsedRecipe?.['products']) || parsedRecipe['products'].length === 0)
             ? ({
                 version: '1.0',
                 products: recipeProductsFromIds,
-                relationships: Array.isArray(parsedRecipe?.relationships) ? parsedRecipe.relationships : [],
-                scenarios: Array.isArray(parsedRecipe?.scenarios) ? parsedRecipe.scenarios : [],
-                ...(parsedRecipe?.template ? { template: parsedRecipe.template } : {}),
-                ...(Array.isArray(parsedRecipe?.brandImages) ? { brandImages: parsedRecipe.brandImages } : {}),
-                ...(parsedRecipe?.brandVoice ? { brandVoice: parsedRecipe.brandVoice } : {}),
-                ...(parsedRecipe?.debugContext ? { debugContext: parsedRecipe.debugContext } : {}),
+                relationships: Array.isArray(parsedRecipe?.['relationships']) ? parsedRecipe['relationships'] : [],
+                scenarios: Array.isArray(parsedRecipe?.['scenarios']) ? parsedRecipe['scenarios'] : [],
+                ...(parsedRecipe?.['template'] ? { template: parsedRecipe['template'] } : {}),
+                ...(Array.isArray(parsedRecipe?.['brandImages']) ? { brandImages: parsedRecipe['brandImages'] } : {}),
+                ...(parsedRecipe?.['brandVoice'] ? { brandVoice: parsedRecipe['brandVoice'] } : {}),
+                ...(parsedRecipe?.['debugContext'] ? { debugContext: parsedRecipe['debugContext'] } : {}),
               } as import('@shared/types/ideaBank').GenerationRecipe)
             : (parsedRecipe as import('@shared/types/ideaBank').GenerationRecipe | undefined);
 
@@ -4749,7 +4751,9 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   /**
    * POST /api/n8n/callback
    * Webhook handler for n8n posting results
-   * Called by n8n workflows after posting to social platforms
+   * Called by n8n workflows after posting to social platforms.
+   * NOTE: This legacy stub is superseded by n8n.router.ts (registered first).
+   * Kept as a fallback; wired to handleN8nCallback for correctness.
    */
   app.post('/api/n8n/callback', validateN8nWebhook, validate(n8nCallbackSchema), async (req, res) => {
     try {
@@ -4762,11 +4766,18 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
           success,
           executionId,
         },
-        'n8n callback received',
+        'n8n callback received (legacy stub)',
       );
 
-      // TODO: Update scheduledPosts table (Phase 8.2 - Approval Queue)
-      // For now, just log and acknowledge
+      await handleN8nCallback({
+        scheduledPostId,
+        success,
+        platformPostId: req.body.platformPostId,
+        platformPostUrl: req.body.platformPostUrl,
+        error: req.body.error,
+        errorCode: req.body.errorCode,
+        postedAt: req.body.postedAt,
+      });
 
       res.json({
         success: true,
@@ -5585,8 +5596,11 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // Start pattern cleanup scheduler (Learn from Winners 24-hour TTL)
   startPatternCleanupScheduler();
 
-  // Start n8n posting job (claims due posts and dispatches to n8n webhooks)
+  // Start posting job (claims due posts and publishes directly via platform APIs)
   startPostingJobScheduler();
+
+  // Start token refresh job (proactively refreshes OAuth tokens before expiry)
+  startTokenRefreshScheduler();
 
   // Load any saved Gemini API key on startup (single-tenant: find any valid key)
   (async () => {

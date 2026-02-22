@@ -1,16 +1,21 @@
 /**
  * Social Router
- * Social media account management endpoints
+ * Social media account management + OAuth connect endpoints
  *
  * Endpoints:
  * - GET /api/social/accounts - List connected social accounts
  * - DELETE /api/social/accounts/:id - Disconnect social account
- * - POST /api/social/sync-accounts - Sync account from n8n
+ * - POST /api/social/sync-accounts - Sync account from n8n (legacy)
+ * - GET /api/social/oauth/:platform/authorize - Start OAuth flow
+ * - GET /api/social/oauth/:platform/callback - Handle OAuth redirect
+ * - POST /api/social/accounts/:id/refresh - Manual token refresh
  */
 
 import type { Router, Request, Response } from 'express';
 import type { RouterContext, RouterFactory, RouterModule } from '../types/router';
 import { createRouter, asyncHandler } from './utils/createRouter';
+import { getAuthorizationUrl, handleOAuthCallback } from '../services/oauthService';
+import { refreshToken } from '../services/tokenService';
 
 export const socialRouter: RouterFactory = (ctx: RouterContext): Router => {
   const router = createRouter();
@@ -188,14 +193,147 @@ export const socialRouter: RouterFactory = (ctx: RouterContext): Router => {
     }),
   );
 
+  // ──────────────────────────────────────────────
+  // OAuth Endpoints
+  // ──────────────────────────────────────────────
+
+  /**
+   * GET /oauth/:platform/authorize - Start OAuth flow
+   * Returns the authorization URL for the given platform.
+   */
+  router.get(
+    '/oauth/:platform/authorize',
+    requireAuth,
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const platform = String(req.params['platform']);
+
+        if (platform !== 'linkedin' && platform !== 'twitter') {
+          return res.status(400).json({
+            success: false,
+            error: `Unsupported OAuth platform: ${platform}. Supported: linkedin, twitter`,
+          });
+        }
+
+        const authUrl = await getAuthorizationUrl(platform, req.user!.id);
+
+        res.json({ success: true, authUrl });
+      } catch (error) {
+        logger.error(
+          { module: 'OAuth', err: error, platform: req.params['platform'] },
+          'Failed to generate authorization URL',
+        );
+        res.status(500).json({
+          success: false,
+          error: 'Failed to start OAuth flow',
+        });
+      }
+    }),
+  );
+
+  /**
+   * GET /oauth/:platform/callback - Handle OAuth redirect from provider
+   * Validates state, exchanges code, stores encrypted tokens, redirects to UI.
+   */
+  router.get(
+    '/oauth/:platform/callback',
+    requireAuth,
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const platform = String(req.params['platform']);
+
+        if (platform !== 'linkedin' && platform !== 'twitter') {
+          return res.redirect('/pipeline?tab=social-accounts&error=unsupported_platform');
+        }
+
+        const code = String(req.query['code'] ?? '');
+        const state = String(req.query['state'] ?? '');
+        const errorParam = req.query['error'];
+
+        // Provider returned an error (user denied access, etc.)
+        if (errorParam) {
+          logger.warn(
+            { platform, error: errorParam, errorDescription: req.query['error_description'] },
+            'OAuth provider returned error',
+          );
+          return res.redirect(`/pipeline?tab=social-accounts&error=${encodeURIComponent(String(errorParam))}`);
+        }
+
+        if (!code || !state) {
+          return res.redirect('/pipeline?tab=social-accounts&error=missing_params');
+        }
+
+        const result = await handleOAuthCallback(platform, code, state);
+
+        logger.info(
+          { userId: req.user!.id, platform, connectionId: result.connectionId },
+          'OAuth callback processed successfully',
+        );
+
+        res.redirect(`/pipeline?tab=social-accounts&connected=${platform}`);
+      } catch (error) {
+        logger.error({ module: 'OAuth', err: error, platform: req.params['platform'] }, 'OAuth callback failed');
+        res.redirect('/pipeline?tab=social-accounts&error=oauth_failed');
+      }
+    }),
+  );
+
+  /**
+   * POST /accounts/:id/refresh - Manual token refresh
+   * Allows the UI to trigger a token refresh on demand.
+   */
+  router.post(
+    '/accounts/:id/refresh',
+    requireAuth,
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const id = String(req.params['id']);
+
+        // Verify ownership
+        const connection = await storage.getSocialConnectionById(id);
+
+        if (!connection) {
+          return res.status(404).json({
+            success: false,
+            error: 'Account not found',
+          });
+        }
+
+        if (connection.userId !== req.user!.id) {
+          return res.status(403).json({
+            success: false,
+            error: 'Unauthorized: You do not own this account',
+          });
+        }
+
+        await refreshToken(id);
+
+        // Re-fetch to get updated expiry
+        const updated = await storage.getSocialConnectionById(id);
+
+        res.json({
+          success: true,
+          message: `${connection.platform} token refreshed`,
+          tokenExpiresAt: updated?.tokenExpiresAt,
+        });
+      } catch (error) {
+        logger.error({ module: 'OAuth', err: error, connectionId: req.params['id'] }, 'Manual token refresh failed');
+        res.status(500).json({
+          success: false,
+          error: 'Failed to refresh token',
+        });
+      }
+    }),
+  );
+
   return router;
 };
 
 export const socialRouterModule: RouterModule = {
   prefix: '/api/social',
   factory: socialRouter,
-  description: 'Social media account management',
-  endpointCount: 3,
+  description: 'Social media account management and OAuth',
+  endpointCount: 6,
   requiresAuth: true,
-  tags: ['social', 'accounts', 'n8n'],
+  tags: ['social', 'accounts', 'oauth'],
 };

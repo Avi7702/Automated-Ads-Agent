@@ -278,7 +278,7 @@ Example:
 - C1: Response time must be under 200ms for API calls
 - C2: No new npm dependencies without explicit approval
 - C3: Must work on mobile viewports (320px minimum)
-- C4: Hebrew RTL layout must be preserved
+- C4: RTL layout must be preserved
 - C5: Must not break existing chat functionality
 
 ## Acceptance Criteria

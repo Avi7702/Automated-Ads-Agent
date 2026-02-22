@@ -7,11 +7,7 @@
  * @file client/src/fixtures/socialConnections.ts
  */
 
-import type {
-  SocialConnection,
-  ScheduledPost,
-  PostAnalytics,
-} from '../../../shared/schema';
+import type { SocialConnection, ScheduledPost, PostAnalytics } from '../../../shared/schema';
 
 // Base date for consistent timestamps in tests
 const BASE_DATE = new Date('2026-01-15T12:00:00Z');
@@ -201,6 +197,7 @@ export const mockScheduledPosts: ScheduledPost[] = [
     nextRetryAt: null,
     generationId: 'gen-001',
     templateId: 'content-planner-product-showcase',
+    publishIdempotencyKey: null,
     createdAt: daysAgo(1),
     updatedAt: daysAgo(1),
   },
@@ -225,6 +222,7 @@ export const mockScheduledPosts: ScheduledPost[] = [
     nextRetryAt: null,
     generationId: 'gen-003',
     templateId: null,
+    publishIdempotencyKey: null,
     createdAt: daysAgo(2),
     updatedAt: daysAgo(0),
   },
@@ -249,6 +247,7 @@ export const mockScheduledPosts: ScheduledPost[] = [
     nextRetryAt: null,
     generationId: null,
     templateId: 'content-planner-company-updates',
+    publishIdempotencyKey: null,
     createdAt: daysAgo(3),
     updatedAt: new Date(BASE_DATE.getTime() - 5 * 60 * 1000),
   },
@@ -273,6 +272,7 @@ export const mockScheduledPosts: ScheduledPost[] = [
     nextRetryAt: null,
     generationId: 'gen-002',
     templateId: null,
+    publishIdempotencyKey: null,
     createdAt: daysAgo(5),
     updatedAt: daysAgo(2),
   },
@@ -297,6 +297,7 @@ export const mockScheduledPosts: ScheduledPost[] = [
     nextRetryAt: null,
     generationId: 'gen-003',
     templateId: 'content-planner-product-showcase',
+    publishIdempotencyKey: null,
     createdAt: daysAgo(7),
     updatedAt: daysAgo(5),
   },
@@ -321,6 +322,7 @@ export const mockScheduledPosts: ScheduledPost[] = [
     nextRetryAt: hoursFromNow(2),
     generationId: null,
     templateId: null,
+    publishIdempotencyKey: null,
     createdAt: daysAgo(2),
     updatedAt: daysAgo(1),
   },
@@ -345,6 +347,7 @@ export const mockScheduledPosts: ScheduledPost[] = [
     nextRetryAt: null,
     generationId: null,
     templateId: null,
+    publishIdempotencyKey: null,
     createdAt: daysAgo(4),
     updatedAt: daysAgo(3),
   },
@@ -369,6 +372,7 @@ export const mockScheduledPosts: ScheduledPost[] = [
     nextRetryAt: null,
     generationId: null,
     templateId: null,
+    publishIdempotencyKey: null,
     createdAt: daysAgo(1),
     updatedAt: daysAgo(0),
   },
@@ -447,54 +451,38 @@ export const activeConnections = mockSocialConnections.filter((c) => c.isActive)
 export const inactiveConnections = mockSocialConnections.filter((c) => !c.isActive);
 
 /** LinkedIn connections */
-export const linkedinConnections = mockSocialConnections.filter(
-  (c) => c.platform === 'linkedin'
-);
+export const linkedinConnections = mockSocialConnections.filter((c) => c.platform === 'linkedin');
 
 /** Instagram connections */
-export const instagramConnections = mockSocialConnections.filter(
-  (c) => c.platform === 'instagram'
-);
+export const instagramConnections = mockSocialConnections.filter((c) => c.platform === 'instagram');
 
 /** Connections with expired tokens */
-export const expiredConnections = mockSocialConnections.filter(
-  (c) => c.tokenExpiresAt < BASE_DATE
-);
+export const expiredConnections = mockSocialConnections.filter((c) => c.tokenExpiresAt < BASE_DATE);
 
 /** Connections with errors */
-export const errorConnections = mockSocialConnections.filter(
-  (c) => c.lastErrorAt !== null
-);
+export const errorConnections = mockSocialConnections.filter((c) => c.lastErrorAt !== null);
 
 /** Scheduled posts (not yet published) */
-export const scheduledPosts = mockScheduledPosts.filter(
-  (p) => p.status === 'scheduled'
-);
+export const scheduledPosts = mockScheduledPosts.filter((p) => p.status === 'scheduled');
 
 /** Draft posts */
 export const draftPosts = mockScheduledPosts.filter((p) => p.status === 'draft');
 
 /** Published posts */
-export const publishedPosts = mockScheduledPosts.filter(
-  (p) => p.status === 'published'
-);
+export const publishedPosts = mockScheduledPosts.filter((p) => p.status === 'published');
 
 /** Failed posts */
 export const failedPosts = mockScheduledPosts.filter((p) => p.status === 'failed');
 
 /** Posts pending retry */
-export const postsForRetry = mockScheduledPosts.filter(
-  (p) => p.status === 'failed' && p.nextRetryAt !== null
-);
+export const postsForRetry = mockScheduledPosts.filter((p) => p.status === 'failed' && p.nextRetryAt !== null);
 
 // === FACTORY FUNCTIONS ===
 
 /**
  * Creates a mock social connection with custom overrides
  */
-export function createMockConnection(
-  overrides: Partial<SocialConnection> = {}
-): SocialConnection {
+export function createMockConnection(overrides: Partial<SocialConnection> = {}): SocialConnection {
   const id = overrides.id || `conn-test-${Date.now()}`;
   const now = new Date();
   return {
@@ -525,9 +513,7 @@ export function createMockConnection(
 /**
  * Creates a mock scheduled post with custom overrides
  */
-export function createMockScheduledPost(
-  overrides: Partial<ScheduledPost> = {}
-): ScheduledPost {
+export function createMockScheduledPost(overrides: Partial<ScheduledPost> = {}): ScheduledPost {
   const id = overrides.id || `post-test-${Date.now()}`;
   const now = new Date();
   return {
@@ -550,6 +536,7 @@ export function createMockScheduledPost(
     nextRetryAt: null,
     generationId: null,
     templateId: null,
+    publishIdempotencyKey: null,
     createdAt: now,
     updatedAt: now,
     ...overrides,
@@ -559,10 +546,7 @@ export function createMockScheduledPost(
 /**
  * Creates a mock post analytics entry
  */
-export function createMockAnalytics(
-  scheduledPostId: string,
-  overrides: Partial<PostAnalytics> = {}
-): PostAnalytics {
+export function createMockAnalytics(scheduledPostId: string, overrides: Partial<PostAnalytics> = {}): PostAnalytics {
   const id = overrides.id || `analytics-test-${Date.now()}`;
   const now = new Date();
   return {
