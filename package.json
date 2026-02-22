@@ -30,7 +30,7 @@
     "analyze": "cross-env ANALYZE=true npx vite build",
     "knip": "knip",
     "knip:fix": "knip --fix",
-    "prepare": "husky"
+    "prepare": "husky || echo \"husky skipped\""
   },
   "notes": "removed framer motion dependency",
   "dependencies": {
