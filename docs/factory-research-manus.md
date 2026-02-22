@@ -1,31 +1,32 @@
-# Hebrew Image (manus-deploy) -- Factory Research Report
+# Reference Image App (external-reference) -- Factory Research Report
 
 **Date:** 2026-02-13
-**Source:** `c:/Users/avibm/manus-deploy/`
-**Project Name:** `hebrew-image` (v3.0.0)
+**Source:** `c:/Users/avibm/external-reference/`
+**Project Name:** `reference-image-app` (v3.0.0)
+**Note:** This document was sanitized to keep external-project identifiers out of this repository.
 
 ---
 
 ## 1. What This Project Does
 
-**Hebrew Image** is an AI-powered Hebrew text image generation platform. Users type Hebrew words/phrases (with optional Nikud/vowel marks), select a visual style, and the app generates a beautiful image with that Hebrew text rendered as the focal element.
+**Reference Image App** is an AI-powered localized text image generation platform. Users type localized words/phrases (with optional Nikud/vowel marks), select a visual style, and the app generates a beautiful image with that localized text rendered as the focal element.
 
-**Core Value Proposition:** AI models historically fail at rendering Hebrew text correctly. This app solves it by using **Gemini 3 Pro Image** (`gemini-3-pro-image-preview`), which can natively render Hebrew text correctly in generated images.
+**Core Value Proposition:** AI models historically fail at rendering localized text correctly. This app solves it by using **Gemini 3 Pro Image** (`gemini-3-pro-image-preview`), which can natively render localized text correctly in generated images.
 
-**Tagline (Hebrew):** "Create images with perfect Hebrew" (in Hebrew: "yitzira temunot im ivrit mushlemet")
+**Tagline (localized):** "Create images with perfect localized" (in localized: "yitzira temunot im ivrit mushlemet")
 
 ### Key Features
 
-1. **Hebrew text image generation** -- Type Hebrew text, pick a style, generate an image with that text
+1. **localized text image generation** -- Type localized text, pick a style, generate an image with that text
 2. **Prompt Engine** -- Auto-detects intent from user input (occasion, emotion, style), maps to optimized prompts
-3. **22+ Hebrew word library** with nikud, transliteration, categories (greeting/blessing/emotion/spiritual/celebration/family/nature)
+3. **22+ localized word library** with nikud, transliteration, categories (greeting/blessing/emotion/spiritual/celebration/family/nature)
 4. **10 visual style templates** -- calligraphy, neon, gold luxury, watercolor, minimalist, vintage, nature, festive, spiritual, ocean
 5. **Advanced editing** -- Outpainting, background removal, background replacement (via Gemini API)
 6. **Image editor with SAM2** -- Click-to-select objects using SAM2 AI segmentation (currently brush fallback)
 7. **PixiJS canvas** -- WebGPU-first canvas with RTL origin support
-8. **Voice input** -- Record Hebrew speech, transcribe via OpenAI gpt-4o-mini-transcribe, generate image from voice command
+8. **Voice input** -- Record localized speech, transcribe via OpenAI gpt-4o-mini-transcribe, generate image from voice command
 9. **Video generation** -- Text-to-video and image-to-video via Google Veo 3.1 API
-10. **3D text generation** -- Generate 3D Hebrew text models via Meshy API (GLB/USDZ/FBX/OBJ export)
+10. **3D text generation** -- Generate 3D localized text models via Meshy API (GLB/USDZ/FBX/OBJ export)
 11. **Real-time collaboration** -- Multi-user editing via Liveblocks (BYOK pattern)
 12. **Project management** -- Users have projects, images are stored per project, credit-based billing
 
@@ -38,7 +39,7 @@
 The `wrangler.toml` defines the project as a Cloudflare Pages project:
 
 ```toml
-name = "hebrew-image"
+name = "reference-image-app"
 compatibility_date = "2026-02-03"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = ".vercel/output/static"
@@ -48,12 +49,12 @@ pages_build_output_dir = ".vercel/output/static"
 
 ### Cloudflare Bindings (from `wrangler.toml`)
 
-| Binding  | Type         | Name/ID                | Purpose                                                      |
-| -------- | ------------ | ---------------------- | ------------------------------------------------------------ |
-| `DB`     | D1 Database  | `hebrew-image-db`      | Users, projects, images, credit transactions                 |
-| `IMAGES` | R2 Bucket    | `hebrew-image-storage` | Store generated images                                       |
-| `CACHE`  | KV Namespace | (placeholder)          | Caching and rate limiting                                    |
-| `AI`     | Workers AI   | (built-in)             | Image generation (though currently uses Gemini API directly) |
+| Binding  | Type         | Name/ID                       | Purpose                                                      |
+| -------- | ------------ | ----------------------------- | ------------------------------------------------------------ |
+| `DB`     | D1 Database  | `reference-image-app-db`      | Users, projects, images, credit transactions                 |
+| `IMAGES` | R2 Bucket    | `reference-image-app-storage` | Store generated images                                       |
+| `CACHE`  | KV Namespace | (placeholder)                 | Caching and rate limiting                                    |
+| `AI`     | Workers AI   | (built-in)                    | Image generation (though currently uses Gemini API directly) |
 
 ### Environment Type (from `cloudflare.d.ts`)
 
@@ -77,7 +78,7 @@ interface CloudflareEnv {
 
 - `users` -- id, email, name, avatar_url, credits (integer, default 10), plan (free/basic/pro/business)
 - `projects` -- id, user_id, name, description, thumbnail_url
-- `images` -- id, project_id, user_id, prompt, user_input, style, hebrew_text, image_url, r2_key, model (default 'lucid-origin'), width, height
+- `images` -- id, project_id, user_id, prompt, user_input, style, localized_text, image_url, r2_key, model (default 'lucid-origin'), width, height
 - `credit_transactions` -- id, user_id, amount, type (purchase/usage/bonus/refund), description, image_id
 
 **D1 Client** (`lib/infra/d1-client.ts`):
@@ -117,7 +118,7 @@ interface CloudflareEnv {
 - Declared in `wrangler.toml` with `[ai]` binding
 - Type definition: `Ai.run(model: string, inputs: Record<string, unknown>)`
 - **Currently NOT the primary generation engine** -- the app primarily uses:
-  - **Gemini 3 Pro Image API** (`gemini-3-pro-image-preview`) for Hebrew text image generation
+  - **Gemini 3 Pro Image API** (`gemini-3-pro-image-preview`) for localized text image generation
   - **Gemini 2.0 Flash** for editing operations (outpaint, background removal, replacement)
   - **OpenAI gpt-image-1** as fallback image generation
   - **OpenAI gpt-4o-mini-transcribe** for voice-to-text
@@ -153,11 +154,11 @@ interface CloudflareEnv {
 
 The prompt engine is a standalone library (`lib/prompt-engine/`) with:
 
-1. **Hebrew Library** (`hebrew-library.ts`) -- 22+ Hebrew words with full metadata (nikud, transliteration, English, category, occasions, emotions)
+1. **localized Library** (`localized-library.ts`) -- 22+ localized words with full metadata (nikud, transliteration, English, category, occasions, emotions)
 2. **Style Library** (`style-library.ts`) -- 10 style templates each with: AI background prompt, text style config (font, color, effects), tags, occasions, emotions
 3. **Scenes & Colors Library** (`scenes-colors-library.ts`) -- Additional scene/color suggestions
 4. **Prompt Builder** (`prompt-builder.ts`) -- Intent detection pipeline:
-   - Extract Hebrew text from mixed input (regex: `[\u0590-\u05FF\uFB1D-\uFB4F]+`)
+   - Extract localized text from mixed input (regex: `[\u0590-\u05FF\uFB1D-\uFB4F]+`)
    - Detect occasion (wedding, birthday, bar mitzvah, shabbat, etc.)
    - Detect emotion (joyful, romantic, peaceful, hopeful, elegant)
    - Detect/suggest style based on context
@@ -168,7 +169,7 @@ The prompt engine is a standalone library (`lib/prompt-engine/`) with:
 - `<html lang="he" dir="rtl">` globally
 - PixiCanvas has `rtlOrigin` prop that flips the canvas origin to the right edge
 - CSS `direction: rtl` on body
-- All UI text in Hebrew with Hebrew-first layout
+- All UI text in localized with localized-first layout
 
 ### 5.3 BYOK (Bring Your Own Key) Pattern
 
@@ -207,7 +208,7 @@ components/
   common/       -- ErrorBoundary, ProgressLoader, RateLimitWarning
   editor/       -- ImageEditor (SAM2), AdvancedEditingPanel, OutpaintControls, ReplaceBgDialog
   generation/   -- ImageGenerator
-  hebrew/       -- HebrewTextInput (with Nikud insertion), HebrewCanvasText, NikudKeyboard
+  localized/       -- localizedTextInput (with Nikud insertion), localizedCanvasText, NikudKeyboard
   video/        -- VideoGeneratorPanel, VideoGenerationForm, VideoPreviewPlayer
   voice/        -- VoiceInputButton, RecordingIndicator
 ```
@@ -217,12 +218,12 @@ components/
 - **Unit tests:** Vitest with JSDOM (`vitest.config.ts`)
 - **E2E tests:** Playwright (`playwright.config.ts`)
 - **Test files:** Co-located with source files (`.test.tsx` / `.test.ts`)
-- E2E specs: dashboard, error-handling, hebrew-text, image-generation, studio
+- E2E specs: dashboard, error-handling, localized-text, image-generation, studio
 
 ### 5.9 Workspace Structure
 
 ```
-manus-deploy/
+external-reference/
   pnpm-workspace.yaml    -- pnpm workspaces
   package.json           -- root (v3.0.0), delegates to apps/web
   wrangler.toml          -- Cloudflare deployment config
@@ -243,15 +244,15 @@ manus-deploy/
 
 ## 6. External API Dependencies
 
-| Service           | API/Model                                    | Purpose                                          |
-| ----------------- | -------------------------------------------- | ------------------------------------------------ |
-| **Google Gemini** | `gemini-3-pro-image-preview`                 | Primary image generation (Hebrew text rendering) |
-| **Google Gemini** | `gemini-2.0-flash-exp`                       | Image editing (outpaint, background ops)         |
-| **Google Veo**    | `veo-3.1-generate-preview`                   | Video generation (text-to-video, image-to-video) |
-| **OpenAI**        | `gpt-image-1` / `gpt-image-1.5` / `dall-e-3` | Alternative image generation                     |
-| **OpenAI**        | `gpt-4o-mini-transcribe`                     | Voice-to-text (Hebrew speech recognition)        |
-| **Meshy**         | Text-to-3D / Image-to-3D                     | 3D model generation                              |
-| **Liveblocks**    | Real-time SDK                                | Multi-user collaboration (BYOK)                  |
+| Service           | API/Model                                    | Purpose                                             |
+| ----------------- | -------------------------------------------- | --------------------------------------------------- |
+| **Google Gemini** | `gemini-3-pro-image-preview`                 | Primary image generation (localized text rendering) |
+| **Google Gemini** | `gemini-2.0-flash-exp`                       | Image editing (outpaint, background ops)            |
+| **Google Veo**    | `veo-3.1-generate-preview`                   | Video generation (text-to-video, image-to-video)    |
+| **OpenAI**        | `gpt-image-1` / `gpt-image-1.5` / `dall-e-3` | Alternative image generation                        |
+| **OpenAI**        | `gpt-4o-mini-transcribe`                     | Voice-to-text (localized speech recognition)        |
+| **Meshy**         | Text-to-3D / Image-to-3D                     | 3D model generation                                 |
+| **Liveblocks**    | Real-time SDK                                | Multi-user collaboration (BYOK)                     |
 
 ---
 
@@ -278,9 +279,9 @@ manus-deploy/
 
 ### Architecture Differences from Automated Ads Agent
 
-- Hebrew Image: Next.js 16 on Cloudflare Pages (edge-rendered)
+- Reference Image App: Next.js 16 on Cloudflare Pages (edge-rendered)
 - Automated Ads Agent: Express/Vite on Railway (Node.js server)
-- Hebrew Image: D1 (SQLite edge) + R2 + KV
+- Reference Image App: D1 (SQLite edge) + R2 + KV
 - Automated Ads Agent: PostgreSQL (Drizzle ORM) on Railway
 
 ### Potential Reuse

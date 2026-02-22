@@ -14,32 +14,34 @@
 
 import pino from 'pino';
 
-const isDevelopment = process.env.NODE_ENV !== 'production';
+const isDevelopment = process.env['NODE_ENV'] !== 'production';
 
 // Configure Pino
 export const logger = pino({
-  level: process.env.LOG_LEVEL || (isDevelopment ? 'debug' : 'info'),
+  level: process.env['LOG_LEVEL'] || (isDevelopment ? 'debug' : 'info'),
 
   // Add base context to all logs
   base: {
-    service: process.env.OTEL_SERVICE_NAME || 'automated-ads-agent',
-    env: process.env.NODE_ENV || 'development',
+    service: process.env['OTEL_SERVICE_NAME'] || 'automated-ads-agent',
+    env: process.env['NODE_ENV'] || 'development',
   },
 
   // Format timestamps as ISO strings
   timestamp: pino.stdTimeFunctions.isoTime,
 
   // Pretty print in development
-  transport: isDevelopment
+  ...(isDevelopment
     ? {
-        target: 'pino-pretty',
-        options: {
-          colorize: true,
-          translateTime: 'SYS:standard',
-          ignore: 'pid,hostname,service,env',
+        transport: {
+          target: 'pino-pretty',
+          options: {
+            colorize: true,
+            translateTime: 'SYS:standard',
+            ignore: 'pid,hostname,service,env',
+          },
         },
       }
-    : undefined,
+    : {}),
 
   // Custom serializers for common objects
   serializers: {
@@ -62,8 +64,7 @@ export const logger = pino({
 });
 
 // Child logger for specific modules
-export const createModuleLogger = (module: string) =>
-  logger.child({ module });
+export const createModuleLogger = (module: string) => logger.child({ module });
 
 // Pre-configured module loggers
 export const authLogger = createModuleLogger('auth');

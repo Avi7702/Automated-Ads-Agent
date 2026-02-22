@@ -34,6 +34,9 @@ import { productRelationshipsRouterModule, relationshipsRAGRouterModule } from '
 // Studio agent (conversational AI)
 import { agentRouterModule } from './agent.router';
 
+// Agent plan pipeline (suggestions, preview, execute, revise)
+import { agentPlanRouterModule } from './agentPlan.router';
+
 // File search (RAG)
 import { catalogRouterModule } from './catalog.router';
 
@@ -108,6 +111,9 @@ export const routerModules: RouterModule[] = [
 
   // Studio agent (conversational AI)
   agentRouterModule,
+
+  // Agent plan pipeline (suggestions, preview, execute, revise)
+  agentPlanRouterModule,
 
   // File search (RAG)
   catalogRouterModule,
@@ -200,5 +206,6 @@ export { approvalQueueRouterModule } from './approvalQueue.router';
 export { styleReferencesRouterModule } from './styleReferences.router';
 export { trainingRouterModule } from './training.router';
 export { agentRouterModule } from './agent.router';
+export { agentPlanRouterModule } from './agentPlan.router';
 export { intelligenceRouterModule } from './intelligence.router';
 export { adminRouterModule } from './admin.router';

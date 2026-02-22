@@ -1,16 +1,9 @@
-import { useState, useEffect } from "react";
-import {
-  Loader2,
-  CheckCircle2,
-  XCircle,
-  ExternalLink,
-  Eye,
-  EyeOff,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { useState, useEffect } from 'react';
+import { Loader2, CheckCircle2, XCircle, ExternalLink, Eye, EyeOff } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
@@ -18,19 +11,19 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { SERVICE_CONFIG } from "@/lib/apiKeyConfig";
+} from '@/components/ui/dialog';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { SERVICE_CONFIG } from '@/lib/apiKeyConfig';
 
 interface ApiKeyFormProps {
   isOpen: boolean;
   onClose: () => void;
   service: string | null;
-  existingKey?: string | null;
+  existingKey?: string | null | undefined;
   onSave: (service: string, data: Record<string, string>) => Promise<void>;
-  isSaving?: boolean;
-  validationError?: string | null;
-  validationSuccess?: boolean;
+  isSaving?: boolean | undefined;
+  validationError?: string | null | undefined;
+  validationSuccess?: boolean | undefined;
 }
 
 export function ApiKeyForm({
@@ -53,7 +46,7 @@ export function ApiKeyForm({
       const config = SERVICE_CONFIG[service];
       const initial: Record<string, string> = {};
       config?.fields.forEach((field) => {
-        initial[field.name] = "";
+        initial[field.name] = '';
       });
       setFormData(initial);
       setShowPasswords({});
@@ -74,7 +67,7 @@ export function ApiKeyForm({
 
     // Clear format error when typing
     if (formatErrors[fieldName]) {
-      setFormatErrors((prev) => ({ ...prev, [fieldName]: "" }));
+      setFormatErrors((prev) => ({ ...prev, [fieldName]: '' }));
     }
   };
 
@@ -83,12 +76,12 @@ export function ApiKeyForm({
     let isValid = true;
 
     config.fields.forEach((field) => {
-      const value = formData[field.name]?.trim() || "";
+      const value = formData[field.name]?.trim() || '';
       if (!value) {
-        errors[field.name] = "This field is required";
+        errors[field.name] = 'This field is required';
         isValid = false;
       } else if (field.pattern && !field.pattern.test(value)) {
-        errors[field.name] = field.formatHint || "Invalid format";
+        errors[field.name] = field.formatHint || 'Invalid format';
         isValid = false;
       }
     });
@@ -112,10 +105,12 @@ export function ApiKeyForm({
   };
 
   const isSecretField = (fieldName: string) => {
-    return fieldName.toLowerCase().includes("secret") ||
-           fieldName.toLowerCase().includes("key") ||
-           fieldName.toLowerCase().includes("password") ||
-           fieldName === "apiKey";
+    return (
+      fieldName.toLowerCase().includes('secret') ||
+      fieldName.toLowerCase().includes('key') ||
+      fieldName.toLowerCase().includes('password') ||
+      fieldName === 'apiKey'
+    );
   };
 
   return (
@@ -128,12 +123,12 @@ export function ApiKeyForm({
             </div>
             <div>
               <DialogTitle>
-                {existingKey ? "Update" : "Add"} {config.displayName} API Key
+                {existingKey ? 'Update' : 'Add'} {config.displayName} API Key
               </DialogTitle>
               <DialogDescription>
                 {existingKey
-                  ? "Enter a new API key to replace the existing one."
-                  : "Add your API key to use your own quota."}
+                  ? 'Enter a new API key to replace the existing one.'
+                  : 'Add your API key to use your own quota.'}
               </DialogDescription>
             </div>
           </div>
@@ -147,18 +142,11 @@ export function ApiKeyForm({
               <div className="relative">
                 <Input
                   id={field.name}
-                  type={
-                    isSecretField(field.name) && !showPasswords[field.name]
-                      ? "password"
-                      : "text"
-                  }
-                  value={formData[field.name] || ""}
+                  type={isSecretField(field.name) && !showPasswords[field.name] ? 'password' : 'text'}
+                  value={formData[field.name] || ''}
                   onChange={(e) => handleFieldChange(field.name, e.target.value)}
                   placeholder={field.placeholder}
-                  className={cn(
-                    "pr-12",
-                    formatErrors[field.name] && "border-destructive"
-                  )}
+                  className={cn('pr-12', formatErrors[field.name] && 'border-destructive')}
                   autoComplete="off"
                   spellCheck="false"
                 />
@@ -170,23 +158,13 @@ export function ApiKeyForm({
                     className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
                     onClick={() => togglePasswordVisibility(field.name)}
                   >
-                    {showPasswords[field.name] ? (
-                      <EyeOff className="w-4 h-4" />
-                    ) : (
-                      <Eye className="w-4 h-4" />
-                    )}
+                    {showPasswords[field.name] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </Button>
                 )}
               </div>
-              {formatErrors[field.name] && (
-                <p className="text-xs text-destructive">
-                  {formatErrors[field.name]}
-                </p>
-              )}
+              {formatErrors[field.name] && <p className="text-xs text-destructive">{formatErrors[field.name]}</p>}
               {field.formatHint && !formatErrors[field.name] && (
-                <p className="text-xs text-muted-foreground">
-                  {field.formatHint}
-                </p>
+                <p className="text-xs text-muted-foreground">{field.formatHint}</p>
               )}
             </div>
           ))}
@@ -216,17 +194,15 @@ export function ApiKeyForm({
             <Alert className="border-green-500/50 bg-green-500/10">
               <CheckCircle2 className="h-4 w-4 text-green-500" />
               <AlertTitle className="text-green-500">Key Validated</AlertTitle>
-              <AlertDescription>
-                Your API key has been validated and saved successfully.
-              </AlertDescription>
+              <AlertDescription>Your API key has been validated and saved successfully.</AlertDescription>
             </Alert>
           )}
 
           {/* Info */}
           <div className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
             <p>
-              Your API key will be encrypted and stored securely. You can
-              remove it at any time to revert to the default system key.
+              Your API key will be encrypted and stored securely. You can remove it at any time to revert to the default
+              system key.
             </p>
           </div>
         </form>
@@ -235,11 +211,7 @@ export function ApiKeyForm({
           <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button
-            type="submit"
-            onClick={handleSubmit}
-            disabled={isSaving}
-          >
+          <Button type="submit" onClick={handleSubmit} disabled={isSaving}>
             {isSaving ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />

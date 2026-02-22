@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, Edit2, Home, Layers, Package, ChevronDown, X, Save, Loader2, ImagePlus } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Plus, Trash2, Edit2, Home, Layers, X, Save, Loader2 } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import type { InstallationScenario, Product } from '@shared/schema';
 
@@ -426,7 +425,10 @@ function ScenarioFormModal({
   );
 }
 
-export default function InstallationScenarios({ embedded = false, selectedId }: InstallationScenariosProps) {
+export default function InstallationScenarios({
+  embedded = false,
+  selectedId: _selectedId,
+}: InstallationScenariosProps) {
   const queryClient = useQueryClient();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingScenario, setEditingScenario] = useState<InstallationScenario | null>(null);

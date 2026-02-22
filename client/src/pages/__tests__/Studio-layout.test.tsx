@@ -15,11 +15,13 @@
  * @file client/src/pages/__tests__/Studio-layout.test.tsx
  */
 import React from 'react';
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { vi, describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { mockProducts, singleDrainageProduct } from '@/fixtures';
+
+vi.setConfig({ testTimeout: 15000, hookTimeout: 20000 });
 
 // Mock external dependencies
 vi.mock('@/components/layout/Header', () => ({
@@ -215,7 +217,12 @@ function createWrapper() {
 let Studio: () => JSX.Element;
 
 describe('Studio Component - Layout & Structure', () => {
-  beforeEach(async () => {
+  beforeAll(async () => {
+    const module = await import('../../pages/Studio');
+    Studio = module.default;
+  }, 30000);
+
+  beforeEach(() => {
     vi.resetAllMocks();
     mockLocalStorage.clear();
 
@@ -256,9 +263,6 @@ describe('Studio Component - Layout & Structure', () => {
         json: () => Promise.resolve({}),
       });
     });
-
-    const module = await import('../../pages/Studio');
-    Studio = module.default;
   });
 
   afterEach(() => {

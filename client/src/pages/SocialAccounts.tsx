@@ -1,21 +1,80 @@
 import { useState, useEffect } from 'react';
 import { Header } from '@/components/layout/Header';
-
-interface SocialAccountsProps {
-  embedded?: boolean;
-}
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ConnectedAccountCard } from '@/components/social/ConnectedAccountCard';
 import { useToast } from '@/hooks/use-toast';
-import { SocialConnection } from '@/types/social';
-import { RefreshCw, Link as LinkIcon, AlertCircle, ExternalLink } from 'lucide-react';
+import type { SocialConnection } from '@/types/social';
+import { RefreshCw, Link as LinkIcon, LinkedinIcon } from 'lucide-react';
+
+interface SocialAccountsProps {
+  readonly embedded?: boolean;
+}
+
+// Platform connect card config
+interface PlatformConfig {
+  readonly key: string;
+  readonly label: string;
+  readonly icon: React.ElementType | null;
+  readonly iconColor: string;
+  readonly bgColor: string;
+  readonly borderColor: string;
+  readonly available: boolean;
+}
+
+const PLATFORM_CONFIGS: PlatformConfig[] = [
+  {
+    key: 'linkedin',
+    label: 'LinkedIn',
+    icon: LinkedinIcon,
+    iconColor: 'text-blue-600',
+    bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+    borderColor: 'border-blue-200 dark:border-blue-800',
+    available: true,
+  },
+  {
+    key: 'twitter',
+    label: 'Twitter / X',
+    icon: null, // No Twitter icon in lucide-react; use text fallback
+    iconColor: 'text-sky-500',
+    bgColor: 'bg-sky-50 dark:bg-sky-900/20',
+    borderColor: 'border-sky-200 dark:border-sky-800',
+    available: true,
+  },
+  {
+    key: 'instagram',
+    label: 'Instagram',
+    icon: null,
+    iconColor: 'text-pink-600',
+    bgColor: 'bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20',
+    borderColor: 'border-pink-200 dark:border-pink-800',
+    available: false,
+  },
+  {
+    key: 'facebook',
+    label: 'Facebook',
+    icon: null,
+    iconColor: 'text-blue-700',
+    bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+    borderColor: 'border-blue-300 dark:border-blue-700',
+    available: false,
+  },
+];
+
+// Text fallbacks for platforms without lucide-react icons
+const PLATFORM_EMOJI: Record<string, string> = {
+  twitter: '𝕏',
+  instagram: '📷',
+  facebook: '📘',
+};
 
 export default function SocialAccounts({ embedded = false }: SocialAccountsProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [connecting, setConnecting] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<SocialConnection[]>([]);
 
   // Fetch connected accounts
@@ -41,10 +100,11 @@ export default function SocialAccounts({ embedded = false }: SocialAccountsProps
           variant: 'default',
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to load social accounts';
       toast({
         title: 'Error',
-        description: error.message || 'Failed to load social accounts',
+        description: message,
         variant: 'destructive',
       });
     } finally {
@@ -53,12 +113,26 @@ export default function SocialAccounts({ embedded = false }: SocialAccountsProps
     }
   };
 
-  // Initial load
+  // Initial load + check for ?connected= URL param
   useEffect(() => {
-    fetchAccounts();
+    const params = new URLSearchParams(globalThis.location.search);
+    const connectedPlatform = params.get('connected');
+    if (connectedPlatform) {
+      const platformLabel = PLATFORM_CONFIGS.find((p) => p.key === connectedPlatform)?.label ?? connectedPlatform;
+      toast({
+        title: 'Account Connected',
+        description: `${platformLabel} account connected successfully.`,
+        variant: 'default',
+      });
+      // Strip ?connected= from the URL without triggering a reload
+      const cleanUrl = globalThis.location.pathname + globalThis.location.hash;
+      globalThis.history.replaceState(null, '', cleanUrl);
+    }
+    void fetchAccounts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Handle refresh button
+  // Handle refresh all button
   const handleRefreshAll = async () => {
     setRefreshing(true);
     await fetchAccounts(true);
@@ -83,14 +157,75 @@ export default function SocialAccounts({ embedded = false }: SocialAccountsProps
         variant: 'default',
       });
 
-      // Reload accounts
       await fetchAccounts();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to disconnect account';
       toast({
         title: 'Disconnect Failed',
-        description: error.message || 'Failed to disconnect account',
+        description: message,
         variant: 'destructive',
       });
+    }
+  };
+
+  // Refresh a single account token
+  const handleRefreshToken = async (accountId: string) => {
+    try {
+      const response = await fetch(`/api/social/accounts/${accountId}/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to refresh token');
+      }
+
+      toast({
+        title: 'Token Refreshed',
+        description: 'Account token refreshed successfully.',
+        variant: 'default',
+      });
+
+      await fetchAccounts();
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to refresh token';
+      toast({
+        title: 'Refresh Failed',
+        description: message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Initiate OAuth connect flow
+  const handleConnect = async (platform: string) => {
+    setConnecting(platform);
+    try {
+      const response = await fetch(`/api/social/oauth/${platform}/authorize`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || `Failed to start ${platform} OAuth`);
+      }
+
+      const data = await response.json();
+      if (!data.authUrl) {
+        throw new Error('No authorization URL returned from server');
+      }
+
+      // Redirect user to the OAuth provider
+      globalThis.location.href = data.authUrl;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : `Failed to connect ${platform}`;
+      toast({
+        title: 'Connection Failed',
+        description: message,
+        variant: 'destructive',
+      });
+      setConnecting(null);
     }
   };
 
@@ -99,13 +234,13 @@ export default function SocialAccounts({ embedded = false }: SocialAccountsProps
       {!embedded && <Header currentPage="settings" />}
 
       <main className="container mx-auto px-4 py-6 max-w-5xl">
-        {/* Header */}
+        {/* Page header */}
         <div className="mb-6">
           <div className="flex items-start justify-between">
             <div>
               <h1 className="text-2xl font-bold">Social Media Accounts</h1>
               <p className="text-muted-foreground mt-1">
-                Manage your social media accounts connected via n8n for automated posting
+                Connect your social media accounts to publish content directly from this app.
               </p>
             </div>
             <Button
@@ -123,19 +258,72 @@ export default function SocialAccounts({ embedded = false }: SocialAccountsProps
 
         {/* Loading state */}
         {loading ? (
-          <div
-            className="space-y-4"
-            role="status"
-            aria-live="polite"
-            aria-busy="true"
-            aria-label="Loading social accounts"
-          >
+          <output className="space-y-4 block" aria-live="polite" aria-busy="true" aria-label="Loading social accounts">
             <Skeleton className="h-48 w-full" />
             <Skeleton className="h-48 w-full" />
             <Skeleton className="h-32 w-full" />
-          </div>
+          </output>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-8">
+            {/* Connect a Social Account */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Connect a Social Account</CardTitle>
+                <CardDescription>
+                  Authorize this app to post on your behalf. You can connect multiple accounts.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                  {PLATFORM_CONFIGS.map((platform) => {
+                    const Icon = platform.icon;
+                    const emoji = PLATFORM_EMOJI[platform.key];
+                    const isConnecting = connecting === platform.key;
+
+                    return (
+                      <div
+                        key={platform.key}
+                        className={`rounded-lg border-2 p-4 flex flex-col items-center gap-3 ${platform.borderColor} ${platform.bgColor}`}
+                      >
+                        {/* Platform icon */}
+                        <div className="p-2 rounded-lg bg-white dark:bg-gray-800 shadow-sm">
+                          {Icon ? (
+                            <Icon className={`w-6 h-6 ${platform.iconColor}`} />
+                          ) : (
+                            <span className={`text-xl font-bold ${platform.iconColor}`}>{emoji}</span>
+                          )}
+                        </div>
+
+                        <span className="font-medium text-sm text-center">{platform.label}</span>
+
+                        {platform.available ? (
+                          <Button
+                            size="sm"
+                            className="w-full"
+                            disabled={isConnecting}
+                            onClick={() => handleConnect(platform.key)}
+                          >
+                            {isConnecting ? (
+                              <>
+                                <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                                Connecting...
+                              </>
+                            ) : (
+                              `Connect ${platform.label}`
+                            )}
+                          </Button>
+                        ) : (
+                          <Badge variant="secondary" className="text-xs">
+                            Coming Soon
+                          </Badge>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Connected Accounts */}
             {accounts.length > 0 && (
               <div className="space-y-4">
@@ -144,14 +332,18 @@ export default function SocialAccounts({ embedded = false }: SocialAccountsProps
                   Connected Accounts ({accounts.length})
                 </h2>
 
-                {/* All Connected Accounts */}
                 {accounts.map((account) => (
-                  <ConnectedAccountCard key={account.id} account={account} onDisconnect={handleDisconnect} />
+                  <ConnectedAccountCard
+                    key={account.id}
+                    account={account}
+                    onDisconnect={handleDisconnect}
+                    onRefreshToken={handleRefreshToken}
+                  />
                 ))}
               </div>
             )}
 
-            {/* Empty state */}
+            {/* Empty state — only shown when no accounts */}
             {accounts.length === 0 && (
               <Card>
                 <CardContent className="p-12 text-center">
@@ -159,103 +351,12 @@ export default function SocialAccounts({ embedded = false }: SocialAccountsProps
                     <LinkIcon className="w-8 h-8 text-muted-foreground" />
                   </div>
                   <h3 className="text-lg font-medium mb-2">No Connected Accounts</h3>
-                  <p className="text-muted-foreground mb-6">
-                    Configure OAuth in n8n and sync your accounts to start posting content automatically.
+                  <p className="text-muted-foreground">
+                    Use the connect buttons above to link your social media accounts.
                   </p>
                 </CardContent>
               </Card>
             )}
-
-            {/* n8n Setup Instructions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Connect Social Media Accounts via n8n</CardTitle>
-                <CardDescription>
-                  OAuth authentication is managed through n8n for security and ease of use
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  {/* Setup instructions */}
-                  <div className="space-y-4">
-                    <h3 className="font-semibold text-sm">Setup Instructions:</h3>
-                    <ol className="list-decimal list-inside space-y-3 text-sm">
-                      <li className="pl-2">
-                        <span className="font-medium">Configure OAuth in n8n</span>
-                        <p className="ml-6 mt-1 text-muted-foreground">
-                          Go to n8n → Settings → Credentials → Add Credential, then select the platform you want to
-                          connect (LinkedIn, Instagram, Facebook, etc.)
-                        </p>
-                      </li>
-                      <li className="pl-2">
-                        <span className="font-medium">Complete OAuth flow</span>
-                        <p className="ml-6 mt-1 text-muted-foreground">
-                          Click "Connect my account" in n8n and authorize the application
-                        </p>
-                      </li>
-                      <li className="pl-2">
-                        <span className="font-medium">Sync accounts to this app</span>
-                        <p className="ml-6 mt-1 text-muted-foreground">
-                          Accounts will be synced automatically once the integration is complete
-                        </p>
-                      </li>
-                    </ol>
-                  </div>
-
-                  {/* Sync button */}
-                  <div className="flex gap-3">
-                    {/* TODO: Wire to /api/social/sync-accounts when n8n sync is implemented */}
-                    <Button variant="outline" className="gap-2" asChild>
-                      <a
-                        href="https://docs.n8n.io/integrations/builtin/credentials/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                        n8n Documentation
-                      </a>
-                    </Button>
-                  </div>
-
-                  {/* Supported platforms */}
-                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                    <div className="flex gap-3">
-                      <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                      <div className="space-y-2 text-sm">
-                        <p className="font-medium text-blue-900 dark:text-blue-100">Supported Platforms:</p>
-                        <ul className="list-disc list-inside space-y-1 text-blue-800 dark:text-blue-200">
-                          <li>
-                            <strong>LinkedIn:</strong> Personal profiles and company pages supported
-                          </li>
-                          <li>
-                            <strong>Instagram:</strong> Business or Creator accounts only (via Facebook Graph API)
-                          </li>
-                          <li>
-                            <strong>Facebook:</strong> Pages and groups
-                          </li>
-                          <li>
-                            <strong>Twitter/X:</strong> Standard and premium API tiers
-                          </li>
-                          <li>
-                            <strong>TikTok:</strong> Business accounts
-                          </li>
-                          <li>
-                            <strong>YouTube:</strong> Channels
-                          </li>
-                          <li>
-                            <strong>Pinterest:</strong> Business accounts
-                          </li>
-                        </ul>
-                        <p className="mt-3 text-blue-800 dark:text-blue-200">
-                          <strong>Note:</strong> n8n automatically handles token refresh and expiration, so you don't
-                          need to worry about re-authorizing.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         )}
       </main>

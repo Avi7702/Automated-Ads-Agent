@@ -17,7 +17,7 @@ async function fetchCsrfToken(): Promise<string> {
 
   const data = await res.json();
   csrfToken = data.csrfToken;
-  return csrfToken;
+  return csrfToken ?? '';
 }
 
 // Get CSRF token, fetching if necessary (singleton pattern to avoid race conditions)
@@ -90,7 +90,7 @@ export async function apiRequest(method: string, url: string, data?: unknown | u
   let res = await fetch(url, {
     method,
     headers,
-    body: data ? JSON.stringify(data) : undefined,
+    body: data ? JSON.stringify(data) : null,
     credentials: 'include',
   });
 
@@ -103,7 +103,7 @@ export async function apiRequest(method: string, url: string, data?: unknown | u
       res = await fetch(url, {
         method,
         headers,
-        body: data ? JSON.stringify(data) : undefined,
+        body: data ? JSON.stringify(data) : null,
         credentials: 'include',
       });
     } catch (refreshError) {

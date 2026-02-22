@@ -13,17 +13,20 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { SocialConnection } from '@/types/social';
-import { Linkedin, Instagram, Unplug, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
+import { Unplug, AlertTriangle, CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
 interface ConnectedAccountCardProps {
-  account: SocialConnection;
-  onDisconnect: (id: string) => Promise<void>;
+  readonly account: SocialConnection;
+  readonly onDisconnect: (id: string) => Promise<void>;
+  readonly onRefreshToken: (id: string) => Promise<void>;
 }
 
-export function ConnectedAccountCard({ account, onDisconnect }: ConnectedAccountCardProps) {
+export function ConnectedAccountCard({ account, onDisconnect, onRefreshToken }: ConnectedAccountCardProps) {
   const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleDisconnect = async () => {
     setIsDisconnecting(true);
@@ -35,52 +38,64 @@ export function ConnectedAccountCard({ account, onDisconnect }: ConnectedAccount
     }
   };
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await onRefreshToken(account.id);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   // Platform-specific styling
-  const platformConfig: Record<string, any> = {
+  const platformConfig: Record<
+    string,
+    { icon: React.ElementType | null; iconColor: string; bgColor: string; borderColor: string; label: string }
+  > = {
     linkedin: {
-      icon: Linkedin,
+      icon: LucideIcons.LinkedinIcon,
       iconColor: 'text-blue-600',
       bgColor: 'bg-blue-50 dark:bg-blue-900/20',
       borderColor: 'border-blue-200 dark:border-blue-800',
       label: 'LinkedIn',
     },
     instagram: {
-      icon: Instagram,
+      icon: LucideIcons.InstagramIcon,
       iconColor: 'text-pink-600',
       bgColor: 'bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20',
       borderColor: 'border-pink-200 dark:border-pink-800',
       label: 'Instagram',
     },
     facebook: {
-      icon: Linkedin, // Placeholder - would need Facebook icon
+      icon: null,
       iconColor: 'text-blue-700',
       bgColor: 'bg-blue-50 dark:bg-blue-900/20',
       borderColor: 'border-blue-200 dark:border-blue-800',
       label: 'Facebook',
     },
     twitter: {
-      icon: Linkedin, // Placeholder - would need Twitter icon
+      icon: null,
       iconColor: 'text-sky-500',
       bgColor: 'bg-sky-50 dark:bg-sky-900/20',
       borderColor: 'border-sky-200 dark:border-sky-800',
       label: 'Twitter/X',
     },
     tiktok: {
-      icon: Linkedin, // Placeholder - would need TikTok icon
+      icon: null,
       iconColor: 'text-black dark:text-white',
       bgColor: 'bg-gray-50 dark:bg-gray-900/20',
       borderColor: 'border-gray-200 dark:border-gray-800',
       label: 'TikTok',
     },
     youtube: {
-      icon: Linkedin, // Placeholder - would need YouTube icon
+      icon: null,
       iconColor: 'text-red-600',
       bgColor: 'bg-red-50 dark:bg-red-900/20',
       borderColor: 'border-red-200 dark:border-red-800',
       label: 'YouTube',
     },
     pinterest: {
-      icon: Linkedin, // Placeholder - would need Pinterest icon
+      icon: null,
       iconColor: 'text-red-700',
       bgColor: 'bg-red-50 dark:bg-red-900/20',
       borderColor: 'border-red-200 dark:border-red-800',
@@ -88,10 +103,20 @@ export function ConnectedAccountCard({ account, onDisconnect }: ConnectedAccount
     },
   };
 
-  const config = platformConfig[account.platform] || platformConfig.linkedin;
-  const Icon = config.icon;
+  // Text fallbacks for platforms without lucide-react icons
+  const platformEmoji: Record<string, string> = {
+    facebook: '📘',
+    twitter: '𝕏',
+    tiktok: '🎵',
+    youtube: '▶',
+    pinterest: '📌',
+  };
 
-  // Compute status from existing fields (2026 UX: clear visual feedback)
+  const config = platformConfig[account.platform] ?? platformConfig['linkedin'];
+  const Icon = config?.icon ?? null;
+  const emoji = platformEmoji[account.platform];
+
+  // Compute status from existing fields
   const computeStatus = (): 'active' | 'error' | 'inactive' | 'expiring' => {
     if (!account.isActive) return 'inactive';
 
@@ -115,19 +140,23 @@ export function ConnectedAccountCard({ account, onDisconnect }: ConnectedAccount
 
   return (
     <>
-      <Card className={`${config.borderColor} border-2`}>
-        <CardContent className={`p-6 ${config.bgColor}`}>
+      <Card className={`${config?.borderColor ?? ''} border-2`}>
+        <CardContent className={`p-6 ${config?.bgColor ?? ''}`}>
           <div className="flex flex-col gap-4">
             {/* Header with icon and platform */}
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-white dark:bg-gray-800 shadow-sm">
-                  <Icon className={`w-6 h-6 ${config.iconColor}`} />
+                  {Icon ? (
+                    <Icon className={`w-6 h-6 ${config?.iconColor ?? ''}`} />
+                  ) : (
+                    <span className={`text-xl font-bold ${config?.iconColor ?? ''}`}>{emoji}</span>
+                  )}
                 </div>
                 <div>
-                  <h3 className="font-semibold text-lg">{config.label}</h3>
+                  <h3 className="font-semibold text-lg">{config?.label ?? account.platform}</h3>
                   <p className="text-sm text-muted-foreground">
-                    {account.platformUsername || account.platformUserId || 'Unknown Account'}
+                    {account.platformUsername ?? account.platformUserId ?? 'Unknown Account'}
                   </p>
                 </div>
               </div>
@@ -168,24 +197,13 @@ export function ConnectedAccountCard({ account, onDisconnect }: ConnectedAccount
 
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">Connected:</span>
-                <span className="font-medium">
-                  {format(parseISO(account.connectedAt), 'MMM d, yyyy')}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">Managed by:</span>
-                <Badge variant="outline" className="gap-1">
-                  n8n
-                </Badge>
+                <span className="font-medium">{format(parseISO(account.connectedAt), 'MMM d, yyyy')}</span>
               </div>
 
               {account.lastUsedAt && (
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground">Last Used:</span>
-                  <span className="font-medium">
-                    {format(parseISO(account.lastUsedAt), 'MMM d, yyyy h:mm a')}
-                  </span>
+                  <span className="font-medium">{format(parseISO(account.lastUsedAt), 'MMM d, yyyy h:mm a')}</span>
                 </div>
               )}
 
@@ -196,9 +214,7 @@ export function ConnectedAccountCard({ account, onDisconnect }: ConnectedAccount
                     <p className="text-xs text-muted-foreground">
                       Last Error ({format(parseISO(account.lastErrorAt), 'MMM d, h:mm a')}):
                     </p>
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      {account.lastErrorMessage}
-                    </p>
+                    <p className="text-sm text-red-600 dark:text-red-400">{account.lastErrorMessage}</p>
                   </div>
                 </div>
               )}
@@ -209,8 +225,19 @@ export function ConnectedAccountCard({ account, onDisconnect }: ConnectedAccount
               <Button
                 variant="outline"
                 size="sm"
+                onClick={handleRefresh}
+                disabled={isRefreshing || isDisconnecting}
+                className="gap-2"
+              >
+                {isRefreshing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                {isRefreshing ? 'Refreshing...' : 'Refresh Token'}
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setShowDisconnectDialog(true)}
-                disabled={isDisconnecting}
+                disabled={isDisconnecting || isRefreshing}
                 className="gap-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
               >
                 <Unplug className="w-4 h-4" />
@@ -225,12 +252,13 @@ export function ConnectedAccountCard({ account, onDisconnect }: ConnectedAccount
       <AlertDialog open={showDisconnectDialog} onOpenChange={setShowDisconnectDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Disconnect {config.label} Account?</AlertDialogTitle>
+            <AlertDialogTitle>Disconnect {config?.label ?? account.platform} Account?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove the reference to your {config.label} account{' '}
+              This will remove the reference to your {config?.label ?? account.platform} account{' '}
               {account.platformUsername && `(@${account.platformUsername})`} from this application.
-              <br /><br />
-              <strong>Note:</strong> This does NOT revoke OAuth permissions in n8n. Scheduled posts using this account will fail until you reconnect via the "Sync Accounts from n8n" button.
+              <br />
+              <br />
+              Scheduled posts using this account will fail until you reconnect.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

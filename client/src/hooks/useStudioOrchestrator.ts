@@ -136,7 +136,7 @@ export function useStudioOrchestrator() {
   const [selectedSuggestion, setSelectedSuggestion] = useState<{
     id: string;
     prompt: string;
-    reasoning?: string;
+    reasoning?: string | undefined;
   } | null>(null);
   const [generationRecipe, setGenerationRecipe] = useState<GenerationRecipe | undefined>(undefined);
   const [ideaBankMode, setIdeaBankMode] = useState<IdeaBankMode>('freestyle');

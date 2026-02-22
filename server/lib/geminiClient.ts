@@ -51,8 +51,8 @@ const RETRYABLE_ERRORS = [
  */
 function isRetryableError(error: unknown): boolean {
   const err = error as Record<string, unknown> | null | undefined;
-  const errorCode = String(err?.code ?? err?.name ?? '');
-  const errorMessage = String(err?.message ?? '');
+  const errorCode = String(err?.['code'] ?? err?.['name'] ?? '');
+  const errorMessage = String(err?.['message'] ?? '');
 
   return (
     RETRYABLE_ERRORS.some((code) => errorCode.includes(code) || errorMessage.includes(code)) ||
@@ -66,9 +66,9 @@ function isRetryableError(error: unknown): boolean {
  */
 function getRetryDelay(error: unknown, attempt: number, config: RetryConfig): number {
   const err = error as Record<string, unknown> | null | undefined;
-  const details = err?.details as Record<string, unknown> | undefined;
+  const details = err?.['details'] as Record<string, unknown> | undefined;
   // Check for Retry-After header in error
-  const retryAfter = err?.retryAfter ?? details?.retryAfter;
+  const retryAfter = err?.['retryAfter'] ?? details?.['retryAfter'];
   if (retryAfter && typeof retryAfter === 'number') {
     return Math.min(retryAfter * 1000, config.maxDelayMs);
   }
@@ -145,8 +145,8 @@ export async function callGeminiWithRetry<T>(
           requestId: context.requestId,
           attempt,
           nextRetryMs: delay,
-          errorCode: err?.code ?? err?.name,
-          errorMessage: String(err?.message ?? '').substring(0, 100),
+          errorCode: err?.['code'] ?? err?.['name'],
+          errorMessage: String(err?.['message'] ?? '').substring(0, 100),
         },
         'Gemini API call failed, retrying',
       );
@@ -197,7 +197,7 @@ export async function generateContentWithRetry(
     // Try fallback model if available
     const modelName =
       typeof params === 'object' && params !== null && 'model' in params
-        ? String((params as Record<string, unknown>).model ?? '')
+        ? String((params as unknown as Record<string, unknown>)['model'] ?? '')
         : '';
     const fallbackModel = MODEL_FALLBACK[modelName];
 
@@ -227,8 +227,8 @@ export async function generateContentWithRetry(
  */
 export function isQuotaError(error: unknown): boolean {
   const err = error as Record<string, unknown> | null | undefined;
-  const errorMessage = String(err?.message ?? '');
-  const errorCode = String(err?.code ?? '');
+  const errorMessage = String(err?.['message'] ?? '');
+  const errorCode = String(err?.['code'] ?? '');
   return (
     errorMessage.includes('429') ||
     errorMessage.includes('RESOURCE_EXHAUSTED') ||
@@ -241,6 +241,6 @@ export function isQuotaError(error: unknown): boolean {
  */
 export function isServiceUnavailableError(error: unknown): boolean {
   const err = error as Record<string, unknown> | null | undefined;
-  const errorMessage = String(err?.message ?? '');
+  const errorMessage = String(err?.['message'] ?? '');
   return errorMessage.includes('503') || errorMessage.includes('UNAVAILABLE');
 }

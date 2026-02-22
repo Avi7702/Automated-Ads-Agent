@@ -15,8 +15,8 @@
  * - Framer Motion animations with reduced-motion support
  */
 
-import { useState, useCallback, useRef } from "react";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { useState, useCallback, useRef } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   Upload,
   Sparkles,
@@ -31,13 +31,13 @@ import {
   Star,
   Zap,
   Info,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 // UI Components
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Progress } from '@/components/ui/progress';
 import {
   Dialog,
   DialogContent,
@@ -45,50 +45,40 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // ============================================
 // Constants
 // ============================================
 
 const PATTERN_CATEGORIES = [
-  { value: "product_showcase", label: "Product Showcase", icon: ImageIcon, color: "blue" },
-  { value: "testimonial", label: "Testimonial", icon: Star, color: "yellow" },
-  { value: "comparison", label: "Comparison", icon: BarChart3, color: "green" },
-  { value: "educational", label: "Educational", icon: Brain, color: "purple" },
-  { value: "promotional", label: "Promotional", icon: Zap, color: "orange" },
-  { value: "brand_awareness", label: "Brand Awareness", icon: Target, color: "pink" },
+  { value: 'product_showcase', label: 'Product Showcase', icon: ImageIcon, color: 'blue' },
+  { value: 'testimonial', label: 'Testimonial', icon: Star, color: 'yellow' },
+  { value: 'comparison', label: 'Comparison', icon: BarChart3, color: 'green' },
+  { value: 'educational', label: 'Educational', icon: Brain, color: 'purple' },
+  { value: 'promotional', label: 'Promotional', icon: Zap, color: 'orange' },
+  { value: 'brand_awareness', label: 'Brand Awareness', icon: Target, color: 'pink' },
 ];
 
 const PLATFORMS = [
-  { value: "linkedin", label: "LinkedIn" },
-  { value: "facebook", label: "Facebook" },
-  { value: "instagram", label: "Instagram" },
-  { value: "twitter", label: "Twitter/X" },
-  { value: "tiktok", label: "TikTok" },
-  { value: "youtube", label: "YouTube" },
-  { value: "pinterest", label: "Pinterest" },
-  { value: "general", label: "General" },
+  { value: 'linkedin', label: 'LinkedIn' },
+  { value: 'facebook', label: 'Facebook' },
+  { value: 'instagram', label: 'Instagram' },
+  { value: 'twitter', label: 'Twitter/X' },
+  { value: 'tiktok', label: 'TikTok' },
+  { value: 'youtube', label: 'YouTube' },
+  { value: 'pinterest', label: 'Pinterest' },
+  { value: 'general', label: 'General' },
 ];
 
 const ENGAGEMENT_TIERS = [
-  { value: "top-1", label: "Top 1%", color: "text-yellow-600 dark:text-yellow-400" },
-  { value: "top-5", label: "Top 5%", color: "text-orange-600 dark:text-orange-400" },
-  { value: "top-10", label: "Top 10%", color: "text-blue-600 dark:text-blue-400" },
-  { value: "top-25", label: "Top 25%", color: "text-green-600 dark:text-green-400" },
-  { value: "unverified", label: "Unverified", color: "text-muted-foreground" },
+  { value: 'top-1', label: 'Top 1%', color: 'text-yellow-600 dark:text-yellow-400' },
+  { value: 'top-5', label: 'Top 5%', color: 'text-orange-600 dark:text-orange-400' },
+  { value: 'top-10', label: 'Top 10%', color: 'text-blue-600 dark:text-blue-400' },
+  { value: 'top-25', label: 'Top 25%', color: 'text-green-600 dark:text-green-400' },
+  { value: 'unverified', label: 'Unverified', color: 'text-muted-foreground' },
 ];
 
 // ============================================
@@ -108,8 +98,8 @@ interface AdaptiveUploadZoneProps {
   onUpload: (file: File, metadata: UploadMetadata) => void;
   isUploading: boolean;
   uploadProgress: number;
-  uploadStatus?: 'pending' | 'scanning' | 'extracting' | 'completed' | 'failed';
-  uploadError?: string;
+  uploadStatus?: 'pending' | 'scanning' | 'extracting' | 'completed' | 'failed' | undefined;
+  uploadError?: string | undefined;
 }
 
 // ============================================
@@ -130,9 +120,9 @@ export function AdaptiveUploadZone({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [showMetadataForm, setShowMetadataForm] = useState(false);
   const [metadata, setMetadata] = useState<UploadMetadata>({
-    name: "",
-    category: "product_showcase",
-    platform: "general",
+    name: '',
+    category: 'product_showcase',
+    platform: 'general',
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const shouldReduceMotion = useReducedMotion();
@@ -142,14 +132,14 @@ export function AdaptiveUploadZone({
   // ============================================
 
   const validateFile = (file: File): string | null => {
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
     const maxSize = 5 * 1024 * 1024; // 5MB
 
     if (!allowedTypes.includes(file.type)) {
-      return "Invalid file type. Please upload JPG, PNG, WebP, or GIF.";
+      return 'Invalid file type. Please upload JPG, PNG, WebP, or GIF.';
     }
     if (file.size > maxSize) {
-      return "File too large. Maximum size is 5MB.";
+      return 'File too large. Maximum size is 5MB.';
     }
     return null;
   };
@@ -158,11 +148,14 @@ export function AdaptiveUploadZone({
   // Drag & Drop Handlers
   // ============================================
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!isDragging) setIsDragging(true);
-  }, [isDragging]);
+  const handleDragOver = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!isDragging) setIsDragging(true);
+    },
+    [isDragging],
+  );
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -186,7 +179,7 @@ export function AdaptiveUploadZone({
 
     setPreviewFile(file);
     setPreviewUrl(URL.createObjectURL(file));
-    setMetadata(prev => ({ ...prev, name: file.name.replace(/\.[^.]+$/, "") }));
+    setMetadata((prev) => ({ ...prev, name: file.name.replace(/\.[^.]+$/, '') }));
     setShowMetadataForm(true);
   }, []);
 
@@ -203,7 +196,7 @@ export function AdaptiveUploadZone({
 
     setPreviewFile(file);
     setPreviewUrl(URL.createObjectURL(file));
-    setMetadata(prev => ({ ...prev, name: file.name.replace(/\.[^.]+$/, "") }));
+    setMetadata((prev) => ({ ...prev, name: file.name.replace(/\.[^.]+$/, '') }));
     setShowMetadataForm(true);
   };
 
@@ -222,7 +215,7 @@ export function AdaptiveUploadZone({
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(null);
     setShowMetadataForm(false);
-    setMetadata({ name: "", category: "product_showcase", platform: "general" });
+    setMetadata({ name: '', category: 'product_showcase', platform: 'general' });
   };
 
   const handleUploadClick = () => {
@@ -234,10 +227,10 @@ export function AdaptiveUploadZone({
   // ============================================
 
   const getUploadStatusMessage = () => {
-    if (uploadProgress < 30) return "Scanning for privacy...";
-    if (uploadProgress >= 30 && uploadProgress < 70) return "Extracting visual patterns...";
-    if (uploadProgress >= 70) return "Saving to your library...";
-    return "Processing...";
+    if (uploadProgress < 30) return 'Scanning for privacy...';
+    if (uploadProgress >= 30 && uploadProgress < 70) return 'Extracting visual patterns...';
+    if (uploadProgress >= 70) return 'Saving to your library...';
+    return 'Processing...';
   };
 
   // ============================================
@@ -264,13 +257,10 @@ export function AdaptiveUploadZone({
 
           {/* Title & Description */}
           <div className="max-w-md">
-            <h2 className="text-2xl font-display font-semibold mb-2">
-              Learn from Your Winners
-            </h2>
+            <h2 className="text-2xl font-display font-semibold mb-2">Learn from Your Winners</h2>
             <p className="text-muted-foreground">
-              Upload high-performing ads to extract success patterns.
-              Our AI analyzes layout, color psychology, hooks, and visual elements
-              to help you create more winning ads.
+              Upload high-performing ads to extract success patterns. Our AI analyzes layout, color psychology, hooks,
+              and visual elements to help you create more winning ads.
             </p>
           </div>
 
@@ -339,7 +329,7 @@ export function AdaptiveUploadZone({
         initial={false}
         animate={{
           scale: isDragging ? 1.02 : 1,
-          borderColor: isDragging ? "hsl(var(--primary))" : "hsl(var(--border))",
+          borderColor: isDragging ? 'hsl(var(--primary))' : 'hsl(var(--border))',
         }}
         transition={{ duration: shouldReduceMotion ? 0 : 0.15 }}
         onDragOver={handleDragOver}
@@ -347,10 +337,10 @@ export function AdaptiveUploadZone({
         onDrop={handleDrop}
         onClick={handleUploadClick}
         className={cn(
-          "relative cursor-pointer rounded-2xl border-2 border-dashed p-8 transition-colors",
-          "bg-gradient-to-br from-background via-background to-muted/30",
-          "hover:border-primary/50 hover:bg-muted/20",
-          isDragging && "border-primary bg-primary/5 ring-4 ring-primary/20"
+          'relative cursor-pointer rounded-2xl border-2 border-dashed p-8 transition-colors',
+          'bg-gradient-to-br from-background via-background to-muted/30',
+          'hover:border-primary/50 hover:bg-muted/20',
+          isDragging && 'border-primary bg-primary/5 ring-4 ring-primary/20',
         )}
       >
         <input
@@ -368,22 +358,17 @@ export function AdaptiveUploadZone({
               y: isDragging ? -8 : 0,
               scale: isDragging ? 1.1 : 1,
             }}
-            transition={{ duration: shouldReduceMotion ? 0 : 0.2, type: "spring" }}
+            transition={{ duration: shouldReduceMotion ? 0 : 0.2, type: 'spring' }}
             className={cn(
-              "w-16 h-16 rounded-2xl flex items-center justify-center",
-              "bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/30"
+              'w-16 h-16 rounded-2xl flex items-center justify-center',
+              'bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/30',
             )}
           >
-            <Upload className={cn(
-              "w-8 h-8 transition-colors",
-              isDragging ? "text-primary" : "text-primary/70"
-            )} />
+            <Upload className={cn('w-8 h-8 transition-colors', isDragging ? 'text-primary' : 'text-primary/70')} />
           </motion.div>
 
           <div>
-            <h3 className="text-lg font-semibold mb-1">
-              {isDragging ? "Drop your ad here" : "Upload a winning ad"}
-            </h3>
+            <h3 className="text-lg font-semibold mb-1">{isDragging ? 'Drop your ad here' : 'Upload a winning ad'}</h3>
             <p className="text-sm text-muted-foreground">
               Drag & drop or click to select • JPG, PNG, WebP, GIF • Max 5MB
             </p>
@@ -408,9 +393,7 @@ export function AdaptiveUploadZone({
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
               <div className="text-center">
                 <p className="font-medium">Analyzing patterns...</p>
-                <p className="text-sm text-muted-foreground">
-                  {getUploadStatusMessage()}
-                </p>
+                <p className="text-sm text-muted-foreground">{getUploadStatusMessage()}</p>
               </div>
               <Progress value={uploadProgress} className="w-48" />
             </motion.div>
@@ -491,20 +474,14 @@ function MetadataFormDialog({
             <Brain className="w-5 h-5 text-primary" />
             Describe Your Winning Ad
           </DialogTitle>
-          <DialogDescription>
-            Help our AI understand the context for better pattern extraction
-          </DialogDescription>
+          <DialogDescription>Help our AI understand the context for better pattern extraction</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-6 py-4">
           {/* Preview */}
           {previewUrl && (
             <div className="relative aspect-video rounded-xl overflow-hidden bg-muted">
-              <img
-                src={previewUrl}
-                alt="Preview"
-                className="w-full h-full object-contain"
-              />
+              <img src={previewUrl} alt="Preview" className="w-full h-full object-contain" />
             </div>
           )}
 
@@ -514,7 +491,7 @@ function MetadataFormDialog({
               <label className="text-sm font-medium mb-2 block">Pattern Name *</label>
               <Input
                 value={metadata.name}
-                onChange={(e) => setMetadata(prev => ({ ...prev, name: e.target.value }))}
+                onChange={(e) => setMetadata((prev) => ({ ...prev, name: e.target.value }))}
                 placeholder="e.g., High-Converting Product Hero"
                 maxLength={100}
               />
@@ -525,7 +502,7 @@ function MetadataFormDialog({
                 <label className="text-sm font-medium mb-2 block">Category *</label>
                 <Select
                   value={metadata.category}
-                  onValueChange={(v) => setMetadata(prev => ({ ...prev, category: v }))}
+                  onValueChange={(v) => setMetadata((prev) => ({ ...prev, category: v }))}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -547,7 +524,7 @@ function MetadataFormDialog({
                 <label className="text-sm font-medium mb-2 block">Platform *</label>
                 <Select
                   value={metadata.platform}
-                  onValueChange={(v) => setMetadata(prev => ({ ...prev, platform: v }))}
+                  onValueChange={(v) => setMetadata((prev) => ({ ...prev, platform: v }))}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -567,8 +544,8 @@ function MetadataFormDialog({
               <div>
                 <label className="text-sm font-medium mb-2 block">Industry</label>
                 <Input
-                  value={metadata.industry || ""}
-                  onChange={(e) => setMetadata(prev => ({ ...prev, industry: e.target.value }))}
+                  value={metadata.industry || ''}
+                  onChange={(e) => setMetadata((prev) => ({ ...prev, industry: e.target.value }))}
                   placeholder="e.g., SaaS, E-commerce"
                   maxLength={100}
                 />
@@ -582,15 +559,13 @@ function MetadataFormDialog({
                       <TooltipTrigger>
                         <Info className="w-3.5 h-3.5 text-muted-foreground" />
                       </TooltipTrigger>
-                      <TooltipContent>
-                        How well did this ad perform compared to others?
-                      </TooltipContent>
+                      <TooltipContent>How well did this ad perform compared to others?</TooltipContent>
                     </Tooltip>
                   </span>
                 </label>
                 <Select
-                  value={metadata.engagementTier || "unverified"}
-                  onValueChange={(v) => setMetadata(prev => ({ ...prev, engagementTier: v }))}
+                  value={metadata.engagementTier || 'unverified'}
+                  onValueChange={(v) => setMetadata((prev) => ({ ...prev, engagementTier: v }))}
                 >
                   <SelectTrigger>
                     <SelectValue />

@@ -11,23 +11,18 @@
  * - Ad copy generation (copy)
  */
 
-import { Worker } from 'bullmq';
+import { Worker, type ConnectionOptions } from 'bullmq';
 import { logger } from '../lib/logger';
 import { processGenerationJob } from '../jobs/generationWorker';
 import { moveToDeadLetterQueue } from '../lib/queue';
-import {
-  GenerationJobData,
-  GenerationJobResult,
-  QUEUE_NAMES,
-  DEFAULT_JOB_OPTIONS,
-} from '../jobs/types';
+import { GenerationJobData, GenerationJobResult, QUEUE_NAMES, DEFAULT_JOB_OPTIONS } from '../jobs/types';
 
 /**
  * Get Redis connection options for the worker
  * Mirrors the logic in lib/queue.ts for consistency
  */
-function getWorkerConnectionOptions() {
-  const redisUrl = process.env.REDIS_URL;
+function getWorkerConnectionOptions(): ConnectionOptions {
+  const redisUrl = process.env['REDIS_URL'];
 
   if (redisUrl) {
     try {
@@ -35,22 +30,20 @@ function getWorkerConnectionOptions() {
       return {
         host: url.hostname,
         port: parseInt(url.port) || 6379,
-        password: url.password || undefined,
-        username: url.username || undefined,
-        tls: url.protocol === 'rediss:' ? {} : undefined,
+        ...(url.password ? { password: url.password } : {}),
+        ...(url.username ? { username: url.username } : {}),
+        ...(url.protocol === 'rediss:' ? { tls: {} } : {}),
       };
     } catch {
-      logger.warn(
-        { module: 'Worker', redisUrl },
-        'Failed to parse REDIS_URL, falling back to host/port config'
-      );
+      logger.warn({ module: 'Worker', redisUrl }, 'Failed to parse REDIS_URL, falling back to host/port config');
     }
   }
 
+  const redisPassword = process.env['REDIS_PASSWORD'];
   return {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379'),
-    password: process.env.REDIS_PASSWORD || undefined,
+    host: process.env['REDIS_HOST'] || 'localhost',
+    port: parseInt(process.env['REDIS_PORT'] || '6379'),
+    ...(redisPassword ? { password: redisPassword } : {}),
   };
 }
 
@@ -63,27 +56,23 @@ let generationWorker: Worker<GenerationJobData, GenerationJobResult> | null = nu
  */
 export function startGenerationWorker(): Worker<GenerationJobData, GenerationJobResult> | null {
   // Skip worker initialization if Redis is not configured
-  if (!process.env.REDIS_URL && !process.env.REDIS_HOST) {
+  if (!process.env['REDIS_URL'] && !process.env['REDIS_HOST']) {
     logger.warn(
       { module: 'Worker' },
-      'Redis not configured - generation worker disabled. Jobs will be queued but not processed.'
+      'Redis not configured - generation worker disabled. Jobs will be queued but not processed.',
     );
     return null;
   }
 
   const connection = getWorkerConnectionOptions();
 
-  generationWorker = new Worker<GenerationJobData, GenerationJobResult>(
-    QUEUE_NAMES.GENERATION,
-    processGenerationJob,
-    {
-      connection,
-      concurrency: parseInt(process.env.WORKER_CONCURRENCY || '5'), // Process up to 5 jobs in parallel
-      lockDuration: 180000, // 3 minutes lock (jobs can take up to 2 min)
-      stalledInterval: 30000, // Check for stalled jobs every 30s (Phase 3 hardening)
-      maxStalledCount: 2, // Allow 2 stalls before marking failed → moves to DLQ
-    }
-  );
+  generationWorker = new Worker<GenerationJobData, GenerationJobResult>(QUEUE_NAMES.GENERATION, processGenerationJob, {
+    connection,
+    concurrency: parseInt(process.env['WORKER_CONCURRENCY'] || '5'), // Process up to 5 jobs in parallel
+    lockDuration: 180000, // 3 minutes lock (jobs can take up to 2 min)
+    stalledInterval: 30000, // Check for stalled jobs every 30s (Phase 3 hardening)
+    maxStalledCount: 2, // Allow 2 stalls before marking failed → moves to DLQ
+  });
 
   // Worker event listeners for monitoring
   generationWorker.on('ready', () => {
@@ -91,17 +80,14 @@ export function startGenerationWorker(): Worker<GenerationJobData, GenerationJob
       {
         module: 'Worker',
         queueName: QUEUE_NAMES.GENERATION,
-        concurrency: parseInt(process.env.WORKER_CONCURRENCY || '5'),
+        concurrency: parseInt(process.env['WORKER_CONCURRENCY'] || '5'),
       },
-      'Generation worker started and ready'
+      'Generation worker started and ready',
     );
   });
 
   generationWorker.on('active', (job) => {
-    logger.debug(
-      { module: 'Worker', jobId: job.id, jobType: job.data.jobType },
-      'Job started processing'
-    );
+    logger.debug({ module: 'Worker', jobId: job.id, jobType: job.data.jobType }, 'Job started processing');
   });
 
   generationWorker.on('completed', (job, result) => {
@@ -113,7 +99,7 @@ export function startGenerationWorker(): Worker<GenerationJobData, GenerationJob
         generationId: result.generationId,
         processingTimeMs: result.processingTimeMs,
       },
-      'Job completed successfully'
+      'Job completed successfully',
     );
   });
 
@@ -131,9 +117,7 @@ export function startGenerationWorker(): Worker<GenerationJobData, GenerationJob
         maxAttempts,
         exhaustedRetries: hasExhaustedRetries,
       },
-      hasExhaustedRetries
-        ? 'Job failed - all retries exhausted, moving to DLQ'
-        : 'Job failed - will retry'
+      hasExhaustedRetries ? 'Job failed - all retries exhausted, moving to DLQ' : 'Job failed - will retry',
     );
 
     // Move to DLQ when all retries are exhausted
@@ -143,17 +127,11 @@ export function startGenerationWorker(): Worker<GenerationJobData, GenerationJob
   });
 
   generationWorker.on('error', (error) => {
-    logger.error(
-      { module: 'Worker', error: error.message },
-      'Worker error'
-    );
+    logger.error({ module: 'Worker', error: error.message }, 'Worker error');
   });
 
   generationWorker.on('stalled', (jobId) => {
-    logger.warn(
-      { module: 'Worker', jobId },
-      'Job stalled - will be retried'
-    );
+    logger.warn({ module: 'Worker', jobId }, 'Job stalled - will be retried');
   });
 
   return generationWorker;

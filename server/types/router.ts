@@ -3,10 +3,10 @@
  * Sprint 2, Week 1, Days 3-5 - Task 2.3
  */
 
-import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
+import { Router, RequestHandler } from 'express';
 import { ZodSchema } from 'zod';
 import type { IStorage } from '../storage';
-import type { GoogleGenerativeAI } from '@google/generative-ai';
+import type { GoogleGenAI } from '@google/genai';
 import type { v2 as cloudinaryType } from 'cloudinary';
 import type { Logger } from 'pino';
 import type multer from 'multer';
@@ -19,10 +19,10 @@ export interface RouterServices {
   storage: IStorage;
 
   /** Gemini AI client for text operations */
-  genAIText: GoogleGenerativeAI;
+  genAIText: GoogleGenAI;
 
   /** Gemini AI client for image operations */
-  genAIImage: GoogleGenerativeAI;
+  genAIImage: GoogleGenAI;
 
   /** Cloudinary client (may be null if not configured) */
   cloudinary: typeof cloudinaryType | null;

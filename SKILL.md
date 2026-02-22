@@ -41,8 +41,9 @@ Your mission: Transform simple prompts into Claude 4.x optimized teammate spawn 
 cat CLAUDE.md
 
 # Get tech stack
-cat package.json | grep -A 20 '"dependencies"'
-cat wrangler.toml | head -20
+cat package.json | grep -A 30 '"dependencies"'
+cat .env.example | head -40
+ls .github/workflows
 
 # Get recent changes
 git log --oneline -5
@@ -114,7 +115,7 @@ Based on task complexity:
 Replace all placeholders in the template:
 
 - `{{PROJECT_NAME}}` → from CLAUDE.md or git root folder name
-- `{{TECH_STACK}}` → from package.json + wrangler.toml
+- `{{TECH_STACK}}` → from package.json + .env.example + deployment manifests
 - `{{CLAUDE_MD_CONTENTS}}` → full CLAUDE.md file
 - `{{RECENT_CHANGES}}` → git log output
 - `{{USER_DESCRIPTION}}` → original_prompt
@@ -180,22 +181,21 @@ Return ONLY the assembled XML prompt. No commentary. No markdown code blocks. Ju
   </project_conventions>
 
   <tech_stack>
-    - Framework: Next.js 16.1.6
-    - Runtime: Cloudflare Workers
-    - API: tRPC
-    - Database: Drizzle ORM + D1 (SQLite)
-    - Storage: Cloudflare R2
-    - Cache: Cloudflare KV
-    - Auth: Better Auth
-    - AI: AI SDK v6, Claude Sonnet 4.5
+    - Frontend: React 19 + Vite 7
+    - Backend: Express 5 (Node.js 20+)
+    - Database: PostgreSQL + Drizzle ORM
+    - Cache/Queue: Redis + BullMQ
+    - Auth: Session auth + jose + argon2
+    - AI: Google Gemini + Google ADK
+    - Testing: Vitest + Playwright
   </tech_stack>
 
   <recent_changes>
-    bcb8225 fix: expose bearer token in CORS headers
-    7bb9549 docs: add bearer token fix verification
-    c8b038f fix: implement bearer token auth for cross-domain
-    50ed3b2 fix: handle 401 unauthorized in gallery page
-    9cf8851 fix: gallery crash + R2 image loading in service worker
+    dbc64bd fix(test): add MSW handlers for /api/style-references
+    07d0c23 fix(ci): unblock PR #114 - web-push shim + test assertion
+    a33de6c fix(types): eliminate TS errors in lib, repositories, seeds, jobs, workers, shared
+    ad0328c fix(types): eliminate TS errors in all server services
+    15230b2 fix(types): eliminate TS errors in routes, middleware, and router types
   </recent_changes>
 </documents>
 
@@ -210,15 +210,15 @@ Let me analyze this bug fix task systematically:
 </thinking>
 
 <role>
-You are a Debug Specialist for Hebrew Image AI.
+You are a Debug Specialist for Automated Ads Agent.
 You follow the principle: Minimal fix, maximum safety.
 You ALWAYS write tests FIRST (TDD approach).
 You adhere to all conventions defined in CLAUDE.md.
 </role>
 
 <context>
-Project: Hebrew Image AI
-Tech stack: Next.js 16, Cloudflare Workers, tRPC, Better Auth, R2, D1, KV
+Project: Automated Ads Agent
+Tech stack: React + Vite, Express, PostgreSQL + Drizzle, Redis, Google Gemini
 Code domain: {{domain}}
 Recent changes: See git log above
 Task complexity: Medium
@@ -247,10 +247,10 @@ Tool usage sequence:
 2. Use Grep to search for related patterns if needed
 3. THINK about the root cause (use thinking block)
 4. Use Write to create test file (TDD - test FIRST)
-5. Use Bash to run test: pnpm test (should FAIL initially)
+5. Use Bash to run test: npm test (should FAIL initially)
 6. Use Edit to apply the fix
-7. Use Bash to run test again: pnpm test (should PASS)
-8. Use Bash to run full suite: pnpm test (verify no regressions)
+7. Use Bash to run test again: npm test (should PASS)
+8. Use Bash to run full suite: npm test (verify no regressions)
 
 Interleaved thinking:
 - Think after each Read (what did you learn?)

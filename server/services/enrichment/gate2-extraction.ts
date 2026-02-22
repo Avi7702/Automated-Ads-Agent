@@ -11,17 +11,16 @@
  * Threshold: 90% of fields must be verified for source to pass
  */
 
-import { logger } from "../../lib/logger";
-import { aiReExtractField, aiVerifyClaim, valuesAgree } from "./aiHelpers";
+import { logger } from '../../lib/logger';
+import { aiReExtractField, aiVerifyClaim, valuesAgree } from './aiHelpers';
 import {
   DEFAULT_PIPELINE_CONFIG,
   type Gate2Result,
   type ExtractedData,
   type SourceSearchResult,
   type FieldVerification,
-  type VerificationMethod,
   type PipelineConfig,
-} from "./types";
+} from './types';
 
 // ============================================
 // MAIN VERIFICATION FUNCTION
@@ -33,7 +32,7 @@ import {
 export async function verifyExtraction(
   source: SourceSearchResult,
   extracted: ExtractedData,
-  config: PipelineConfig = { ...DEFAULT_PIPELINE_CONFIG }
+  config: PipelineConfig = { ...DEFAULT_PIPELINE_CONFIG },
 ): Promise<Gate2Result> {
   const verifiedFields: FieldVerification[] = [];
   const pageContent = source.pageContent;
@@ -44,43 +43,27 @@ export async function verifyExtraction(
 
   // Verify productName
   if (extracted.productName) {
-    const verification = await verifyField(
-      "productName",
-      extracted.productName,
-      pageContent
-    );
+    const verification = await verifyField('productName', extracted.productName, pageContent);
     verifiedFields.push(verification);
   }
 
   // Verify description
   if (extracted.description) {
-    const verification = await verifyField(
-      "description",
-      extracted.description,
-      pageContent
-    );
+    const verification = await verifyField('description', extracted.description, pageContent);
     verifiedFields.push(verification);
   }
 
   // Verify each specification
   for (const [specKey, specValue] of Object.entries(extracted.specifications)) {
     if (specValue) {
-      const verification = await verifyField(
-        `specifications.${specKey}`,
-        specValue,
-        pageContent
-      );
+      const verification = await verifyField(`specifications.${specKey}`, specValue, pageContent);
       verifiedFields.push(verification);
     }
   }
 
   // Verify installation info
   if (extracted.installationInfo) {
-    const verification = await verifyField(
-      "installationInfo",
-      extracted.installationInfo,
-      pageContent
-    );
+    const verification = await verifyField('installationInfo', extracted.installationInfo, pageContent);
     verifiedFields.push(verification);
   }
 
@@ -88,11 +71,7 @@ export async function verifyExtraction(
   for (let i = 0; i < extracted.certifications.length; i++) {
     const cert = extracted.certifications[i];
     if (cert) {
-      const verification = await verifyField(
-        `certifications[${i}]`,
-        cert,
-        pageContent
-      );
+      const verification = await verifyField(`certifications[${i}]`, cert, pageContent);
       verifiedFields.push(verification);
     }
   }
@@ -100,11 +79,9 @@ export async function verifyExtraction(
   // ============================================
   // 2. Calculate overall accuracy
   // ============================================
-  const verifiedCount = verifiedFields.filter(f => f.verified).length;
+  const verifiedCount = verifiedFields.filter((f) => f.verified).length;
   const totalFields = verifiedFields.length;
-  const overallAccuracy = totalFields > 0
-    ? Math.round((verifiedCount / totalFields) * 100)
-    : 0;
+  const overallAccuracy = totalFields > 0 ? Math.round((verifiedCount / totalFields) * 100) : 0;
 
   // ============================================
   // 3. Determine if extraction passes
@@ -126,18 +103,14 @@ export async function verifyExtraction(
 /**
  * Verify a single extracted field against source content
  */
-async function verifyField(
-  fieldName: string,
-  extractedValue: string,
-  pageContent: string
-): Promise<FieldVerification> {
+async function verifyField(fieldName: string, extractedValue: string, pageContent: string): Promise<FieldVerification> {
   // Skip empty values
   if (!extractedValue || !extractedValue.trim()) {
     return {
       field: fieldName,
       extracted: extractedValue,
       verified: false,
-      verificationMethod: "NOT_VERIFIED",
+      verificationMethod: 'NOT_VERIFIED',
       confidence: 0,
     };
   }
@@ -152,7 +125,7 @@ async function verifyField(
       field: fieldName,
       extracted: extractedValue,
       verified: true,
-      verificationMethod: "DIRECT_MATCH",
+      verificationMethod: 'DIRECT_MATCH',
       confidence: directMatch.confidence,
     };
   }
@@ -162,7 +135,11 @@ async function verifyField(
   // ============================================
   try {
     // Extract the base field name (remove array indices and nested paths)
-    const baseFieldName = fieldName.split(".").pop()?.replace(/\[\d+\]/, "") || fieldName;
+    const baseFieldName =
+      fieldName
+        .split('.')
+        .pop()
+        ?.replace(/\[\d+\]/, '') || fieldName;
 
     const reExtracted = await aiReExtractField(pageContent, baseFieldName);
 
@@ -171,7 +148,7 @@ async function verifyField(
         field: fieldName,
         extracted: extractedValue,
         verified: true,
-        verificationMethod: "AI_REEXTRACT",
+        verificationMethod: 'AI_REEXTRACT',
         confidence: 85, // AI re-extraction is reliable but not 100%
       };
     }
@@ -188,7 +165,7 @@ async function verifyField(
           field: fieldName,
           extracted: extractedValue,
           verified: true,
-          verificationMethod: "SEMANTIC_VERIFY",
+          verificationMethod: 'SEMANTIC_VERIFY',
           confidence: 75, // Semantic verification is less precise
         };
       }
@@ -202,7 +179,11 @@ async function verifyField(
   // Method 3: Semantic verification (fallback)
   // ============================================
   try {
-    const baseFieldName = fieldName.split(".").pop()?.replace(/\[\d+\]/, "") || fieldName;
+    const baseFieldName =
+      fieldName
+        .split('.')
+        .pop()
+        ?.replace(/\[\d+\]/, '') || fieldName;
 
     const semanticVerify = await aiVerifyClaim({
       claim: `The product's ${baseFieldName} is: ${extractedValue}`,
@@ -214,7 +195,7 @@ async function verifyField(
         field: fieldName,
         extracted: extractedValue,
         verified: true,
-        verificationMethod: "SEMANTIC_VERIFY",
+        verificationMethod: 'SEMANTIC_VERIFY',
         confidence: 70,
       };
     }
@@ -225,7 +206,7 @@ async function verifyField(
         field: fieldName,
         extracted: extractedValue,
         verified: false,
-        verificationMethod: "NOT_VERIFIED",
+        verificationMethod: 'NOT_VERIFIED',
         confidence: 0, // Actively contradicted
       };
     }
@@ -240,7 +221,7 @@ async function verifyField(
     field: fieldName,
     extracted: extractedValue,
     verified: false,
-    verificationMethod: "NOT_VERIFIED",
+    verificationMethod: 'NOT_VERIFIED',
     confidence: 0,
   };
 }
@@ -257,10 +238,7 @@ interface DirectMatchResult {
 /**
  * Check if source content contains the extracted value
  */
-function checkDirectMatch(
-  pageContent: string,
-  extractedValue: string
-): DirectMatchResult {
+function checkDirectMatch(pageContent: string, extractedValue: string): DirectMatchResult {
   const normalizedContent = normalizeText(pageContent);
   const normalizedValue = normalizeText(extractedValue);
 
@@ -272,11 +250,9 @@ function checkDirectMatch(
   // Check for significant substring match (for longer values)
   if (normalizedValue.length > 20) {
     // Split into words and check if most words are present
-    const words = normalizedValue.split(/\s+/).filter(w => w.length > 3);
+    const words = normalizedValue.split(/\s+/).filter((w) => w.length > 3);
     if (words.length > 0) {
-      const matchedWords = words.filter(word =>
-        normalizedContent.includes(word)
-      );
+      const matchedWords = words.filter((word) => normalizedContent.includes(word));
       const matchRatio = matchedWords.length / words.length;
 
       if (matchRatio >= 0.8) {
@@ -297,10 +273,7 @@ function checkDirectMatch(
 /**
  * Check for numerical value matches (handles unit conversions)
  */
-function checkNumberMatch(
-  extractedValue: string,
-  pageContent: string
-): DirectMatchResult {
+function checkNumberMatch(extractedValue: string, pageContent: string): DirectMatchResult {
   // Extract numbers from the value
   const numberPattern = /(\d+(?:\.\d+)?)\s*(mm|cm|m|in|inch|inches|ft|feet|kg|lb|lbs|oz|g)?/gi;
   const match = numberPattern.exec(extractedValue);
@@ -309,8 +282,8 @@ function checkNumberMatch(
     return { found: false, confidence: 0 };
   }
 
-  const value = parseFloat(match[1]);
-  const unit = (match[2] || "").toLowerCase();
+  const value = parseFloat(match[1] ?? '0');
+  const unit = (match[2] ?? '').toLowerCase();
 
   // Look for the same number in the content
   const contentNumbers = pageContent.match(/\d+(?:\.\d+)?/g) || [];
@@ -325,14 +298,14 @@ function checkNumberMatch(
 
     // Common unit conversions
     const conversions: Record<string, Record<string, number>> = {
-      "mm": { "in": 25.4, "inch": 25.4, "inches": 25.4, "cm": 10 },
-      "cm": { "mm": 0.1, "in": 2.54, "inch": 2.54, "inches": 2.54 },
-      "m": { "ft": 0.3048, "feet": 0.3048 },
-      "kg": { "lb": 0.453592, "lbs": 0.453592 },
+      mm: { in: 25.4, inch: 25.4, inches: 25.4, cm: 10 },
+      cm: { mm: 0.1, in: 2.54, inch: 2.54, inches: 2.54 },
+      m: { ft: 0.3048, feet: 0.3048 },
+      kg: { lb: 0.453592, lbs: 0.453592 },
     };
 
     if (unit && conversions[unit]) {
-      for (const [targetUnit, factor] of Object.entries(conversions[unit])) {
+      for (const [_targetUnit, factor] of Object.entries(conversions[unit])) {
         const converted = value / factor;
         if (Math.abs(contentValue - converted) < 0.1) {
           return { found: true, confidence: 85 };
@@ -350,8 +323,8 @@ function checkNumberMatch(
 function normalizeText(text: string): string {
   return text
     .toLowerCase()
-    .replace(/\s+/g, " ")
-    .replace(/[^\w\s\d.-]/g, "")
+    .replace(/\s+/g, ' ')
+    .replace(/[^\w\s\d.-]/g, '')
     .trim();
 }
 
@@ -367,21 +340,20 @@ export async function verifyExtractionsBatch(
     source: SourceSearchResult;
     extracted: ExtractedData;
   }>,
-  config?: PipelineConfig
+  config?: PipelineConfig,
 ): Promise<Gate2Result[]> {
   const results = await Promise.all(
     sourcesWithExtractions.map(({ source, extracted }) =>
-      verifyExtraction(source, extracted, config)
-        .catch(err => {
-          logger.error({ module: 'Gate2', sourceUrl: source.url, err }, 'Verification failed');
-          return {
-            sourceUrl: source.url,
-            passed: false,
-            verifiedFields: [],
-            overallAccuracy: 0,
-          };
-        })
-    )
+      verifyExtraction(source, extracted, config).catch((err) => {
+        logger.error({ module: 'Gate2', sourceUrl: source.url, err }, 'Verification failed');
+        return {
+          sourceUrl: source.url,
+          passed: false,
+          verifiedFields: [],
+          overallAccuracy: 0,
+        };
+      }),
+    ),
   );
 
   return results;
@@ -394,40 +366,32 @@ export async function verifyExtractionsBatch(
 /**
  * Get only verified fields from an extraction
  */
-export function getVerifiedFields(
-  extracted: ExtractedData,
-  gate2Result: Gate2Result
-): ExtractedData {
-  const verifiedFieldNames = new Set(
-    gate2Result.verifiedFields
-      .filter(f => f.verified)
-      .map(f => f.field)
-  );
+export function getVerifiedFields(extracted: ExtractedData, gate2Result: Gate2Result): ExtractedData {
+  const verifiedFieldNames = new Set(gate2Result.verifiedFields.filter((f) => f.verified).map((f) => f.field));
 
   // Filter specifications to only verified ones
   const verifiedSpecs: Record<string, string> = {};
   for (const [key, value] of Object.entries(extracted.specifications)) {
     if (verifiedFieldNames.has(`specifications.${key}`)) {
-      verifiedSpecs[key] = value || "";
+      verifiedSpecs[key] = value || '';
     }
   }
 
   // Filter certifications to only verified ones
   const verifiedCerts: string[] = [];
   for (let i = 0; i < extracted.certifications.length; i++) {
-    if (verifiedFieldNames.has(`certifications[${i}]`)) {
-      verifiedCerts.push(extracted.certifications[i]);
+    const cert = extracted.certifications[i];
+    if (cert && verifiedFieldNames.has(`certifications[${i}]`)) {
+      verifiedCerts.push(cert);
     }
   }
 
   return {
     ...extracted,
-    productName: verifiedFieldNames.has("productName") ? extracted.productName : "",
-    description: verifiedFieldNames.has("description") ? extracted.description : "",
+    productName: verifiedFieldNames.has('productName') ? extracted.productName : '',
+    description: verifiedFieldNames.has('description') ? extracted.description : '',
     specifications: verifiedSpecs,
-    installationInfo: verifiedFieldNames.has("installationInfo")
-      ? extracted.installationInfo
-      : "",
+    installationInfo: verifiedFieldNames.has('installationInfo') ? extracted.installationInfo : '',
     certifications: verifiedCerts,
   };
 }

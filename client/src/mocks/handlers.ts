@@ -156,7 +156,7 @@ export const handlers = [
   }),
 
   http.get('/api/products/:id', ({ params }) => {
-    const product = mockProducts.find((p) => p.id === params.id);
+    const product = mockProducts.find((p) => p.id === params['id']);
     if (!product) {
       return HttpResponse.json({ error: 'Product not found' }, { status: 404 });
     }
@@ -193,7 +193,7 @@ export const handlers = [
   }),
 
   http.get('/api/generations/:id', ({ params }) => {
-    const generation = mockGenerations.find((g) => g.id === params.id);
+    const generation = mockGenerations.find((g) => g.id === params['id']);
     if (!generation) {
       return HttpResponse.json({ error: 'Generation not found' }, { status: 404 });
     }
@@ -262,7 +262,7 @@ export const handlers = [
 
   // ============ Jobs Endpoints ============
   http.get('/api/jobs/:jobId', ({ params }) => {
-    const jobId = params.jobId as string;
+    const jobId = params['jobId'] as string;
     const job = mockJobs[jobId] || {
       id: jobId,
       status: 'pending',
@@ -299,7 +299,7 @@ export const handlers = [
   }),
 
   http.get('/api/templates/:id', ({ params }) => {
-    const template = mockTemplates.find((t) => t.id === params.id);
+    const template = mockTemplates.find((t) => t.id === params['id']);
     if (!template) {
       return HttpResponse.json({ error: 'Template not found' }, { status: 404 });
     }
@@ -330,7 +330,7 @@ export const handlers = [
 
   http.patch('/api/templates/:id', async ({ params, request }) => {
     const body = (await request.json()) as Partial<{ name: string; platform: string; category: string }>;
-    const template = mockTemplates.find((t) => t.id === params.id);
+    const template = mockTemplates.find((t) => t.id === params['id']);
     if (!template) {
       return HttpResponse.json({ error: 'Template not found' }, { status: 404 });
     }
@@ -377,7 +377,7 @@ export const handlers = [
   }),
 
   http.get('/api/copy/:id', ({ params }) => {
-    const copy = mockCopy.find((c) => c.id === params.id);
+    const copy = mockCopy.find((c) => c.id === params['id']);
     if (!copy) {
       return HttpResponse.json({ error: 'Copy not found' }, { status: 404 });
     }
@@ -409,7 +409,7 @@ export const handlers = [
   }),
 
   http.get('/api/ad-templates/:id', ({ params }) => {
-    const template = mockTemplates.find((t) => t.id === params.id);
+    const template = mockTemplates.find((t) => t.id === params['id']);
     if (!template) {
       return HttpResponse.json({ error: 'Template not found' }, { status: 404 });
     }
@@ -511,26 +511,25 @@ export const handlers = [
     });
   }),
 
-  http.post('/api/settings/api-keys/:service', async ({ params, request }) => {
-    const body = (await request.json()) as { apiKey: string };
+  http.post('/api/settings/api-keys/:service', async ({ params }) => {
     return HttpResponse.json({
-      service: params.service,
+      service: params['service'],
       configured: true,
-      message: `API key for ${params.service} saved successfully`,
+      message: `API key for ${params['service']} saved successfully`,
     });
   }),
 
   http.delete('/api/settings/api-keys/:service', ({ params }) => {
     return HttpResponse.json({
-      service: params.service,
+      service: params['service'],
       configured: false,
-      message: `API key for ${params.service} removed`,
+      message: `API key for ${params['service']} removed`,
     });
   }),
 
   http.post('/api/settings/api-keys/:service/validate', async ({ params }) => {
     return HttpResponse.json({
-      service: params.service,
+      service: params['service'],
       valid: true,
       message: 'API key is valid',
     });
@@ -559,7 +558,7 @@ export const handlers = [
 
   http.get('/api/installation-scenarios/:id', ({ params }) => {
     return HttpResponse.json({
-      id: params.id,
+      id: params['id'],
       name: 'Sample Scenario',
       roomType: 'living_room',
       steps: ['Step 1', 'Step 2', 'Step 3'],
@@ -706,7 +705,7 @@ export const handlers = [
 
   http.get('/api/learned-patterns/:patternId', ({ params }) => {
     return HttpResponse.json({
-      id: params.patternId,
+      id: params['patternId'],
       name: 'Sample Pattern',
       category: 'general',
       data: { key: 'value' },
@@ -759,5 +758,57 @@ export const handlers = [
         { id: 'sa-2', platform: 'facebook', synced: true },
       ],
     });
+  }),
+
+  // ============ Style References Endpoints ============
+  http.get('/api/style-references', () => {
+    return HttpResponse.json([
+      {
+        id: 'sr-1',
+        userId: 'user-1',
+        cloudinaryUrl: 'https://res.cloudinary.com/demo/image/upload/style1.jpg',
+        cloudinaryPublicId: 'style1',
+        name: 'Modern Minimalist',
+        category: 'style',
+        tags: ['minimal', 'clean'],
+        styleDescription: 'Clean minimalist aesthetic',
+        extractedElements: null,
+        confidence: 0.92,
+        imageFingerprint: 'fp-001',
+        analyzedAt: new Date().toISOString(),
+        usageCount: 3,
+        lastUsedAt: new Date().toISOString(),
+        isActive: true,
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+  }),
+
+  http.post('/api/style-references', async () => {
+    return HttpResponse.json(
+      {
+        id: 'sr-new',
+        userId: 'user-1',
+        cloudinaryUrl: 'https://res.cloudinary.com/demo/image/upload/new-style.jpg',
+        cloudinaryPublicId: 'new-style',
+        name: 'Uploaded Style',
+        category: 'style',
+        tags: null,
+        styleDescription: null,
+        extractedElements: null,
+        confidence: 0,
+        imageFingerprint: 'fp-new',
+        analyzedAt: null,
+        usageCount: 0,
+        lastUsedAt: null,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+      },
+      { status: 201 },
+    );
+  }),
+
+  http.delete('/api/style-references/:id', () => {
+    return HttpResponse.json({ success: true });
   }),
 ];

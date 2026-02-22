@@ -15,6 +15,56 @@ env:
 
 jobs:
   # ============================================
+  # JOB 0: Cross-Project Guard (blocking)
+  # ============================================
+  cross-project-guard:
+    name: Cross-Project Guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Block known cross-project markers
+        run: |
+          set -euo pipefail
+          A1='he'
+          A2='brew'
+          B='image'
+          C1='man'
+          C2='us'
+          D='deploy'
+          E='abbinbox\.workers\.dev'
+          PATTERN="(${A1}${A2}-${B}|${A1}${A2} ${B} ai|${C1}${C2}-${D}|${A1}${A2}-${B}-api|${A1}${A2}-${B}-ai|${E})"
+          SCAN_PATHS=(client server shared scripts .github/workflows package.json package-lock.json)
+          if git grep -n -I -E -i "$PATTERN" -- "${SCAN_PATHS[@]}"; then
+            echo "::error::Cross-project marker detected. Remove or neutralize this reference."
+            exit 1
+          fi
+          echo "Cross-project guard passed."
+
+  # ============================================
+  # JOB 0b: Secret Guard (blocking)
+  # ============================================
+  secret-guard:
+    name: Secret Guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Block obvious hardcoded secrets in source/config
+        run: |
+          set -euo pipefail
+          PATTERN='(AIza[0-9A-Za-z_-]{35,}|gh[pousr]_[A-Za-z0-9_]{30,}|sk-[A-Za-z0-9]{20,})'
+          MATCHES=$(git grep -n -I -E "$PATTERN" -- \
+            client server shared scripts .github/workflows package.json package-lock.json \
+            ":(exclude)server/__tests__/**" \
+            ":(exclude)client/src/**/__tests__/**" \
+            ":(exclude)docs/**" || true)
+          if [ -n "$MATCHES" ]; then
+            echo "$MATCHES"
+            echo "::error::Potential hardcoded secret detected in tracked source/config files."
+            exit 1
+          fi
+          echo "Secret guard passed."
+
+  # ============================================
   # JOB 1: Type Check & Lint (report-only)
   # ============================================
   type-check:
@@ -175,7 +225,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [type-check, test-backend, test-frontend]
+    needs: [cross-project-guard, secret-guard, type-check, test-backend, test-frontend]
     if: always()
     continue-on-error: true
     steps:

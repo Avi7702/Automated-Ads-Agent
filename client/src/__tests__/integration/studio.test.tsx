@@ -344,15 +344,23 @@ function createWrapper() {
 let Studio: () => JSX.Element;
 
 /**
- * Helper: add an upload via mock UploadZone to satisfy canGenerate.
+ * Helper: select one product from the composer grid to satisfy canGenerate.
  * canGenerate requires (selectedProducts.length > 0 || tempUploads.length > 0).
  */
-async function addUploadToEnableGenerate() {
+async function selectProductToEnableGenerate() {
   await waitFor(() => {
-    const addUploadBtn = screen.getByTestId('add-upload-btn');
-    expect(addUploadBtn).toBeInTheDocument();
-    fireEvent.click(addUploadBtn);
+    expect(screen.getByText('Your Products')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Search products...')).toBeInTheDocument();
   });
+
+  const productImages = Array.from(document.querySelectorAll('button img')).filter(
+    (img) => (img as HTMLImageElement).alt && (img as HTMLImageElement).alt !== 'Generated',
+  ) as HTMLImageElement[];
+  expect(productImages.length).toBeGreaterThan(0);
+
+  const productButton = productImages[0].closest('button');
+  expect(productButton).not.toBeNull();
+  fireEvent.click(productButton as HTMLButtonElement);
 }
 
 // ============================================
@@ -397,7 +405,7 @@ describe('Studio Page Integration Tests', () => {
       expect(mainGenerateButton).toBeDisabled();
 
       // Select a product (canGenerate requires selectedProducts.length > 0)
-      await addUploadToEnableGenerate();
+      await selectProductToEnableGenerate();
 
       // Enter a prompt in the quick start textarea
       const quickStartTextarea = screen.getByPlaceholderText(/Describe your ideal ad creative/i);
@@ -432,11 +440,11 @@ describe('Studio Page Integration Tests', () => {
       render(<Studio />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        expect(screen.getByText('Choose Your Path')).toBeInTheDocument();
+        expect(screen.getByText('Create stunning product visuals')).toBeInTheDocument();
       });
 
       // Select a product (canGenerate requires selectedProducts.length > 0)
-      await addUploadToEnableGenerate();
+      await selectProductToEnableGenerate();
 
       // Type in quick start
       const quickStartTextarea = screen.getByPlaceholderText(/Describe your ideal ad creative/i);
@@ -477,7 +485,7 @@ describe('Studio Page Integration Tests', () => {
       });
 
       // Select a product (canGenerate requires selectedProducts.length > 0)
-      await addUploadToEnableGenerate();
+      await selectProductToEnableGenerate();
 
       // Enter a prompt
       const quickStartTextarea = screen.getByPlaceholderText(/Describe your ideal ad creative/i);
@@ -525,7 +533,7 @@ describe('Studio Page Integration Tests', () => {
       });
 
       // Select a product (canGenerate requires selectedProducts.length > 0)
-      await addUploadToEnableGenerate();
+      await selectProductToEnableGenerate();
 
       // Enter prompt
       const quickStartTextarea = screen.getByPlaceholderText(/Describe your ideal ad creative/i);
@@ -557,7 +565,7 @@ describe('Studio Page Integration Tests', () => {
       });
 
       // Select a product (canGenerate requires selectedProducts.length > 0)
-      await addUploadToEnableGenerate();
+      await selectProductToEnableGenerate();
 
       const quickStartTextarea = screen.getByPlaceholderText(/Describe your ideal ad creative/i);
       fireEvent.change(quickStartTextarea, { target: { value: 'Test prompt' } });
@@ -792,7 +800,7 @@ describe('Studio Page Integration Tests', () => {
       });
 
       // Select a product (canGenerate requires selectedProducts.length > 0)
-      await addUploadToEnableGenerate();
+      await selectProductToEnableGenerate();
 
       const longPrompt = 'A'.repeat(5000);
       const quickStartTextarea = screen.getByPlaceholderText(/Describe your ideal ad creative/i);
@@ -861,7 +869,7 @@ describe('Studio Page Integration Tests', () => {
       });
 
       // Select a product (canGenerate requires selectedProducts.length > 0)
-      await addUploadToEnableGenerate();
+      await selectProductToEnableGenerate();
 
       // Start a generation
       const quickStartTextarea = screen.getByPlaceholderText(/Describe your ideal ad creative/i);
@@ -901,7 +909,7 @@ describe('Studio Page Integration Tests', () => {
       });
 
       // Select a product (canGenerate requires selectedProducts.length > 0)
-      await addUploadToEnableGenerate();
+      await selectProductToEnableGenerate();
 
       const quickStartTextarea = screen.getByPlaceholderText(/Describe your ideal ad creative/i);
       fireEvent.change(quickStartTextarea, { target: { value: 'Test prompt' } });

@@ -11,7 +11,7 @@ import { and, eq, desc, sql } from 'drizzle-orm';
 
 export async function saveGeneration(insertGeneration: InsertGeneration): Promise<Generation> {
   const [generation] = await db.insert(generations).values(insertGeneration).returning();
-  return generation;
+  return generation!;
 }
 
 export async function getGenerations(limit: number = 50, offset: number = 0): Promise<Generation[]> {
@@ -58,7 +58,7 @@ export async function updateGeneration(id: number | string, updates: Partial<Ins
     .set({ ...updates, updatedAt: new Date() })
     .where(eq(generations.id, stringId))
     .returning();
-  return generation;
+  return generation!;
 }
 
 export async function deleteGeneration(id: string): Promise<void> {
@@ -81,7 +81,7 @@ export async function getEditHistory(generationId: string): Promise<Generation[]
 
 export async function saveGenerationUsage(insertUsage: InsertGenerationUsage): Promise<GenerationUsage> {
   const [usage] = await db.insert(generationUsage).values(insertUsage).returning();
-  return usage;
+  return usage!;
 }
 
 export async function getGenerationUsageRows(params: {

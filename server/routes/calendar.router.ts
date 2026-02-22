@@ -8,6 +8,7 @@
  * - GET  /api/calendar/posts/:id   — Single post details
  * - POST /api/calendar/schedule    — Schedule a new post
  * - PATCH /api/calendar/posts/:id/reschedule — Change scheduled date
+ * - POST  /api/calendar/posts/:id/retry      — Retry a failed post
  * - PATCH /api/calendar/posts/:id/cancel     — Cancel a scheduled post
  */
 
@@ -21,6 +22,7 @@ import {
   schedulePost,
   reschedulePost,
   cancelScheduledPost,
+  scheduleRetry,
 } from '../services/schedulingRepository';
 
 export const calendarRouter: RouterFactory = (ctx: RouterContext): Router => {
@@ -70,8 +72,8 @@ export const calendarRouter: RouterFactory = (ctx: RouterContext): Router => {
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const userId = (req as any).user?.id;
-        const year = parseInt(req.query.year as string, 10);
-        const month = parseInt(req.query.month as string, 10);
+        const year = parseInt(String(req.query['year']), 10);
+        const month = parseInt(String(req.query['month']), 10);
 
         if (!year || !month || month < 1 || month > 12) {
           return res.status(400).json({ error: 'Valid year and month (1-12) query params required' });
@@ -93,7 +95,7 @@ export const calendarRouter: RouterFactory = (ctx: RouterContext): Router => {
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const userId = (req as any).user?.id;
-        const post = await getScheduledPostById(req.params.id, userId);
+        const post = await getScheduledPostById(String(req.params['id']), userId);
 
         if (!post) {
           return res.status(404).json({ error: 'Post not found' });
@@ -181,7 +183,7 @@ export const calendarRouter: RouterFactory = (ctx: RouterContext): Router => {
           return res.status(400).json({ error: 'Invalid scheduledFor date format' });
         }
 
-        const post = await reschedulePost(req.params.id, userId, newDate);
+        const post = await reschedulePost(String(req.params['id']), userId, newDate);
 
         if (!post) {
           return res.status(404).json({ error: 'Post not found' });
@@ -196,6 +198,45 @@ export const calendarRouter: RouterFactory = (ctx: RouterContext): Router => {
   );
 
   /**
+   * POST /posts/:id/retry — Retry a failed post
+   * Resets status to 'scheduled' and bumps retryCount via scheduleRetry().
+   * Optionally accepts { scheduledFor } to change the retry time.
+   */
+  router.post(
+    '/posts/:id/retry',
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const userId = (req as any).user?.id;
+        const postId = String(req.params['id']);
+        const { scheduledFor } = req.body;
+
+        const post = await getScheduledPostById(postId, userId);
+        if (!post) {
+          return res.status(404).json({ error: 'Post not found' });
+        }
+        if (post.status !== 'failed') {
+          return res.status(400).json({ error: 'Only failed posts can be retried' });
+        }
+
+        const scheduled = await scheduleRetry(postId);
+        if (!scheduled) {
+          return res.status(409).json({ error: 'Max retries exceeded (3)' });
+        }
+
+        if (scheduledFor) {
+          await reschedulePost(postId, userId, new Date(String(scheduledFor)));
+        }
+
+        const updated = await getScheduledPostById(postId, userId);
+        logger.info({ postId, retried: true }, 'Failed post queued for retry');
+        res.json(updated);
+      } catch (error) {
+        handleRouteError(res, error, 'calendar.retry');
+      }
+    }),
+  );
+
+  /**
    * PATCH /posts/:id/cancel — Cancel a scheduled post
    */
   router.patch(
@@ -203,7 +244,7 @@ export const calendarRouter: RouterFactory = (ctx: RouterContext): Router => {
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const userId = (req as any).user?.id;
-        const post = await cancelScheduledPost(req.params.id, userId);
+        const post = await cancelScheduledPost(String(req.params['id']), userId);
 
         if (!post) {
           return res.status(404).json({ error: 'Post not found' });
@@ -224,7 +265,7 @@ export const calendarRouterModule: RouterModule = {
   prefix: '/api/calendar',
   factory: calendarRouter,
   description: 'Content calendar scheduling and management',
-  endpointCount: 6,
+  endpointCount: 7,
   requiresAuth: true,
   tags: ['calendar', 'scheduling', 'content'],
 };

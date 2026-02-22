@@ -435,7 +435,7 @@ export async function analyzeRelationshipType(
       operation: 'generate',
       inputTokens: prompt.length * 0.25,
       durationMs: Date.now() - startTime,
-      userId,
+      ...(userId !== undefined && { userId }),
       success: true,
     });
 
@@ -487,7 +487,7 @@ async function queryKnowledgeBase(sourceProduct: Product, targetProduct?: Produc
  * Build prompt for relationship discovery
  */
 function buildRelationshipDiscoveryPrompt(
-  sourceProduct: Product,
+  _sourceProduct: Product,
   sourceContext: string,
   candidates: Array<{ id: string; name: string; context: string }>,
   kbContext: string | null,

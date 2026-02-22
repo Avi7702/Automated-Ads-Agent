@@ -23,7 +23,7 @@ export class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     this.props.onError?.(error, errorInfo);
   }
 
@@ -31,7 +31,7 @@ export class ErrorBoundary extends Component<Props, State> {
     this.setState({ hasError: false, error: null });
   };
 
-  render() {
+  override render() {
     if (this.state.hasError) {
       if (this.props.fallback) {
         return this.props.fallback;
@@ -40,18 +40,11 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="flex flex-col items-center justify-center p-6 text-center bg-muted rounded-lg border border-border">
           <AlertTriangle className="w-10 h-10 text-amber-500 mb-3" />
-          <h3 className="text-lg font-semibold text-foreground mb-2">
-            Something went wrong
-          </h3>
+          <h3 className="text-lg font-semibold text-foreground mb-2">Something went wrong</h3>
           <p className="text-sm text-muted-foreground mb-4 max-w-md">
             {this.state.error?.message || 'An unexpected error occurred'}
           </p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={this.handleRetry}
-            className="gap-2"
-          >
+          <Button variant="outline" size="sm" onClick={this.handleRetry} className="gap-2">
             <RefreshCw className="w-4 h-4" />
             Try Again
           </Button>

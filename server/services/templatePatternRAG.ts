@@ -145,8 +145,8 @@ export async function matchTemplateForContext(context: TemplateMatchContext): Pr
           objective: context.objective,
           platform: context.platform,
           aspectRatio: context.aspectRatio,
-          mood: context.mood,
-          style: context.style,
+          ...(context.mood !== undefined && { mood: context.mood }),
+          ...(context.style !== undefined && { style: context.style }),
         },
       };
     }
@@ -179,8 +179,8 @@ export async function matchTemplateForContext(context: TemplateMatchContext): Pr
         objective: context.objective,
         platform: context.platform,
         aspectRatio: context.aspectRatio,
-        mood: context.mood,
-        style: context.style,
+        ...(context.mood !== undefined && { mood: context.mood }),
+        ...(context.style !== undefined && { style: context.style }),
       },
     };
   } catch (error) {
@@ -194,7 +194,7 @@ export async function matchTemplateForContext(context: TemplateMatchContext): Pr
       category: 'template_matching',
       success,
       durationMs,
-      errorType,
+      ...(errorType !== undefined && { errorType }),
     });
   }
 }
@@ -268,7 +268,7 @@ export async function analyzeTemplatePatterns(template: PerformingAdTemplate): P
       category: 'pattern_analysis',
       success,
       durationMs,
-      errorType,
+      ...(errorType !== undefined && { errorType }),
     });
   }
 }
@@ -323,7 +323,7 @@ export async function suggestTemplateCustomizations(
       category: 'customization_suggestions',
       success,
       durationMs,
-      errorType,
+      ...(errorType !== undefined && { errorType }),
     });
   }
 }
@@ -341,8 +341,8 @@ async function getCandidateTemplates(context: TemplateMatchContext): Promise<Per
     return await storage.searchPerformingAdTemplates(context.userId, {
       industry: context.industry,
       platform: context.platform,
-      mood: context.mood,
-      style: context.style,
+      ...(context.mood !== undefined && { mood: context.mood }),
+      ...(context.style !== undefined && { style: context.style }),
       objective: context.objective,
     });
   }
@@ -473,7 +473,7 @@ async function generateQuickCustomizations(
  * Analyze template with Gemini vision capabilities
  */
 async function analyzeTemplateWithVision(
-  imageUrl: string,
+  _imageUrl: string,
   template: PerformingAdTemplate,
 ): Promise<{
   detectedPatterns: string[];
@@ -711,8 +711,9 @@ function extractColorsFromPalette(colorPalette: unknown): string[] {
 function inferLayoutType(template: PerformingAdTemplate): string {
   const layouts = template.layouts as Array<{ gridStructure?: string }> | null;
 
-  if (layouts && layouts.length > 0 && layouts[0].gridStructure) {
-    return layouts[0].gridStructure;
+  const firstLayout = layouts?.[0];
+  if (firstLayout?.gridStructure) {
+    return firstLayout.gridStructure;
   }
 
   return 'standard';

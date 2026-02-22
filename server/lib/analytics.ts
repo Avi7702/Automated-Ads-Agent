@@ -17,16 +17,17 @@ async function getClient(): Promise<any> {
   if (initialized) return posthogClient;
   initialized = true;
 
-  const apiKey = process.env.POSTHOG_API_KEY;
+  const apiKey = process.env['POSTHOG_API_KEY'];
   if (!apiKey) {
     logger.debug({ module: 'Analytics' }, 'PostHog disabled (POSTHOG_API_KEY not set)');
     return null;
   }
 
   try {
-    const { PostHog } = await import('posthog-node');
+    const moduleName = 'posthog-node';
+    const { PostHog } = await import(/* webpackIgnore: true */ moduleName);
     posthogClient = new PostHog(apiKey, {
-      host: process.env.POSTHOG_HOST || 'https://us.i.posthog.com',
+      host: process.env['POSTHOG_HOST'] || 'https://us.i.posthog.com',
       flushAt: 20,
       flushInterval: 10000,
     });

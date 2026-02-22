@@ -11,8 +11,8 @@
  * 5. Retry if needed
  */
 
-import { logger } from "../../lib/logger";
-import { storage } from "../../storage";
+import { logger } from '../../lib/logger';
+import { storage } from '../../storage';
 import {
   DEFAULT_PIPELINE_CONFIG,
   type Gate3Result,
@@ -20,8 +20,8 @@ import {
   type WriteDiscrepancy,
   type WriteIssue,
   type PipelineConfig,
-} from "./types";
-import type { Product } from "@shared/schema";
+} from './types';
+import type { Product } from '@shared/schema';
 
 // ============================================
 // MAIN VERIFICATION FUNCTION
@@ -32,7 +32,7 @@ import type { Product } from "@shared/schema";
  */
 export async function verifyDatabaseWrite(
   payload: WritePayload,
-  config: PipelineConfig = { ...DEFAULT_PIPELINE_CONFIG }
+  config: PipelineConfig = { ...DEFAULT_PIPELINE_CONFIG },
 ): Promise<Gate3Result> {
   let retryCount = 0;
   let lastError: Error | null = null;
@@ -48,9 +48,9 @@ export async function verifyDatabaseWrite(
         features: payload.features,
         benefits: payload.benefits,
         tags: payload.tags,
-        enrichmentStatus: "verified",
+        enrichmentStatus: 'verified',
         enrichmentVerifiedAt: new Date(),
-        enrichmentSource: "ai_pipeline",
+        enrichmentSource: 'ai_pipeline',
       });
 
       // Small delay to ensure write is committed
@@ -86,10 +86,7 @@ export async function verifyDatabaseWrite(
 
       // If we have discrepancies but haven't exhausted retries, try again
       if (retryCount < config.maxDbWriteRetries) {
-        logger.warn(
-          { module: 'Gate3', discrepancyCount: discrepancies.length },
-          'Write verification failed, retrying'
-        );
+        logger.warn({ module: 'Gate3', discrepancyCount: discrepancies.length }, 'Write verification failed, retrying');
         retryCount++;
         await delay(config.retryDelayMs);
         continue;
@@ -118,10 +115,10 @@ export async function verifyDatabaseWrite(
         productId: payload.productId,
         discrepancies: [
           {
-            field: "_database",
-            intended: "write and verify",
+            field: '_database',
+            intended: 'write and verify',
             actual: lastError.message,
-            issue: "CORRUPTED",
+            issue: 'CORRUPTED',
           },
         ],
         retryCount,
@@ -135,10 +132,10 @@ export async function verifyDatabaseWrite(
     productId: payload.productId,
     discrepancies: [
       {
-        field: "_database",
-        intended: "write and verify",
-        actual: lastError?.message || "Unknown error",
-        issue: "CORRUPTED",
+        field: '_database',
+        intended: 'write and verify',
+        actual: lastError?.message || 'Unknown error',
+        issue: 'CORRUPTED',
       },
     ],
     retryCount,
@@ -152,28 +149,21 @@ export async function verifyDatabaseWrite(
 /**
  * Compare write payload to actual product in database
  */
-function comparePayloadToProduct(
-  payload: WritePayload,
-  actual: Product
-): WriteDiscrepancy[] {
+function comparePayloadToProduct(payload: WritePayload, actual: Product): WriteDiscrepancy[] {
   const discrepancies: WriteDiscrepancy[] = [];
 
   // Compare description
   if (payload.description) {
-    const discrepancy = compareStringField(
-      "description",
-      payload.description,
-      actual.description
-    );
+    const discrepancy = compareStringField('description', payload.description, actual.description);
     if (discrepancy) discrepancies.push(discrepancy);
   }
 
   // Compare specifications (JSON object)
   if (payload.specifications && Object.keys(payload.specifications).length > 0) {
     const discrepancy = compareJsonField(
-      "specifications",
+      'specifications',
       payload.specifications,
-      actual.specifications as Record<string, string> | null
+      actual.specifications as Record<string, string> | null,
     );
     if (discrepancy) discrepancies.push(discrepancy);
   }
@@ -181,30 +171,22 @@ function comparePayloadToProduct(
   // Compare features (JSON object)
   if (payload.features && Object.keys(payload.features).length > 0) {
     const discrepancy = compareJsonField(
-      "features",
+      'features',
       payload.features,
-      actual.features as Record<string, string | string[]> | null
+      actual.features as Record<string, string | string[]> | null,
     );
     if (discrepancy) discrepancies.push(discrepancy);
   }
 
   // Compare benefits (array)
   if (payload.benefits && payload.benefits.length > 0) {
-    const discrepancy = compareArrayField(
-      "benefits",
-      payload.benefits,
-      actual.benefits
-    );
+    const discrepancy = compareArrayField('benefits', payload.benefits, actual.benefits);
     if (discrepancy) discrepancies.push(discrepancy);
   }
 
   // Compare tags (array)
   if (payload.tags && payload.tags.length > 0) {
-    const discrepancy = compareArrayField(
-      "tags",
-      payload.tags,
-      actual.tags
-    );
+    const discrepancy = compareArrayField('tags', payload.tags, actual.tags);
     if (discrepancy) discrepancies.push(discrepancy);
   }
 
@@ -217,11 +199,11 @@ function comparePayloadToProduct(
 function compareStringField(
   fieldName: string,
   intended: string,
-  actual: string | null | undefined
+  actual: string | null | undefined,
 ): WriteDiscrepancy | null {
   if (!intended) return null;
 
-  const actualValue = actual || "";
+  const actualValue = actual || '';
 
   if (intended === actualValue) {
     return null; // Match
@@ -244,12 +226,10 @@ function compareStringField(
 function compareJsonField(
   fieldName: string,
   intended: Record<string, unknown>,
-  actual: Record<string, unknown> | null | undefined
+  actual: Record<string, unknown> | null | undefined,
 ): WriteDiscrepancy | null {
   const intendedStr = JSON.stringify(intended, Object.keys(intended).sort());
-  const actualStr = actual
-    ? JSON.stringify(actual, Object.keys(actual).sort())
-    : "{}";
+  const actualStr = actual ? JSON.stringify(actual, Object.keys(actual).sort()) : '{}';
 
   if (intendedStr === actualStr) {
     return null; // Match
@@ -258,14 +238,14 @@ function compareJsonField(
   // Check if data exists but differs
   if (actual && Object.keys(actual).length > 0) {
     // Check for individual field mismatches
-    const missingKeys = Object.keys(intended).filter(k => !(k in actual));
+    const missingKeys = Object.keys(intended).filter((k) => !(k in actual));
 
     if (missingKeys.length > 0) {
       return {
         field: fieldName,
         intended: intendedStr,
         actual: actualStr,
-        issue: "MISSING",
+        issue: 'MISSING',
       };
     }
 
@@ -274,7 +254,7 @@ function compareJsonField(
       field: fieldName,
       intended: intendedStr,
       actual: actualStr,
-      issue: "CORRUPTED",
+      issue: 'CORRUPTED',
     };
   }
 
@@ -282,7 +262,7 @@ function compareJsonField(
     field: fieldName,
     intended: intendedStr,
     actual: actualStr,
-    issue: actual === null ? "MISSING" : "CORRUPTED",
+    issue: actual === null ? 'MISSING' : 'CORRUPTED',
   };
 }
 
@@ -292,7 +272,7 @@ function compareJsonField(
 function compareArrayField(
   fieldName: string,
   intended: string[],
-  actual: string[] | null | undefined
+  actual: string[] | null | undefined,
 ): WriteDiscrepancy | null {
   const actualArray = actual || [];
 
@@ -307,16 +287,14 @@ function compareArrayField(
   // Check for truncation
   if (actualArray.length < intended.length && actualArray.length > 0) {
     // Check if it's a prefix
-    const isPrefix = actualArray.every((v, i) =>
-      intended.includes(v)
-    );
+    const isPrefix = actualArray.every((v, _i) => intended.includes(v));
 
     if (isPrefix) {
       return {
         field: fieldName,
         intended: JSON.stringify(intended),
         actual: JSON.stringify(actualArray),
-        issue: "TRUNCATED",
+        issue: 'TRUNCATED',
       };
     }
   }
@@ -325,7 +303,7 @@ function compareArrayField(
     field: fieldName,
     intended: JSON.stringify(intended),
     actual: JSON.stringify(actualArray),
-    issue: actualArray.length === 0 ? "MISSING" : "CORRUPTED",
+    issue: actualArray.length === 0 ? 'MISSING' : 'CORRUPTED',
   };
 }
 
@@ -335,32 +313,32 @@ function compareArrayField(
 function detectStringIssue(intended: string, actual: string): WriteIssue {
   // Check for truncation
   if (actual.length < intended.length && intended.startsWith(actual)) {
-    return "TRUNCATED";
+    return 'TRUNCATED';
   }
 
   // Check for encoding issues (common patterns)
   const hasEncodingIssues =
-    actual.includes("�") || // Replacement character
-    actual.includes("\\u") || // Escaped unicode
+    actual.includes('�') || // Replacement character
+    actual.includes('\\u') || // Escaped unicode
     (intended.includes("'") && actual.includes("''")) || // SQL escaping artifacts
     (intended.includes('"') && actual.includes('\\"'));
 
   if (hasEncodingIssues) {
-    return "ENCODING";
+    return 'ENCODING';
   }
 
   // Check for complete missing data
-  if (!actual || actual.trim() === "") {
-    return "MISSING";
+  if (!actual || actual.trim() === '') {
+    return 'MISSING';
   }
 
   // Check for type mismatch (e.g., number stored as string differently)
   if (typeof intended !== typeof actual) {
-    return "TYPE_MISMATCH";
+    return 'TYPE_MISMATCH';
   }
 
   // Default to corruption
-  return "CORRUPTED";
+  return 'CORRUPTED';
 }
 
 // ============================================
@@ -371,7 +349,7 @@ function detectStringIssue(intended: string, actual: string): WriteIssue {
  * Simple delay utility
  */
 function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -384,15 +362,15 @@ export function buildWritePayload(
   features: Record<string, string | string[]>,
   benefits: string[],
   tags: string[],
-  sources: string[]
+  sources: string[],
 ): WritePayload {
   return {
     productId,
     description: description.trim(),
     specifications: cleanObject(specifications),
     features: cleanObject(features) as Record<string, string | string[]>,
-    benefits: benefits.filter(b => b && b.trim()),
-    tags: Array.from(new Set(tags.filter(t => t && t.trim()))), // Dedupe tags
+    benefits: benefits.filter((b) => b && b.trim()),
+    tags: Array.from(new Set(tags.filter((t) => t && t.trim()))), // Dedupe tags
     sources,
   };
 }
@@ -404,7 +382,7 @@ function cleanObject<T extends Record<string, unknown>>(obj: T): T {
   const cleaned = {} as T;
 
   for (const [key, value] of Object.entries(obj)) {
-    if (value !== null && value !== undefined && value !== "") {
+    if (value !== null && value !== undefined && value !== '') {
       if (Array.isArray(value) && value.length === 0) {
         continue; // Skip empty arrays
       }
@@ -422,11 +400,9 @@ export function isRetryableFailure(result: Gate3Result): boolean {
   if (result.passed) return false;
 
   // Database errors are often transient
-  const transientIssues: WriteIssue[] = ["CORRUPTED"];
+  const transientIssues: WriteIssue[] = ['CORRUPTED'];
 
-  return result.discrepancies.some(d =>
-    transientIssues.includes(d.issue) && d.field === "_database"
-  );
+  return result.discrepancies.some((d) => transientIssues.includes(d.issue) && d.field === '_database');
 }
 
 // Export gate3 module

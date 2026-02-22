@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SchedulePostDialog } from '@/components/calendar/SchedulePostDialog';
 import {
   ChevronLeft,
   ChevronRight,
@@ -112,6 +113,14 @@ export default function WeeklyPlanView() {
   // Week navigation state — undefined = current week
   const [weekStart, setWeekStart] = useState<string | undefined>(undefined);
 
+  // Schedule dialog state
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [schedulePrefill, setSchedulePrefill] = useState<{
+    caption?: string;
+    generationId?: string;
+    defaultDate?: Date;
+  } | null>(null);
+
   const { data: plan, isLoading, error } = useWeeklyPlan(weekStart);
   const updatePost = useUpdatePlanPost();
   const regenerate = useRegeneratePlan();
@@ -189,6 +198,21 @@ export default function WeeklyPlanView() {
       navigate(`/?${params.toString()}`);
     },
     [plan, navigate],
+  );
+
+  const handleSchedule = useCallback(
+    (postIndex: number) => {
+      if (!plan) return;
+      const post = (plan.posts as any[])[postIndex];
+      const defaultDate = post?.scheduledDate ? new Date(post.scheduledDate) : undefined;
+      setSchedulePrefill({
+        caption: post?.briefing ?? post?.content ?? undefined,
+        generationId: post?.generationId ?? undefined,
+        defaultDate,
+      });
+      setScheduleDialogOpen(true);
+    },
+    [plan],
   );
 
   /* ---------------------------------------------------------------- */
@@ -361,13 +385,13 @@ export default function WeeklyPlanView() {
                     <Button size="sm" variant="outline" onClick={() => handleCreateNow(idx)}>
                       <Eye className="h-3.5 w-3.5 mr-1" /> Review
                     </Button>
-                    <Button size="sm" onClick={() => handleCreateNow(idx)}>
+                    <Button size="sm" onClick={() => handleSchedule(idx)}>
                       Schedule <ArrowRight className="h-3.5 w-3.5 ml-1" />
                     </Button>
                   </>
                 )}
                 {post.status === 'approved' && (
-                  <Button size="sm" onClick={() => handleCreateNow(idx)}>
+                  <Button size="sm" onClick={() => handleSchedule(idx)}>
                     Schedule <ArrowRight className="h-3.5 w-3.5 ml-1" />
                   </Button>
                 )}
@@ -413,6 +437,16 @@ export default function WeeklyPlanView() {
           </div>
         )}
       </CardContent>
+
+      <SchedulePostDialog
+        open={scheduleDialogOpen}
+        onOpenChange={(open) => {
+          setScheduleDialogOpen(open);
+          if (!open) setSchedulePrefill(null);
+        }}
+        defaultDate={schedulePrefill?.defaultDate ?? null}
+        prefill={schedulePrefill ?? undefined}
+      />
     </Card>
   );
 }

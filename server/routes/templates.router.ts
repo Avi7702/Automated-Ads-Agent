@@ -76,7 +76,7 @@ export const templatesRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/:id',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const template = await storage.getAdSceneTemplateById(req.params.id);
+        const template = await storage.getAdSceneTemplateById(String(req.params['id']));
 
         if (!template) {
           return res.status(404).json({ error: 'Template not found' });
@@ -128,7 +128,7 @@ export const templatesRouter: RouterFactory = (ctx: RouterContext): Router => {
       try {
         const userId = (req.session as any).userId;
         const userRole = req.user?.role;
-        const template = await storage.getAdSceneTemplateById(req.params.id);
+        const template = await storage.getAdSceneTemplateById(String(req.params['id']));
 
         if (!template) {
           return res.status(404).json({ error: 'Template not found' });
@@ -139,7 +139,7 @@ export const templatesRouter: RouterFactory = (ctx: RouterContext): Router => {
           return res.status(403).json({ error: 'Not authorized to update this template' });
         }
 
-        const updated = await storage.updateAdSceneTemplate(req.params.id, req.body);
+        const updated = await storage.updateAdSceneTemplate(String(req.params['id']), req.body);
         res.json(updated);
       } catch (error: any) {
         logger.error({ module: 'TemplateUpdate', err: error }, 'Error updating template');
@@ -159,7 +159,7 @@ export const templatesRouter: RouterFactory = (ctx: RouterContext): Router => {
       try {
         const userId = (req.session as any).userId;
         const userRole = req.user?.role;
-        const template = await storage.getAdSceneTemplateById(req.params.id);
+        const template = await storage.getAdSceneTemplateById(String(req.params['id']));
 
         if (!template) {
           return res.status(404).json({ error: 'Template not found' });
@@ -170,7 +170,7 @@ export const templatesRouter: RouterFactory = (ctx: RouterContext): Router => {
           return res.status(403).json({ error: 'Not authorized to delete this template' });
         }
 
-        await storage.deleteAdSceneTemplate(req.params.id);
+        await storage.deleteAdSceneTemplate(String(req.params['id']));
         res.json({ success: true });
       } catch (error: any) {
         logger.error({ module: 'TemplateDelete', err: error }, 'Error deleting template');

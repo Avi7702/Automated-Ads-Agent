@@ -24,157 +24,191 @@ export const brandImagesRouter: RouterFactory = (ctx: RouterContext): Router => 
   /**
    * POST / - Upload brand image
    */
-  router.post('/', uploadSingle('image'), requireAuth, asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const userId = (req.session as any).userId;
-      const file = req.file;
+  router.post(
+    '/',
+    uploadSingle('image'),
+    requireAuth,
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const userId = (req.session as any).userId;
+        const file = req.file;
 
-      if (!file) {
-        return res.status(400).json({ error: 'Image file is required' });
+        if (!file) {
+          return res.status(400).json({ error: 'Image file is required' });
+        }
+
+        // Upload to Cloudinary
+        const cloudinary = (await import('cloudinary')).v2;
+        cloudinary.config({
+          cloud_name: process.env['CLOUDINARY_CLOUD_NAME'] ?? '',
+          api_key: process.env['CLOUDINARY_API_KEY'] ?? '',
+          api_secret: process.env['CLOUDINARY_API_SECRET'] ?? '',
+        });
+
+        const uploadResult = await new Promise<any>((resolve, reject) => {
+          cloudinary.uploader
+            .upload_stream(
+              {
+                folder: 'brand-images',
+                resource_type: 'image',
+              },
+              (error, result) => {
+                if (error) reject(error);
+                else resolve(result);
+              },
+            )
+            .end(file.buffer);
+        });
+
+        // Parse metadata from body
+        // Valid categories: historical_ad, product_hero, installation, detail, lifestyle, comparison
+        const validCategories = ['historical_ad', 'product_hero', 'installation', 'detail', 'lifestyle', 'comparison'];
+        const category = validCategories.includes(req.body.category) ? req.body.category : 'product_hero';
+        const tags = req.body.tags ? JSON.parse(req.body.tags) : [];
+        const productIds = req.body.productIds ? JSON.parse(req.body.productIds) : [];
+        const suggestedUse = req.body.suggestedUse ? JSON.parse(req.body.suggestedUse) : [];
+
+        // Create database record
+        const brandImage = await storage.createBrandImage({
+          userId,
+          cloudinaryUrl: uploadResult.secure_url,
+          cloudinaryPublicId: uploadResult.public_id,
+          category,
+          tags,
+          description: req.body.description || null,
+          productIds,
+          scenarioId: req.body.scenarioId || null,
+          suggestedUse,
+          aspectRatio: req.body.aspectRatio || null,
+        });
+
+        res.status(201).json(brandImage);
+      } catch (error: any) {
+        logger.error({ module: 'BrandImages', err: error }, 'Upload error');
+        res.status(500).json({ error: 'Failed to upload brand image' });
       }
-
-      // Upload to Cloudinary
-      const cloudinary = (await import('cloudinary')).v2;
-      cloudinary.config({
-        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-        api_key: process.env.CLOUDINARY_API_KEY,
-        api_secret: process.env.CLOUDINARY_API_SECRET,
-      });
-
-      const uploadResult = await new Promise<any>((resolve, reject) => {
-        cloudinary.uploader.upload_stream(
-          {
-            folder: 'brand-images',
-            resource_type: 'image',
-          },
-          (error, result) => {
-            if (error) reject(error);
-            else resolve(result);
-          }
-        ).end(file.buffer);
-      });
-
-      // Parse metadata from body
-      // Valid categories: historical_ad, product_hero, installation, detail, lifestyle, comparison
-      const validCategories = ['historical_ad', 'product_hero', 'installation', 'detail', 'lifestyle', 'comparison'];
-      const category = validCategories.includes(req.body.category) ? req.body.category : 'product_hero';
-      const tags = req.body.tags ? JSON.parse(req.body.tags) : [];
-      const productIds = req.body.productIds ? JSON.parse(req.body.productIds) : [];
-      const suggestedUse = req.body.suggestedUse ? JSON.parse(req.body.suggestedUse) : [];
-
-      // Create database record
-      const brandImage = await storage.createBrandImage({
-        userId,
-        cloudinaryUrl: uploadResult.secure_url,
-        cloudinaryPublicId: uploadResult.public_id,
-        category,
-        tags,
-        description: req.body.description || null,
-        productIds,
-        scenarioId: req.body.scenarioId || null,
-        suggestedUse,
-        aspectRatio: req.body.aspectRatio || null,
-      });
-
-      res.status(201).json(brandImage);
-    } catch (error: any) {
-      logger.error({ module: 'BrandImages', err: error }, 'Upload error');
-      res.status(500).json({ error: 'Failed to upload brand image' });
-    }
-  }));
+    }),
+  );
 
   /**
    * GET / - Get all brand images for user
    */
-  router.get('/', requireAuth, asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const userId = (req.session as any).userId;
-      const images = await storage.getBrandImagesByUser(userId);
-      res.json(images);
-    } catch (error: any) {
-      logger.error({ module: 'BrandImages', err: error }, 'List error');
-      res.status(500).json({ error: 'Failed to get brand images' });
-    }
-  }));
+  router.get(
+    '/',
+    requireAuth,
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const userId = (req.session as any).userId;
+        const images = await (
+          storage as unknown as { getBrandImagesByUser(userId: string): Promise<unknown[]> }
+        ).getBrandImagesByUser(userId);
+        res.json(images);
+      } catch (error: any) {
+        logger.error({ module: 'BrandImages', err: error }, 'List error');
+        res.status(500).json({ error: 'Failed to get brand images' });
+      }
+    }),
+  );
 
   /**
    * GET /category/:category - Get brand images by category
    */
-  router.get('/category/:category', requireAuth, asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const userId = (req.session as any).userId;
-      const images = await storage.getBrandImagesByCategory(userId, req.params.category);
-      res.json(images);
-    } catch (error: any) {
-      logger.error({ module: 'BrandImages', err: error }, 'Category query error');
-      res.status(500).json({ error: 'Failed to get brand images by category' });
-    }
-  }));
+  router.get(
+    '/category/:category',
+    requireAuth,
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const userId = (req.session as any).userId;
+        const images = await storage.getBrandImagesByCategory(userId, String(req.params['category']));
+        res.json(images);
+      } catch (error: any) {
+        logger.error({ module: 'BrandImages', err: error }, 'Category query error');
+        res.status(500).json({ error: 'Failed to get brand images by category' });
+      }
+    }),
+  );
 
   /**
    * POST /for-products - Get brand images for specific products
    */
-  router.post('/for-products', requireAuth, asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const userId = (req.session as any).userId;
-      const { productIds } = req.body;
-      if (!productIds || !Array.isArray(productIds)) {
-        return res.status(400).json({ error: 'productIds array is required' });
+  router.post(
+    '/for-products',
+    requireAuth,
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const userId = (req.session as any).userId;
+        const { productIds } = req.body;
+        if (!productIds || !Array.isArray(productIds)) {
+          return res.status(400).json({ error: 'productIds array is required' });
+        }
+        const images = await storage.getBrandImagesForProducts(productIds, userId);
+        res.json(images);
+      } catch (error: any) {
+        logger.error({ module: 'BrandImages', err: error }, 'Products query error');
+        res.status(500).json({ error: 'Failed to get brand images for products' });
       }
-      const images = await storage.getBrandImagesForProducts(productIds, userId);
-      res.json(images);
-    } catch (error: any) {
-      logger.error({ module: 'BrandImages', err: error }, 'Products query error');
-      res.status(500).json({ error: 'Failed to get brand images for products' });
-    }
-  }));
+    }),
+  );
 
   /**
    * PUT /:id - Update brand image
    */
-  router.put('/:id', requireAuth, asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const image = await storage.updateBrandImage(req.params.id, req.body);
-      res.json(image);
-    } catch (error: any) {
-      logger.error({ module: 'BrandImages', err: error }, 'Update error');
-      res.status(500).json({ error: 'Failed to update brand image' });
-    }
-  }));
+  router.put(
+    '/:id',
+    requireAuth,
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const image = await storage.updateBrandImage(String(req.params['id']), req.body);
+        res.json(image);
+      } catch (error: any) {
+        logger.error({ module: 'BrandImages', err: error }, 'Update error');
+        res.status(500).json({ error: 'Failed to update brand image' });
+      }
+    }),
+  );
 
   /**
    * DELETE /:id - Delete brand image
    */
-  router.delete('/:id', requireAuth, asyncHandler(async (req: Request, res: Response) => {
-    try {
-      // Get the image to delete from Cloudinary
-      const images = await storage.getBrandImagesByUser((req.session as any).userId);
-      const imageToDelete = images.find((img: any) => img.id === req.params.id);
+  router.delete(
+    '/:id',
+    requireAuth,
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        // Get the image to delete from Cloudinary
+        const imageId = String(req.params['id']);
+        const images = await (
+          storage as unknown as {
+            getBrandImagesByUser(userId: string): Promise<Array<{ id: string; cloudinaryPublicId: string }>>;
+          }
+        ).getBrandImagesByUser((req.session as any).userId);
+        const imageToDelete = images.find((img) => img.id === imageId);
 
-      if (imageToDelete) {
-        // Delete from Cloudinary
-        const cloudinary = (await import('cloudinary')).v2;
-        cloudinary.config({
-          cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-          api_key: process.env.CLOUDINARY_API_KEY,
-          api_secret: process.env.CLOUDINARY_API_SECRET,
-        });
+        if (imageToDelete) {
+          // Delete from Cloudinary
+          const cloudinary = (await import('cloudinary')).v2;
+          cloudinary.config({
+            cloud_name: process.env['CLOUDINARY_CLOUD_NAME'] ?? '',
+            api_key: process.env['CLOUDINARY_API_KEY'] ?? '',
+            api_secret: process.env['CLOUDINARY_API_SECRET'] ?? '',
+          });
 
-        try {
-          await cloudinary.uploader.destroy(imageToDelete.cloudinaryPublicId);
-        } catch (cloudinaryError) {
-          logger.warn({ module: 'BrandImages', err: cloudinaryError }, 'Cloudinary delete warning');
-          // Continue with database deletion even if Cloudinary fails
+          try {
+            await cloudinary.uploader.destroy(imageToDelete.cloudinaryPublicId);
+          } catch (cloudinaryError) {
+            logger.warn({ module: 'BrandImages', err: cloudinaryError }, 'Cloudinary delete warning');
+            // Continue with database deletion even if Cloudinary fails
+          }
         }
-      }
 
-      await storage.deleteBrandImage(req.params.id);
-      res.json({ success: true });
-    } catch (error: any) {
-      logger.error({ module: 'BrandImages', err: error }, 'Delete error');
-      res.status(500).json({ error: 'Failed to delete brand image' });
-    }
-  }));
+        await storage.deleteBrandImage(imageId);
+        res.json({ success: true });
+      } catch (error: any) {
+        logger.error({ module: 'BrandImages', err: error }, 'Delete error');
+        res.status(500).json({ error: 'Failed to delete brand image' });
+      }
+    }),
+  );
 
   return router;
 };
@@ -185,5 +219,5 @@ export const brandImagesRouterModule: RouterModule = {
   description: 'Brand image management',
   endpointCount: 6,
   requiresAuth: true,
-  tags: ['brand', 'images', 'uploads']
+  tags: ['brand', 'images', 'uploads'],
 };

@@ -13,7 +13,7 @@
 
 import type { Router, Request, Response } from 'express';
 import type { RouterContext, RouterFactory, RouterModule } from '../types/router';
-import { createRouter, asyncHandler, handleRouteError } from './utils/createRouter';
+import { createRouter, asyncHandler } from './utils/createRouter';
 import { validate } from '../middleware/validate';
 import { registerSchema, loginSchema } from '../validation/schemas';
 
@@ -21,7 +21,7 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
   const router = createRouter();
   const { storage, logger, telemetry } = ctx.services;
   const { authService } = ctx.domainServices;
-  const { requireAuth } = ctx.middleware;
+  // requireAuth not needed in auth router (auth endpoints are public)
 
   /**
    * POST /register - Register a new user account
@@ -187,7 +187,7 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
     asyncHandler(async (req: Request, res: Response) => {
       try {
         // BUG-013 fix: Block demo endpoint in production unless explicitly enabled
-        if (process.env.NODE_ENV === 'production' && process.env.ENABLE_DEMO_MODE !== 'true') {
+        if (process.env['NODE_ENV'] === 'production' && process.env['ENABLE_DEMO_MODE'] !== 'true') {
           return res.status(404).json({ error: 'Not found' });
         }
 

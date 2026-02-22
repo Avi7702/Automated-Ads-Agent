@@ -121,11 +121,11 @@ export interface EvaluateContentParams {
  * - <50: Auto-reject with feedback
  */
 export async function evaluateContent(params: EvaluateContentParams): Promise<ConfidenceScore> {
-  const { caption, platform, imageUrl, hashtags = [], userId } = params;
+  const { caption, platform, imageUrl: _imageUrl, hashtags = [], userId } = params;
 
   logger.info(
     { module: 'ConfidenceScoring', platform, captionLength: caption.length, hashtagCount: hashtags.length },
-    'Starting content evaluation'
+    'Starting content evaluation',
   );
 
   // STEP 1: Character Limit Validation (+20 pts if valid)
@@ -191,7 +191,7 @@ export async function evaluateContent(params: EvaluateContentParams): Promise<Co
       recommendation,
       breakdown: score.breakdown,
     },
-    'Content evaluation complete'
+    'Content evaluation complete',
   );
 
   return score;
@@ -214,7 +214,7 @@ function validateCharacterLimits(caption: string, platform: string): boolean {
  */
 function assessHookQuality(caption: string): number {
   // Extract first sentence/line as the hook
-  const hook = caption.split(/[.\n]/)[0].trim();
+  const hook = (caption.split(/[.\n]/)[0] ?? '').trim();
   if (hook.length === 0) return 0;
 
   // Check for proven hook patterns
@@ -244,7 +244,7 @@ function assessHookQuality(caption: string): number {
  * Detect call-to-action presence
  */
 function detectCTA(caption: string): boolean {
-  return CTA_PATTERNS.some(pattern => pattern.test(caption));
+  return CTA_PATTERNS.some((pattern) => pattern.test(caption));
 }
 
 /**
@@ -275,8 +275,8 @@ function validateHashtags(hashtags: string[], platform: string): boolean {
   // - Too many hashtags per character (spam indicator)
   // - All caps hashtags (spam indicator)
   // - Very long hashtags (>30 chars - likely spam)
-  const allCapsCount = hashtags.filter(h => h === h.toUpperCase() && h.length > 3).length;
-  const longHashtagCount = hashtags.filter(h => h.length > 30).length;
+  const allCapsCount = hashtags.filter((h) => h === h.toUpperCase() && h.length > 3).length;
+  const longHashtagCount = hashtags.filter((h) => h.length > 30).length;
 
   if (allCapsCount > hashtags.length / 2) return false; // More than half all caps
   if (longHashtagCount > 0) return false; // Any hashtag over 30 chars
@@ -291,7 +291,7 @@ function validateHashtags(hashtags: string[], platform: string): boolean {
 async function assessBrandVoiceAlignment(
   caption: string,
   brandProfile: BrandProfile | undefined,
-  platform: string
+  platform: string,
 ): Promise<number> {
   // If no brand profile, give baseline score
   if (!brandProfile || !brandProfile.voice) {
@@ -332,7 +332,7 @@ async function assessBrandVoiceAlignment(
           },
         },
       },
-      { operation: 'brand_voice_scoring' }
+      { operation: 'brand_voice_scoring' },
     );
 
     const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
@@ -344,7 +344,7 @@ async function assessBrandVoiceAlignment(
         alignmentScore: result.alignmentScore,
         reasoning: result.reasoning,
       },
-      'Brand voice alignment assessed'
+      'Brand voice alignment assessed',
     );
 
     return result.alignmentScore;

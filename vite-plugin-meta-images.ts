@@ -43,12 +43,12 @@ export function metaImagesPlugin(): Plugin {
 
       html = html.replace(
         /<meta\s+property="og:image"\s+content="[^"]*"\s*\/>/g,
-        `<meta property="og:image" content="${imageUrl}" />`
+        `<meta property="og:image" content="${imageUrl}" />`,
       );
 
       html = html.replace(
         /<meta\s+name="twitter:image"\s+content="[^"]*"\s*\/>/g,
-        `<meta name="twitter:image" content="${imageUrl}" />`
+        `<meta name="twitter:image" content="${imageUrl}" />`,
       );
 
       return html;
@@ -57,14 +57,14 @@ export function metaImagesPlugin(): Plugin {
 }
 
 function getDeploymentUrl(): string | null {
-  if (process.env.REPLIT_INTERNAL_APP_DOMAIN) {
-    const url = `https://${process.env.REPLIT_INTERNAL_APP_DOMAIN}`;
+  if (process.env['REPLIT_INTERNAL_APP_DOMAIN']) {
+    const url = `https://${process.env['REPLIT_INTERNAL_APP_DOMAIN']}`;
     log('[meta-images] using internal app domain:', url);
     return url;
   }
 
-  if (process.env.REPLIT_DEV_DOMAIN) {
-    const url = `https://${process.env.REPLIT_DEV_DOMAIN}`;
+  if (process.env['REPLIT_DEV_DOMAIN']) {
+    const url = `https://${process.env['REPLIT_DEV_DOMAIN']}`;
     log('[meta-images] using dev domain:', url);
     return url;
   }
@@ -73,7 +73,7 @@ function getDeploymentUrl(): string | null {
 }
 
 function log(...args: any[]): void {
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env['NODE_ENV'] === 'production') {
     console.log(...args);
   }
 }

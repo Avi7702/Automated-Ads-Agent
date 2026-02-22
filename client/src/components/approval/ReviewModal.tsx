@@ -1,20 +1,13 @@
-import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { PriorityBadge } from "./PriorityBadge";
-import { cn } from "@/lib/utils";
+import { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { PriorityBadge } from './PriorityBadge';
+import { cn } from '@/lib/utils';
 import {
   CheckCircle2,
   XCircle,
-  Edit3,
   Pause,
   TrendingUp,
   Lightbulb,
@@ -25,8 +18,8 @@ import {
   Instagram,
   Twitter,
   ImageIcon,
-  Star
-} from "lucide-react";
+  Star,
+} from 'lucide-react';
 
 interface ReviewModalProps {
   isOpen: boolean;
@@ -76,23 +69,23 @@ export function ReviewModal({
   onApprove,
   onReject,
   onRequestRevision,
-  isProcessing = false
+  isProcessing = false,
 }: ReviewModalProps) {
-  const [notes, setNotes] = useState("");
+  const [notes, setNotes] = useState('');
 
   const handleApprove = () => {
     onApprove(notes);
-    setNotes("");
+    setNotes('');
   };
 
   const handleReject = () => {
     onReject(notes);
-    setNotes("");
+    setNotes('');
   };
 
   const handleRevision = () => {
     onRequestRevision(notes);
-    setNotes("");
+    setNotes('');
   };
 
   const caption = item.adCopy?.caption || 'No caption available';
@@ -107,7 +100,7 @@ export function ReviewModal({
   const lengthPercentage = (captionLength / maxLength) * 100;
 
   const safetyChecks = item.safetyChecksPassed || {};
-  const allChecksPassed = Object.values(safetyChecks).every(v => v === true);
+  const allChecksPassed = Object.values(safetyChecks).every((v) => v === true);
 
   const getConfidenceColor = (score: number) => {
     if (score >= 90) return 'text-green-600 dark:text-green-400';
@@ -123,8 +116,8 @@ export function ReviewModal({
           <Star
             key={i}
             className={cn(
-              "w-3 h-3",
-              i < stars ? "fill-yellow-500 text-yellow-500" : "text-gray-300 dark:text-gray-600"
+              'w-3 h-3',
+              i < stars ? 'fill-yellow-500 text-yellow-500' : 'text-gray-300 dark:text-gray-600',
             )}
           />
         ))}
@@ -148,9 +141,7 @@ export function ReviewModal({
             <div className="space-y-1">
               <div className="text-xs text-muted-foreground">Quality</div>
               <div className="flex items-center gap-2">
-                <span className={cn("text-lg font-bold", getConfidenceColor(qualityScore))}>
-                  {qualityScore}/100
-                </span>
+                <span className={cn('text-lg font-bold', getConfidenceColor(qualityScore))}>{qualityScore}/100</span>
                 {renderStars(qualityScore)}
               </div>
             </div>
@@ -158,20 +149,24 @@ export function ReviewModal({
             <div className="space-y-1">
               <div className="text-xs text-muted-foreground">Confidence</div>
               <div className="flex items-center gap-1">
-                <TrendingUp className={cn("w-4 h-4", getConfidenceColor(confidenceScore))} />
-                <span className={cn("text-lg font-bold", getConfidenceColor(confidenceScore))}>
-                  {confidenceScore}%
-                </span>
+                <TrendingUp className={cn('w-4 h-4', getConfidenceColor(confidenceScore))} />
+                <span className={cn('text-lg font-bold', getConfidenceColor(confidenceScore))}>{confidenceScore}%</span>
               </div>
             </div>
 
             <div className="space-y-1">
               <div className="text-xs text-muted-foreground">Character Count</div>
               <div className="flex items-center gap-1">
-                <span className={cn(
-                  "text-lg font-bold",
-                  lengthPercentage > 95 ? "text-red-600" : lengthPercentage > 85 ? "text-yellow-600" : "text-green-600"
-                )}>
+                <span
+                  className={cn(
+                    'text-lg font-bold',
+                    lengthPercentage > 95
+                      ? 'text-red-600'
+                      : lengthPercentage > 85
+                        ? 'text-yellow-600'
+                        : 'text-green-600',
+                  )}
+                >
                   {captionLength}/{maxLength}
                 </span>
                 {lengthPercentage <= 100 && <CheckCircle className="w-4 h-4 text-green-600" />}
@@ -319,11 +314,7 @@ export function ReviewModal({
             Reject
           </Button>
 
-          <Button
-            onClick={handleRevision}
-            variant="outline"
-            disabled={isProcessing}
-          >
+          <Button onClick={handleRevision} variant="outline" disabled={isProcessing}>
             <Pause className="w-4 h-4 mr-2" />
             Needs Revision
           </Button>

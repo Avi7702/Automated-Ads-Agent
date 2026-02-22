@@ -12,11 +12,7 @@
  * This is the CRITICAL gate that prevents data confusion from multi-source aggregation.
  */
 
-import {
-  aiCheckEquivalence,
-  aiExtractClaims,
-  aiVerifyClaim,
-} from "./aiHelpers";
+import { aiCheckEquivalence, aiExtractClaims, aiVerifyClaim } from './aiHelpers';
 import {
   SOURCE_TRUST_LEVELS,
   type Gate4Result,
@@ -28,7 +24,7 @@ import {
   type ExtractedData,
   type AggregatedData,
   type ConfidenceLevel,
-} from "./types";
+} from './types';
 
 // ============================================
 // MAIN VERIFICATION FUNCTION
@@ -39,7 +35,7 @@ import {
  */
 export async function verifyCrossSourceTruth(
   extractions: ExtractedData[],
-  aggregated: AggregatedData
+  aggregated: AggregatedData,
 ): Promise<Gate4Result> {
   // ============================================
   // 1. DETECT CONFLICTS across sources
@@ -49,29 +45,26 @@ export async function verifyCrossSourceTruth(
   // ============================================
   // 2. VERIFY each claim in final description against ALL sources
   // ============================================
-  const truthChecks = await verifyDescriptionClaims(
-    aggregated.description,
-    extractions
-  );
+  const truthChecks = await verifyDescriptionClaims(aggregated.description, extractions);
 
   // ============================================
   // 3. Determine overall verdict
   // ============================================
-  const hasUnresolvedConflicts = conflicts.some(c => c.resolution === "CONFLICT");
-  const hasContradictions = truthChecks.some(t => t.verdict === "CONTRADICTED");
-  const hasUnverified = truthChecks.some(t => t.verdict === "UNVERIFIED");
+  const hasUnresolvedConflicts = conflicts.some((c) => c.resolution === 'CONFLICT');
+  const hasContradictions = truthChecks.some((t) => t.verdict === 'CONTRADICTED');
+  const hasUnverified = truthChecks.some((t) => t.verdict === 'UNVERIFIED');
 
   let overallVerdict: Gate4Verdict;
   let passed: boolean;
 
   if (hasUnresolvedConflicts || hasContradictions) {
-    overallVerdict = "CONFLICTS_FOUND";
+    overallVerdict = 'CONFLICTS_FOUND';
     passed = false;
   } else if (hasUnverified) {
-    overallVerdict = "SOME_UNVERIFIED";
+    overallVerdict = 'SOME_UNVERIFIED';
     passed = true; // Still passes, but with lower confidence
   } else {
-    overallVerdict = "ALL_VERIFIED";
+    overallVerdict = 'ALL_VERIFIED';
     passed = true;
   }
 
@@ -92,16 +85,12 @@ export async function verifyCrossSourceTruth(
  */
 async function detectFieldConflicts(
   extractions: ExtractedData[],
-  aggregated: AggregatedData
+  aggregated: AggregatedData,
 ): Promise<FieldConflict[]> {
   const conflicts: FieldConflict[] = [];
 
   // Get all unique field names from aggregated data
-  const fieldNames = new Set<string>([
-    "productName",
-    "description",
-    ...Object.keys(aggregated.specifications),
-  ]);
+  const fieldNames = new Set<string>(['productName', 'description', ...Object.keys(aggregated.specifications)]);
 
   for (const fieldName of Array.from(fieldNames)) {
     // Collect all values for this field across sources
@@ -110,9 +99,9 @@ async function detectFieldConflicts(
     for (const extraction of extractions) {
       let value: string | undefined;
 
-      if (fieldName === "productName") {
+      if (fieldName === 'productName') {
         value = extraction.productName;
-      } else if (fieldName === "description") {
+      } else if (fieldName === 'description') {
         value = extraction.description;
       } else {
         value = extraction.specifications[fieldName];
@@ -132,37 +121,35 @@ async function detectFieldConflicts(
     }
 
     // Check if all values are the same
-    const uniqueValues = Array.from(new Set(valuesWithSources.map(v => v.value.toLowerCase())));
+    const uniqueValues = Array.from(new Set(valuesWithSources.map((v) => v.value.toLowerCase())));
 
     if (uniqueValues.length === 1) {
       continue; // No conflict, all sources agree
     }
 
     // Check if values are equivalent (e.g., unit conversions)
-    const equivalence = await aiCheckEquivalence(
-      valuesWithSources.map(v => v.value)
-    );
+    const equivalence = await aiCheckEquivalence(valuesWithSources.map((v) => v.value));
 
     let resolution: ConflictResolution;
     let resolvedValue: string | null = null;
     let reasoning: string;
 
     if (equivalence.allEquivalent) {
-      resolution = "EQUIVALENT";
+      resolution = 'EQUIVALENT';
       resolvedValue = equivalence.resolvedValue;
       reasoning = equivalence.reasoning;
     } else if (equivalence.compatible) {
-      resolution = "COMPATIBLE";
+      resolution = 'COMPATIBLE';
       resolvedValue = equivalence.resolvedValue;
       reasoning = equivalence.reasoning;
     } else {
-      resolution = "CONFLICT";
+      resolution = 'CONFLICT';
       resolvedValue = null;
       reasoning = equivalence.reasoning;
     }
 
     // Only record if there's something to report
-    if (resolution !== "EQUIVALENT" || uniqueValues.length > 1) {
+    if (resolution !== 'EQUIVALENT' || uniqueValues.length > 1) {
       conflicts.push({
         field: fieldName,
         values: valuesWithSources,
@@ -183,10 +170,7 @@ async function detectFieldConflicts(
 /**
  * Verify claims in the aggregated description against all sources
  */
-async function verifyDescriptionClaims(
-  description: string,
-  extractions: ExtractedData[]
-): Promise<TruthCheck[]> {
+async function verifyDescriptionClaims(description: string, extractions: ExtractedData[]): Promise<TruthCheck[]> {
   // Skip if description is empty
   if (!description || !description.trim()) {
     return [];
@@ -202,7 +186,7 @@ async function verifyDescriptionClaims(
   const truthChecks: TruthCheck[] = [];
 
   // Verify each claim against all sources
-  for (const { claim, importance } of claims) {
+  for (const { claim, importance: _importance } of claims) {
     const supportedBy: string[] = [];
     const contradictedBy: string[] = [];
 
@@ -226,11 +210,11 @@ async function verifyDescriptionClaims(
 
     if (contradictedBy.length > 0) {
       // Any contradiction is serious
-      verdict = "CONTRADICTED";
+      verdict = 'CONTRADICTED';
     } else if (supportedBy.length > 0) {
-      verdict = "VERIFIED";
+      verdict = 'VERIFIED';
     } else {
-      verdict = "UNVERIFIED";
+      verdict = 'UNVERIFIED';
     }
 
     truthChecks.push({
@@ -253,7 +237,7 @@ async function verifyDescriptionClaims(
  */
 export function resolveConflicts(
   conflicts: FieldConflict[],
-  extractions: ExtractedData[]
+  extractions: ExtractedData[],
 ): {
   resolved: Record<string, string>;
   unresolved: FieldConflict[];
@@ -265,7 +249,7 @@ export function resolveConflicts(
   const sourceTrustMap = buildSourceTrustMap(extractions);
 
   for (const conflict of conflicts) {
-    if (conflict.resolution === "EQUIVALENT" || conflict.resolution === "COMPATIBLE") {
+    if (conflict.resolution === 'EQUIVALENT' || conflict.resolution === 'COMPATIBLE') {
       // Use the resolved value from AI
       if (conflict.resolvedValue) {
         resolved[conflict.field] = conflict.resolvedValue;
@@ -278,7 +262,7 @@ export function resolveConflicts(
           unresolved.push(conflict);
         }
       }
-    } else if (conflict.resolution === "CONFLICT") {
+    } else if (conflict.resolution === 'CONFLICT') {
       // Try to resolve using trust levels
       const bestValue = selectHighestTrustValue(conflict.values, sourceTrustMap);
       if (bestValue) {
@@ -301,10 +285,10 @@ function buildSourceTrustMap(extractions: ExtractedData[]): Map<string, number> 
   for (const extraction of extractions) {
     try {
       const url = new URL(extraction.sourceUrl);
-      const domain = url.hostname.replace(/^www\./, "");
+      const domain = url.hostname.replace(/^www\./, '');
 
       // Look up trust level
-      const trustLevel = SOURCE_TRUST_LEVELS[domain] || SOURCE_TRUST_LEVELS["default"];
+      const trustLevel = SOURCE_TRUST_LEVELS[domain] ?? SOURCE_TRUST_LEVELS['default'] ?? 4;
       trustMap.set(extraction.sourceUrl, trustLevel);
     } catch {
       // Invalid URL, use default trust
@@ -320,7 +304,7 @@ function buildSourceTrustMap(extractions: ExtractedData[]): Map<string, number> 
  */
 function selectHighestTrustValue(
   values: { source: string; value: string }[],
-  trustMap: Map<string, number>
+  trustMap: Map<string, number>,
 ): string | null {
   if (values.length === 0) return null;
 
@@ -331,41 +315,38 @@ function selectHighestTrustValue(
     return trustB - trustA;
   });
 
-  return sorted[0].value;
+  return sorted[0]?.value ?? null;
 }
 
 /**
  * Filter out contradicted claims from description
  */
-export function filterContradictedClaims(
-  description: string,
-  truthChecks: TruthCheck[]
-): string {
+export function filterContradictedClaims(description: string, truthChecks: TruthCheck[]): string {
   let filteredDescription = description;
 
   // Get contradicted claims
-  const contradicted = truthChecks.filter(t => t.verdict === "CONTRADICTED");
+  const contradicted = truthChecks.filter((t) => t.verdict === 'CONTRADICTED');
 
   // Simple approach: try to remove sentences containing the claim
   for (const check of contradicted) {
     // Find and remove the claim from the description
     // This is a simple implementation - could be improved with NLP
     const sentences = filteredDescription.split(/(?<=[.!?])\s+/);
-    const filteredSentences = sentences.filter(sentence => {
+    const filteredSentences = sentences.filter((sentence) => {
       // Check if this sentence contains the problematic claim
       const sentenceLower = sentence.toLowerCase();
       const claimLower = check.claim.toLowerCase();
 
       // Simple word overlap check
-      const claimWords = claimLower.split(/\s+/).filter(w => w.length > 3);
-      const matchCount = claimWords.filter(w => sentenceLower.includes(w)).length;
+      const claimWords = claimLower.split(/\s+/).filter((w) => w.length > 3);
+      const matchCount = claimWords.filter((w) => sentenceLower.includes(w)).length;
       const matchRatio = matchCount / claimWords.length;
 
       // Remove if more than 60% of claim words match
       return matchRatio < 0.6;
     });
 
-    filteredDescription = filteredSentences.join(" ");
+    filteredDescription = filteredSentences.join(' ');
   }
 
   return filteredDescription.trim();
@@ -380,24 +361,24 @@ export function filterContradictedClaims(
  */
 export function calculateGate4Confidence(result: Gate4Result): ConfidenceLevel {
   if (!result.passed) {
-    return "LOW";
+    return 'LOW';
   }
 
-  const verifiedCount = result.truthChecks.filter(t => t.verdict === "VERIFIED").length;
+  const verifiedCount = result.truthChecks.filter((t) => t.verdict === 'VERIFIED').length;
   const totalChecks = result.truthChecks.length;
 
   if (totalChecks === 0) {
-    return "MEDIUM"; // No claims to verify
+    return 'MEDIUM'; // No claims to verify
   }
 
   const verificationRatio = verifiedCount / totalChecks;
 
   if (verificationRatio >= 0.8 && result.conflicts.length === 0) {
-    return "HIGH";
+    return 'HIGH';
   } else if (verificationRatio >= 0.5) {
-    return "MEDIUM";
+    return 'MEDIUM';
   } else {
-    return "LOW";
+    return 'LOW';
   }
 }
 
@@ -412,24 +393,16 @@ export function getGate4Summary(result: Gate4Result): {
   claimsContradicted: number;
 } {
   const conflictsResolved = result.conflicts.filter(
-    c => c.resolution === "EQUIVALENT" || c.resolution === "COMPATIBLE"
+    (c) => c.resolution === 'EQUIVALENT' || c.resolution === 'COMPATIBLE',
   ).length;
 
-  const conflictsUnresolved = result.conflicts.filter(
-    c => c.resolution === "CONFLICT"
-  ).length;
+  const conflictsUnresolved = result.conflicts.filter((c) => c.resolution === 'CONFLICT').length;
 
-  const claimsVerified = result.truthChecks.filter(
-    t => t.verdict === "VERIFIED"
-  ).length;
+  const claimsVerified = result.truthChecks.filter((t) => t.verdict === 'VERIFIED').length;
 
-  const claimsUnverified = result.truthChecks.filter(
-    t => t.verdict === "UNVERIFIED"
-  ).length;
+  const claimsUnverified = result.truthChecks.filter((t) => t.verdict === 'UNVERIFIED').length;
 
-  const claimsContradicted = result.truthChecks.filter(
-    t => t.verdict === "CONTRADICTED"
-  ).length;
+  const claimsContradicted = result.truthChecks.filter((t) => t.verdict === 'CONTRADICTED').length;
 
   return {
     conflictsResolved,

@@ -22,22 +22,22 @@ The NDS Content Factory is an **11-stage durable content pipeline** built on **C
 Topic String
     |
     v
-Stage 0: Research Planning (Gemini 3 Pro + Google Search grounding)
+Stage 0: Research Planning (Gemini 3.1   + Google Search grounding)
     |
     v
 Stage 1: Research (Gemini 3 Pro + Google Search grounding)
     |  [GATE: Topic Sanity Check — blocks if invalid]
     v
-Stage 2: Design (Claude Sonnet 4.5)
+Stage 2: Design (Claude Sonnet 4.6)
     |
     v
-Stage 3: Architecture (Claude Sonnet 4.5)
+Stage 3: Architecture (Claude Sonnet 4.6)
     |
     v
-Stage 4: Content Creation (Claude Sonnet 4.5, target: Opus for highest quality)
+Stage 4: Content Creation (Claude Sonnet 4.6, target: Opus for highest quality)
     |
     v
-Stage 5: Technical Verification (Gemini 3 Pro + Google Search grounding)
+Stage 5: Technical Verification (Gemini 3.1 + Google Search grounding)
     |  [GATE: Score >= 80/100 AND scenarios realistic]
     |  [RETRY: Up to 6 attempts (2 injections x 3 verify cycles)]
     v
@@ -50,7 +50,7 @@ Stage 6.5: Diagram Designer (Gemini 3 Pro subagent)
 Stage 7: Image Generation (Placeholder URLs currently)
     |
     v
-Stage 8: UX/Interaction Design (Claude Sonnet 4.5)
+Stage 8: UX/Interaction Design (Claude Sonnet 4.6)
     |
     v
 Stage 9: Assembly (Template-based, NO LLM — direct mapping)
@@ -73,7 +73,7 @@ Stage 11: Deploy (D1 database save, NO LLM)
 
 **File:** `workflows/stages/stage-00-research-planning.ts`
 **Model:** Gemini 3 Pro with Google Search grounding
-**Fallbacks:** GPT-5.2 -> Claude Sonnet 4.5
+**Fallbacks:** GPT-5.2 -> Claude Sonnet 4.56
 **Budget:** $0.05
 **Retries:** 2
 
@@ -303,9 +303,9 @@ Checks required fields, section count, word count (70% threshold), FAQ count (7+
 
 **Brand Specifications Injected:**
 
-- Vehicle: Rigid-body lorry (NOT articulated), white cab, grey body, orange NextDaySteel livery, HIAB crane
+- Vehicle: Rigid-body lorry (NOT articulated), white cab, FLAT BED, white and orange ONLY (NO navy, NO blue), NextDaySteel livery in orange, HIAB crane
 - PPE: Orange hi-vis with NDS logo, white hard hat with NDS logo, rigger gloves, steel-toe boots
-- Brand Colors: Orange #f97316, Navy #1e3a5f, White #ffffff
+- Brand Colors: Orange #f97316, White #ffffff (NO navy, NO blue anywhere on vehicles)
 - Setting: UK construction site, overcast/bright overcast, photorealistic
 - Forbidden: Sunny blue skies, stock photo poses, generic warehouse interiors
 

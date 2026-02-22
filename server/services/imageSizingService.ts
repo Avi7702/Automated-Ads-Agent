@@ -51,7 +51,7 @@ interface CloudinaryConfig {
  * Get Cloudinary configuration
  */
 function getCloudinaryConfig(): CloudinaryConfig {
-  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const cloudName = process.env['CLOUDINARY_CLOUD_NAME'];
 
   if (!cloudName) {
     throw new Error('CLOUDINARY_CLOUD_NAME not configured');
@@ -73,14 +73,14 @@ export function extractPublicId(cloudinaryUrl: string): string {
   // Handle full Cloudinary URLs
   // Format: https://res.cloudinary.com/{cloud}/image/upload/v{version}/{publicId}
   const uploadMatch = cloudinaryUrl.match(/\/upload\/(?:v\d+\/)?(.+?)(?:\.\w+)?$/);
-  if (uploadMatch) {
+  if (uploadMatch?.[1]) {
     return uploadMatch[1];
   }
 
   // Handle URLs with transformations
   // Format: https://res.cloudinary.com/{cloud}/image/upload/{transformations}/{publicId}
   const transformMatch = cloudinaryUrl.match(/\/upload\/[^\/]+\/(.+?)(?:\.\w+)?$/);
-  if (transformMatch) {
+  if (transformMatch?.[1]) {
     return transformMatch[1];
   }
 
@@ -108,7 +108,9 @@ export function buildCloudinaryUrl(publicId: string, transformations: string): s
  * @returns Width and height
  */
 function calculateDimensions(aspectRatio: string, targetWidth?: number): { width: number; height: number } {
-  const [widthRatio, heightRatio] = aspectRatio.split(':').map(Number);
+  const parts = aspectRatio.split(':').map(Number);
+  const widthRatio = parts[0] ?? 1;
+  const heightRatio = parts[1] ?? 1;
 
   if (targetWidth) {
     return {
@@ -152,7 +154,7 @@ function estimateFileSize(width: number, height: number, format: string, quality
   } else if (quality.includes('auto:best')) {
     compressionRatio = 0.15;
   } else if (quality.includes('auto:good')) {
-    compressionRatio = 0.10;
+    compressionRatio = 0.1;
   } else if (quality.includes('auto:low')) {
     compressionRatio = 0.05;
   }
@@ -168,10 +170,7 @@ function estimateFileSize(width: number, height: number, format: string, quality
  * @param options - Sizing options
  * @returns Sized image with transformation URL
  */
-export async function resizeImageForPlatform(
-  sourceImageUrl: string,
-  options: ImageSizingOptions
-): Promise<SizedImage> {
+export async function resizeImageForPlatform(sourceImageUrl: string, options: ImageSizingOptions): Promise<SizedImage> {
   const startTime = Date.now();
 
   try {
@@ -238,20 +237,22 @@ export async function resizeImageForPlatform(
       cloudinaryTransform: transformations,
       aspectRatio,
       platform: options.platform,
-      contentType: options.contentType,
+      ...(options.contentType !== undefined && { contentType: options.contentType }),
     };
 
-    logger.debug({
-      platform: options.platform,
-      aspectRatio,
-      dimensions: `${width}x${height}`,
-      format,
-      estimatedSizeKB,
-      duration: Date.now() - startTime,
-    }, 'Image resized for platform');
+    logger.debug(
+      {
+        platform: options.platform,
+        aspectRatio,
+        dimensions: `${width}x${height}`,
+        format,
+        estimatedSizeKB,
+        duration: Date.now() - startTime,
+      },
+      'Image resized for platform',
+    );
 
     return result;
-
   } catch (error) {
     logger.error({ error, platform: options.platform, sourceImageUrl }, 'Image resizing failed');
     throw error;
@@ -289,7 +290,7 @@ function determineOptimalFormat(platform: string, specs: PlatformSpecs): 'jpg' |
 export async function generatePlatformImages(
   sourceImageUrl: string,
   platforms: string[],
-  options?: Partial<ImageSizingOptions>
+  options?: Partial<ImageSizingOptions>,
 ): Promise<Record<string, SizedImage>> {
   const startTime = Date.now();
   const results: Record<string, SizedImage> = {};
@@ -313,14 +314,16 @@ export async function generatePlatformImages(
       results[platform] = sized;
     });
 
-    logger.info({
-      platforms,
-      totalImages: Object.keys(results).length,
-      duration: Date.now() - startTime,
-    }, 'Batch image generation completed');
+    logger.info(
+      {
+        platforms,
+        totalImages: Object.keys(results).length,
+        duration: Date.now() - startTime,
+      },
+      'Batch image generation completed',
+    );
 
     return results;
-
   } catch (error) {
     logger.error({ error, platforms, sourceImageUrl }, 'Batch image generation failed');
     throw error;
@@ -336,10 +339,7 @@ export async function generatePlatformImages(
  * @param platform - Platform identifier
  * @returns Array of sized images (one per aspect ratio)
  */
-export async function generateAllAspectRatios(
-  sourceImageUrl: string,
-  platform: string
-): Promise<SizedImage[]> {
+export async function generateAllAspectRatios(sourceImageUrl: string, platform: string): Promise<SizedImage[]> {
   const specs = getPlatformSpecs(platform);
   if (!specs) {
     throw new Error(`Platform '${platform}' not supported`);
@@ -360,10 +360,13 @@ export async function generateAllAspectRatios(
     });
   }
 
-  logger.info({
-    platform,
-    aspectRatiosGenerated: results.length,
-  }, 'Generated all aspect ratio variations');
+  logger.info(
+    {
+      platform,
+      aspectRatiosGenerated: results.length,
+    },
+    'Generated all aspect ratio variations',
+  );
 
   return results;
 }
@@ -383,7 +386,7 @@ export function validateImageForPlatform(
   height: number,
   fileSizeMB: number,
   format: string,
-  platform: string
+  platform: string,
 ): {
   isValid: boolean;
   errors: string[];
@@ -400,9 +403,7 @@ export function validateImageForPlatform(
 
   // Validate format
   if (!specs.image.formats.includes(format.toLowerCase())) {
-    errors.push(
-      `Format '${format}' not supported. Supported formats: ${specs.image.formats.join(', ')}`
-    );
+    errors.push(`Format '${format}' not supported. Supported formats: ${specs.image.formats.join(', ')}`);
   }
 
   // Validate dimensions
@@ -421,15 +422,17 @@ export function validateImageForPlatform(
 
   // Check aspect ratio
   const aspectRatio = (width / height).toFixed(2);
-  const matchesAspectRatio = specs.image.aspectRatios.some(ar => {
-    const [w, h] = ar.ratio.split(':').map(Number);
+  const matchesAspectRatio = specs.image.aspectRatios.some((ar) => {
+    const parts = ar.ratio.split(':').map(Number);
+    const w = parts[0] ?? 1;
+    const h = parts[1] ?? 1;
     const expectedRatio = (w / h).toFixed(2);
     return aspectRatio === expectedRatio;
   });
 
   if (!matchesAspectRatio) {
     warnings.push(
-      `Aspect ratio ${aspectRatio} doesn't match recommended ratios: ${specs.image.aspectRatios.map(ar => ar.ratio).join(', ')}`
+      `Aspect ratio ${aspectRatio} doesn't match recommended ratios: ${specs.image.aspectRatios.map((ar) => ar.ratio).join(', ')}`,
     );
   }
 
@@ -443,9 +446,7 @@ export function validateImageForPlatform(
  * @param useCase - Transformation use case
  * @returns Cloudinary transformation string
  */
-export function getTransformationPreset(
-  useCase: 'thumbnail' | 'preview' | 'full' | 'optimized'
-): string {
+export function getTransformationPreset(useCase: 'thumbnail' | 'preview' | 'full' | 'optimized'): string {
   switch (useCase) {
     case 'thumbnail':
       return 'w_150,h_150,c_thumb,f_jpg,q_auto:low';
@@ -473,7 +474,7 @@ export function getTransformationPreset(
  */
 export function createResponsiveSrcSet(publicId: string, widths: number[] = [320, 640, 1024, 1920]): string {
   const config = getCloudinaryConfig();
-  const srcset = widths.map(width => {
+  const srcset = widths.map((width) => {
     const transform = `w_${width},c_scale,f_auto,q_auto`;
     const url = `${config.baseUrl}/${transform}/${publicId}`;
     return `${url} ${width}w`;
@@ -481,8 +482,3 @@ export function createResponsiveSrcSet(publicId: string, widths: number[] = [320
 
   return srcset.join(', ');
 }
-
-/**
- * Export types
- */
-export type { ImageSizingOptions, SizedImage };

@@ -7,7 +7,6 @@ import { createAuthFailedLoginsMap } from '../utils/memoryManager';
 import { logger } from '../lib/logger';
 import * as redisLockout from './redisAuthLockout';
 
-const BCRYPT_ROUNDS = 12;
 const ARGON2_CONFIG = { memoryCost: 19456, timeCost: 2, parallelism: 1 };
 const LOCKOUT_THRESHOLD = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
@@ -20,7 +19,7 @@ const failedLogins = createAuthFailedLoginsMap(5000);
  * Returns true when REDIS_URL is set in the environment.
  */
 function isRedisLockoutEnabled(): boolean {
-  return Boolean(process.env.REDIS_URL);
+  return Boolean(process.env['REDIS_URL']);
 }
 
 export interface AuthResult {
@@ -84,7 +83,11 @@ export async function registerUser(email: string, password: string): Promise<Aut
   // Validate password
   const passwordValidation = validatePassword(password);
   if (!passwordValidation.valid) {
-    return { success: false, error: passwordValidation.error, statusCode: 400 };
+    return {
+      success: false,
+      ...(passwordValidation.error !== undefined && { error: passwordValidation.error }),
+      statusCode: 400,
+    };
   }
 
   // Check if user exists
@@ -182,7 +185,7 @@ export async function comparePasswordWithRehash(
   }
   // Modern argon2 hash
   const valid = await argon2.verify(hash, password);
-  return { valid, newHash: undefined };
+  return { valid };
 }
 
 // --- In-memory lockout helpers (used as fallback) ---

@@ -1,10 +1,9 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Activity, AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Activity, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface ErrorEvent {
   id: string;
@@ -48,7 +47,7 @@ export function ErrorTrackingTab() {
   });
 
   const toggleExpanded = (id: string) => {
-    setExpandedErrors(prev => {
+    setExpandedErrors((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);
@@ -134,7 +133,10 @@ export function ErrorTrackingTab() {
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline" className="text-xs bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400">
+                        <Badge
+                          variant="outline"
+                          className="text-xs bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400"
+                        >
                           {error.statusCode}
                         </Badge>
                         <Badge variant="outline" className="text-xs">

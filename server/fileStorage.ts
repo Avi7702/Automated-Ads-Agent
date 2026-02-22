@@ -1,29 +1,32 @@
-import { promises as fs } from "fs";
-import path from "path";
-import { randomUUID } from "crypto";
-import { v2 as cloudinary } from "cloudinary";
+import { promises as fs } from 'fs';
+import path from 'path';
+import { randomUUID } from 'crypto';
+import { v2 as cloudinary } from 'cloudinary';
 import { logger } from './lib/logger';
 
-const STORAGE_BASE = path.join(process.cwd(), "attached_assets", "generations");
-const ORIGINALS_DIR = path.join(STORAGE_BASE, "originals");
-const RESULTS_DIR = path.join(STORAGE_BASE, "results");
+const STORAGE_BASE = path.join(process.cwd(), 'attached_assets', 'generations');
+const ORIGINALS_DIR = path.join(STORAGE_BASE, 'originals');
+const RESULTS_DIR = path.join(STORAGE_BASE, 'results');
 
 // Configure Cloudinary if credentials are available
 const isCloudinaryConfigured = !!(
-  process.env.CLOUDINARY_CLOUD_NAME &&
-  process.env.CLOUDINARY_API_KEY &&
-  process.env.CLOUDINARY_API_SECRET
+  process.env['CLOUDINARY_CLOUD_NAME'] &&
+  process.env['CLOUDINARY_API_KEY'] &&
+  process.env['CLOUDINARY_API_SECRET']
 );
 
 if (isCloudinaryConfigured) {
   cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
+    cloud_name: process.env['CLOUDINARY_CLOUD_NAME'] as string,
+    api_key: process.env['CLOUDINARY_API_KEY'] as string,
+    api_secret: process.env['CLOUDINARY_API_SECRET'] as string,
   });
   logger.info({ module: 'fileStorage' }, 'Cloudinary configured for persistent storage');
 } else {
-  logger.warn({ module: 'fileStorage' }, 'Cloudinary not configured - using local storage (images will be lost on deploy)');
+  logger.warn(
+    { module: 'fileStorage' },
+    'Cloudinary not configured - using local storage (images will be lost on deploy)',
+  );
 }
 
 async function ensureDirectories() {
@@ -54,10 +57,7 @@ function sanitizeFilename(filename: string): string {
  * Save an uploaded file to disk
  * @returns Relative path to the saved file
  */
-export async function saveOriginalFile(
-  fileBuffer: Buffer,
-  originalFilename: string
-): Promise<string> {
+export async function saveOriginalFile(fileBuffer: Buffer, originalFilename: string): Promise<string> {
   await ensureDirectories();
 
   // Sanitize the extension from the original filename
@@ -74,19 +74,16 @@ export async function saveOriginalFile(
   await fs.writeFile(filepath, fileBuffer);
 
   // Return relative path from project root
-  return path.join("attached_assets", "generations", "originals", filename);
+  return path.join('attached_assets', 'generations', 'originals', filename);
 }
 
 /**
  * Save a generated image (base64) to Cloudinary or local disk
  * @returns URL (Cloudinary) or relative path (local) to the saved file
  */
-export async function saveGeneratedImage(
-  base64Data: string,
-  format: string = "png"
-): Promise<string> {
+export async function saveGeneratedImage(base64Data: string, format: string = 'png'): Promise<string> {
   // Remove data URL prefix if present
-  const base64Image = base64Data.replace(/^data:image\/\w+;base64,/, "");
+  const base64Image = base64Data.replace(/^data:image\/\w+;base64,/, '');
 
   // Use Cloudinary if configured (persistent storage)
   if (isCloudinaryConfigured) {
@@ -95,14 +92,14 @@ export async function saveGeneratedImage(
         cloudinary.uploader.upload(
           `data:image/${format};base64,${base64Image}`,
           {
-            folder: "generations/results",
-            resource_type: "image",
+            folder: 'generations/results',
+            resource_type: 'image',
             format: format,
           },
           (error, result) => {
             if (error) reject(error);
             else resolve(result);
-          }
+          },
         );
       });
 
@@ -128,11 +125,11 @@ export async function saveGeneratedImage(
     throw new Error('Invalid file path');
   }
 
-  const buffer = Buffer.from(base64Image, "base64");
+  const buffer = Buffer.from(base64Image, 'base64');
   await fs.writeFile(filepath, buffer);
 
   // Return relative path from project root
-  return path.join("attached_assets", "generations", "results", filename);
+  return path.join('attached_assets', 'generations', 'results', filename);
 }
 
 /**
@@ -141,7 +138,7 @@ export async function saveGeneratedImage(
  */
 export async function deleteFile(pathOrUrl: string): Promise<void> {
   // Check if this is a Cloudinary URL
-  if (pathOrUrl.startsWith("https://res.cloudinary.com/")) {
+  if (pathOrUrl.startsWith('https://res.cloudinary.com/')) {
     if (!isCloudinaryConfigured) {
       logger.warn({ module: 'fileStorage' }, 'Cannot delete Cloudinary file - not configured');
       return;
@@ -150,13 +147,12 @@ export async function deleteFile(pathOrUrl: string): Promise<void> {
     try {
       // Extract public_id from Cloudinary URL
       // URL format: https://res.cloudinary.com/{cloud}/image/upload/{version}/{folder}/{public_id}.{format}
-      const urlParts = pathOrUrl.split("/");
-      const filename = urlParts[urlParts.length - 1];
-      const publicIdWithExt = urlParts.slice(-2).join("/"); // e.g., "generations/results/abc123.png"
-      const publicId = publicIdWithExt.replace(/\.[^/.]+$/, ""); // Remove extension
+      const urlParts = pathOrUrl.split('/');
+      const publicIdWithExt = urlParts.slice(-2).join('/'); // e.g., "generations/results/abc123.png"
+      const publicId = publicIdWithExt.replace(/\.[^/.]+$/, ''); // Remove extension
 
       await new Promise<void>((resolve, reject) => {
-        cloudinary.uploader.destroy(publicId, { resource_type: "image" }, (error, result) => {
+        cloudinary.uploader.destroy(publicId, { resource_type: 'image' }, (error, _result) => {
           if (error) reject(error);
           else {
             logger.info({ module: 'fileStorage', publicId }, 'Deleted from Cloudinary');

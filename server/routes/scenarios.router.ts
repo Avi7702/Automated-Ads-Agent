@@ -25,124 +25,157 @@ export const scenariosRouter: RouterFactory = (ctx: RouterContext): Router => {
   /**
    * POST / - Create installation scenario
    */
-  router.post('/', requireAuth, validate(insertInstallationScenario), asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const userId = (req.session as any).userId;
-      const scenario = await storage.createInstallationScenario({
-        ...req.body,
-        userId,
-      });
-      res.status(201).json(scenario);
-    } catch (error: any) {
-      logger.error({ module: 'InstallationScenarios', err: error }, 'Create error');
-      res.status(500).json({ error: 'Failed to create installation scenario' });
-    }
-  }));
+  router.post(
+    '/',
+    requireAuth,
+    validate(insertInstallationScenario),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const userId = (req.session as any).userId;
+        const scenario = await storage.createInstallationScenario({
+          ...req.body,
+          userId,
+        });
+        res.status(201).json(scenario);
+      } catch (error: any) {
+        logger.error({ module: 'InstallationScenarios', err: error }, 'Create error');
+        res.status(500).json({ error: 'Failed to create installation scenario' });
+      }
+    }),
+  );
 
   /**
    * GET / - Get all installation scenarios for user
    */
-  router.get('/', requireAuth, asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const userId = (req.session as any).userId;
-      const scenarios = await storage.getInstallationScenariosByUser(userId);
-      res.json(scenarios);
-    } catch (error: any) {
-      logger.error({ module: 'InstallationScenarios', err: error }, 'List error');
-      res.status(500).json({ error: 'Failed to get installation scenarios' });
-    }
-  }));
+  router.get(
+    '/',
+    requireAuth,
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const userId = (req.session as any).userId;
+        const scenarios = await (
+          storage as unknown as { getInstallationScenariosByUser(userId: string): Promise<unknown[]> }
+        ).getInstallationScenariosByUser(userId);
+        res.json(scenarios);
+      } catch (error: any) {
+        logger.error({ module: 'InstallationScenarios', err: error }, 'List error');
+        res.status(500).json({ error: 'Failed to get installation scenarios' });
+      }
+    }),
+  );
 
   /**
    * GET /room-type/:roomType - Get scenarios by room type
    * Note: Must be before :id catch-all
    */
-  router.get('/room-type/:roomType', requireAuth, asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const scenarios = await storage.getScenariosByRoomType(req.params.roomType);
-      res.json(scenarios);
-    } catch (error: any) {
-      logger.error({ module: 'InstallationScenarios', err: error }, 'Room type query error');
-      res.status(500).json({ error: 'Failed to get scenarios by room type' });
-    }
-  }));
+  router.get(
+    '/room-type/:roomType',
+    requireAuth,
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const scenarios = await storage.getScenariosByRoomType(String(req.params['roomType']));
+        res.json(scenarios);
+      } catch (error: any) {
+        logger.error({ module: 'InstallationScenarios', err: error }, 'Room type query error');
+        res.status(500).json({ error: 'Failed to get scenarios by room type' });
+      }
+    }),
+  );
 
   /**
    * POST /for-products - Get scenarios for products
    * Note: Must be before :id catch-all
    */
-  router.post('/for-products', requireAuth, asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const { productIds } = req.body;
-      if (!productIds || !Array.isArray(productIds)) {
-        return res.status(400).json({ error: 'productIds array is required' });
+  router.post(
+    '/for-products',
+    requireAuth,
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const { productIds } = req.body;
+        if (!productIds || !Array.isArray(productIds)) {
+          return res.status(400).json({ error: 'productIds array is required' });
+        }
+        const scenarios = await storage.getInstallationScenariosForProducts(productIds);
+        res.json(scenarios);
+      } catch (error: any) {
+        logger.error({ module: 'InstallationScenarios', err: error }, 'Products query error');
+        res.status(500).json({ error: 'Failed to get scenarios for products' });
       }
-      const scenarios = await storage.getInstallationScenariosForProducts(productIds);
-      res.json(scenarios);
-    } catch (error: any) {
-      logger.error({ module: 'InstallationScenarios', err: error }, 'Products query error');
-      res.status(500).json({ error: 'Failed to get scenarios for products' });
-    }
-  }));
+    }),
+  );
 
   /**
    * GET /:id - Get single installation scenario
    * Note: catch-all - must be after specific routes
    */
-  router.get('/:id', requireAuth, asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const scenario = await storage.getInstallationScenarioById(req.params.id);
-      if (!scenario) {
-        return res.status(404).json({ error: 'Installation scenario not found' });
+  router.get(
+    '/:id',
+    requireAuth,
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const scenario = await storage.getInstallationScenarioById(String(req.params['id']));
+        if (!scenario) {
+          return res.status(404).json({ error: 'Installation scenario not found' });
+        }
+        res.json(scenario);
+      } catch (error: any) {
+        logger.error({ module: 'InstallationScenarios', err: error }, 'Get error');
+        res.status(500).json({ error: 'Failed to get installation scenario' });
       }
-      res.json(scenario);
-    } catch (error: any) {
-      logger.error({ module: 'InstallationScenarios', err: error }, 'Get error');
-      res.status(500).json({ error: 'Failed to get installation scenario' });
-    }
-  }));
+    }),
+  );
 
   /**
    * PUT /:id - Update installation scenario (with ownership check)
    */
-  router.put('/:id', requireAuth, asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const userId = (req.session as any).userId;
-      const existing = await storage.getInstallationScenarioById(req.params.id);
-      if (!existing) {
-        return res.status(404).json({ error: 'Installation scenario not found' });
+  router.put(
+    '/:id',
+    requireAuth,
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const userId = (req.session as any).userId;
+        const scenarioId = String(req.params['id']);
+        const existing = await storage.getInstallationScenarioById(scenarioId);
+        if (!existing) {
+          return res.status(404).json({ error: 'Installation scenario not found' });
+        }
+        if (existing.userId !== userId) {
+          return res.status(403).json({ error: 'Not authorized to update this scenario' });
+        }
+        const scenario = await storage.updateInstallationScenario(scenarioId, req.body);
+        res.json(scenario);
+      } catch (error: any) {
+        logger.error({ module: 'InstallationScenarios', err: error }, 'Update error');
+        res.status(500).json({ error: 'Failed to update installation scenario' });
       }
-      if (existing.userId !== userId) {
-        return res.status(403).json({ error: 'Not authorized to update this scenario' });
-      }
-      const scenario = await storage.updateInstallationScenario(req.params.id, req.body);
-      res.json(scenario);
-    } catch (error: any) {
-      logger.error({ module: 'InstallationScenarios', err: error }, 'Update error');
-      res.status(500).json({ error: 'Failed to update installation scenario' });
-    }
-  }));
+    }),
+  );
 
   /**
    * DELETE /:id - Delete installation scenario (with ownership check)
    */
-  router.delete('/:id', requireAuth, asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const userId = (req.session as any).userId;
-      const existing = await storage.getInstallationScenarioById(req.params.id);
-      if (!existing) {
-        return res.status(404).json({ error: 'Installation scenario not found' });
+  router.delete(
+    '/:id',
+    requireAuth,
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const userId = (req.session as any).userId;
+        const scenarioId = String(req.params['id']);
+        const existing = await storage.getInstallationScenarioById(scenarioId);
+        if (!existing) {
+          return res.status(404).json({ error: 'Installation scenario not found' });
+        }
+        if (existing.userId !== userId) {
+          return res.status(403).json({ error: 'Not authorized to delete this scenario' });
+        }
+        await storage.deleteInstallationScenario(scenarioId);
+        res.json({ success: true });
+      } catch (error: any) {
+        logger.error({ module: 'InstallationScenarios', err: error }, 'Delete error');
+        res.status(500).json({ error: 'Failed to delete installation scenario' });
       }
-      if (existing.userId !== userId) {
-        return res.status(403).json({ error: 'Not authorized to delete this scenario' });
-      }
-      await storage.deleteInstallationScenario(req.params.id);
-      res.json({ success: true });
-    } catch (error: any) {
-      logger.error({ module: 'InstallationScenarios', err: error }, 'Delete error');
-      res.status(500).json({ error: 'Failed to delete installation scenario' });
-    }
-  }));
+    }),
+  );
 
   return router;
 };
@@ -153,5 +186,5 @@ export const scenariosRouterModule: RouterModule = {
   description: 'Installation scenarios management',
   endpointCount: 7,
   requiresAuth: true,
-  tags: ['scenarios', 'installation', 'products']
+  tags: ['scenarios', 'installation', 'products'],
 };

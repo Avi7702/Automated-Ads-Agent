@@ -18,7 +18,7 @@ import { and, eq, desc, ilike } from 'drizzle-orm';
 
 export async function savePromptTemplate(insertTemplate: InsertPromptTemplate): Promise<PromptTemplate> {
   const [template] = await db.insert(promptTemplates).values(insertTemplate).returning();
-  return template;
+  return template!;
 }
 
 export async function getPromptTemplates(category?: string): Promise<PromptTemplate[]> {
@@ -47,7 +47,7 @@ export async function deletePromptTemplate(id: string): Promise<void> {
 
 export async function saveAdSceneTemplate(insertTemplate: InsertAdSceneTemplate): Promise<AdSceneTemplate> {
   const [template] = await db.insert(adSceneTemplates).values(insertTemplate).returning();
-  return template;
+  return template!;
 }
 
 export async function getAdSceneTemplates(filters?: {
@@ -94,7 +94,7 @@ export async function updateAdSceneTemplate(
   updates: Partial<InsertAdSceneTemplate>,
 ): Promise<AdSceneTemplate> {
   const [template] = await db.update(adSceneTemplates).set(updates).where(eq(adSceneTemplates.id, id)).returning();
-  return template;
+  return template!;
 }
 
 export async function deleteAdSceneTemplate(id: string): Promise<void> {
@@ -117,7 +117,7 @@ export async function searchAdSceneTemplates(query: string): Promise<AdSceneTemp
 
 export async function createPerformingAdTemplate(template: InsertPerformingAdTemplate): Promise<PerformingAdTemplate> {
   const [result] = await db.insert(performingAdTemplates).values(template).returning();
-  return result;
+  return result!;
 }
 
 export async function getPerformingAdTemplates(userId: string): Promise<PerformingAdTemplate[]> {
@@ -189,7 +189,7 @@ export async function updatePerformingAdTemplate(
     .set({ ...updates, updatedAt: new Date() })
     .where(eq(performingAdTemplates.id, id))
     .returning();
-  return template;
+  return template!;
 }
 
 export async function deletePerformingAdTemplate(id: string): Promise<void> {

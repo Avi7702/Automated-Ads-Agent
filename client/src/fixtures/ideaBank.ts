@@ -12,13 +12,10 @@ import type {
   IdeaBankSuggestResponse,
   IdeaBankSuggestRequest,
   AnalysisStatus,
-  GenerationMode,
   SourcesUsed,
   ProductAnalysisResult,
   GenerationRecipe,
   GenerationRecipeProduct,
-  GenerationRecipeRelationship,
-  GenerationRecipeScenario,
   TemplateSlotSuggestion,
   IdeaBankTemplateResponse,
   TemplateContext,
@@ -97,10 +94,12 @@ export const mockSuggestions: IdeaBankSuggestion[] = [
   {
     id: 'sug-001',
     summary: 'Professional studio showcase on white background with soft lighting',
-    prompt: 'Create a professional product photograph of the NDS EZ-Drain French drain system centered on an infinite white cyclorama background. Use soft diffused lighting from above and sides, no harsh shadows. The product should fill approximately 60% of the frame with ultra-sharp focus on product details.',
+    prompt:
+      'Create a professional product photograph of the NDS EZ-Drain French drain system centered on an infinite white cyclorama background. Use soft diffused lighting from above and sides, no harsh shadows. The product should fill approximately 60% of the frame with ultra-sharp focus on product details.',
     mode: 'exact_insert',
     templateIds: ['ast-001'],
-    reasoning: 'Studio showcase is ideal for e-commerce and product pages. The clean background ensures the product is the focus.',
+    reasoning:
+      'Studio showcase is ideal for e-commerce and product pages. The clean background ensures the product is the focus.',
     confidence: 95,
     sourcesUsed: allSourcesUsed,
     recommendedPlatform: 'instagram',
@@ -109,10 +108,12 @@ export const mockSuggestions: IdeaBankSuggestion[] = [
   {
     id: 'sug-002',
     summary: 'Active construction site installation with workers',
-    prompt: 'Show the NDS EZ-Drain being installed in an active construction trench by workers wearing safety vests and hard hats. Morning sunlight creating warm golden hour glow. Dust particles in the air. Realistic construction environment with equipment visible in background.',
+    prompt:
+      'Show the NDS EZ-Drain being installed in an active construction trench by workers wearing safety vests and hard hats. Morning sunlight creating warm golden hour glow. Dust particles in the air. Realistic construction environment with equipment visible in background.',
     mode: 'inspiration',
     templateIds: ['ast-002'],
-    reasoning: 'Installation shots demonstrate product in real-world use, building credibility with professional contractors.',
+    reasoning:
+      'Installation shots demonstrate product in real-world use, building credibility with professional contractors.',
     confidence: 88,
     sourcesUsed: {
       visionAnalysis: true,
@@ -126,10 +127,12 @@ export const mockSuggestions: IdeaBankSuggestion[] = [
   {
     id: 'sug-003',
     summary: 'Before/after split showing drainage problem solved',
-    prompt: 'Create a split-screen before/after image. LEFT: Flooded yard with standing water, muddy grass, and drainage problems. RIGHT: Same yard with NDS EZ-Drain installed showing perfect drainage, green healthy grass, no standing water. Consistent lighting on both sides with clear dividing line.',
+    prompt:
+      'Create a split-screen before/after image. LEFT: Flooded yard with standing water, muddy grass, and drainage problems. RIGHT: Same yard with NDS EZ-Drain installed showing perfect drainage, green healthy grass, no standing water. Consistent lighting on both sides with clear dividing line.',
     mode: 'exact_insert',
     templateIds: ['ast-003'],
-    reasoning: 'Before/after comparisons are highly effective for showing product value and solving customer pain points.',
+    reasoning:
+      'Before/after comparisons are highly effective for showing product value and solving customer pain points.',
     confidence: 92,
     sourcesUsed: allSourcesUsed,
     recommendedPlatform: 'facebook',
@@ -138,7 +141,8 @@ export const mockSuggestions: IdeaBankSuggestion[] = [
   {
     id: 'sug-004',
     summary: 'Scale demonstration with worker hands for size reference',
-    prompt: 'Close-up of the NDS EZ-Drain section being held by professional worker hands wearing work gloves. Product is the hero element, hands provide scale reference. Shallow depth of field blurs the worksite background. Natural daylight illumination.',
+    prompt:
+      'Close-up of the NDS EZ-Drain section being held by professional worker hands wearing work gloves. Product is the hero element, hands provide scale reference. Shallow depth of field blurs the worksite background. Natural daylight illumination.',
     mode: 'inspiration',
     templateIds: ['ast-004'],
     reasoning: 'Scale reference helps customers understand product dimensions, important for purchase decisions.',
@@ -150,7 +154,8 @@ export const mockSuggestions: IdeaBankSuggestion[] = [
   {
     id: 'sug-005',
     summary: 'Underground cross-section showing proper installation',
-    prompt: 'Educational cross-section illustration showing NDS EZ-Drain installed underground. Clear soil layers visible including topsoil, gravel bed, and native soil. Proper grading and drainage direction indicated with arrows. Technical but accessible visual style.',
+    prompt:
+      'Educational cross-section illustration showing NDS EZ-Drain installed underground. Clear soil layers visible including topsoil, gravel bed, and native soil. Proper grading and drainage direction indicated with arrows. Technical but accessible visual style.',
     mode: 'standard',
     templateIds: ['ast-007'],
     reasoning: 'Educational content builds authority and helps DIYers understand proper installation techniques.',
@@ -167,7 +172,8 @@ export const mockSuggestions: IdeaBankSuggestion[] = [
   {
     id: 'sug-006',
     summary: 'Urgency promotional banner with bold colors',
-    prompt: 'Dynamic product shot of NDS EZ-Drain at dramatic 45-degree angle. Bold red and yellow accent colors creating energy. High contrast dramatic lighting. Space reserved in upper right corner for promotional text overlay like "LIMITED TIME" or "SAVE 20%".',
+    prompt:
+      'Dynamic product shot of NDS EZ-Drain at dramatic 45-degree angle. Bold red and yellow accent colors creating energy. High contrast dramatic lighting. Space reserved in upper right corner for promotional text overlay like "LIMITED TIME" or "SAVE 20%".',
     mode: 'exact_insert',
     templateIds: ['ast-006'],
     reasoning: 'Urgency-focused creative drives immediate action for promotional campaigns and sales events.',
@@ -233,7 +239,7 @@ export const fullSuggestionResponse: IdeaBankSuggestResponse = {
 };
 
 export const minimalSuggestionResponse: IdeaBankSuggestResponse = {
-  suggestions: [mockSuggestions[0]],
+  suggestions: [mockSuggestions[0]!],
   analysisStatus: visionOnlyAnalysisStatus,
 };
 
@@ -425,7 +431,8 @@ export const mockTemplateContext: TemplateContext = {
 export const mockTemplateResponse: IdeaBankTemplateResponse = {
   slotSuggestions: mockSlotSuggestions,
   template: mockTemplateContext,
-  mergedPrompt: 'Beautiful modern interior featuring Premium Engineered Oak as the flooring. Real oak beauty with wide planks showing natural color variation. Soft natural light from large windows highlighting the wood grain patterns. Modern furniture provides lifestyle context. Space for text overlay in upper portion.',
+  mergedPrompt:
+    'Beautiful modern interior featuring Premium Engineered Oak as the flooring. Real oak beauty with wide planks showing natural color variation. Soft natural light from large windows highlighting the wood grain patterns. Modern furniture provides lifestyle context. Space for text overlay in upper portion.',
   analysisStatus: fullAnalysisStatus,
   recipe: complexRecipe,
 };
@@ -433,43 +440,29 @@ export const mockTemplateResponse: IdeaBankTemplateResponse = {
 // === FILTERED SUBSETS ===
 
 /** High confidence suggestions (>= 85) */
-export const highConfidenceSuggestions = mockSuggestions.filter(
-  (s) => s.confidence >= 85
-);
+export const highConfidenceSuggestions = mockSuggestions.filter((s) => s.confidence >= 85);
 
 /** Low confidence suggestions (< 80) */
-export const lowConfidenceSuggestions = mockSuggestions.filter(
-  (s) => s.confidence < 80
-);
+export const lowConfidenceSuggestions = mockSuggestions.filter((s) => s.confidence < 80);
 
 /** Exact insert mode suggestions */
-export const exactInsertSuggestions = mockSuggestions.filter(
-  (s) => s.mode === 'exact_insert'
-);
+export const exactInsertSuggestions = mockSuggestions.filter((s) => s.mode === 'exact_insert');
 
 /** Inspiration mode suggestions */
-export const inspirationSuggestions = mockSuggestions.filter(
-  (s) => s.mode === 'inspiration'
-);
+export const inspirationSuggestions = mockSuggestions.filter((s) => s.mode === 'inspiration');
 
 /** Standard mode suggestions */
-export const standardSuggestions = mockSuggestions.filter(
-  (s) => s.mode === 'standard'
-);
+export const standardSuggestions = mockSuggestions.filter((s) => s.mode === 'standard');
 
 /** Instagram-targeted suggestions */
-export const instagramSuggestions = mockSuggestions.filter(
-  (s) => s.recommendedPlatform === 'instagram'
-);
+export const instagramSuggestions = mockSuggestions.filter((s) => s.recommendedPlatform === 'instagram');
 
 // === FACTORY FUNCTIONS ===
 
 /**
  * Creates a mock suggestion with custom overrides
  */
-export function createMockSuggestion(
-  overrides: Partial<IdeaBankSuggestion> = {}
-): IdeaBankSuggestion {
+export function createMockSuggestion(overrides: Partial<IdeaBankSuggestion> = {}): IdeaBankSuggestion {
   const id = overrides.id || `sug-test-${Date.now()}`;
   return {
     id,
@@ -491,7 +484,7 @@ export function createMockSuggestion(
  */
 export function createMockSuggestResponse(
   suggestions: IdeaBankSuggestion[] = [createMockSuggestion()],
-  overrides: Partial<IdeaBankSuggestResponse> = {}
+  overrides: Partial<IdeaBankSuggestResponse> = {},
 ): IdeaBankSuggestResponse {
   return {
     suggestions,
@@ -505,7 +498,7 @@ export function createMockSuggestResponse(
  */
 export function createMockAnalysis(
   productId: string,
-  overrides: Partial<ProductAnalysisResult> = {}
+  overrides: Partial<ProductAnalysisResult> = {},
 ): ProductAnalysisResult {
   const id = overrides.id || `pa-test-${Date.now()}`;
   return {
@@ -532,7 +525,7 @@ export function createMockAnalysis(
  */
 export function createMockRecipe(
   products: GenerationRecipeProduct[],
-  overrides: Partial<GenerationRecipe> = {}
+  overrides: Partial<GenerationRecipe> = {},
 ): GenerationRecipe {
   return {
     version: '1.0',

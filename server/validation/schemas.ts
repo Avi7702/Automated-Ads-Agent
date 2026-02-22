@@ -330,6 +330,20 @@ export const approvalQueueQuerySchema = z.object({
     .optional(),
 });
 
+/** POST /api/approval-queue/:id/approve */
+export const approveWithScheduleSchema = z.object({
+  notes: z.string().trim().max(1000).optional(),
+  schedule: z
+    .object({
+      connectionId: z.string().min(1, 'Connection ID is required'),
+      scheduledFor: z.string().datetime({ message: 'scheduledFor must be a valid ISO 8601 datetime' }),
+      timezone: z.string().max(50).optional(),
+    })
+    .optional(),
+});
+
+export type ApproveWithScheduleInput = z.infer<typeof approveWithScheduleSchema>;
+
 /** GET /api/catalog/files */
 export const catalogFilesQuerySchema = z.object({
   category: z.string().trim().max(100).optional(),
@@ -409,3 +423,48 @@ export type ListPatternsQuery = z.infer<typeof listPatternsQuerySchema>;
 
 // Content Planner types
 export type GenerateCompletePostInput = z.infer<typeof generateCompletePostSchema>;
+
+// ============================================
+// AGENT PLAN SCHEMAS
+// ============================================
+
+/** GET /api/agent-plan/suggestions */
+export const agentSuggestionsQuerySchema = z.object({
+  products: z.string().max(500, 'Product IDs string too long').optional(),
+  limit: z
+    .string()
+    .regex(/^\d+$/)
+    .transform(Number)
+    .refine((n) => n >= 1 && n <= 20, 'Limit must be 1-20')
+    .optional(),
+});
+
+/** POST /api/agent-plan/plan/preview */
+export const planPreviewSchema = z.object({
+  suggestionId: z.string().min(1, 'Suggestion ID is required').max(128, 'Suggestion ID too long'),
+  answers: z.record(z.string(), z.string().max(1000, 'Answer too long')).default({}),
+});
+
+/** POST /api/agent-plan/plan/execute */
+export const planExecuteSchema = z.object({
+  planId: z.string().uuid('Invalid plan ID'),
+  idempotencyKey: z.string().min(1, 'Idempotency key is required').max(128, 'Idempotency key too long'),
+});
+
+/** POST /api/agent-plan/plan/revise */
+export const planReviseSchema = z.object({
+  planId: z.string().uuid('Invalid plan ID'),
+  feedback: z.string().trim().min(1, 'Feedback is required').max(2000, 'Feedback too long'),
+});
+
+/** GET /api/agent/execution/:executionId */
+export const executionIdParamSchema = z.object({
+  executionId: z.string().uuid('Invalid execution ID'),
+});
+
+// Agent Plan types
+export type AgentSuggestionsQuery = z.infer<typeof agentSuggestionsQuerySchema>;
+export type PlanPreviewInput = z.infer<typeof planPreviewSchema>;
+export type PlanExecuteInput = z.infer<typeof planExecuteSchema>;
+export type PlanReviseInput = z.infer<typeof planReviseSchema>;
+export type ExecutionIdParam = z.infer<typeof executionIdParamSchema>;

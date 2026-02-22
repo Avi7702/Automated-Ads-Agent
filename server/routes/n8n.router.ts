@@ -1,4 +1,8 @@
 /**
+ * @deprecated This router is deprecated. Posting is now handled in-process via publishingService.ts.
+ * Kept temporarily for /api/n8n/callback rollout compatibility.
+ * TODO: Remove after rollout is confirmed stable.
+ *
  * N8N Router
  * N8N webhook endpoints for social posting automation
  *

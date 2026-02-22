@@ -7,14 +7,7 @@
 
 import { logger } from '../../lib/logger';
 import { generateContentWithRetry } from '../../lib/geminiClient';
-import type {
-  ComparisonResult,
-  EquivalenceResult,
-  ClaimSupportResult,
-  ExtractedClaim,
-  ExtractedData,
-  VisionResult,
-} from './types';
+import type { ComparisonResult, EquivalenceResult, ClaimSupportResult, ExtractedClaim, ExtractedData } from './types';
 
 // ============================================
 // CONSTANTS
@@ -22,11 +15,11 @@ import type {
 
 // Text model for comparisons and verification (fast, accurate)
 // MODEL RECENCY RULE: Before changing any model ID, verify today's date and confirm the model is current within the last 3-4 weeks.
-const TEXT_MODEL = process.env.GEMINI_TEXT_MODEL || 'gemini-3-flash';
+const TEXT_MODEL = process.env['GEMINI_TEXT_MODEL'] || 'gemini-3-flash';
 
 // Vision model for image comparisons (best spatial reasoning)
 // MODEL RECENCY RULE: Before changing any model ID, verify today's date and confirm the model is current within the last 3-4 weeks.
-const VISION_MODEL = process.env.GEMINI_VISION_MODEL || 'gemini-3-pro-preview';
+const VISION_MODEL = process.env['GEMINI_VISION_MODEL'] || 'gemini-3-pro-preview';
 
 // ============================================
 // SEMANTIC COMPARISON FUNCTIONS
@@ -465,7 +458,7 @@ Ignore marketing language and subjective statements.
 /**
  * Select the best value from multiple extractions using trust-weighted voting
  */
-export function selectBestValue(extractions: Array<{ value: string; trustLevel: number }>, fieldName: string): string {
+export function selectBestValue(extractions: Array<{ value: string; trustLevel: number }>, _fieldName: string): string {
   if (extractions.length === 0) return '';
 
   // Sort by trust level (highest first)
@@ -474,7 +467,7 @@ export function selectBestValue(extractions: Array<{ value: string; trustLevel: 
   if (sorted.length === 0) return '';
 
   // Return the highest trust value
-  return sorted[0].value;
+  return sorted[0]!.value;
 }
 
 /**

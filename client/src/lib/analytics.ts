@@ -16,16 +16,17 @@ export async function initAnalytics(): Promise<void> {
   if (initialized) return;
   initialized = true;
 
-  const apiKey = import.meta.env.VITE_POSTHOG_API_KEY;
+  const apiKey = import.meta.env['VITE_POSTHOG_API_KEY'];
   if (!apiKey) return;
 
   try {
+    // @ts-expect-error posthog-js not installed
     const posthog = await import('posthog-js');
     posthog.default.init(apiKey, {
-      api_host: import.meta.env.VITE_POSTHOG_HOST || 'https://us.i.posthog.com',
-      loaded: (ph) => {
+      api_host: import.meta.env['VITE_POSTHOG_HOST'] || 'https://us.i.posthog.com',
+      loaded: (ph: unknown) => {
         if (import.meta.env.DEV) {
-          ph.opt_out_capturing(); // Don't track in development
+          (ph as { opt_out_capturing: () => void }).opt_out_capturing(); // Don't track in development
         }
       },
       capture_pageview: true,

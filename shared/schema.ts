@@ -1414,7 +1414,7 @@ export type ContentPlannerPost = typeof contentPlannerPosts.$inferSelect;
 /**
  * Social Platform enum for social connections
  */
-export const socialPlatformEnum = z.enum(['linkedin', 'instagram']);
+export const socialPlatformEnum = z.enum(['linkedin', 'instagram', 'twitter']);
 
 /**
  * Social Account Type enum
@@ -1543,6 +1543,9 @@ export const scheduledPosts = pgTable(
     // Traceability - link to generation source
     generationId: varchar('generation_id').references(() => generations.id, { onDelete: 'set null' }),
     templateId: varchar('template_id', { length: 100 }), // Content Planner template ID
+
+    // Idempotency key for publish-once semantics
+    publishIdempotencyKey: varchar('publish_idempotency_key', { length: 36 }),
 
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -2296,3 +2299,146 @@ export const insertGenerationPerformanceSchema = createInsertSchema(generationPe
 });
 export type InsertGenerationPerformance = z.infer<typeof insertGenerationPerformanceSchema>;
 export type GenerationPerformance = typeof generationPerformance.$inferSelect;
+
+// ============================================
+// OAUTH STATE TABLE (WP1 — Token Lifecycle)
+// ============================================
+
+/**
+ * OAuth States - DB-backed CSRF state tokens for OAuth flows
+ * Prevents replay attacks and supports Twitter PKCE code_verifier storage.
+ * State tokens expire after 10 minutes.
+ */
+export const oauthStates = pgTable(
+  'oauth_states',
+  {
+    id: varchar('id')
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: varchar('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    platform: varchar('platform', { length: 20 }).notNull(), // linkedin | twitter
+    stateToken: varchar('state_token', { length: 128 }).notNull().unique(),
+    codeVerifier: text('code_verifier'), // Twitter PKCE only
+    expiresAt: timestamp('expires_at').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    stateTokenIdx: index('oauth_states_state_token_idx').on(table.stateToken),
+    expiresAtIdx: index('oauth_states_expires_at_idx').on(table.expiresAt),
+  }),
+);
+
+export const insertOauthStateSchema = createInsertSchema(oauthStates).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertOauthState = z.infer<typeof insertOauthStateSchema>;
+export type OauthState = typeof oauthStates.$inferSelect;
+
+// ============================================
+// AGENT MODE — PLAN & EXECUTION PERSISTENCE
+// ============================================
+
+/**
+ * Agent Plans — Persisted plan briefs created by the Agent Mode orchestrator.
+ * Each plan is user-scoped and tracks revision count + lifecycle status.
+ */
+export const agentPlans = pgTable(
+  'agent_plans',
+  {
+    id: varchar('id')
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: varchar('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+
+    // Origin
+    suggestionId: varchar('suggestion_id', { length: 128 }),
+
+    // Plan content
+    objective: text('objective').notNull(),
+    cadence: text('cadence').notNull(),
+    platform: varchar('platform', { length: 50 }).notNull(),
+    contentMix: jsonb('content_mix').notNull(), // Array of { type: string, count: number }
+    approvalScore: integer('approval_score').notNull(),
+    scoreBreakdown: jsonb('score_breakdown').notNull(), // Array of { criterion, score, max }
+    estimatedCost: jsonb('estimated_cost').notNull(), // { credits: number, currency: string }
+    posts: jsonb('posts').notNull(), // Array of PlanPost
+
+    // Lifecycle
+    status: varchar('status', { length: 25 }).notNull().default('draft'), // draft, approved, executing, completed, failed, cancelled
+    revisionCount: integer('revision_count').notNull().default(0),
+
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index('agent_plans_user_id_idx').on(table.userId),
+    statusIdx: index('agent_plans_status_idx').on(table.status),
+    createdAtIdx: index('agent_plans_created_at_idx').on(table.createdAt),
+  }),
+);
+
+/**
+ * Agent Executions — Tracks each execution run for a plan.
+ * Supports idempotency via compound (planId + idempotencyKey) constraint.
+ */
+export const agentExecutions = pgTable(
+  'agent_executions',
+  {
+    id: varchar('id')
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    planId: varchar('plan_id')
+      .notNull()
+      .references(() => agentPlans.id, { onDelete: 'cascade' }),
+    userId: varchar('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+
+    // Idempotency
+    idempotencyKey: varchar('idempotency_key', { length: 128 }).notNull(),
+
+    // Execution state
+    status: varchar('status', { length: 25 }).notNull().default('queued'), // queued, running, complete, failed
+    steps: jsonb('steps').notNull(), // Array of ExecutionStep
+
+    // Output references
+    generationIds: text('generation_ids').array(),
+    adCopyIds: text('ad_copy_ids').array(),
+    approvalQueueIds: text('approval_queue_ids').array(),
+
+    // Timing
+    startedAt: timestamp('started_at'),
+    completedAt: timestamp('completed_at'),
+    errorMessage: text('error_message'),
+
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    planIdIdx: index('agent_executions_plan_id_idx').on(table.planId),
+    userIdIdx: index('agent_executions_user_id_idx').on(table.userId),
+    planIdempotencyIdx: unique('agent_executions_plan_idempotency').on(table.planId, table.idempotencyKey),
+  }),
+);
+
+// Agent Plan schemas and types
+export const insertAgentPlanSchema = createInsertSchema(agentPlans).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertAgentPlan = z.infer<typeof insertAgentPlanSchema>;
+export type AgentPlan = typeof agentPlans.$inferSelect;
+
+export const insertAgentExecutionSchema = createInsertSchema(agentExecutions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertAgentExecution = z.infer<typeof insertAgentExecutionSchema>;
+export type AgentExecution = typeof agentExecutions.$inferSelect;

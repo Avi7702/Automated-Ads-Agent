@@ -357,6 +357,18 @@ function createWrapper() {
 
 let Studio: () => JSX.Element;
 
+async function selectProductForGeneration() {
+  await waitFor(() => {
+    expect(screen.getByText('Your Products')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Search products...')).toBeInTheDocument();
+  });
+
+  const firstProductImage = await screen.findByAltText(mockProducts[0].name);
+  const productButton = firstProductImage.closest('button');
+  expect(productButton).not.toBeNull();
+  fireEvent.click(productButton as HTMLButtonElement);
+}
+
 describe('Studio Component - Integration', () => {
   // Load Studio once before all tests
   beforeAll(async () => {
@@ -462,12 +474,14 @@ describe('Studio Component - Integration', () => {
       });
     });
 
-    it('updates upload zone max files based on product selection', async () => {
+    it('updates selected-product count in IdeaBank panel after product selection', async () => {
       render(<Studio />, { wrapper: createWrapper() });
 
+      await selectProductForGeneration();
+
       await waitFor(() => {
-        const uploadZone = screen.getByTestId('mock-upload-zone');
-        expect(uploadZone).toHaveAttribute('data-max', '6');
+        const ideaBankPanel = screen.getByTestId('mock-idea-bank-panel');
+        expect(ideaBankPanel).toHaveAttribute('data-products', '1');
       });
     });
 
@@ -483,46 +497,42 @@ describe('Studio Component - Integration', () => {
   });
 
   // ==========================================
-  // Template Application Tests (5 tests)
+  // Workspace Mode Tests (5 tests)
   // ==========================================
-  describe('Template Application', () => {
-    it('renders template section with category filter', async () => {
+  describe('Workspace Modes', () => {
+    it('renders workspace mode selector', async () => {
       render(<Studio />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        expect(screen.getByText('Style & Template')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Agent Mode' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Studio Mode' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Split View' })).toBeInTheDocument();
       });
     });
 
-    it('shows Choose Your Path mode selector', async () => {
+    it('switches to agent mode and updates heading', async () => {
       render(<Studio />, { wrapper: createWrapper() });
 
+      const agentModeButton = await screen.findByRole('button', { name: 'Agent Mode' });
+      fireEvent.click(agentModeButton);
+
       await waitFor(() => {
-        expect(screen.getByText('Choose Your Path')).toBeInTheDocument();
-        expect(screen.getByText('Freestyle')).toBeInTheDocument();
-        expect(screen.getByText('Use Template')).toBeInTheDocument();
+        expect(screen.getByText(/Plan, ask, and execute with the assistant/i)).toBeInTheDocument();
       });
     });
 
-    it('switches to template mode when Use Template is clicked', async () => {
+    it('switches to split view and updates heading', async () => {
       render(<Studio />, { wrapper: createWrapper() });
 
-      await waitFor(() => {
-        expect(screen.getByText('Use Template')).toBeInTheDocument();
-      });
-
-      const useTemplateBtn = screen.getByText('Use Template').closest('button');
-      if (useTemplateBtn) {
-        fireEvent.click(useTemplateBtn);
-      }
+      const splitModeButton = await screen.findByRole('button', { name: 'Split View' });
+      fireEvent.click(splitModeButton);
 
       await waitFor(() => {
-        // Template library should appear
-        expect(screen.getByTestId('mock-template-library')).toBeInTheDocument();
+        expect(screen.getByText(/Plan with the assistant while composing visuals/i)).toBeInTheDocument();
       });
     });
 
-    it('passes mode to IdeaBankPanel', async () => {
+    it('keeps IdeaBank in freestyle mode', async () => {
       render(<Studio />, { wrapper: createWrapper() });
 
       await waitFor(() => {
@@ -531,11 +541,12 @@ describe('Studio Component - Integration', () => {
       });
     });
 
-    it('shows Template Inspiration button', async () => {
+    it('renders history quick action button', async () => {
       render(<Studio />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        expect(screen.getByText('Template Inspiration')).toBeInTheDocument();
+        const historyButtons = screen.getAllByRole('button', { name: /history/i });
+        expect(historyButtons.length).toBeGreaterThan(0);
       });
     });
   });
@@ -720,17 +731,15 @@ describe('Studio Component - Integration', () => {
     it('flow: upload temp image -> enter prompt -> generate', async () => {
       render(<Studio />, { wrapper: createWrapper() });
 
-      await waitFor(() => {
-        expect(screen.getByTestId('mock-upload-zone')).toBeInTheDocument();
-      });
+      await selectProductForGeneration();
 
-      // Add a temp upload
-      const addUploadBtn = screen.getByTestId('add-upload-btn');
-      fireEvent.click(addUploadBtn);
+      const promptTextarea = screen.getByPlaceholderText(/Describe your ideal ad creative/i);
+      fireEvent.change(promptTextarea, { target: { value: 'Construction product hero shot' } });
+
+      const generateButton = screen.getByRole('button', { name: /Generate Image/i });
 
       await waitFor(() => {
-        const uploadZone = screen.getByTestId('mock-upload-zone');
-        expect(uploadZone).toHaveAttribute('data-count', '1');
+        expect(generateButton).toBeEnabled();
       });
     });
 

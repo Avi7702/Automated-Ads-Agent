@@ -15,7 +15,7 @@ import { eq, desc, inArray, arrayContains } from 'drizzle-orm';
 
 export async function saveProduct(insertProduct: InsertProduct): Promise<Product> {
   const [product] = await db.insert(products).values(insertProduct).returning();
-  return product;
+  return product!;
 }
 
 export async function getProducts(limit: number = 50, offset: number = 0): Promise<Product[]> {
@@ -38,7 +38,7 @@ export async function deleteProductsByIds(ids: string[]): Promise<void> {
 
 export async function updateProduct(id: string, updates: Partial<InsertProduct>): Promise<Product> {
   const [product] = await db.update(products).set(updates).where(eq(products.id, id)).returning();
-  return product;
+  return product!;
 }
 
 export async function getProductsByIds(ids: string[]): Promise<Product[]> {
@@ -60,7 +60,7 @@ export async function searchProductsByTag(tag: string): Promise<Product[]> {
 
 export async function saveProductAnalysis(insertAnalysis: InsertProductAnalysis): Promise<ProductAnalysis> {
   const [analysis] = await db.insert(productAnalyses).values(insertAnalysis).returning();
-  return analysis;
+  return analysis!;
 }
 
 export async function getProductAnalysisByProductId(productId: string): Promise<ProductAnalysis | undefined> {
@@ -82,7 +82,7 @@ export async function updateProductAnalysis(
     .set({ ...updates, analyzedAt: new Date() })
     .where(eq(productAnalyses.productId, productId))
     .returning();
-  return analysis;
+  return analysis!;
 }
 
 export async function deleteProductAnalysis(productId: string): Promise<void> {

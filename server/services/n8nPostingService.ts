@@ -1,12 +1,12 @@
 /**
+ * @deprecated This service is deprecated. Use publishingService.ts instead.
+ * Kept temporarily for /api/n8n/callback rollout compatibility.
+ * TODO: Remove after rollout is confirmed stable.
+ *
  * n8n Posting Service
  *
  * Handles posting to n8n webhooks for multi-platform social media automation.
  * Manages callbacks, error handling, and post status tracking.
- *
- * Usage:
- *   import { postToN8n, handleN8nCallback } from './services/n8nPostingService';
- *   const result = await postToN8n('instagram', content, imageUrl, userId, scheduledPostId);
  */
 
 import { logger } from '../lib/logger';
@@ -25,7 +25,7 @@ interface N8nWebhookConfig {
  * Get n8n webhook configuration from environment
  */
 function getN8nConfig(): N8nWebhookConfig {
-  const baseUrl = process.env.N8N_BASE_URL;
+  const baseUrl = process.env['N8N_BASE_URL'];
 
   if (!baseUrl) {
     throw new Error('N8N_BASE_URL not configured. Set this environment variable to use n8n posting.');
@@ -144,14 +144,14 @@ export async function postToN8n(
       content: {
         caption: content.caption,
         hashtags: content.hashtags,
-        imageUrl,
-        videoUrl: options?.videoUrl,
+        ...(imageUrl !== undefined && { imageUrl }),
+        ...(options?.videoUrl !== undefined && { videoUrl: options.videoUrl }),
       },
       metadata: {
         scheduledPostId,
-        generationId: options?.generationId,
-        templateId: options?.templateId,
-        scheduledFor: options?.scheduledFor?.toISOString(),
+        ...(options?.generationId !== undefined && { generationId: options.generationId }),
+        ...(options?.templateId !== undefined && { templateId: options.templateId }),
+        ...(options?.scheduledFor !== undefined && { scheduledFor: options.scheduledFor.toISOString() }),
       },
       formatting: {
         characterCount: content.characterCount,
@@ -159,7 +159,7 @@ export async function postToN8n(
         truncated: content.truncated,
         warnings: content.warnings,
       },
-      callbackUrl: options?.callbackUrl,
+      ...(options?.callbackUrl !== undefined && { callbackUrl: options.callbackUrl }),
     };
 
     // Log outgoing request
@@ -241,7 +241,7 @@ export async function postToN8n(
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
-      webhookUrl: config.webhooks[platform] || 'unknown',
+      webhookUrl: 'unknown',
     };
   }
 }
@@ -284,10 +284,10 @@ export async function handleN8nCallback(data: N8nCallbackData): Promise<void> {
     // Update the scheduled post in the database
     try {
       const result = await updatePostAfterCallback(data.scheduledPostId, data.success, {
-        platformPostId: data.platformPostId,
-        platformPostUrl: data.platformPostUrl,
-        errorMessage: data.error,
-        failureReason: data.errorCode,
+        ...(data.platformPostId !== undefined && { platformPostId: data.platformPostId }),
+        ...(data.platformPostUrl !== undefined && { platformPostUrl: data.platformPostUrl }),
+        ...(data.error !== undefined && { errorMessage: data.error }),
+        ...(data.errorCode !== undefined && { failureReason: data.errorCode }),
       });
 
       if (!result || (Array.isArray(result) && result.length === 0)) {
@@ -392,11 +392,11 @@ export async function postToMultiplePlatforms(
       const scheduledPostId = `${baseScheduledPostId}_${platform}`;
 
       const result = await postToN8n(platform, content, imageUrl, userId, scheduledPostId, {
-        videoUrl,
-        generationId: options?.generationId,
-        templateId: options?.templateId,
-        scheduledFor: options?.scheduledFor,
-        callbackUrl: options?.callbackUrl,
+        ...(videoUrl !== undefined && { videoUrl }),
+        ...(options?.generationId !== undefined && { generationId: options.generationId }),
+        ...(options?.templateId !== undefined && { templateId: options.templateId }),
+        ...(options?.scheduledFor !== undefined && { scheduledFor: options.scheduledFor }),
+        ...(options?.callbackUrl !== undefined && { callbackUrl: options.callbackUrl }),
       });
 
       return { platform, result };
@@ -538,11 +538,11 @@ export function validateN8nConfig(): {
   const warnings: string[] = [];
 
   // Check base URL
-  if (!process.env.N8N_BASE_URL) {
+  if (!process.env['N8N_BASE_URL']) {
     errors.push('N8N_BASE_URL environment variable not set');
   } else {
     try {
-      const url = new URL(process.env.N8N_BASE_URL);
+      const url = new URL(process.env['N8N_BASE_URL']);
       if (!url.protocol.startsWith('http')) {
         errors.push('N8N_BASE_URL must be an HTTP(S) URL');
       }
@@ -552,7 +552,7 @@ export function validateN8nConfig(): {
   }
 
   // Check API key (optional, but recommended)
-  if (!process.env.N8N_API_KEY) {
+  if (!process.env['N8N_API_KEY']) {
     warnings.push('N8N_API_KEY not set. Some features may not work (e.g., status checking)');
   }
 
@@ -560,8 +560,3 @@ export function validateN8nConfig(): {
 
   return { isValid, errors, warnings };
 }
-
-/**
- * Export types
- */
-export type { N8nPostPayload, N8nCallbackData, N8nPostResult };
