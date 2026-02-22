@@ -1,8 +1,11 @@
-export { createStudioAgent } from './agentDefinition';
 export { streamAgentResponse, deleteAgentSession } from './agentRunner';
 export type { AgentSSEEvent } from './agentRunner';
 
-// Agent plan orchestrator
+// Exported for testing and direct access
+export { getSystemInstruction, getToolDeclarations, getToolExecutors } from './agentDefinition';
+export type { ToolExecutor } from './agentDefinition';
+
+// Agent plan orchestrator (unchanged)
 export {
   generateSuggestions,
   buildPlanPreview,
@@ -10,5 +13,8 @@ export {
   revisePlan,
   getPlan,
   getExecution,
+  listPlans,
+  cancelExecution,
+  retryFailedSteps,
   PlanNotFoundError,
 } from './orchestratorService';

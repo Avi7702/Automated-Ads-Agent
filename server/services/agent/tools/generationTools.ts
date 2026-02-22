@@ -3,74 +3,149 @@
  * Tools for setting prompts, output settings, and generating images
  */
 
-import { FunctionTool } from '@google/adk';
-import type { ToolContext } from '@google/adk';
-import { z } from 'zod';
+import { Type } from '@google/genai';
+import type { FunctionDeclaration } from '@google/genai';
 import type { IStorage } from '../../../storage';
 import { logger } from '../../../lib/logger';
+import type { ToolExecutor } from './types';
 
-export function createGenerationTools(storage: IStorage) {
-  const setPrompt = new FunctionTool({
+/** Tool declarations for Gemini function calling */
+export const declarations: FunctionDeclaration[] = [
+  {
     name: 'set_prompt',
     description:
       'Set the generation prompt in the Studio UI. Use this to write a creative prompt describing the ad image to generate. The prompt will appear in the Studio composer.',
-    parameters: z.object({
-      prompt: z.string().min(5).describe('The generation prompt describing the desired ad image'),
-    }),
-    execute: async (input) => {
-      return {
-        status: 'success',
-        uiActions: [{ type: 'set_prompt', payload: { prompt: input.prompt } }],
-        message: `Prompt set: "${input.prompt.slice(0, 80)}..."`,
-      };
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        prompt: { type: Type.STRING, description: 'The generation prompt describing the desired ad image' },
+      },
+      required: ['prompt'],
     },
-  });
-
-  const setOutputSettings = new FunctionTool({
+  },
+  {
     name: 'set_output_settings',
     description: 'Configure the output settings for generation: platform, aspect ratio, and resolution.',
-    parameters: z.object({
-      platform: z
-        .enum(['instagram', 'linkedin', 'facebook', 'twitter', 'tiktok', 'custom'])
-        .optional()
-        .describe('Target social media platform'),
-      aspectRatio: z.enum(['1:1', '4:5', '16:9', '9:16', '4:3']).optional().describe('Image aspect ratio'),
-      resolution: z.enum(['1K', '2K', '4K']).optional().describe('Output resolution'),
-    }),
-    execute: async (input) => {
-      const actions: Array<{ type: string; payload: Record<string, string> }> = [];
-      if (input.platform) actions.push({ type: 'set_platform', payload: { platform: input.platform } });
-      if (input.aspectRatio) actions.push({ type: 'set_aspect_ratio', payload: { aspectRatio: input.aspectRatio } });
-      if (input.resolution) actions.push({ type: 'set_resolution', payload: { resolution: input.resolution } });
-
-      const parts: string[] = [];
-      if (input.platform) parts.push(`platform=${input.platform}`);
-      if (input.aspectRatio) parts.push(`aspectRatio=${input.aspectRatio}`);
-      if (input.resolution) parts.push(`resolution=${input.resolution}`);
-
-      return {
-        status: 'success',
-        uiActions: actions,
-        message: `Settings updated: ${parts.join(', ')}`,
-      };
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        platform: {
+          type: Type.STRING,
+          enum: ['instagram', 'linkedin', 'facebook', 'twitter', 'tiktok', 'custom'],
+          description: 'Target social media platform',
+        },
+        aspectRatio: {
+          type: Type.STRING,
+          enum: ['1:1', '4:5', '16:9', '9:16', '4:3'],
+          description: 'Image aspect ratio',
+        },
+        resolution: {
+          type: Type.STRING,
+          enum: ['1K', '2K', '4K'],
+          description: 'Output resolution',
+        },
+      },
     },
+  },
+  {
+    name: 'generate_post_image',
+    description:
+      'Generate an ad image using the current prompt and selected products. IMPORTANT: Always confirm with the user before calling this tool, as it uses API credits. Make sure products are selected and a prompt is set first.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        prompt: { type: Type.STRING, description: 'The generation prompt' },
+        productIds: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: 'Product IDs to include',
+        },
+        resolution: {
+          type: Type.STRING,
+          enum: ['1K', '2K', '4K'],
+          description: 'Output resolution (default 1K)',
+        },
+        mode: {
+          type: Type.STRING,
+          enum: ['exact_insert', 'inspiration', 'standard'],
+          description: 'Generation mode (default standard)',
+        },
+      },
+      required: ['prompt', 'productIds'],
+    },
+  },
+  {
+    name: 'generate_image',
+    description: 'Legacy alias for generate_post_image.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        prompt: { type: Type.STRING, description: 'The generation prompt' },
+        productIds: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: 'Product IDs to include',
+        },
+        resolution: {
+          type: Type.STRING,
+          enum: ['1K', '2K', '4K'],
+          description: 'Output resolution (default 1K)',
+        },
+        mode: {
+          type: Type.STRING,
+          enum: ['exact_insert', 'inspiration', 'standard'],
+          description: 'Generation mode (default standard)',
+        },
+      },
+      required: ['prompt', 'productIds'],
+    },
+  },
+];
+
+/** Create executor map (keyed by tool name) */
+export function createExecutors(storage: IStorage): Map<string, ToolExecutor> {
+  const map = new Map<string, ToolExecutor>();
+
+  map.set('set_prompt', async (args, _userId) => {
+    const prompt = args['prompt'] as string;
+    return {
+      status: 'success',
+      uiActions: [{ type: 'set_prompt', payload: { prompt } }],
+      message: `Prompt set: "${prompt.slice(0, 80)}..."`,
+    };
   });
 
-  const generatePostImageParameters = z.object({
-    prompt: z.string().describe('The generation prompt'),
-    productIds: z.array(z.string()).min(1).max(6).describe('Product IDs to include'),
-    resolution: z.enum(['1K', '2K', '4K']).optional().describe('Output resolution (default 1K)'),
-    mode: z.enum(['exact_insert', 'inspiration', 'standard']).optional().describe('Generation mode (default standard)'),
+  map.set('set_output_settings', async (args, _userId) => {
+    const platform = args['platform'] as string | undefined;
+    const aspectRatio = args['aspectRatio'] as string | undefined;
+    const resolution = args['resolution'] as string | undefined;
+
+    const actions: Array<{ type: string; payload: Record<string, string> }> = [];
+    if (platform) actions.push({ type: 'set_platform', payload: { platform } });
+    if (aspectRatio) actions.push({ type: 'set_aspect_ratio', payload: { aspectRatio } });
+    if (resolution) actions.push({ type: 'set_resolution', payload: { resolution } });
+
+    const parts: string[] = [];
+    if (platform) parts.push(`platform=${platform}`);
+    if (aspectRatio) parts.push(`aspectRatio=${aspectRatio}`);
+    if (resolution) parts.push(`resolution=${resolution}`);
+
+    return {
+      status: 'success',
+      uiActions: actions,
+      message: `Settings updated: ${parts.join(', ')}`,
+    };
   });
 
-  const executeGeneratePostImage = async (
-    input: z.infer<typeof generatePostImageParameters>,
-    tool_context?: ToolContext,
-  ) => {
-    const userId = tool_context?.state?.get<string>('authenticatedUserId');
+  const executeGeneratePostImage: ToolExecutor = async (args, userId) => {
     if (!userId) {
       return { status: 'error', message: 'Authentication required. Please refresh the page and try again.' };
     }
+
+    const prompt = args['prompt'] as string;
+    const productIds = args['productIds'] as string[];
+    const resolution = ((args['resolution'] as string | undefined) ?? '1K') as '1K' | '2K' | '4K';
+    const mode = ((args['mode'] as string | undefined) ?? 'standard') as 'exact_insert' | 'inspiration' | 'standard';
 
     // Collect product images and metadata for the generation recipe
     const images: Array<{ buffer: Buffer; mimetype: string; originalname: string }> = [];
@@ -81,7 +156,7 @@ export function createGenerationTools(storage: IStorage) {
       description?: string;
       imageUrls: string[];
     }> = [];
-    for (const id of input.productIds) {
+    for (const id of productIds) {
       try {
         const product = await storage.getProductById(id);
         if (!product) continue;
@@ -141,10 +216,10 @@ export function createGenerationTools(storage: IStorage) {
       const { executeGenerationPipeline } = await import('../../generation');
       const result = await executeGenerationPipeline({
         userId,
-        prompt: input.prompt,
+        prompt,
         images,
-        mode: input.mode ?? 'standard',
-        resolution: input.resolution ?? '1K',
+        mode,
+        resolution,
         recipe: {
           version: '1.0',
           products: recipeProducts,
@@ -168,20 +243,8 @@ export function createGenerationTools(storage: IStorage) {
     }
   };
 
-  const generatePostImage = new FunctionTool({
-    name: 'generate_post_image',
-    description:
-      'Generate an ad image using the current prompt and selected products. IMPORTANT: Always confirm with the user before calling this tool, as it uses API credits. Make sure products are selected and a prompt is set first.',
-    parameters: generatePostImageParameters,
-    execute: executeGeneratePostImage,
-  });
+  map.set('generate_post_image', executeGeneratePostImage);
+  map.set('generate_image', executeGeneratePostImage);
 
-  const generateImage = new FunctionTool({
-    name: 'generate_image',
-    description: 'Legacy alias for generate_post_image.',
-    parameters: generatePostImageParameters,
-    execute: executeGeneratePostImage,
-  });
-
-  return [setPrompt, setOutputSettings, generatePostImage, generateImage];
+  return map;
 }

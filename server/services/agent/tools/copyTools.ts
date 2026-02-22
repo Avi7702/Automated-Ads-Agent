@@ -3,45 +3,131 @@
  * Tools for generating ad copy and getting AI suggestions
  */
 
-import { FunctionTool } from '@google/adk';
-import type { ToolContext } from '@google/adk';
-import { z } from 'zod';
+import { Type } from '@google/genai';
+import type { FunctionDeclaration } from '@google/genai';
 import { logger } from '../../../lib/logger';
+import type { ToolExecutor } from './types';
 
-export function createCopyTools() {
-  const generatePostCopyParameters = z.object({
-    platform: z.enum(['instagram', 'linkedin', 'facebook', 'twitter', 'tiktok']).describe('Target platform'),
-    productName: z.string().describe('Product name'),
-    productDescription: z.string().describe('Brief product description'),
-    industry: z.string().optional().describe('Industry/vertical (default: general)'),
-    tone: z
-      .enum(['professional', 'casual', 'technical', 'urgent', 'minimal', 'authentic'])
-      .optional()
-      .describe('Tone of voice (default: professional)'),
-    framework: z
-      .enum(['aida', 'pas', 'bab', 'fab', 'auto'])
-      .optional()
-      .describe('Copywriting framework (default: auto)'),
-    variations: z.number().min(1).max(5).optional().describe('Number of variations (default 3)'),
-  });
+/** Tool declarations for Gemini function calling */
+export const declarations: FunctionDeclaration[] = [
+  {
+    name: 'generate_post_copy',
+    description:
+      'Generate social post copy (headline, body, CTA, hashtags) for a product on a specific social media platform. Returns multiple variations with quality scores.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        platform: {
+          type: Type.STRING,
+          enum: ['instagram', 'linkedin', 'facebook', 'twitter', 'tiktok'],
+          description: 'Target platform',
+        },
+        productName: { type: Type.STRING, description: 'Product name' },
+        productDescription: { type: Type.STRING, description: 'Brief product description' },
+        industry: { type: Type.STRING, description: 'Industry/vertical (default: general)' },
+        tone: {
+          type: Type.STRING,
+          enum: ['professional', 'casual', 'technical', 'urgent', 'minimal', 'authentic'],
+          description: 'Tone of voice (default: professional)',
+        },
+        framework: {
+          type: Type.STRING,
+          enum: ['aida', 'pas', 'bab', 'fab', 'auto'],
+          description: 'Copywriting framework (default: auto)',
+        },
+        variations: { type: Type.NUMBER, description: 'Number of variations (default 3)' },
+      },
+      required: ['platform', 'productName', 'productDescription'],
+    },
+  },
+  {
+    name: 'generate_ad_copy',
+    description: 'Legacy alias for generate_post_copy.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        platform: {
+          type: Type.STRING,
+          enum: ['instagram', 'linkedin', 'facebook', 'twitter', 'tiktok'],
+          description: 'Target platform',
+        },
+        productName: { type: Type.STRING, description: 'Product name' },
+        productDescription: { type: Type.STRING, description: 'Brief product description' },
+        industry: { type: Type.STRING, description: 'Industry/vertical (default: general)' },
+        tone: {
+          type: Type.STRING,
+          enum: ['professional', 'casual', 'technical', 'urgent', 'minimal', 'authentic'],
+          description: 'Tone of voice (default: professional)',
+        },
+        framework: {
+          type: Type.STRING,
+          enum: ['aida', 'pas', 'bab', 'fab', 'auto'],
+          description: 'Copywriting framework (default: auto)',
+        },
+        variations: { type: Type.NUMBER, description: 'Number of variations (default 3)' },
+      },
+      required: ['platform', 'productName', 'productDescription'],
+    },
+  },
+  {
+    name: 'suggest_ideas',
+    description:
+      'Get AI-powered creative suggestions for ad generation based on selected products. Returns prompt ideas with confidence scores.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        productId: { type: Type.STRING, description: 'Product ID to get suggestions for' },
+        userGoal: {
+          type: Type.STRING,
+          description: 'What the user wants to achieve (e.g. "increase sales", "brand awareness")',
+        },
+        maxSuggestions: { type: Type.NUMBER, description: 'Number of suggestions (default 3)' },
+      },
+    },
+  },
+  {
+    name: 'get_idea_suggestions',
+    description: 'Legacy alias for suggest_ideas.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        productId: { type: Type.STRING, description: 'Product ID to get suggestions for' },
+        userGoal: {
+          type: Type.STRING,
+          description: 'What the user wants to achieve (e.g. "increase sales", "brand awareness")',
+        },
+        maxSuggestions: { type: Type.NUMBER, description: 'Number of suggestions (default 3)' },
+      },
+    },
+  },
+];
 
-  const executeGeneratePostCopy = async (
-    input: z.infer<typeof generatePostCopyParameters>,
-    _tool_context?: ToolContext,
-  ) => {
+/** Create executor map (keyed by tool name) */
+export function createExecutors(): Map<string, ToolExecutor> {
+  const map = new Map<string, ToolExecutor>();
+
+  const executeGeneratePostCopy: ToolExecutor = async (args, _userId) => {
     try {
+      const platform = args['platform'] as string;
+      const productName = args['productName'] as string;
+      const productDescription = args['productDescription'] as string;
+      const industry = (args['industry'] as string | undefined) ?? 'general';
+      const tone = (args['tone'] as string | undefined) ?? 'professional';
+      const framework = (args['framework'] as string | undefined) ?? 'auto';
+      const variations = (args['variations'] as number | undefined) ?? 3;
+
       const { copywritingService } = await import('../../copywritingService');
       const { randomUUID } = await import('node:crypto');
       const results = await copywritingService.generateCopy({
         generationId: randomUUID(),
-        platform: input.platform,
-        productName: input.productName,
-        productDescription: input.productDescription,
-        industry: input.industry ?? 'general',
-        tone: input.tone ?? 'professional',
-        framework: input.framework ?? 'auto',
+        platform,
+        productName,
+        productDescription,
+        industry,
+        tone,
+        framework,
         campaignObjective: 'engagement',
-        variations: input.variations ?? 3,
+        variations,
       } as any);
 
       return {
@@ -57,7 +143,7 @@ export function createCopyTools() {
           framework: c.framework,
           qualityScore: c.qualityScore?.overallScore,
         })),
-        message: `Generated ${results.length} ad copy variation(s) for ${input.platform}`,
+        message: `Generated ${results.length} ad copy variation(s) for ${platform}`,
       };
     } catch (err: unknown) {
       logger.error({ module: 'AgentTools', err }, 'Ad copy generation error');
@@ -65,46 +151,28 @@ export function createCopyTools() {
     }
   };
 
-  const generatePostCopy = new FunctionTool({
-    name: 'generate_post_copy',
-    description:
-      'Generate social post copy (headline, body, CTA, hashtags) for a product on a specific social media platform. Returns multiple variations with quality scores.',
-    parameters: generatePostCopyParameters,
-    execute: executeGeneratePostCopy,
-  });
+  map.set('generate_post_copy', executeGeneratePostCopy);
+  map.set('generate_ad_copy', executeGeneratePostCopy);
 
-  const generateAdCopy = new FunctionTool({
-    name: 'generate_ad_copy',
-    description: 'Legacy alias for generate_post_copy.',
-    parameters: generatePostCopyParameters,
-    execute: executeGeneratePostCopy,
-  });
-
-  const suggestIdeasParameters = z.object({
-    productId: z.string().optional().describe('Product ID to get suggestions for'),
-    userGoal: z
-      .string()
-      .optional()
-      .describe('What the user wants to achieve (e.g. "increase sales", "brand awareness")'),
-    maxSuggestions: z.number().min(1).max(5).optional().describe('Number of suggestions (default 3)'),
-  });
-
-  const executeSuggestIdeas = async (input: z.infer<typeof suggestIdeasParameters>, tool_context?: ToolContext) => {
-    const userId = tool_context?.state?.get<string>('authenticatedUserId');
+  const executeSuggestIdeas: ToolExecutor = async (args, userId) => {
     if (!userId) {
       return { status: 'error', message: 'Authentication required. Please refresh the page and try again.' };
     }
 
     try {
+      const productId = args['productId'] as string | undefined;
+      const userGoal = args['userGoal'] as string | undefined;
+      const maxSuggestions = (args['maxSuggestions'] as number | undefined) ?? 3;
+
       const { ideaBankService } = await import('../../ideaBankService');
 
       // Build request, only including defined properties
       const request: Record<string, unknown> = {
         userId,
-        maxSuggestions: input.maxSuggestions ?? 3,
+        maxSuggestions,
       };
-      if (input.productId !== undefined) request['productId'] = input.productId;
-      if (input.userGoal !== undefined) request['userGoal'] = input.userGoal;
+      if (productId !== undefined) request['productId'] = productId;
+      if (userGoal !== undefined) request['userGoal'] = userGoal;
 
       const result = await ideaBankService.generateSuggestions(request as any);
 
@@ -132,20 +200,8 @@ export function createCopyTools() {
     }
   };
 
-  const suggestIdeas = new FunctionTool({
-    name: 'suggest_ideas',
-    description:
-      'Get AI-powered creative suggestions for ad generation based on selected products. Returns prompt ideas with confidence scores.',
-    parameters: suggestIdeasParameters,
-    execute: executeSuggestIdeas,
-  });
+  map.set('suggest_ideas', executeSuggestIdeas);
+  map.set('get_idea_suggestions', executeSuggestIdeas);
 
-  const getIdeaSuggestions = new FunctionTool({
-    name: 'get_idea_suggestions',
-    description: 'Legacy alias for suggest_ideas.',
-    parameters: suggestIdeasParameters,
-    execute: executeSuggestIdeas,
-  });
-
-  return [generatePostCopy, generateAdCopy, suggestIdeas, getIdeaSuggestions];
+  return map;
 }

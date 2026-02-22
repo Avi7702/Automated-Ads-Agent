@@ -34,8 +34,7 @@
   },
   "notes": "removed framer motion dependency",
   "dependencies": {
-    "@google/adk": "^0.3.0",
-    "@google/genai": "^1.40.0",
+    "@google/genai": "^1.42.0",
     "@hookform/resolvers": "^5.2.2",
     "@jridgewell/trace-mapping": "^0.3.25",
     "@mendable/firecrawl-js": "^4.12.1",
