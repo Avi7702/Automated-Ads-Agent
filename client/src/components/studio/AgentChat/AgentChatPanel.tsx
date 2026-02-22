@@ -1,9 +1,12 @@
 // @ts-nocheck
 /**
- * AgentChatPanel — Collapsible chat panel at top of Studio page
+ * AgentChatPanel - Chat panel for Studio workspace
  *
- * Renders a conversational interface with the Studio Agent.
- * Dispatches ui_action events to the orchestrator to drive the UI.
+ * Supports:
+ * - Collapsible or forced-open variants
+ * - Uploading reference images
+ * - Optional external message injection (Idea Bank -> Agent)
+ * - Passing hidden workspace context with each chat turn
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
@@ -13,18 +16,42 @@ import { Bot, ChevronUp, ChevronDown, Send, Square, Trash2, Mic, MicOff, Papercl
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { ChatMessage } from './ChatMessage';
-import { useAgentChat } from './useAgentChat';
+import { useAgentChat, type AgentChatMessageContext } from './useAgentChat';
 import type { StudioOrchestrator } from '@/hooks/useStudioOrchestrator';
 import type { AnalyzedUpload, ImageAnalysisResponse } from '@/types/analyzedUpload';
+import type { IdeaBankContextSnapshot } from '@/components/ideabank/types';
 
 interface AgentChatPanelProps {
   orch: StudioOrchestrator;
+  title?: string;
+  className?: string;
+  bodyMaxHeightClassName?: string;
+  forceExpanded?: boolean;
+  showCollapseToggle?: boolean;
+  ideaBankContext?: IdeaBankContextSnapshot | null;
+  ideaBankBridgeState?: 'idle' | 'waiting' | 'ready' | 'error' | 'sent';
+  externalMessage?: { id: string; text: string } | null;
+  onExternalMessageConsumed?: (id: string) => void;
 }
 
-export function AgentChatPanel({ orch }: AgentChatPanelProps) {
+export function AgentChatPanel({
+  orch,
+  title = 'Studio Assistant',
+  className,
+  bodyMaxHeightClassName = 'max-h-[350px]',
+  forceExpanded = false,
+  showCollapseToggle,
+  ideaBankContext = null,
+  ideaBankBridgeState = 'idle',
+  externalMessage = null,
+  onExternalMessageConsumed,
+}: AgentChatPanelProps) {
   const { toast } = useToast();
   const maxImageInputs = 6;
+  const isCollapseEnabled = showCollapseToggle ?? !forceExpanded;
+
   const [isOpen, setIsOpen] = useState(() => {
+    if (forceExpanded) return true;
     try {
       const stored = localStorage.getItem('agent-chat-open');
       return stored ? stored === 'true' : true;
@@ -35,10 +62,13 @@ export function AgentChatPanel({ orch }: AgentChatPanelProps) {
   const [input, setInput] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const consumedExternalMessageRef = useRef<string | null>(null);
+
   const remainingUploadSlots = Math.max(0, maxImageInputs - orch.selectedProducts.length - orch.tempUploads.length);
 
   const analyzeUpload = useCallback(async (upload: AnalyzedUpload): Promise<AnalyzedUpload> => {
@@ -150,7 +180,6 @@ export function AgentChatPanel({ orch }: AgentChatPanelProps) {
     [handleUploadFiles],
   );
 
-  // Handle UI actions from the agent
   const handleUiAction = useCallback(
     (action: string, payload: Record<string, unknown>) => {
       try {
@@ -208,7 +237,6 @@ export function AgentChatPanel({ orch }: AgentChatPanelProps) {
           case 'copy_generated': {
             const copies = payload.copies as Record<string, unknown>[];
             if (copies?.length > 0) {
-              // setGeneratedCopy expects a string — use the first copy's caption
               const firstCopy = copies[0];
               if (orch.setGeneratedCopyFull) {
                 orch.setGeneratedCopyFull(firstCopy);
@@ -234,33 +262,76 @@ export function AgentChatPanel({ orch }: AgentChatPanelProps) {
     onUiAction: handleUiAction,
   });
 
-  // Persist collapse state
+  const buildMessageContext = useCallback((): AgentChatMessageContext => {
+    const selectedProducts = orch.selectedProducts
+      .map((product) => product.name)
+      .filter((name): name is string => typeof name === 'string' && name.trim().length > 0)
+      .slice(0, 6);
+
+    const uploadedReferences = orch.tempUploads
+      .filter((upload) => upload.selected !== false)
+      .map((upload) => upload.description || upload.file?.name || 'Uploaded image')
+      .filter((label): label is string => typeof label === 'string' && label.trim().length > 0)
+      .slice(0, 6);
+
+    const topIdeas =
+      ideaBankContext?.suggestions
+        ?.slice(0, 3)
+        .map((idea) => idea.summary || idea.prompt)
+        .filter((value): value is string => typeof value === 'string' && value.trim().length > 0) ?? [];
+
+    return {
+      selectedProducts,
+      uploadedReferences,
+      ideaBank: {
+        status: ideaBankContext?.status,
+        suggestionCount: ideaBankContext?.suggestionCount ?? 0,
+        topIdeas,
+      },
+    };
+  }, [ideaBankContext, orch.selectedProducts, orch.tempUploads]);
+
   useEffect(() => {
+    if (!isCollapseEnabled || forceExpanded) return;
     try {
       localStorage.setItem('agent-chat-open', String(isOpen));
     } catch {
       // ignore
     }
-  }, [isOpen]);
+  }, [forceExpanded, isCollapseEnabled, isOpen]);
 
-  // Auto-scroll
+  useEffect(() => {
+    if (forceExpanded && !isOpen) {
+      setIsOpen(true);
+    }
+  }, [forceExpanded, isOpen]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Focus input when opened
   useEffect(() => {
     if (isOpen) inputRef.current?.focus();
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!externalMessage || !externalMessage.text?.trim()) return;
+    if (consumedExternalMessageRef.current === externalMessage.id) return;
+    if (isStreaming) return;
+
+    consumedExternalMessageRef.current = externalMessage.id;
+    setIsOpen(true);
+    sendMessage(externalMessage.text, buildMessageContext());
+    onExternalMessageConsumed?.(externalMessage.id);
+  }, [buildMessageContext, externalMessage, isStreaming, onExternalMessageConsumed, sendMessage]);
+
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!input.trim() || isStreaming) return;
-    sendMessage(input);
+    sendMessage(input, buildMessageContext());
     setInput('');
   };
 
-  // Clean up voice recognition on unmount
   useEffect(() => {
     return () => {
       if (recognitionRef.current) {
@@ -274,7 +345,6 @@ export function AgentChatPanel({ orch }: AgentChatPanelProps) {
     };
   }, []);
 
-  // Voice input via Web Speech API
   const toggleVoice = useCallback(() => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
       return;
@@ -314,35 +384,39 @@ export function AgentChatPanel({ orch }: AgentChatPanelProps) {
     typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
 
   return (
-    <div className="w-full mb-6">
-      {/* Header — always visible */}
+    <div className={cn('w-full mb-6', className)}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          if (isCollapseEnabled) {
+            setIsOpen(!isOpen);
+          }
+        }}
         className={cn(
           'w-full flex items-center justify-between px-4 py-3 rounded-xl',
           'bg-card/50 border border-border hover:bg-card/80 transition-colors',
           isOpen && 'rounded-b-none border-b-0',
+          !isCollapseEnabled && 'cursor-default',
         )}
       >
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center">
             <Bot className="w-4 h-4 text-white" />
           </div>
-          <span className="text-sm font-medium">Studio Assistant</span>
+          <span className="text-sm font-medium">{title}</span>
           {messages.length > 0 && (
             <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
               {messages.length} msg{messages.length !== 1 ? 's' : ''}
             </span>
           )}
         </div>
-        {isOpen ? (
-          <ChevronUp className="w-4 h-4 text-muted-foreground" />
-        ) : (
-          <ChevronDown className="w-4 h-4 text-muted-foreground" />
-        )}
+        {isCollapseEnabled &&
+          (isOpen ? (
+            <ChevronUp className="w-4 h-4 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          ))}
       </button>
 
-      {/* Chat Body — collapsible */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -353,35 +427,50 @@ export function AgentChatPanel({ orch }: AgentChatPanelProps) {
             className="overflow-hidden"
           >
             <div className="border border-t-0 border-border rounded-b-xl bg-card/30 backdrop-blur-sm">
-              {/* Messages */}
-              <div className="max-h-[350px] overflow-y-auto p-4 space-y-3 scrollbar-hide">
+              <div className={cn(bodyMaxHeightClassName, 'overflow-y-auto p-4 space-y-3 scrollbar-hide')}>
+                {(ideaBankBridgeState === 'waiting' || ideaBankBridgeState === 'sent' || ideaBankContext?.status) && (
+                  <div className="text-xs rounded-lg border border-border bg-muted/40 px-3 py-2 text-muted-foreground">
+                    {ideaBankBridgeState === 'waiting' && 'Idea Bank is running. I will use the results when ready.'}
+                    {ideaBankBridgeState === 'sent' && 'Idea Bank results were sent to this chat.'}
+                    {ideaBankBridgeState !== 'waiting' &&
+                      ideaBankBridgeState !== 'sent' &&
+                      ideaBankContext?.status === 'ready' &&
+                      `${ideaBankContext.suggestionCount} idea bank result(s) ready for planning.`}
+                    {(ideaBankBridgeState === 'error' || ideaBankContext?.status === 'error') &&
+                      (ideaBankContext?.error || 'Idea Bank failed to load.')}
+                  </div>
+                )}
+
                 {orch.tempUploads.length > 0 && (
                   <div className="text-xs rounded-lg border border-border bg-muted/40 px-3 py-2 text-muted-foreground">
                     {orch.tempUploads.length} uploaded reference image
                     {orch.tempUploads.length !== 1 ? 's' : ''} ready for generation.
                   </div>
                 )}
+
                 {messages.length === 0 && (
                   <p className="text-center text-xs text-muted-foreground py-6">
                     Ask me to generate ads, find products, write copy, or set up your campaign.
                   </p>
                 )}
+
                 {messages.map((msg) => (
                   <ChatMessage key={msg.id} message={msg} />
                 ))}
+
                 {isStreaming && (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                     Thinking...
                   </div>
                 )}
+
                 {error && (
                   <div className="text-xs text-destructive bg-destructive/10 rounded-lg px-3 py-2">{error}</div>
                 )}
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Input */}
               <form onSubmit={handleSubmit} className="flex items-center gap-2 p-3 border-t border-border">
                 <input
                   ref={uploadInputRef}

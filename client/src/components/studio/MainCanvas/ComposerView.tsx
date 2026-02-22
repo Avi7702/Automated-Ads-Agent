@@ -20,20 +20,11 @@ import { CarouselBuilder } from '@/components/CarouselBuilder';
 import { BeforeAfterBuilder } from '@/components/BeforeAfterBuilder';
 import { TextOnlyMode } from '@/components/TextOnlyMode';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import {
-  Sparkles,
-  ChevronDown,
-  ChevronUp,
-  Check,
-  X,
-  Search,
-  Package,
-  Mic,
-  MicOff,
-} from 'lucide-react';
+import { Sparkles, ChevronDown, ChevronUp, Check, X, Search, Package, Mic, MicOff, Bot, Loader2 } from 'lucide-react';
 import { useRipple } from '@/hooks/useRipple';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import type { StudioOrchestrator } from '@/hooks/useStudioOrchestrator';
+import type { IdeaBankContextSnapshot } from '@/components/ideabank/types';
 
 function Section({
   id,
@@ -59,7 +50,10 @@ function Section({
       animate={{ opacity: 1, y: 0 }}
       className="rounded-2xl border border-border bg-card/50 overflow-hidden"
     >
-      <button onClick={onToggle} className="w-full flex items-center justify-between p-5 hover:bg-muted/50 transition-colors">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between p-5 hover:bg-muted/50 transition-colors"
+      >
         <div className="flex items-center gap-3">
           {Icon && <Icon className="w-5 h-5 text-primary" />}
           <h3 className="font-medium text-sm">{title}</h3>
@@ -78,9 +72,19 @@ function Section({
 
 interface ComposerViewProps {
   orch: StudioOrchestrator;
+  ideaBankContext?: IdeaBankContextSnapshot | null;
+  ideaBankBridgeState?: 'idle' | 'waiting' | 'ready' | 'error' | 'sent';
+  onIdeaBankContextChange?: (context: IdeaBankContextSnapshot) => void;
+  onSendIdeasToAgent?: () => void;
 }
 
-export const ComposerView = memo(function ComposerView({ orch }: ComposerViewProps) {
+export const ComposerView = memo(function ComposerView({
+  orch,
+  ideaBankContext = null,
+  ideaBankBridgeState = 'idle',
+  onIdeaBankContextChange,
+  onSendIdeasToAgent,
+}: ComposerViewProps) {
   const { createRipple } = useRipple();
 
   useEffect(() => {
@@ -135,7 +139,10 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
           {orch.selectedProducts.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {orch.selectedProducts.map((p) => (
-                <div key={p.id} className="w-16 h-16 relative group rounded-lg overflow-hidden border border-primary/30">
+                <div
+                  key={p.id}
+                  className="w-16 h-16 relative group rounded-lg overflow-hidden border border-primary/30"
+                >
                   <img src={getProductImageUrl(p.cloudinaryUrl)} alt={p.name} className="w-full h-full object-cover" />
                   <button
                     onClick={() => orch.toggleProductSelection(p)}
@@ -192,7 +199,9 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
                     }}
                     className={cn(
                       'relative rounded-xl overflow-hidden border-2 aspect-square transition-all',
-                      isSelected ? 'border-primary ring-2 ring-primary/20 scale-105' : 'border-border hover:border-primary/50',
+                      isSelected
+                        ? 'border-primary ring-2 ring-primary/20 scale-105'
+                        : 'border-border hover:border-primary/50',
                     )}
                   >
                     <img
@@ -345,6 +354,7 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
             selectedProducts={orch.selectedProducts}
             tempUploads={orch.tempUploads}
             onSelectPrompt={orch.handleSelectSuggestion}
+            onContextChange={onIdeaBankContextChange}
             onRecipeAvailable={(recipe) => orch.setGenerationRecipe(recipe)}
             onSetPlatform={orch.setPlatform}
             onSetAspectRatio={orch.setAspectRatio}
@@ -357,6 +367,55 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
             mode="freestyle"
           />
         </ErrorBoundary>
+
+        {(ideaBankContext || onSendIdeasToAgent) && (
+          <div className="rounded-xl border border-border/70 bg-muted/20 px-4 py-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-medium flex items-center gap-2">
+                  <Bot className="w-4 h-4 text-primary" />
+                  Agent + Idea Bank sync
+                </p>
+                {ideaBankBridgeState === 'waiting' && (
+                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Waiting for Idea Bank suggestions. They will be sent to the agent when ready.
+                  </p>
+                )}
+                {ideaBankBridgeState !== 'waiting' && ideaBankContext?.status === 'ready' && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {ideaBankContext.suggestionCount} idea
+                    {ideaBankContext.suggestionCount === 1 ? '' : 's'} ready. Send them to the agent for planning.
+                  </p>
+                )}
+                {ideaBankBridgeState === 'sent' && (
+                  <p className="text-xs text-green-600 dark:text-green-400 mt-1">Ideas sent to agent chat.</p>
+                )}
+                {(ideaBankBridgeState === 'error' || ideaBankContext?.status === 'error') && (
+                  <p className="text-xs text-red-500 mt-1">{ideaBankContext?.error || 'Failed to load ideas.'}</p>
+                )}
+                {ideaBankBridgeState === 'idle' &&
+                  (!ideaBankContext || ideaBankContext.status === 'idle' || ideaBankContext.suggestionCount === 0) && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Select products or uploads to generate ideas first.
+                    </p>
+                  )}
+              </div>
+
+              {onSendIdeasToAgent && (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={onSendIdeasToAgent}
+                  disabled={ideaBankBridgeState === 'waiting'}
+                  className="sm:shrink-0"
+                >
+                  {ideaBankBridgeState === 'waiting' ? 'Waiting for ideas...' : 'Send Ideas To Agent'}
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="flex flex-col sm:flex-row flex-wrap gap-4">
           <div className="flex items-center gap-2">
@@ -418,7 +477,9 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
             <div>
               <p className="text-sm font-medium">
                 Estimated cost:{' '}
-                <span className="text-green-600 dark:text-green-400">${orch.priceEstimate.estimatedCost.toFixed(3)}</span>
+                <span className="text-green-600 dark:text-green-400">
+                  ${orch.priceEstimate.estimatedCost.toFixed(3)}
+                </span>
               </p>
               <p className="text-xs text-muted-foreground">
                 {orch.priceEstimate.usedFallback
@@ -437,7 +498,8 @@ export const ComposerView = memo(function ComposerView({ orch }: ComposerViewPro
         </Button>
         <p className="text-center text-sm text-muted-foreground mt-3">
           {orch.selectedProducts.length + orch.tempUploads.length} image
-          {orch.selectedProducts.length + orch.tempUploads.length !== 1 ? 's' : ''} - {orch.platform} - {orch.resolution}
+          {orch.selectedProducts.length + orch.tempUploads.length !== 1 ? 's' : ''} - {orch.platform} -{' '}
+          {orch.resolution}
         </p>
       </motion.div>
     </div>

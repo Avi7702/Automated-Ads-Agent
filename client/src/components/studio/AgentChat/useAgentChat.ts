@@ -17,6 +17,16 @@ export interface ChatMessage {
   timestamp: number;
 }
 
+export interface AgentChatMessageContext {
+  selectedProducts?: string[];
+  uploadedReferences?: string[];
+  ideaBank?: {
+    status?: 'idle' | 'loading' | 'ready' | 'error';
+    suggestionCount?: number;
+    topIdeas?: string[];
+  };
+}
+
 interface UseAgentChatOptions {
   onUiAction?: (action: string, payload: Record<string, unknown>) => void;
 }
@@ -37,7 +47,7 @@ export function useAgentChat(options: UseAgentChatOptions = {}) {
   }, []);
 
   const sendMessage = useCallback(
-    async (text: string) => {
+    async (text: string, context?: AgentChatMessageContext) => {
       if (!text.trim() || isStreaming) return;
 
       setError(null);
@@ -84,6 +94,7 @@ export function useAgentChat(options: UseAgentChatOptions = {}) {
           body: JSON.stringify({
             message: text.trim(),
             sessionId: sessionIdRef.current,
+            context,
           }),
           signal: abortRef.current.signal,
         });

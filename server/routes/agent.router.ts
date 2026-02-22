@@ -16,6 +16,56 @@ const MAX_MESSAGE_LENGTH = 4000;
 const MAX_SESSION_ID_LENGTH = 128;
 const SESSION_ID_PATTERN = /^[a-zA-Z0-9_\-]+$/;
 
+function coerceStringArray(value: unknown, limit: number): string[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .filter((item): item is string => typeof item === 'string')
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0)
+    .slice(0, limit);
+}
+
+function buildWorkspaceContextMessage(rawContext: unknown): string {
+  if (!rawContext || typeof rawContext !== 'object') return '';
+
+  const context = rawContext as Record<string, unknown>;
+  const lines: string[] = [];
+
+  const selectedProducts = coerceStringArray(context['selectedProducts'], 6);
+  if (selectedProducts.length > 0) {
+    lines.push(`Selected products: ${selectedProducts.join(', ')}`);
+  }
+
+  const uploadedReferences = coerceStringArray(context['uploadedReferences'], 6);
+  if (uploadedReferences.length > 0) {
+    lines.push(`Uploaded references: ${uploadedReferences.join(' | ')}`);
+  }
+
+  const ideaBankRaw = context['ideaBank'];
+  if (ideaBankRaw && typeof ideaBankRaw === 'object') {
+    const ideaBank = ideaBankRaw as Record<string, unknown>;
+    const status = typeof ideaBank['status'] === 'string' ? ideaBank['status'] : undefined;
+    const suggestionCount =
+      typeof ideaBank['suggestionCount'] === 'number' && Number.isFinite(ideaBank['suggestionCount'])
+        ? Math.max(0, Math.floor(ideaBank['suggestionCount']))
+        : undefined;
+    const topIdeas = coerceStringArray(ideaBank['topIdeas'], 4);
+
+    if (status || typeof suggestionCount === 'number') {
+      lines.push(
+        `Idea bank status: ${status || 'unknown'}${typeof suggestionCount === 'number' ? ` (${suggestionCount} ideas)` : ''}`,
+      );
+    }
+    if (topIdeas.length > 0) {
+      lines.push(`Top ideas: ${topIdeas.join(' || ')}`);
+    }
+  }
+
+  if (lines.length === 0) return '';
+  return `[Studio Workspace Context]\n${lines.join('\n')}`;
+}
+
 export const agentRouter: RouterFactory = (ctx: RouterContext): Router => {
   const router = createRouter();
   const { storage, logger } = ctx.services;
@@ -40,7 +90,7 @@ export const agentRouter: RouterFactory = (ctx: RouterContext): Router => {
         return res.status(401).json({ error: 'Not authenticated' });
       }
 
-      const { message, sessionId } = req.body;
+      const { message, sessionId, context } = req.body;
       if (!message || typeof message !== 'string') {
         return res.status(400).json({ error: 'message is required and must be a string' });
       }
@@ -57,6 +107,10 @@ export const agentRouter: RouterFactory = (ctx: RouterContext): Router => {
       }
 
       const sid = typeof sessionId === 'string' && sessionId.length > 0 ? sessionId : `session_${userId}_${Date.now()}`;
+      const workspaceContextMessage = buildWorkspaceContextMessage(context);
+      const composedMessage = workspaceContextMessage
+        ? `${workspaceContextMessage}\n\nUser request:\n${message}`
+        : message;
 
       // SSE headers — include session ID so client can track conversations
       res.setHeader('Content-Type', 'text/event-stream');
@@ -73,7 +127,7 @@ export const agentRouter: RouterFactory = (ctx: RouterContext): Router => {
       });
 
       try {
-        for await (const event of streamAgentResponse(storage, userId, sid, message)) {
+        for await (const event of streamAgentResponse(storage, userId, sid, composedMessage)) {
           if (res.writableEnded || clientDisconnected) break;
           res.write(`data: ${JSON.stringify(event)}\n\n`);
         }

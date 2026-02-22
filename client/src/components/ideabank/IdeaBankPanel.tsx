@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useCallback, memo } from "react";
-import { motion } from "framer-motion";
-import { cn } from "@/lib/utils";
-import { IdeaBankHeader } from "./IdeaBankHeader";
-import { IdeaBankInputSummary } from "./IdeaBankInputSummary";
-import { IdeaBankAnalysisStatus } from "./IdeaBankAnalysisStatus";
-import { IdeaBankSuggestions } from "./IdeaBankSuggestions";
-import { useIdeaBankFetch } from "./useIdeaBankFetch";
-import type { IdeaBankPanelProps, TemplateSlotSuggestion } from "./types";
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
+import { IdeaBankHeader } from './IdeaBankHeader';
+import { IdeaBankInputSummary } from './IdeaBankInputSummary';
+import { IdeaBankAnalysisStatus } from './IdeaBankAnalysisStatus';
+import { IdeaBankSuggestions } from './IdeaBankSuggestions';
+import { useIdeaBankFetch } from './useIdeaBankFetch';
+import type { IdeaBankPanelProps, TemplateSlotSuggestion } from './types';
 
 function IdeaBankPanelComponent({
   selectedProducts,
@@ -19,9 +19,10 @@ function IdeaBankPanelComponent({
   className,
   selectedPromptId,
   isGenerating,
-  mode = "freestyle",
+  mode = 'freestyle',
   templateId,
   onSlotSuggestionSelect,
+  onContextChange,
 }: IdeaBankPanelProps) {
   const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(null);
 
@@ -49,6 +50,52 @@ function IdeaBankPanelComponent({
     setSelectedSlotIndex(null);
   }, [mode, templateId]);
 
+  const contextStatus = useMemo<'idle' | 'loading' | 'ready' | 'error'>(() => {
+    if (loading) return 'loading';
+    if (error) return 'error';
+    if ((response?.suggestions?.length ?? 0) > 0 || slotSuggestions.length > 0) return 'ready';
+    return 'idle';
+  }, [loading, error, response?.suggestions?.length, slotSuggestions.length]);
+
+  // Surface Idea Bank status/suggestions to parent so Studio can bridge results into Agent chat.
+  useEffect(() => {
+    if (!onContextChange) return;
+
+    if (mode === 'template') {
+      onContextChange({
+        mode,
+        status: contextStatus,
+        error,
+        suggestionCount: slotSuggestions.length,
+        suggestions: slotSuggestions.map((slot, index) => ({
+          id: `slot-${index}`,
+          summary: slot.productHighlights?.[0] || slot.reasoning || 'Template slot suggestion',
+          prompt: mergedPrompt,
+          reasoning: slot.reasoning,
+          confidence: slot.confidence,
+        })),
+      });
+      return;
+    }
+
+    onContextChange({
+      mode,
+      status: contextStatus,
+      error,
+      suggestionCount: response?.suggestions?.length ?? 0,
+      suggestions:
+        response?.suggestions?.map((suggestion) => ({
+          id: suggestion.id,
+          summary: suggestion.summary,
+          prompt: suggestion.prompt,
+          reasoning: suggestion.reasoning,
+          confidence: suggestion.confidence,
+          recommendedPlatform: suggestion.recommendedPlatform,
+          recommendedAspectRatio: suggestion.recommendedAspectRatio,
+        })) ?? [],
+    });
+  }, [contextStatus, error, mergedPrompt, mode, onContextChange, response?.suggestions, slotSuggestions]);
+
   // Handle slot selection
   const handleSlotSelect = useCallback(
     (index: number, suggestion: TemplateSlotSuggestion, prompt: string) => {
@@ -57,7 +104,7 @@ function IdeaBankPanelComponent({
         onSlotSuggestionSelect(suggestion, prompt);
       }
     },
-    [onSlotSuggestionSelect]
+    [onSlotSuggestionSelect],
   );
 
   // Check if panel should be visible
@@ -73,16 +120,11 @@ function IdeaBankPanelComponent({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        "p-4 sm:p-6 rounded-2xl border border-border bg-gradient-to-br from-primary/5 to-purple-500/5 space-y-4",
-        className
+        'p-4 sm:p-6 rounded-2xl border border-border bg-gradient-to-br from-primary/5 to-purple-500/5 space-y-4',
+        className,
       )}
     >
-      <IdeaBankHeader
-        mode={mode}
-        legacyMode={legacyMode}
-        loading={loading}
-        onRefresh={fetchSuggestions}
-      />
+      <IdeaBankHeader mode={mode} legacyMode={legacyMode} loading={loading} onRefresh={fetchSuggestions} />
 
       <IdeaBankInputSummary
         selectedProducts={selectedProducts}
@@ -90,9 +132,7 @@ function IdeaBankPanelComponent({
         analyzingCount={analyzingCount}
       />
 
-      {response && !legacyMode && (
-        <IdeaBankAnalysisStatus response={response} legacyMode={legacyMode} />
-      )}
+      {response && !legacyMode && <IdeaBankAnalysisStatus response={response} legacyMode={legacyMode} />}
 
       <IdeaBankSuggestions
         mode={mode}
