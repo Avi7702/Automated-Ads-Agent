@@ -1,4 +1,4 @@
-import { Switch, Route, Redirect } from 'wouter';
+import { Switch, Route, Redirect, useLocation } from 'wouter';
 import { lazy, Suspense, useEffect } from 'react';
 import { queryClient, initializeCsrf } from './lib/queryClient';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -148,6 +148,9 @@ function Router() {
 }
 
 function App() {
+  const [location] = useLocation();
+  const showGlobalChat = location !== '/';
+
   // Initialize CSRF token on app load
   useEffect(() => {
     initializeCsrf();
@@ -176,7 +179,7 @@ function App() {
                 </main>
               </OnboardingGate>
               <PWAUpdatePrompt />
-              <GlobalChatButton />
+              {showGlobalChat && <GlobalChatButton />}
             </TooltipProvider>
           </AuthProvider>
         </QueryClientProvider>

@@ -180,13 +180,26 @@ export const intelligenceRouter: RouterFactory = (ctx: RouterContext): Router =>
    */
   router.get(
     '/onboarding-status',
-    requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = (req.session as any)?.userId as string | undefined;
+
+        // Public-safe fallback: avoid noisy 401s for logged-out sessions.
+        if (!userId) {
+          return res.json({
+            onboardingComplete: true,
+            hasBusinessData: false,
+            hasPriorities: false,
+          });
+        }
+
         const { productIntelligenceService } = await import('../services/productIntelligenceService');
         const complete = await productIntelligenceService.isOnboardingComplete(userId);
-        res.json({ onboardingComplete: complete });
+        res.json({
+          onboardingComplete: complete,
+          hasBusinessData: complete,
+          hasPriorities: complete,
+        });
       } catch (error: any) {
         logger.error({ module: 'Intelligence', err: error }, 'Failed to check onboarding status');
         res.status(500).json({ error: 'Failed to check onboarding status' });

@@ -4,7 +4,7 @@
  *
  * Thin orchestrator (~250 lines) that delegates to:
  * - useStudioOrchestrator: all state + handlers
- * - ComposerView: idle state (prompt, products, templates, generate)
+ * - ComposerView: idle state (products, prompt, generate)
  * - GeneratingView: loading animation
  * - ResultViewEnhanced: result state (image, actions, edit, copy)
  * - HistoryPanel: right-side generation history
@@ -185,7 +185,8 @@ export default function Studio() {
               Create stunning product visuals
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Select products, describe your vision, and generate professional marketing content in minutes.
+              Chat with the assistant, add products and references, and generate professional marketing visuals in
+              minutes.
             </p>
             <div className="flex justify-center gap-3 pt-2">
               <Button variant="outline" size="sm" onClick={orch.handleHistoryToggle} className="gap-2">
