@@ -397,17 +397,17 @@ export default function Studio() {
 
           {workspaceMode === 'agent' && (
             <div className="mx-auto max-w-5xl grid gap-6 xl:grid-cols-[1fr_380px]">
-              <div className="min-w-0">
+              <div className="min-w-0 order-2 xl:order-1">
                 <AgentModePanel orch={orch} />
               </div>
-              <div className="min-w-0 hidden xl:block">
+              <div className="min-w-0 order-1 xl:order-2">
                 <div className="xl:sticky xl:top-24">
                   <AgentChatPanel
                     orch={orch}
                     title="Ad Assistant"
                     forceExpanded
                     showCollapseToggle={false}
-                    bodyMaxHeightClassName="max-h-[calc(100vh-320px)]"
+                    bodyMaxHeightClassName="max-h-[60vh] xl:max-h-[calc(100vh-320px)]"
                     ideaBankContext={ideaBankContext}
                     ideaBankBridgeState={ideaBankBridgeState}
                     externalMessage={agentExternalMessage}
