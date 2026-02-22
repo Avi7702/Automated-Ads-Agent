@@ -25,6 +25,11 @@ export async function pushSchema() {
             ALTER TABLE generations ADD COLUMN IF NOT EXISTS media_type varchar(10) DEFAULT 'image';
             ALTER TABLE generations ADD COLUMN IF NOT EXISTS video_duration_sec integer;
 
+            -- Generations: Wave 3 context metadata (idempotent)
+            ALTER TABLE generations ADD COLUMN IF NOT EXISTS product_ids text[];
+            ALTER TABLE generations ADD COLUMN IF NOT EXISTS template_id varchar(50);
+            ALTER TABLE generations ADD COLUMN IF NOT EXISTS generation_mode varchar(20);
+
             -- Training tables (PR #64)
             CREATE TABLE IF NOT EXISTS training_datasets (
                 id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
