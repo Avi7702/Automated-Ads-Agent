@@ -1,23 +1,18 @@
 // @ts-nocheck
 /**
- * Studio — Unified creative workspace
+ * Studio - Unified creative workspace
  *
- * Thin orchestrator (~250 lines) that delegates to:
- * - useStudioOrchestrator: all state + handlers
- * - ComposerView: idle state (products, prompt, generate)
- * - GeneratingView: loading animation
- * - ResultViewEnhanced: result state (image, actions, edit, copy)
- * - HistoryPanel: right-side generation history
- * - SaveToCatalogDialog / TemplateInspirationDialog: modal overlays
- *
- * Previously 2,963 lines. Decomposed in Phase 2 of Unified Studio redesign.
+ * Includes three workspace modes:
+ * - Agent Mode: full-screen assistant
+ * - Studio Mode: composer-first with inline assistant
+ * - Split View: assistant + composer side by side
  */
 
 import { AnimatePresence, motion } from 'framer-motion';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
 import { cn } from '@/lib/utils';
 
-// Components
 import { Header } from '@/components/layout/Header';
 import { StudioProvider } from '@/context/StudioContext';
 import { ComposerView, ResultViewEnhanced, GeneratingView } from '@/components/studio/MainCanvas';
@@ -32,12 +27,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Badge } from '@/components/ui/badge';
 import { Sparkles, History, TrendingUp, Star, Layout, X } from 'lucide-react';
 
-// Hooks
 import { useStudioOrchestrator } from '@/hooks/useStudioOrchestrator';
 import type { ShortcutConfig } from '@/hooks/useKeyboardShortcuts';
 import type { Product } from '@shared/schema';
+import type { IdeaBankContextSnapshot } from '@/components/ideabank/types';
 
-// ─── Helper Components ──────────────────────────────────
+type WorkspaceMode = 'agent' | 'studio' | 'split';
+type IdeaBankBridgeState = 'idle' | 'waiting' | 'ready' | 'error' | 'sent';
 
 function ContextBar({
   selectedProducts,
@@ -51,6 +47,7 @@ function ContextBar({
   visible: boolean;
 }) {
   if (!visible) return null;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: -20 }}
@@ -138,15 +135,198 @@ function KeyboardShortcutsPanel({
   );
 }
 
-// ─── Main Component ─────────────────────────────────────
-
 export default function Studio() {
   const orch = useStudioOrchestrator();
+
+  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>(() => {
+    if (typeof window === 'undefined') return 'split';
+    const stored = window.localStorage.getItem('studio-workspace-mode');
+    if (stored === 'agent' || stored === 'studio' || stored === 'split') return stored;
+    return window.innerWidth >= 1280 ? 'split' : 'studio';
+  });
+
+  const [ideaBankContext, setIdeaBankContext] = useState<IdeaBankContextSnapshot | null>(null);
+  const [ideaBankBridgeState, setIdeaBankBridgeState] = useState<IdeaBankBridgeState>('idle');
+  const [agentExternalMessage, setAgentExternalMessage] = useState<{ id: string; text: string } | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem('studio-workspace-mode', workspaceMode);
+  }, [workspaceMode]);
+
+  const buildIdeaBankAgentMessage = useCallback((context: IdeaBankContextSnapshot) => {
+    const ideas = context.suggestions.slice(0, 5);
+    const lines = [
+      `I have ${context.suggestionCount} idea bank suggestion(s). Help me choose and plan execution.`,
+      '',
+      'Idea Bank results:',
+      ...ideas.map(
+        (idea, index) => `${index + 1}. ${idea.summary || idea.prompt}${idea.prompt ? `\nPrompt: ${idea.prompt}` : ''}`,
+      ),
+      '',
+      'Please return:',
+      '1) Best idea for today',
+      '2) 7-day post plan aligned to brand voice',
+      '3) Recommended prompts for generation',
+    ];
+    return lines.join('\n').trim();
+  }, []);
+
+  const queueIdeaBankMessageToAgent = useCallback(
+    (context: IdeaBankContextSnapshot) => {
+      if (!context || context.suggestionCount <= 0) return false;
+
+      setAgentExternalMessage({
+        id: `idea-bank-${Date.now()}`,
+        text: buildIdeaBankAgentMessage(context),
+      });
+      setIdeaBankBridgeState('sent');
+      setWorkspaceMode('split');
+      return true;
+    },
+    [buildIdeaBankAgentMessage],
+  );
+
+  const handleIdeaBankContextChange = useCallback((context: IdeaBankContextSnapshot) => {
+    setIdeaBankContext(context);
+
+    if (context.status === 'error') {
+      setIdeaBankBridgeState((prev) => (prev === 'sent' ? 'sent' : 'error'));
+      return;
+    }
+    if (context.status === 'ready') {
+      setIdeaBankBridgeState((prev) => (prev === 'sent' ? 'sent' : 'ready'));
+      return;
+    }
+    if (context.status === 'loading') {
+      setIdeaBankBridgeState((prev) => (prev === 'waiting' ? 'waiting' : 'idle'));
+      return;
+    }
+    setIdeaBankBridgeState((prev) => (prev === 'sent' ? 'sent' : 'idle'));
+  }, []);
+
+  useEffect(() => {
+    if (ideaBankBridgeState !== 'waiting' || !ideaBankContext) return;
+
+    if (ideaBankContext.status === 'ready') {
+      if (ideaBankContext.suggestionCount > 0) {
+        queueIdeaBankMessageToAgent(ideaBankContext);
+      } else {
+        setIdeaBankBridgeState('idle');
+      }
+      return;
+    }
+    if (ideaBankContext.status === 'error') {
+      setIdeaBankBridgeState('error');
+    }
+  }, [ideaBankBridgeState, ideaBankContext, queueIdeaBankMessageToAgent]);
+
+  const handleSendIdeasToAgent = useCallback(() => {
+    if (!ideaBankContext) {
+      setIdeaBankBridgeState('waiting');
+      return;
+    }
+
+    if (ideaBankContext.status === 'loading') {
+      setIdeaBankBridgeState('waiting');
+      return;
+    }
+
+    if (ideaBankContext.status === 'error') {
+      setIdeaBankBridgeState('error');
+      return;
+    }
+
+    if (ideaBankContext.status === 'ready' && ideaBankContext.suggestionCount > 0) {
+      queueIdeaBankMessageToAgent(ideaBankContext);
+      return;
+    }
+
+    setIdeaBankBridgeState('idle');
+  }, [ideaBankContext, queueIdeaBankMessageToAgent]);
+
+  const handleExternalMessageConsumed = useCallback((id: string) => {
+    setAgentExternalMessage((prev) => (prev?.id === id ? null : prev));
+  }, []);
+
+  const workspaceHeadline = useMemo(() => {
+    if (workspaceMode === 'agent') return 'Plan, ask, and execute with the assistant';
+    if (workspaceMode === 'split') return 'Plan with the assistant while composing visuals';
+    return 'Create stunning product visuals';
+  }, [workspaceMode]);
+
+  const workspaceSubheading = useMemo(() => {
+    if (workspaceMode === 'agent') {
+      return 'Use one focused chat workspace for strategy, content planning, and generation commands.';
+    }
+    if (workspaceMode === 'split') {
+      return 'Agent and composer side-by-side: pick products, review Idea Bank, edit prompts, and generate faster.';
+    }
+    return 'Chat with the assistant, add products and references, and generate professional marketing visuals in minutes.';
+  }, [workspaceMode]);
+
+  const renderStudioCanvas = () => (
+    <>
+      <div
+        className={cn(
+          'lg:grid lg:gap-8',
+          orch.historyPanelOpen ? 'lg:grid-cols-[1fr_400px_320px]' : 'lg:grid-cols-[1fr_400px]',
+        )}
+      >
+        <div className="min-w-0">
+          <AnimatePresence mode="wait">
+            {orch.state === 'idle' && (
+              <ComposerView
+                key="composer"
+                orch={orch}
+                ideaBankContext={ideaBankContext}
+                ideaBankBridgeState={ideaBankBridgeState}
+                onIdeaBankContextChange={handleIdeaBankContextChange}
+                onSendIdeasToAgent={handleSendIdeasToAgent}
+              />
+            )}
+            {orch.state === 'generating' && (
+              <GeneratingView
+                key="generating"
+                onCancel={orch.handleCancelGeneration}
+                mediaType={orch.generatedMediaType}
+              />
+            )}
+            {orch.state === 'result' && <ResultViewEnhanced key="result" orch={orch} />}
+          </AnimatePresence>
+        </div>
+
+        <div className="hidden lg:block min-w-0">
+          <div className="sticky top-24 max-h-[calc(100vh-120px)] rounded-2xl border border-border bg-card/30 overflow-hidden">
+            <InspectorPanel orch={orch} />
+          </div>
+        </div>
+
+        <HistoryPanel
+          isOpen={orch.historyPanelOpen}
+          onToggle={orch.handleHistoryToggle}
+          onSelectGeneration={(id) => {
+            orch.selectGeneration(id);
+            fetch(`/api/generations/${id}`, { credentials: 'include' })
+              .then((r) => r.json())
+              .then((data) => {
+                if (data.imageUrl) orch.handleLoadFromHistory(data);
+              })
+              .catch(console.error);
+          }}
+          className="hidden lg:flex"
+        />
+      </div>
+
+      <div className="mt-6 hidden lg:block">
+        <IdeaBankBar orch={orch} />
+      </div>
+    </>
+  );
 
   return (
     <StudioProvider>
       <div className="min-h-screen bg-background text-foreground relative">
-        {/* Background Ambience */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden">
           <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-gradient-to-br from-primary/10 via-purple-500/8 to-transparent blur-[120px] rounded-full animate-float" />
           <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-gradient-to-tl from-blue-500/10 via-cyan-500/8 to-transparent blur-[120px] rounded-full animate-float-delayed" />
@@ -154,7 +334,6 @@ export default function Studio() {
 
         <Header currentPage="studio" />
 
-        {/* Context Bar */}
         <AnimatePresence>
           <ContextBar
             selectedProducts={orch.selectedProducts}
@@ -164,17 +343,12 @@ export default function Studio() {
           />
         </AnimatePresence>
 
-        {/* Main Content */}
         <main
           className={cn(
             'container mx-auto px-6 pt-24 pb-24 lg:pb-12 relative z-10',
             orch.historyPanelOpen ? 'max-w-[1600px]' : 'max-w-7xl',
           )}
         >
-          {/* Agent Chat Panel */}
-          <AgentChatPanel orch={orch} />
-
-          {/* Hero */}
           <motion.div
             ref={orch.heroRef}
             initial={{ opacity: 0, y: 20 }}
@@ -182,12 +356,36 @@ export default function Studio() {
             className="text-center space-y-4 py-8"
           >
             <h1 className="font-display text-4xl md:text-5xl font-bold tracking-tight bg-gradient-to-b from-zinc-900 to-zinc-900/60 dark:from-white dark:to-white/60 bg-clip-text text-transparent">
-              Create stunning product visuals
+              {workspaceHeadline}
             </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Chat with the assistant, add products and references, and generate professional marketing visuals in
-              minutes.
-            </p>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">{workspaceSubheading}</p>
+
+            <div className="flex justify-center pt-1">
+              <div className="inline-flex rounded-xl border border-border bg-card/40 p-1">
+                <Button
+                  variant={workspaceMode === 'agent' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setWorkspaceMode('agent')}
+                >
+                  Agent Mode
+                </Button>
+                <Button
+                  variant={workspaceMode === 'studio' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setWorkspaceMode('studio')}
+                >
+                  Studio Mode
+                </Button>
+                <Button
+                  variant={workspaceMode === 'split' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setWorkspaceMode('split')}
+                >
+                  Split View
+                </Button>
+              </div>
+            </div>
+
             <div className="flex justify-center gap-3 pt-2">
               <Button variant="outline" size="sm" onClick={orch.handleHistoryToggle} className="gap-2">
                 <History className="w-4 h-4" />
@@ -196,66 +394,64 @@ export default function Studio() {
             </div>
           </motion.div>
 
-          {/* Grid: Center + Right + History */}
-          <div
-            className={cn(
-              'lg:grid lg:gap-8',
-              orch.historyPanelOpen ? 'lg:grid-cols-[1fr_400px_320px]' : 'lg:grid-cols-[1fr_400px]',
-            )}
-          >
-            {/* Center Column — State Machine */}
-            <div className="min-w-0">
-              <AnimatePresence mode="wait">
-                {orch.state === 'idle' && <ComposerView key="composer" orch={orch} />}
-                {orch.state === 'generating' && (
-                  <GeneratingView
-                    key="generating"
-                    onCancel={orch.handleCancelGeneration}
-                    mediaType={orch.generatedMediaType}
+          {workspaceMode === 'agent' && (
+            <div className="mx-auto max-w-5xl">
+              <AgentChatPanel
+                orch={orch}
+                title="Ad Assistant"
+                forceExpanded
+                showCollapseToggle={false}
+                bodyMaxHeightClassName="max-h-[calc(100vh-320px)]"
+                ideaBankContext={ideaBankContext}
+                ideaBankBridgeState={ideaBankBridgeState}
+                externalMessage={agentExternalMessage}
+                onExternalMessageConsumed={handleExternalMessageConsumed}
+              />
+            </div>
+          )}
+
+          {workspaceMode === 'studio' && (
+            <>
+              <AgentChatPanel
+                orch={orch}
+                title="Studio Assistant"
+                ideaBankContext={ideaBankContext}
+                ideaBankBridgeState={ideaBankBridgeState}
+                externalMessage={agentExternalMessage}
+                onExternalMessageConsumed={handleExternalMessageConsumed}
+              />
+              {renderStudioCanvas()}
+            </>
+          )}
+
+          {workspaceMode === 'split' && (
+            <div className="grid gap-6 xl:grid-cols-[minmax(320px,420px)_1fr]">
+              <div className="min-w-0">
+                <div className="xl:sticky xl:top-24">
+                  <AgentChatPanel
+                    orch={orch}
+                    title="Ad Assistant"
+                    forceExpanded
+                    showCollapseToggle={false}
+                    bodyMaxHeightClassName="max-h-[calc(100vh-280px)]"
+                    ideaBankContext={ideaBankContext}
+                    ideaBankBridgeState={ideaBankBridgeState}
+                    externalMessage={agentExternalMessage}
+                    onExternalMessageConsumed={handleExternalMessageConsumed}
                   />
-                )}
-                {orch.state === 'result' && <ResultViewEnhanced key="result" orch={orch} />}
-              </AnimatePresence>
-            </div>
-
-            {/* Right Column — Inspector Panel (desktop) */}
-            <div className="hidden lg:block min-w-0">
-              <div className="sticky top-24 max-h-[calc(100vh-120px)] rounded-2xl border border-border bg-card/30 overflow-hidden">
-                <InspectorPanel orch={orch} />
+                </div>
               </div>
+              <div className="min-w-0">{renderStudioCanvas()}</div>
             </div>
-
-            {/* History Panel */}
-            <HistoryPanel
-              isOpen={orch.historyPanelOpen}
-              onToggle={orch.handleHistoryToggle}
-              onSelectGeneration={(id) => {
-                orch.selectGeneration(id);
-                fetch(`/api/generations/${id}`, { credentials: 'include' })
-                  .then((r) => r.json())
-                  .then((data) => {
-                    if (data.imageUrl) orch.handleLoadFromHistory(data);
-                  })
-                  .catch(console.error);
-              }}
-              className="hidden lg:flex"
-            />
-          </div>
-
-          {/* Idea Bank Bar — Horizontal suggestions */}
-          <div className="mt-6 hidden lg:block">
-            <IdeaBankBar orch={orch} />
-          </div>
+          )}
         </main>
 
-        {/* Mobile Inspector — Bottom Sheet */}
         {orch.generatedImage && (
           <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-md border-t max-h-[60vh] overflow-y-auto">
             <InspectorPanel orch={orch} />
           </div>
         )}
 
-        {/* Save to Catalog Dialog */}
         {orch.generatedImage && (
           <ErrorBoundary>
             <SaveToCatalogDialog
@@ -267,7 +463,6 @@ export default function Studio() {
           </ErrorBoundary>
         )}
 
-        {/* Template Inspiration Dialog */}
         <Dialog open={orch.showTemplateInspiration} onOpenChange={orch.setShowTemplateInspiration}>
           <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
             <DialogHeader>
@@ -335,7 +530,6 @@ export default function Studio() {
           </DialogContent>
         </Dialog>
 
-        {/* Keyboard Shortcuts */}
         <KeyboardShortcutsPanel
           visible={orch.showKeyboardShortcuts}
           shortcuts={orch.shortcuts}

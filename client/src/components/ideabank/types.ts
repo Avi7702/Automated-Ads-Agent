@@ -13,6 +13,22 @@ import type {
 import type { Product } from "@shared/schema";
 import type { AnalyzedUpload } from "@/types/analyzedUpload";
 
+export interface IdeaBankContextSnapshot {
+  mode: IdeaBankMode;
+  status: "idle" | "loading" | "ready" | "error";
+  error: string | null;
+  suggestionCount: number;
+  suggestions: Array<{
+    id: string;
+    summary: string;
+    prompt: string;
+    reasoning?: string;
+    confidence?: number;
+    recommendedPlatform?: string;
+    recommendedAspectRatio?: string;
+  }>;
+}
+
 export interface IdeaBankPanelProps {
   selectedProducts: Product[];
   tempUploads?: AnalyzedUpload[];
@@ -27,6 +43,7 @@ export interface IdeaBankPanelProps {
   mode?: IdeaBankMode;
   templateId?: string;
   onSlotSuggestionSelect?: (suggestion: TemplateSlotSuggestion, mergedPrompt: string) => void;
+  onContextChange?: (context: IdeaBankContextSnapshot) => void;
 }
 
 export interface IdeaBankHeaderProps {
