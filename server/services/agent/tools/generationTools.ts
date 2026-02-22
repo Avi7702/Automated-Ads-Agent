@@ -56,15 +56,14 @@ export function createGenerationTools(storage: IStorage): FunctionTool[] {
     },
   });
 
-  const generatePostImageExecute = async (
-    input: {
-      prompt: string;
-      productIds: string[];
-      resolution?: '1K' | '2K' | '4K';
-      mode?: 'exact_insert' | 'inspiration' | 'standard';
-    },
-    toolContext?: any,
-  ) => {
+  const generatePostImageParams = z.object({
+    prompt: z.string().describe('The generation prompt'),
+    productIds: z.array(z.string()).describe('Product IDs to include'),
+    resolution: z.enum(['1K', '2K', '4K']).optional().describe('Output resolution (default 1K)'),
+    mode: z.enum(['exact_insert', 'inspiration', 'standard']).optional().describe('Generation mode (default standard)'),
+  });
+
+  const generatePostImageExecute = async (input: z.infer<typeof generatePostImageParams>, toolContext?: any) => {
     const userId =
       toolContext?.state?.get?.('authenticatedUserId') ?? toolContext?.state?.['authenticatedUserId'] ?? null;
     if (!userId) {
@@ -169,13 +168,6 @@ export function createGenerationTools(storage: IStorage): FunctionTool[] {
       return { status: 'error', message: 'Image generation failed. Please try again.' };
     }
   };
-
-  const generatePostImageParams = z.object({
-    prompt: z.string().describe('The generation prompt'),
-    productIds: z.array(z.string()).describe('Product IDs to include'),
-    resolution: z.enum(['1K', '2K', '4K']).optional().describe('Output resolution (default 1K)'),
-    mode: z.enum(['exact_insert', 'inspiration', 'standard']).optional().describe('Generation mode (default standard)'),
-  });
 
   const generatePostImage = new FunctionTool({
     name: 'generate_post_image',

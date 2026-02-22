@@ -25,15 +25,7 @@ export function createCopyTools(): FunctionTool[] {
     variations: z.number().optional().describe('Number of variations (default 3)'),
   });
 
-  const executeGeneratePostCopy = async (input: {
-    platform: string;
-    productName: string;
-    productDescription: string;
-    industry?: string;
-    tone?: string;
-    framework?: string;
-    variations?: number;
-  }) => {
+  const executeGeneratePostCopy = async (input: z.infer<typeof generatePostCopyParams>) => {
     try {
       const { copywritingService } = await import('../../copywritingService');
       const { randomUUID } = await import('node:crypto');
@@ -94,14 +86,7 @@ export function createCopyTools(): FunctionTool[] {
     maxSuggestions: z.number().optional().describe('Number of suggestions (default 3)'),
   });
 
-  const executeSuggestIdeas = async (
-    input: {
-      productId?: string;
-      userGoal?: string;
-      maxSuggestions?: number;
-    },
-    toolContext?: any,
-  ) => {
+  const executeSuggestIdeas = async (input: z.infer<typeof suggestIdeasParams>, toolContext?: any) => {
     const userId =
       toolContext?.state?.get?.('authenticatedUserId') ?? toolContext?.state?.['authenticatedUserId'] ?? null;
     if (!userId) {
