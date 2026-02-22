@@ -618,14 +618,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ error: 'No prompt provided' });
         }
 
-        // Parse GenerationRecipe if provided (from IdeaBank)
-        let recipe:
-          | {
-              relationships?: Array<{ targetProductName: string; relationshipType: string; description?: string }>;
-              scenarios?: Array<{ title: string; description: string; steps?: string[] }>;
-              brandVoice?: { brandName?: string; industry?: string; values?: string[] };
+        const parseStringArray = (value: unknown): string[] => {
+          if (Array.isArray(value)) {
+            return value.filter((v): v is string => typeof v === 'string' && v.trim().length > 0);
+          }
+          if (typeof value === 'string') {
+            const trimmed = value.trim();
+            if (!trimmed) return [];
+            try {
+              const parsed = JSON.parse(trimmed);
+              if (Array.isArray(parsed)) {
+                return parsed.filter((v): v is string => typeof v === 'string' && v.trim().length > 0);
+              }
+            } catch {
+              // Fall through to single-string interpretation.
             }
-          | undefined;
+            return [trimmed];
+          }
+          return [];
+        };
+
+        // Parse GenerationRecipe if provided (from IdeaBank)
+        let recipe: Record<string, any> | undefined;
         if (recipeJson) {
           try {
             recipe = typeof recipeJson === 'string' ? JSON.parse(recipeJson) : recipeJson;
@@ -634,7 +648,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
 
-        const hasFiles = files.length > 0;
+        const parsedProductIds = parseStringArray(req.body.productIds).slice(0, 6);
 
         // Parse and validate generation mode
         const generationMode = mode || 'standard';
@@ -652,7 +666,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         logger.info(
           {
             module: 'Transform',
-            imageCount: hasFiles ? files.length : 0,
+            imageCount: files.length,
+            productIdsCount: parsedProductIds.length,
             promptPreview: prompt.substring(0, 100),
             mode: generationMode,
           },
@@ -670,9 +685,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
           mimetype: f.mimetype,
           originalname: f.originalname,
         }));
+        const recipeProductsFromIds: Array<{
+          id: string;
+          name: string;
+          category?: string;
+          description?: string;
+          imageUrls: string[];
+        }> = [];
+
+        // Fetch selected product images server-side so generation does not depend on browser fetching Cloudinary.
+        if (parsedProductIds.length > 0 && imageInputs.length < 6) {
+          for (const productId of parsedProductIds) {
+            if (imageInputs.length >= 6) break;
+            const product = await storage.getProductById(productId);
+            if (!product) continue;
+
+            recipeProductsFromIds.push({
+              id: String(product.id),
+              name: product.name ?? String(product.id),
+              ...(product.category ? { category: product.category } : {}),
+              ...(product.description ? { description: product.description } : {}),
+              imageUrls: product.cloudinaryUrl ? [product.cloudinaryUrl] : [],
+            });
+
+            if (!product.cloudinaryUrl) continue;
+
+            let productUrl: URL;
+            try {
+              productUrl = new URL(product.cloudinaryUrl);
+            } catch {
+              logger.warn({ module: 'Transform', productId }, 'Invalid product cloudinaryUrl');
+              continue;
+            }
+
+            const isAllowedHost =
+              productUrl.hostname === 'res.cloudinary.com' ||
+              productUrl.hostname.endsWith('.cloudinary.com') ||
+              productUrl.hostname === 'images.unsplash.com' ||
+              productUrl.hostname === 'nextdaysteel.co.uk' ||
+              productUrl.hostname.endsWith('.nextdaysteel.co.uk');
+
+            if (productUrl.protocol !== 'https:' || !isAllowedHost) {
+              logger.warn(
+                { module: 'Transform', productId, hostname: productUrl.hostname },
+                'Blocked product image host',
+              );
+              continue;
+            }
+
+            try {
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 12000);
+              const response = await fetch(product.cloudinaryUrl, { signal: controller.signal });
+              clearTimeout(timeoutId);
+
+              if (!response.ok) {
+                logger.warn(
+                  { module: 'Transform', productId, status: response.status },
+                  'Failed to fetch product image server-side',
+                );
+                continue;
+              }
+
+              const contentType = response.headers.get('content-type') || 'image/jpeg';
+              if (!contentType.startsWith('image/')) {
+                logger.warn({ module: 'Transform', productId, contentType }, 'Skipped non-image product URL');
+                continue;
+              }
+
+              const buffer = Buffer.from(await response.arrayBuffer());
+              if (!buffer.length) continue;
+
+              const extension = contentType.split('/')[1]?.split(';')[0] || 'jpg';
+              imageInputs.push({
+                buffer,
+                mimetype: contentType,
+                originalname: `${String(product.id)}.${extension}`,
+              });
+            } catch (fetchError) {
+              logger.warn(
+                { module: 'Transform', productId, err: fetchError },
+                'Server-side fetch failed for product image',
+              );
+            }
+          }
+        }
 
         // Parse recipe into the shape the pipeline expects
         const parsedRecipe = recipe;
+        const effectiveRecipe =
+          recipeProductsFromIds.length > 0 &&
+          (!Array.isArray(parsedRecipe?.products) || parsedRecipe.products.length === 0)
+            ? ({
+                version: '1.0',
+                products: recipeProductsFromIds,
+                relationships: Array.isArray(parsedRecipe?.relationships) ? parsedRecipe.relationships : [],
+                scenarios: Array.isArray(parsedRecipe?.scenarios) ? parsedRecipe.scenarios : [],
+                ...(parsedRecipe?.template ? { template: parsedRecipe.template } : {}),
+                ...(Array.isArray(parsedRecipe?.brandImages) ? { brandImages: parsedRecipe.brandImages } : {}),
+                ...(parsedRecipe?.brandVoice ? { brandVoice: parsedRecipe.brandVoice } : {}),
+                ...(parsedRecipe?.debugContext ? { debugContext: parsedRecipe.debugContext } : {}),
+              } as import('@shared/types/ideaBank').GenerationRecipe)
+            : (parsedRecipe as import('@shared/types/ideaBank').GenerationRecipe | undefined);
+
         // Parse templateReferenceUrls from FormData (may come as JSON string)
         let parsedTemplateReferenceUrls: string[] | undefined;
         if (templateReferenceUrls) {
@@ -696,10 +811,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId: userId!,
           ...(templateId ? { templateId } : {}),
           ...(parsedTemplateReferenceUrls ? { templateReferenceUrls: parsedTemplateReferenceUrls } : {}),
-          ...(parsedRecipe ? { recipe: parsedRecipe as import('@shared/types/ideaBank').GenerationRecipe } : {}),
+          ...(effectiveRecipe ? { recipe: effectiveRecipe } : {}),
           ...(req.body.styleReferenceIds ? { styleReferenceIds: req.body.styleReferenceIds } : {}),
           ...(req.body.aspectRatio ? { aspectRatio: req.body.aspectRatio } : {}),
-          ...(req.body.productIds ? { productIds: req.body.productIds } : {}),
+          ...(parsedProductIds.length > 0 ? { productIds: parsedProductIds } : {}),
         });
 
         success = true;
@@ -2901,8 +3016,11 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // Generate idea bank suggestions (optional auth for single-tenant mode)
   app.post('/api/idea-bank/suggest', promptInjectionGuard, async (req, res) => {
     try {
-      // Use authenticated userId or default system user for single-tenant mode
-      const userId = (req.session as any)?.userId || 'system-user';
+      // Use authenticated user ID, otherwise scope anonymous requests by session/IP
+      // so one shared "system-user" key doesn't trigger global rate-limit collisions.
+      const sessionUserId = (req.session as any)?.userId as string | undefined;
+      const anonBase = String(req.sessionID || req.ip || 'unknown').replace(/[^a-zA-Z0-9_-]/g, '_');
+      const userId = sessionUserId || `anon-${anonBase}`;
       const {
         productId,
         productIds,
@@ -2942,6 +3060,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
           ids.slice(0, 6).map(
             (
               id: string, // Limit to 6 products max
+              index: number,
             ) =>
               ideaBankService.generateSuggestions({
                 productId: id,
@@ -2952,6 +3071,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
                 maxSuggestions: 2, // Fewer per product when multiple
                 mode,
                 templateId,
+                skipRateLimitCheck: index > 0, // Count once per API request, not once per product in batch
               }),
           ),
         );

@@ -66,6 +66,8 @@ export function useAgentChat(options: UseAgentChatOptions = {}) {
       abortRef.current = new AbortController();
 
       try {
+        let sawAssistantOutput = false;
+
         // Get CSRF token for state-changing request
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };
         try {
@@ -123,12 +125,14 @@ export function useAgentChat(options: UseAgentChatOptions = {}) {
 
               switch (event.type) {
                 case 'text_delta':
+                  sawAssistantOutput = true;
                   setMessages((prev) =>
                     prev.map((m) => (m.id === assistantId ? { ...m, content: m.content + event.content } : m)),
                   );
                   break;
 
                 case 'tool_call':
+                  sawAssistantOutput = true;
                   setMessages((prev) =>
                     prev.map((m) =>
                       m.id === assistantId
@@ -142,6 +146,7 @@ export function useAgentChat(options: UseAgentChatOptions = {}) {
                   break;
 
                 case 'ui_action':
+                  sawAssistantOutput = true;
                   onUiActionRef.current?.(event.action, event.payload);
                   break;
 
@@ -156,6 +161,16 @@ export function useAgentChat(options: UseAgentChatOptions = {}) {
               // Skip malformed JSON lines
             }
           }
+        }
+
+        if (!sawAssistantOutput) {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId
+                ? { ...m, content: m.content || "I couldn't generate a response. Please try again." }
+                : m,
+            ),
+          );
         }
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === 'AbortError') {

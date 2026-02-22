@@ -631,7 +631,8 @@ describe('Studio Component - Generation Flow', () => {
       render(<Studio />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        expect(screen.getByText('Choose Your Path')).toBeInTheDocument();
+        expect(screen.getByText('Your Products')).toBeInTheDocument();
+        expect(screen.queryByText('Choose Your Path')).not.toBeInTheDocument();
       });
     });
 

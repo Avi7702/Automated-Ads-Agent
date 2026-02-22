@@ -10,7 +10,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { getProductImageUrl } from '@/lib/utils';
 import { getCsrfToken } from '@/lib/queryClient';
 import type { Product, PerformingAdTemplate, AdSceneTemplate } from '@shared/schema';
 import type { GenerationDTO } from '@shared/types/api';
@@ -90,7 +89,6 @@ export function useStudioOrchestrator() {
   const [platform, setPlatform] = useState('LinkedIn');
   const [aspectRatio, setAspectRatio] = useState('1200x627');
   const [resolution, setResolution] = useState<'1K' | '2K' | '4K'>('2K');
-  const [selectedStyleRefIds, setSelectedStyleRefIds] = useState<string[]>([]);
 
   // ── UI State ──────────────────────────────────────────
   const [collapsedSections, setCollapsedSections] = useState<CollapsedSections>(getStoredCollapsedSections);
@@ -245,14 +243,12 @@ export function useStudioOrchestrator() {
 
   const progressSections = useMemo(
     () => [
-      { id: 'upload', label: 'Upload', completed: tempUploads.length > 0 },
       { id: 'products', label: 'Products', completed: selectedProducts.length > 0 },
-      { id: 'templates', label: 'Style', completed: !!selectedTemplate },
       { id: 'prompt', label: 'Prompt', completed: !!prompt.trim() },
       { id: 'generate', label: 'Generate', completed: state === 'result' },
       { id: 'result', label: 'Result', completed: state === 'result' },
     ],
-    [tempUploads.length, selectedProducts.length, selectedTemplate, prompt, state],
+    [selectedProducts.length, prompt, state],
   );
 
   const canGenerate = useMemo(
@@ -553,14 +549,9 @@ export function useStudioOrchestrator() {
       const formData = new FormData();
 
       if (!isQuickStart) {
-        const filePromises = selectedProducts.map(async (product) => {
-          const imageUrl = getProductImageUrl(product.cloudinaryUrl);
-          const response = await fetch(imageUrl);
-          const blob = await response.blob();
-          return new File([blob], `${product.name}.jpg`, { type: blob.type });
-        });
-        const files = await Promise.all(filePromises);
-        files.forEach((file) => formData.append('images', file));
+        if (selectedProducts.length > 0) {
+          formData.append('productIds', JSON.stringify(selectedProducts.map((p) => p.id)));
+        }
         tempUploads.forEach((upload) => formData.append('images', upload.file));
       }
 
@@ -574,10 +565,6 @@ export function useStudioOrchestrator() {
 
       if (generationRecipe) {
         formData.append('recipe', JSON.stringify(generationRecipe));
-      }
-
-      if (selectedStyleRefIds.length > 0) {
-        formData.append('styleReferenceIds', JSON.stringify(selectedStyleRefIds));
       }
 
       const data = await typedPostFormData('/api/transform', formData, TransformResponse, {
@@ -626,7 +613,6 @@ export function useStudioOrchestrator() {
     selectedTemplateForMode,
     generationMode,
     generationRecipe,
-    selectedStyleRefIds,
     planContext,
   ]);
 
@@ -1133,9 +1119,6 @@ export function useStudioOrchestrator() {
     setShowKeyboardShortcuts,
     setImageScale,
     setImagePosition,
-    selectedStyleRefIds,
-    setSelectedStyleRefIds,
-
     // Handlers
     toggleProductSelection,
     toggleSection,

@@ -299,16 +299,15 @@ describe('Studio Component - Layout & Structure', () => {
       render(<Studio />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        expect(screen.getByText(/Select products, describe your vision/)).toBeInTheDocument();
+        expect(screen.getByText(/Chat with the assistant, add products and references/)).toBeInTheDocument();
       });
     });
 
-    it('renders the path selection section in idle state', async () => {
+    it('renders the agent chat panel in idle state', async () => {
       render(<Studio />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        expect(screen.getByText('Choose Your Path')).toBeInTheDocument();
-        expect(screen.getByText('Freestyle')).toBeInTheDocument();
+        expect(screen.getByTestId('mock-agent-chat')).toBeInTheDocument();
       });
     });
 
@@ -342,20 +341,19 @@ describe('Studio Component - Layout & Structure', () => {
       });
     });
 
-    it('renders the upload section', async () => {
+    it('does not render the old upload section', async () => {
       render(<Studio />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        expect(screen.getByText('Upload Images')).toBeInTheDocument();
-        expect(screen.getByTestId('mock-upload-zone')).toBeInTheDocument();
+        expect(screen.queryByText('Upload Images')).not.toBeInTheDocument();
       });
     });
 
-    it('renders the templates section', async () => {
+    it('does not render the old templates section', async () => {
       render(<Studio />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        expect(screen.getByText('Style & Template')).toBeInTheDocument();
+        expect(screen.queryByText('Style & Template')).not.toBeInTheDocument();
       });
     });
 

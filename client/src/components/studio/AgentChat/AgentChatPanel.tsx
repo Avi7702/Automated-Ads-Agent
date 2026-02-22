@@ -9,12 +9,13 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { Bot, ChevronUp, ChevronDown, Send, Square, Trash2, Mic, MicOff } from 'lucide-react';
+import { Bot, ChevronUp, ChevronDown, Send, Square, Trash2, Mic, MicOff, Paperclip, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { ChatMessage } from './ChatMessage';
 import { useAgentChat } from './useAgentChat';
 import type { StudioOrchestrator } from '@/hooks/useStudioOrchestrator';
+import type { AnalyzedUpload, ImageAnalysisResponse } from '@/types/analyzedUpload';
 
 interface AgentChatPanelProps {
   orch: StudioOrchestrator;
@@ -22,18 +23,132 @@ interface AgentChatPanelProps {
 
 export function AgentChatPanel({ orch }: AgentChatPanelProps) {
   const { toast } = useToast();
+  const maxImageInputs = 6;
   const [isOpen, setIsOpen] = useState(() => {
     try {
-      return localStorage.getItem('agent-chat-open') === 'true';
+      const stored = localStorage.getItem('agent-chat-open');
+      return stored ? stored === 'true' : true;
     } catch {
-      return false;
+      return true;
     }
   });
   const [input, setInput] = useState('');
   const [isListening, setIsListening] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const remainingUploadSlots = Math.max(0, maxImageInputs - orch.selectedProducts.length - orch.tempUploads.length);
+
+  const analyzeUpload = useCallback(async (upload: AnalyzedUpload): Promise<AnalyzedUpload> => {
+    try {
+      const formData = new FormData();
+      formData.append('image', upload.file);
+
+      const response = await fetch('/api/analyze-image', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Analysis failed');
+      }
+
+      const data: ImageAnalysisResponse = await response.json();
+
+      return {
+        ...upload,
+        description: data.description,
+        confidence: data.confidence,
+        status: 'confirmed',
+      };
+    } catch {
+      return {
+        ...upload,
+        description: 'Unable to analyze image',
+        confidence: 0,
+        status: 'confirmed',
+      };
+    }
+  }, []);
+
+  const handleUploadFiles = useCallback(
+    async (files: File[]) => {
+      if (isUploading) return;
+      const imageFiles = files.filter((file) => file.type.startsWith('image/'));
+
+      if (imageFiles.length === 0) {
+        toast({
+          title: 'No images found',
+          description: 'Please choose image files to upload.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (remainingUploadSlots <= 0) {
+        toast({
+          title: 'Image limit reached',
+          description: `You can use up to ${maxImageInputs} total images (products + uploads).`,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const filesToAdd = imageFiles.slice(0, remainingUploadSlots);
+      if (filesToAdd.length < imageFiles.length) {
+        toast({
+          title: 'Some files skipped',
+          description: `Added ${filesToAdd.length} image(s). ${imageFiles.length - filesToAdd.length} skipped due to limit.`,
+        });
+      }
+
+      const newUploads: AnalyzedUpload[] = filesToAdd.map((file) => ({
+        id: `upload-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        file,
+        previewUrl: URL.createObjectURL(file),
+        description: null,
+        confidence: 0,
+        status: 'analyzing',
+        selected: true,
+      }));
+
+      setIsUploading(true);
+      orch.setTempUploads((prev) => [...prev, ...newUploads]);
+      try {
+        const analyzedUploads = await Promise.all(newUploads.map((upload) => analyzeUpload(upload)));
+        const analyzedById = new Map(analyzedUploads.map((upload) => [upload.id, upload]));
+
+        orch.setTempUploads((prev) => prev.map((upload) => analyzedById.get(upload.id) ?? upload));
+
+        toast({
+          title: 'Images uploaded',
+          description: `${filesToAdd.length} image(s) added to your generation context.`,
+        });
+      } catch {
+        toast({
+          title: 'Upload failed',
+          description: 'Could not process the uploaded images.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsUploading(false);
+      }
+    },
+    [analyzeUpload, isUploading, maxImageInputs, orch, remainingUploadSlots, toast],
+  );
+
+  const handleUploadInputChange = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const files = event.target.files ? Array.from(event.target.files) : [];
+      event.target.value = '';
+      if (files.length === 0) return;
+      await handleUploadFiles(files);
+    },
+    [handleUploadFiles],
+  );
 
   // Handle UI actions from the agent
   const handleUiAction = useCallback(
@@ -240,6 +355,12 @@ export function AgentChatPanel({ orch }: AgentChatPanelProps) {
             <div className="border border-t-0 border-border rounded-b-xl bg-card/30 backdrop-blur-sm">
               {/* Messages */}
               <div className="max-h-[350px] overflow-y-auto p-4 space-y-3 scrollbar-hide">
+                {orch.tempUploads.length > 0 && (
+                  <div className="text-xs rounded-lg border border-border bg-muted/40 px-3 py-2 text-muted-foreground">
+                    {orch.tempUploads.length} uploaded reference image
+                    {orch.tempUploads.length !== 1 ? 's' : ''} ready for generation.
+                  </div>
+                )}
                 {messages.length === 0 && (
                   <p className="text-center text-xs text-muted-foreground py-6">
                     Ask me to generate ads, find products, write copy, or set up your campaign.
@@ -262,6 +383,31 @@ export function AgentChatPanel({ orch }: AgentChatPanelProps) {
 
               {/* Input */}
               <form onSubmit={handleSubmit} className="flex items-center gap-2 p-3 border-t border-border">
+                <input
+                  ref={uploadInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleUploadInputChange}
+                  className="hidden"
+                />
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => uploadInputRef.current?.click()}
+                  disabled={isStreaming || isUploading || remainingUploadSlots <= 0}
+                  className="h-8 w-8 p-0"
+                  title={
+                    remainingUploadSlots > 0
+                      ? `Upload images (${remainingUploadSlots} slot${remainingUploadSlots === 1 ? '' : 's'} left)`
+                      : 'Image upload limit reached'
+                  }
+                >
+                  {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+                </Button>
+
                 {hasSpeech && (
                   <Button
                     type="button"
@@ -279,7 +425,7 @@ export function AgentChatPanel({ orch }: AgentChatPanelProps) {
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder={isListening ? 'Listening...' : 'Type a message...'}
+                  placeholder={isListening ? 'Listening...' : isUploading ? 'Uploading images...' : 'Type a message...'}
                   disabled={isStreaming}
                   className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                 />
