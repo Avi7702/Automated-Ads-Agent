@@ -170,11 +170,16 @@ export function useBulkSetPriorities() {
 /**
  * Check if the user has completed onboarding.
  */
-export function useOnboardingStatus() {
+export function useOnboardingStatus(options?: { enabled?: boolean }) {
   return useQuery<OnboardingStatus>({
     queryKey: ['intelligence', 'onboarding-status'],
+    enabled: options?.enabled ?? true,
     queryFn: async () => {
       const res = await fetch('/api/intelligence/onboarding-status', { credentials: 'include' });
+      if (res.status === 401) {
+        // Logged-out state or expired session: don't surface noisy errors in the UI.
+        return { onboardingComplete: true, hasBusinessData: false, hasPriorities: false };
+      }
       if (!res.ok) throw new Error('Failed to fetch onboarding status');
       return res.json();
     },
