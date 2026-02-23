@@ -314,8 +314,20 @@ export async function executePlan(
   await storage.updateAgentPlan(planId, { status: 'approved' });
 
   // Fire-and-forget: run steps asynchronously (no await)
-  runExecutionSteps(storage, execution.id, planId, userId).catch((err) => {
+  runExecutionSteps(storage, execution.id, planId, userId).catch(async (err) => {
     logger.error({ module: 'AgentOrchestrator', err, executionId: execution.id }, 'Execution failed');
+    try {
+      await storage.updateAgentExecution(execution.id, {
+        status: 'failed',
+        errorMessage: err instanceof Error ? err.message : 'Unknown execution error',
+        completedAt: new Date(),
+      });
+    } catch (updateErr) {
+      logger.error(
+        { module: 'AgentOrchestrator', updateErr, executionId: execution.id },
+        'Failed to mark execution as failed',
+      );
+    }
   });
 
   return { executionId: execution.id, status: 'queued', steps };
