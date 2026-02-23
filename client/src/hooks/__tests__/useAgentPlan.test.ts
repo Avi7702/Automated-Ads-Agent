@@ -8,7 +8,7 @@
  * - Reset behavior
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 
 // Mock queryClient before imports — use vi.hoisted to avoid TDZ errors
 const { mockApiRequest } = vi.hoisted(() => {

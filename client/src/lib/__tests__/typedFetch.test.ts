@@ -6,7 +6,7 @@
  * - typedPostFormData
  * - validateWithFallback (via public API)
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { z } from 'zod';
 
 // Mock the queryClient module before importing typedFetch

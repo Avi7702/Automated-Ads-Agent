@@ -57,6 +57,12 @@ const mockProduct = {
   createdAt: new Date().toISOString(),
 };
 
+type TempUploadStub = {
+  id: string;
+  url: string;
+  status: 'analyzing' | 'confirmed';
+};
+
 // This matches the hook's processResponse path for structured response:
 // needs `suggestions` array and `analysisStatus` object
 const mockSuggestResponse = {
@@ -284,7 +290,7 @@ describe('useIdeaBankFetch — analyzingCount', () => {
     const { result } = renderHook(() =>
       useIdeaBankFetch({
         selectedProducts: [],
-        tempUploads: uploadsWithAnalyzing as any,
+        tempUploads: uploadsWithAnalyzing as TempUploadStub[],
         mode: 'freestyle',
       }),
     );
@@ -313,7 +319,7 @@ describe('useIdeaBankFetch — analyzingCount', () => {
     const { result } = renderHook(() =>
       useIdeaBankFetch({
         selectedProducts: [],
-        tempUploads: confirmedUploads as any,
+        tempUploads: confirmedUploads as TempUploadStub[],
         mode: 'freestyle',
       }),
     );

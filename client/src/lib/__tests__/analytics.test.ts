@@ -6,7 +6,7 @@
  * the import error and posthogInstance stays null — track/identify/reset
  * all become safe no-ops via optional chaining (posthogInstance?.method).
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 // Suppress unresolved import error from posthog-js dynamic import
 // by mocking it before the test module loads
