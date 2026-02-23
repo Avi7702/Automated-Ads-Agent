@@ -627,7 +627,7 @@ export default function LearnFromWinners({ embedded = false, selectedId: _select
         setCurrentUploadId(null);
       }
     }
-  }, [uploadStatusData, queryClient, toast]);
+  }, [uploadStatusData, queryClient]);
 
   // Filter patterns - patterns is guaranteed to be an array
   const filteredPatterns = patterns.filter((p) => {

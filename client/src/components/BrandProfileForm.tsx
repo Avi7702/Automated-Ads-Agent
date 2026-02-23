@@ -1,11 +1,9 @@
 // @ts-nocheck
 import { useState, useEffect } from 'react';
-import { Building2, Briefcase, Heart, Palette, MessageSquare, Users, Tag, Loader2, Plus, X } from 'lucide-react';
+import { Building2, Heart, Palette, MessageSquare, Users, Tag, Loader2, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { toast } from 'sonner';

@@ -18,7 +18,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Calendar,
-  Clock,
   Image as ImageIcon,
   Send,
   Globe,
@@ -247,9 +246,9 @@ export function SchedulePostDialog({ open, onOpenChange, defaultDate, prefill }:
         description: `Scheduled for ${format(new Date(scheduledFor), 'MMM d, yyyy')} at ${format(new Date(scheduledFor), 'h:mm a')}.`,
       });
       onOpenChange(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error('Failed to schedule', {
-        description: err.message || 'Something went wrong. Please try again.',
+        description: err instanceof Error ? err.message : 'Something went wrong. Please try again.',
       });
     }
   };

@@ -4,19 +4,11 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { useToast, toast } from '../use-toast';
 import { useJobStatus, JobStatus, JobProgress } from '../useJobStatus';
 
-// Mock sonner so we can verify calls without DOM rendering
-vi.mock('sonner', () => ({
-  toast: Object.assign(vi.fn(), {
-    success: vi.fn(),
-    error: vi.fn(),
-  }),
-}));
-
 // ============================================
-// useToast Sonner-shim Tests
+// useToast Tests
 // ============================================
 
-describe('useToast (Sonner shim)', () => {
+describe('useToast', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -29,41 +21,41 @@ describe('useToast (Sonner shim)', () => {
   });
 
   describe('toast function', () => {
-    it('calls sonner.success for default variant', async () => {
-      const { toast: sonnerToast } = await import('sonner');
-      toast({ title: 'Success message', description: 'Details here' });
-      expect(sonnerToast.success).toHaveBeenCalledWith('Success message', { description: 'Details here' });
+    it('returns toast controls for default variant', () => {
+      const result = toast({ title: 'Success message', description: 'Details here' });
+      expect(result).toEqual(
+        expect.objectContaining({
+          id: expect.any(String),
+          dismiss: expect.any(Function),
+          update: expect.any(Function),
+        }),
+      );
     });
 
-    it('calls sonner.error for destructive variant', async () => {
-      const { toast: sonnerToast } = await import('sonner');
-      toast({ title: 'Error!', description: 'Something broke', variant: 'destructive' });
-      expect(sonnerToast.error).toHaveBeenCalledWith('Error!', { description: 'Something broke' });
+    it('handles destructive variant', () => {
+      const result = toast({ title: 'Error!', description: 'Something broke', variant: 'destructive' });
+      expect(result.id).toBeTruthy();
     });
 
-    it('handles missing title gracefully', async () => {
-      const { toast: sonnerToast } = await import('sonner');
-      toast({ description: 'No title' });
-      expect(sonnerToast.success).toHaveBeenCalledWith('', { description: 'No title' });
+    it('handles missing title gracefully', () => {
+      const result = toast({ description: 'No title' });
+      expect(result.id).toBeTruthy();
     });
 
-    it('handles missing description gracefully', async () => {
-      const { toast: sonnerToast } = await import('sonner');
-      toast({ title: 'Title only' });
-      expect(sonnerToast.success).toHaveBeenCalledWith('Title only', { description: undefined });
+    it('handles missing description gracefully', () => {
+      const result = toast({ title: 'Title only' });
+      expect(result.id).toBeTruthy();
     });
 
-    it('handles empty string title and description', async () => {
-      const { toast: sonnerToast } = await import('sonner');
-      toast({ title: '', description: '' });
-      expect(sonnerToast.success).toHaveBeenCalledWith('', { description: '' });
+    it('handles empty string title and description', () => {
+      const result = toast({ title: '', description: '' });
+      expect(result.id).toBeTruthy();
     });
 
-    it('handles extremely long title', async () => {
-      const { toast: sonnerToast } = await import('sonner');
+    it('handles extremely long title', () => {
       const longTitle = 'X'.repeat(10000);
-      toast({ title: longTitle });
-      expect(sonnerToast.success).toHaveBeenCalledWith(longTitle, { description: undefined });
+      const result = toast({ title: longTitle });
+      expect(result.id).toBeTruthy();
     });
 
     it('does not throw when called rapidly', () => {

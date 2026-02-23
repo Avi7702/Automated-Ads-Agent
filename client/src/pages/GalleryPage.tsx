@@ -104,9 +104,9 @@ export default function GalleryPage() {
 
       queryClient.invalidateQueries({ queryKey: ['generations'] });
       setSelectedIds(new Set());
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error('Delete failed', {
-        description: error.message || 'Failed to delete generations',
+        description: error instanceof Error ? error.message : 'Failed to delete generations',
       });
     } finally {
       setIsDeleting(false);

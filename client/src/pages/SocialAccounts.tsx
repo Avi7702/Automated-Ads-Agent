@@ -122,7 +122,6 @@ export default function SocialAccounts({ embedded = false }: SocialAccountsProps
       globalThis.history.replaceState(null, '', cleanUrl);
     }
     void fetchAccounts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Handle refresh all button

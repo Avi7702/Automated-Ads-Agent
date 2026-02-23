@@ -183,9 +183,9 @@ export default function ApiKeySettings({ embedded = false }: ApiKeySettingsProps
       } else {
         throw new Error(data.error || 'Failed to save n8n configuration');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error('Save Failed', {
-        description: error.message || 'Failed to save n8n configuration',
+        description: error instanceof Error ? error.message : 'Failed to save n8n configuration',
       });
     } finally {
       setSavingN8n(false);

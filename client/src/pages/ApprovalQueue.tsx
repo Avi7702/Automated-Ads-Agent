@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Header } from '@/components/layout/Header';

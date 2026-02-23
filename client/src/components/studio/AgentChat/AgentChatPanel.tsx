@@ -158,7 +158,7 @@ export function AgentChatPanel({
         setIsUploading(false);
       }
     },
-    [analyzeUpload, isUploading, maxImageInputs, orch, remainingUploadSlots, toast],
+    [analyzeUpload, isUploading, maxImageInputs, orch, remainingUploadSlots],
   );
 
   const handleUploadInputChange = useCallback(
@@ -250,7 +250,7 @@ export function AgentChatPanel({
         // UI action dispatch should never crash the chat panel
       }
     },
-    [orch, toast],
+    [orch],
   );
 
   const { messages, isStreaming, error, sendMessage, stopStreaming, clearMessages } = useAgentChat({

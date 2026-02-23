@@ -186,7 +186,10 @@ export default function TemplateAdmin({ embedded }: TemplateAdminProps = {}) {
       tags: template.tags || [],
       platformHints: template.platformHints || [],
       aspectRatioHints: template.aspectRatioHints || [],
-      placementHints: (template.placementHints as any) || { position: 'center', scale: 'medium' },
+      placementHints: {
+        position: (template.placementHints as { position?: string; scale?: string } | undefined)?.position ?? 'center',
+        scale: (template.placementHints as { position?: string; scale?: string } | undefined)?.scale ?? 'medium',
+      },
       lightingStyle: template.lightingStyle || 'natural',
       intent: template.intent || 'showcase',
       environment: template.environment || 'indoor',

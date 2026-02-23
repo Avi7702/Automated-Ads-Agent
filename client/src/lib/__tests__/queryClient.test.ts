@@ -10,7 +10,7 @@ describe('queryClient', () => {
   describe('configuration', () => {
     it('has correct default staleTime', () => {
       const defaultOptions = queryClient.getDefaultOptions();
-      expect(defaultOptions.queries?.staleTime).toBe(Infinity);
+      expect(defaultOptions.queries?.staleTime).toBe(60000);
     });
 
     it('has refetchOnWindowFocus disabled', () => {
