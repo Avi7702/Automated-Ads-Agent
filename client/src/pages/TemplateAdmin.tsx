@@ -4,7 +4,7 @@ import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { ArrowLeft, Plus, Trash2, Edit2, RefreshCw, Image as ImageIcon, X, Check, AlertTriangle } from 'lucide-react';
 import type { AdSceneTemplate } from '@shared/schema';
 import { Header } from '@/components/layout/Header';
@@ -66,7 +66,6 @@ interface TemplateAdminProps {
 
 export default function TemplateAdmin({ embedded }: TemplateAdminProps = {}) {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<TemplateFormData>(emptyFormData);
@@ -107,16 +106,13 @@ export default function TemplateAdmin({ embedded }: TemplateAdminProps = {}) {
       queryClient.invalidateQueries({ queryKey: ['admin-templates'] });
       setShowForm(false);
       setFormData(emptyFormData);
-      toast({
-        title: 'Template created',
+      toast.success('Template created', {
         description: 'The template has been created successfully.',
       });
     },
     onError: (error: Error) => {
-      toast({
-        title: 'Failed to create template',
+      toast.error('Failed to create template', {
         description: error.message,
-        variant: 'destructive',
       });
     },
   });
@@ -141,16 +137,13 @@ export default function TemplateAdmin({ embedded }: TemplateAdminProps = {}) {
       setShowForm(false);
       setEditingId(null);
       setFormData(emptyFormData);
-      toast({
-        title: 'Template updated',
+      toast.success('Template updated', {
         description: 'The template has been updated successfully.',
       });
     },
     onError: (error: Error) => {
-      toast({
-        title: 'Failed to update template',
+      toast.error('Failed to update template', {
         description: error.message,
-        variant: 'destructive',
       });
     },
   });
@@ -171,16 +164,13 @@ export default function TemplateAdmin({ embedded }: TemplateAdminProps = {}) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-templates'] });
       setDeleteConfirmId(null);
-      toast({
-        title: 'Template deleted',
+      toast.success('Template deleted', {
         description: 'The template has been deleted successfully.',
       });
     },
     onError: (error: Error) => {
-      toast({
-        title: 'Failed to delete template',
+      toast.error('Failed to delete template', {
         description: error.message,
-        variant: 'destructive',
       });
       setDeleteConfirmId(null);
     },

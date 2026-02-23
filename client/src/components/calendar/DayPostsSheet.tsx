@@ -27,7 +27,7 @@ import {
 import { PostStatusBadge } from './PostStatusBadge';
 import { useCancelPost, useRetryPost } from '@/hooks/useScheduledPosts';
 import type { ScheduledPost } from '@/hooks/useScheduledPosts';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 /* ------------------------------------------------------------------ */
 /*  Platform colors for gradient placeholders                          */
@@ -79,7 +79,6 @@ function getDayLabel(day: Date): string {
 export function DayPostsSheet({ open, onOpenChange, day, posts }: DayPostsSheetProps) {
   const cancelPost = useCancelPost();
   const retryPost = useRetryPost();
-  const { toast } = useToast();
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
 
@@ -88,12 +87,12 @@ export function DayPostsSheet({ open, onOpenChange, day, posts }: DayPostsSheetP
       setCancellingId(postId);
       try {
         await cancelPost.mutateAsync(postId);
-        toast({ title: 'Post cancelled', description: 'The scheduled post has been cancelled.' });
+        toast.success('Post cancelled', {
+          description: 'The scheduled post has been cancelled.',
+        });
       } catch (err: any) {
-        toast({
-          title: 'Failed to cancel',
+        toast.error('Failed to cancel', {
           description: err.message || 'Something went wrong. Please try again.',
-          variant: 'destructive',
         });
       } finally {
         setCancellingId(null);
@@ -107,12 +106,12 @@ export function DayPostsSheet({ open, onOpenChange, day, posts }: DayPostsSheetP
       setRetryingId(postId);
       try {
         await retryPost.mutateAsync({ postId });
-        toast({ title: 'Post rescheduled for retry', description: 'The post has been queued for retry.' });
+        toast.success('Post rescheduled for retry', {
+          description: 'The post has been queued for retry.',
+        });
       } catch (err: any) {
-        toast({
-          title: 'Failed to retry',
+        toast.error('Failed to retry', {
           description: err.message || 'Something went wrong. Please try again.',
-          variant: 'destructive',
         });
       } finally {
         setRetryingId(null);

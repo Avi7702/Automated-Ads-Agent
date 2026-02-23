@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import {
   Loader2,
   ChevronDown,
@@ -134,7 +134,6 @@ const categoryColors: Record<string, string> = {
  * - Mark as posted functionality
  */
 export default function ContentPlanner({ embedded = false }: ContentPlannerProps) {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
@@ -192,16 +191,13 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
       refetchPosts();
       queryClient.invalidateQueries({ queryKey: ['/api/content-planner/balance'] });
       queryClient.invalidateQueries({ queryKey: ['/api/content-planner/suggestion'] });
-      toast({
-        title: 'Post removed',
+      toast.success('Post removed', {
         description: 'Your weekly balance has been updated.',
       });
     },
     onError: () => {
-      toast({
-        title: 'Error',
+      toast.error('Error', {
         description: 'Failed to remove post. Please try again.',
-        variant: 'destructive',
       });
     },
   });
@@ -227,17 +223,14 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
       queryClient.invalidateQueries({ queryKey: ['/api/content-planner/balance'] });
       queryClient.invalidateQueries({ queryKey: ['/api/content-planner/suggestion'] });
       refetchPosts();
-      toast({
-        title: 'Post recorded',
+      toast.success('Post recorded', {
         description: 'Your weekly balance has been updated.',
       });
       setMarkAsPostedCategory(null);
     },
     onError: () => {
-      toast({
-        title: 'Error',
+      toast.error('Error', {
         description: 'Failed to record post. Please try again.',
-        variant: 'destructive',
       });
     },
   });
@@ -250,8 +243,7 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast({
-      title: 'Copied',
+    toast.success('Copied', {
       description: 'Hook formula copied to clipboard.',
     });
   };

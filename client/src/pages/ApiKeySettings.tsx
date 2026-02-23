@@ -9,7 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Header } from '@/components/layout/Header';
 import { ApiKeyCard, type ApiKeyInfo } from '@/components/settings/ApiKeyCard';
 import { ApiKeyForm } from '@/components/settings/ApiKeyForm';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { apiRequest } from '@/lib/queryClient';
 import { SUPPORTED_SERVICES } from '@/lib/apiKeyConfig';
 
@@ -29,7 +29,6 @@ interface ApiKeySettingsProps {
 
 export default function ApiKeySettings({ embedded = false }: ApiKeySettingsProps) {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   // Form state
   const [editingService, setEditingService] = useState<string | null>(null);
@@ -78,8 +77,7 @@ export default function ApiKeySettings({ embedded = false }: ApiKeySettingsProps
       setFormSuccess(true);
       setFormError(null);
       queryClient.invalidateQueries({ queryKey: ['/api/settings/api-keys'] });
-      toast({
-        title: 'API Key Saved',
+      toast.success('API Key Saved', {
         description: `Your ${variables.service} API key has been saved and validated.`,
       });
       // Close dialog after a brief delay to show success
@@ -105,24 +103,19 @@ export default function ApiKeySettings({ embedded = false }: ApiKeySettingsProps
       setValidatingService(null);
       queryClient.invalidateQueries({ queryKey: ['/api/settings/api-keys'] });
       if (data.isValid) {
-        toast({
-          title: 'Key Valid',
+        toast.success('Key Valid', {
           description: `Your ${service} API key is working correctly.`,
         });
       } else {
-        toast({
-          title: 'Key Invalid',
+        toast.error('Key Invalid', {
           description: data.error || `Your ${service} API key is no longer valid.`,
-          variant: 'destructive',
         });
       }
     },
     onError: (error: Error, _service) => {
       setValidatingService(null);
-      toast({
-        title: 'Validation Failed',
+      toast.error('Validation Failed', {
         description: error.message,
-        variant: 'destructive',
       });
     },
   });
@@ -137,17 +130,14 @@ export default function ApiKeySettings({ embedded = false }: ApiKeySettingsProps
     onSuccess: (_data, service) => {
       setDeletingService(null);
       queryClient.invalidateQueries({ queryKey: ['/api/settings/api-keys'] });
-      toast({
-        title: 'Key Removed',
+      toast.success('Key Removed', {
         description: `Your custom ${service} API key has been removed.`,
       });
     },
     onError: (error: Error, _service) => {
       setDeletingService(null);
-      toast({
-        title: 'Deletion Failed',
+      toast.error('Deletion Failed', {
         description: error.message,
-        variant: 'destructive',
       });
     },
   });
@@ -173,10 +163,8 @@ export default function ApiKeySettings({ embedded = false }: ApiKeySettingsProps
   // Handle n8n configuration save (Phase 8.1)
   const saveN8nConfig = async () => {
     if (!n8nConfig.baseUrl) {
-      toast({
-        title: 'Validation Error',
+      toast.error('Validation Error', {
         description: 'n8n instance URL is required',
-        variant: 'destructive',
       });
       return;
     }
@@ -187,8 +175,7 @@ export default function ApiKeySettings({ embedded = false }: ApiKeySettingsProps
       const data = await response.json();
 
       if (data.success) {
-        toast({
-          title: 'n8n Configuration Saved',
+        toast.success('n8n Configuration Saved', {
           description: 'Your n8n configuration has been saved securely',
         });
         queryClient.invalidateQueries({ queryKey: ['/api/settings/n8n'] });
@@ -197,10 +184,8 @@ export default function ApiKeySettings({ embedded = false }: ApiKeySettingsProps
         throw new Error(data.error || 'Failed to save n8n configuration');
       }
     } catch (error: any) {
-      toast({
-        title: 'Save Failed',
+      toast.error('Save Failed', {
         description: error.message || 'Failed to save n8n configuration',
-        variant: 'destructive',
       });
     } finally {
       setSavingN8n(false);

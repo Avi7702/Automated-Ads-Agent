@@ -14,7 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Bot, ChevronUp, ChevronDown, Send, Square, Trash2, Mic, MicOff, Paperclip, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { ChatMessage } from './ChatMessage';
 import { useAgentChat, type AgentChatMessageContext } from './useAgentChat';
 import type { StudioOrchestrator } from '@/hooks/useStudioOrchestrator';
@@ -46,7 +46,6 @@ export function AgentChatPanel({
   externalMessage = null,
   onExternalMessageConsumed,
 }: AgentChatPanelProps) {
-  const { toast } = useToast();
   const maxImageInputs = 6;
   const isCollapseEnabled = showCollapseToggle ?? !forceExpanded;
 
@@ -110,27 +109,22 @@ export function AgentChatPanel({
       const imageFiles = files.filter((file) => file.type.startsWith('image/'));
 
       if (imageFiles.length === 0) {
-        toast({
-          title: 'No images found',
+        toast.error('No images found', {
           description: 'Please choose image files to upload.',
-          variant: 'destructive',
         });
         return;
       }
 
       if (remainingUploadSlots <= 0) {
-        toast({
-          title: 'Image limit reached',
+        toast.error('Image limit reached', {
           description: `You can use up to ${maxImageInputs} total images (products + uploads).`,
-          variant: 'destructive',
         });
         return;
       }
 
       const filesToAdd = imageFiles.slice(0, remainingUploadSlots);
       if (filesToAdd.length < imageFiles.length) {
-        toast({
-          title: 'Some files skipped',
+        toast.success('Some files skipped', {
           description: `Added ${filesToAdd.length} image(s). ${imageFiles.length - filesToAdd.length} skipped due to limit.`,
         });
       }
@@ -153,15 +147,12 @@ export function AgentChatPanel({
 
         orch.setTempUploads((prev) => prev.map((upload) => analyzedById.get(upload.id) ?? upload));
 
-        toast({
-          title: 'Images uploaded',
+        toast.success('Images uploaded', {
           description: `${filesToAdd.length} image(s) added to your generation context.`,
         });
       } catch {
-        toast({
-          title: 'Upload failed',
+        toast.error('Upload failed', {
           description: 'Could not process the uploaded images.',
-          variant: 'destructive',
         });
       } finally {
         setIsUploading(false);
@@ -188,8 +179,7 @@ export function AgentChatPanel({
             const products = payload.products as Record<string, unknown>[];
             if (products && orch.setSelectedProducts) {
               orch.setSelectedProducts(products);
-              toast({
-                title: 'Products selected',
+              toast.success('Products selected', {
                 description: `${products.length} product(s) selected by the assistant.`,
               });
             }
@@ -199,7 +189,9 @@ export function AgentChatPanel({
             const prompt = payload.prompt as string;
             if (prompt && orch.setPrompt) {
               orch.setPrompt(prompt);
-              toast({ title: 'Prompt updated', description: 'The assistant set your generation prompt.' });
+              toast.success('Prompt updated', {
+                description: 'The assistant set your generation prompt.',
+              });
             }
             break;
           }
@@ -207,7 +199,9 @@ export function AgentChatPanel({
             const platform = payload.platform as string;
             if (platform && orch.setPlatform) {
               orch.setPlatform(platform);
-              toast({ title: 'Platform set', description: `Target platform: ${platform}` });
+              toast.success('Platform set', {
+                description: `Target platform: ${platform}`,
+              });
             }
             break;
           }
@@ -230,7 +224,9 @@ export function AgentChatPanel({
             if (imageUrl && orch.setGeneratedImage) {
               orch.setGeneratedImage(imageUrl);
               if (orch.setState) orch.setState('result');
-              toast({ title: 'Image generated!', description: 'Check the result in the canvas.' });
+              toast.success('Image generated!', {
+                description: 'Check the result in the canvas.',
+              });
             }
             break;
           }
@@ -243,8 +239,7 @@ export function AgentChatPanel({
               } else if (orch.setGeneratedCopy) {
                 orch.setGeneratedCopy(firstCopy?.caption ?? firstCopy?.bodyText ?? '');
               }
-              toast({
-                title: 'Ad copy generated',
+              toast.success('Ad copy generated', {
                 description: `${copies.length} variation(s) ready in the Inspector.`,
               });
             }
