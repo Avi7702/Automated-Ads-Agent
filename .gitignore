@@ -63,3 +63,6 @@ docs/verification-group-*.md
 docs/generated-posts/
 scripts/nds-image-gen.py
 docs/NDS-BRAND-CHEATSHEET.md
+
+# Claude Code temp working directories
+tmpclaude-*

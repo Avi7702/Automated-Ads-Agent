@@ -25,7 +25,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSaveBusinessIntelligence, useBulkSetPriorities } from '@/hooks/useBusinessIntelligence';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import {
   Sparkles,
   ArrowRight,
@@ -102,7 +102,6 @@ interface BusinessOnboardingProps {
 }
 
 export function BusinessOnboarding({ onComplete, onSkip }: BusinessOnboardingProps) {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   // Mutations
@@ -231,18 +230,13 @@ export function BusinessOnboarding({ onComplete, onSkip }: BusinessOnboardingPro
 
       queryClient.invalidateQueries({ queryKey: ['intelligence'] });
 
-      toast({
-        title: 'Setup complete',
+      toast.success('Setup complete', {
         description: 'Your business profile has been saved. The AI will use this to create better content.',
       });
 
       onComplete();
     } catch (err) {
-      toast({
-        title: 'Failed to save',
-        description: err instanceof Error ? err.message : 'Something went wrong',
-        variant: 'destructive',
-      });
+      toast.error('Failed to save', { description: err instanceof Error ? err.message : 'Something went wrong' });
     } finally {
       setIsSaving(false);
     }

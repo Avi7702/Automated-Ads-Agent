@@ -76,10 +76,12 @@ vi.mock('@/components/ProductRelationships', () => ({
   ),
 }));
 
-// Mock toast
-vi.mock('@/hooks/use-toast', () => ({
-  useToast: () => ({
-    toast: vi.fn(),
+// Mock sonner toast
+vi.mock('sonner', () => ({
+  toast: Object.assign(vi.fn(), {
+    success: vi.fn(),
+    error: vi.fn(),
+    promise: vi.fn(),
   }),
 }));
 

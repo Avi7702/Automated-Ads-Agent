@@ -55,8 +55,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Header } from '@/components/layout/Header';
-import { useToast } from '@/hooks/use-toast';
-
+import { toast } from 'sonner';
 // Types
 import type { LearnedAdPattern } from '@shared/schema';
 
@@ -514,7 +513,6 @@ function PatternSkeleton() {
 
 export default function LearnFromWinners({ embedded = false, selectedId: _selectedId }: LearnFromWinnersProps) {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -580,17 +578,10 @@ export default function LearnFromWinners({ embedded = false, selectedId: _select
     },
     onSuccess: (data) => {
       setCurrentUploadId(data.uploadId);
-      toast({
-        title: 'Upload accepted',
-        description: 'Processing your ad pattern...',
-      });
+      toast.success('Upload accepted', { description: 'Processing your ad pattern...' });
     },
     onError: (error: Error) => {
-      toast({
-        title: 'Upload failed',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast.error('Upload failed', { description: error.message });
     },
   });
 
@@ -606,17 +597,10 @@ export default function LearnFromWinners({ embedded = false, selectedId: _select
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['learned-patterns'] });
-      toast({
-        title: 'Pattern deleted',
-        description: 'The pattern has been removed from your library.',
-      });
+      toast.success('Pattern deleted', { description: 'The pattern has been removed from your library.' });
     },
     onError: () => {
-      toast({
-        title: 'Delete failed',
-        description: 'Could not delete the pattern. Please try again.',
-        variant: 'destructive',
-      });
+      toast.error('Delete failed', { description: 'Could not delete the pattern. Please try again.' });
     },
   });
 
@@ -625,10 +609,10 @@ export default function LearnFromWinners({ embedded = false, selectedId: _select
     if (uploadStatusData?.isComplete) {
       if (uploadStatusData.status === 'completed') {
         queryClient.invalidateQueries({ queryKey: ['learned-patterns'] });
-        toast({ title: 'Pattern extracted successfully' });
+        toast.success('Pattern extracted successfully');
         setCurrentUploadId(null);
       } else if (uploadStatusData.status === 'failed') {
-        toast({ title: 'Extraction failed', description: uploadStatusData.error, variant: 'destructive' });
+        toast.error('Extraction failed', { description: uploadStatusData.error });
         setCurrentUploadId(null);
       }
     }

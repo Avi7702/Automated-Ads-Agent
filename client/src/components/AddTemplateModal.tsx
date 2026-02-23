@@ -13,8 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
-
+import { toast } from 'sonner';
 // Options
 const CATEGORIES = ['product_showcase', 'installation', 'worksite', 'professional', 'educational'];
 const ENGAGEMENT_TIERS = ['top-5', 'top-10', 'top-25', 'unranked'];
@@ -32,7 +31,6 @@ interface AddTemplateModalProps {
 
 export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form state
@@ -171,31 +169,20 @@ export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
       return response.json();
     },
     onSuccess: () => {
-      toast({
-        title: 'Template created',
-        description: 'Your template has been added to the library.',
-      });
+      toast.success('Template created', { description: 'Your template has been added to the library.' });
       queryClient.invalidateQueries({ queryKey: ['performing-ad-templates'] });
       resetForm();
       onClose();
     },
     onError: (error: Error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
+      toast.error('Error', { description: error.message });
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) {
-      toast({
-        title: 'Name required',
-        description: 'Please enter a template name.',
-        variant: 'destructive',
-      });
+      toast.error('Name required', { description: 'Please enter a template name.' });
       return;
     }
     createMutation.mutate();

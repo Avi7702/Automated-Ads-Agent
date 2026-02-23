@@ -16,8 +16,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { useToast } from '@/hooks/use-toast';
-
+import { toast } from 'sonner';
 interface AddProductModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -27,8 +26,6 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
-
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [name, setName] = useState('');
@@ -163,20 +160,13 @@ export function AddProductModal({ isOpen, onClose }: AddProductModalProps) {
       // Invalidate products query to refresh the list
       queryClient.invalidateQueries({ queryKey: ['products'] });
 
-      toast({
-        title: 'Product created',
-        description: `${product.name} has been added to your library.`,
-      });
+      toast.success('Product created', { description: `${product.name} has been added to your library.` });
 
       handleClose();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to upload product';
       setUploadError(message);
-      toast({
-        title: 'Upload failed',
-        description: message,
-        variant: 'destructive',
-      });
+      toast.error('Upload failed', { description: message });
     } finally {
       setIsUploading(false);
     }

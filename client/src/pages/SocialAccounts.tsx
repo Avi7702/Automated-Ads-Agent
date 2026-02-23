@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ConnectedAccountCard } from '@/components/social/ConnectedAccountCard';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import type { SocialConnection } from '@/types/social';
 import { RefreshCw, Link as LinkIcon, LinkedinIcon } from 'lucide-react';
 
@@ -71,7 +71,6 @@ const PLATFORM_EMOJI: Record<string, string> = {
 };
 
 export default function SocialAccounts({ embedded = false }: SocialAccountsProps) {
-  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [connecting, setConnecting] = useState<string | null>(null);
@@ -94,19 +93,11 @@ export default function SocialAccounts({ embedded = false }: SocialAccountsProps
       setAccounts(data.accounts || []);
 
       if (showToast) {
-        toast({
-          title: 'Accounts Refreshed',
-          description: 'Successfully refreshed your social media accounts.',
-          variant: 'default',
-        });
+        toast.success('Accounts Refreshed', { description: 'Successfully refreshed your social media accounts.' });
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to load social accounts';
-      toast({
-        title: 'Error',
-        description: message,
-        variant: 'destructive',
-      });
+      toast.error('Error', { description: message });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -119,11 +110,7 @@ export default function SocialAccounts({ embedded = false }: SocialAccountsProps
     const connectedPlatform = params.get('connected');
     if (connectedPlatform) {
       const platformLabel = PLATFORM_CONFIGS.find((p) => p.key === connectedPlatform)?.label ?? connectedPlatform;
-      toast({
-        title: 'Account Connected',
-        description: `${platformLabel} account connected successfully.`,
-        variant: 'default',
-      });
+      toast.success('Account Connected', { description: `${platformLabel} account connected successfully.` });
       // Strip ?connected= from the URL without triggering a reload
       const cleanUrl = globalThis.location.pathname + globalThis.location.hash;
       globalThis.history.replaceState(null, '', cleanUrl);
@@ -151,20 +138,12 @@ export default function SocialAccounts({ embedded = false }: SocialAccountsProps
         throw new Error(error.error || 'Failed to disconnect account');
       }
 
-      toast({
-        title: 'Account Disconnected',
-        description: 'Social media account has been disconnected.',
-        variant: 'default',
-      });
+      toast.success('Account Disconnected', { description: 'Social media account has been disconnected.' });
 
       await fetchAccounts();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to disconnect account';
-      toast({
-        title: 'Disconnect Failed',
-        description: message,
-        variant: 'destructive',
-      });
+      toast.error('Disconnect Failed', { description: message });
     }
   };
 
@@ -181,20 +160,12 @@ export default function SocialAccounts({ embedded = false }: SocialAccountsProps
         throw new Error(error.error || 'Failed to refresh token');
       }
 
-      toast({
-        title: 'Token Refreshed',
-        description: 'Account token refreshed successfully.',
-        variant: 'default',
-      });
+      toast.success('Token Refreshed', { description: 'Account token refreshed successfully.' });
 
       await fetchAccounts();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to refresh token';
-      toast({
-        title: 'Refresh Failed',
-        description: message,
-        variant: 'destructive',
-      });
+      toast.error('Refresh Failed', { description: message });
     }
   };
 
@@ -220,11 +191,7 @@ export default function SocialAccounts({ embedded = false }: SocialAccountsProps
       globalThis.location.href = data.authUrl;
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : `Failed to connect ${platform}`;
-      toast({
-        title: 'Connection Failed',
-        description: message,
-        variant: 'destructive',
-      });
+      toast.error('Connection Failed', { description: message });
       setConnecting(null);
     }
   };

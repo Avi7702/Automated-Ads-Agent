@@ -32,8 +32,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { useSchedulePost } from '@/hooks/useScheduledPosts';
-import { useToast } from '@/hooks/use-toast';
-
+import { toast } from 'sonner';
 /* ------------------------------------------------------------------ */
 /*  Platform character limits                                          */
 /* ------------------------------------------------------------------ */
@@ -100,7 +99,6 @@ function isValidUrl(str: string): boolean {
 /* ------------------------------------------------------------------ */
 
 export function SchedulePostDialog({ open, onOpenChange, defaultDate, prefill }: SchedulePostDialogProps) {
-  const { toast } = useToast();
   const schedulePost = useSchedulePost();
 
   // Form state
@@ -244,17 +242,12 @@ export function SchedulePostDialog({ open, onOpenChange, defaultDate, prefill }:
         generationId: prefill?.generationId,
       });
 
-      toast({
-        title: 'Post scheduled',
+      toast.success('Post scheduled', {
         description: `Scheduled for ${format(new Date(scheduledFor), 'MMM d, yyyy')} at ${format(new Date(scheduledFor), 'h:mm a')}.`,
       });
       onOpenChange(false);
     } catch (err: any) {
-      toast({
-        title: 'Failed to schedule',
-        description: err.message || 'Something went wrong. Please try again.',
-        variant: 'destructive',
-      });
+      toast.error('Failed to schedule', { description: err.message || 'Something went wrong. Please try again.' });
     }
   };
 

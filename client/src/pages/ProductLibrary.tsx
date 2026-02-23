@@ -28,8 +28,7 @@ import { Header } from '@/components/layout/Header';
 import { ProductEnrichmentForm } from '@/components/ProductEnrichmentForm';
 import { AddProductModal } from '@/components/AddProductModal';
 import { ProductRelationships } from '@/components/ProductRelationships';
-import { useToast } from '@/hooks/use-toast';
-
+import { toast } from 'sonner';
 // Enrichment status badge styling (light mode readable + dark mode optimized)
 function getEnrichmentStatusBadge(status: string | null | undefined) {
   switch (status) {
@@ -224,8 +223,6 @@ interface ProductLibraryProps {
 
 export default function ProductLibrary({ embedded = false, selectedId: _selectedId }: ProductLibraryProps) {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
-
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -286,20 +283,15 @@ export default function ProductLibrary({ embedded = false, selectedId: _selected
       // Invalidate and refetch products
       queryClient.invalidateQueries({ queryKey: ['products'] });
 
-      toast({
-        title: 'Product deleted',
-        description: `${productToDelete.name} has been removed from your library.`,
-      });
+      toast.success('Product deleted', { description: `${productToDelete.name} has been removed from your library.` });
 
       // Close detail modal if this product was open
       if (selectedProduct?.id === productToDelete.id) {
         handleCloseDetail();
       }
     } catch (error) {
-      toast({
-        title: 'Delete failed',
+      toast.error('Delete failed', {
         description: error instanceof Error ? error.message : 'Failed to delete product',
-        variant: 'destructive',
       });
     } finally {
       setIsDeleting(false);

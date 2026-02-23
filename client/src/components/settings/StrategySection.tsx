@@ -24,7 +24,7 @@ import {
   useBulkSetPriorities,
 } from '@/hooks/useBusinessIntelligence';
 import { useQuery } from '@tanstack/react-query';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { Target, Loader2, Save, Clock, BarChart3, Layers, Globe, CheckCircle } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
@@ -86,8 +86,6 @@ const TIER_COLORS: Record<string, string> = {
 /* ------------------------------------------------------------------ */
 
 export function StrategySection() {
-  const { toast } = useToast();
-
   // Data hooks
   const { data: bizData, isLoading: loadingBiz } = useBusinessIntelligence();
   const { data: priorities = [], isLoading: loadingPriorities } = useProductPriorities();
@@ -224,16 +222,9 @@ export function StrategySection() {
       }
 
       setIsDirty(false);
-      toast({
-        title: 'Strategy saved',
-        description: 'Your content strategy has been updated.',
-      });
+      toast.success('Strategy saved', { description: 'Your content strategy has been updated.' });
     } catch (err) {
-      toast({
-        title: 'Failed to save',
-        description: err instanceof Error ? err.message : 'Something went wrong',
-        variant: 'destructive',
-      });
+      toast.error('Failed to save', { description: err instanceof Error ? err.message : 'Something went wrong' });
     }
   };
 
