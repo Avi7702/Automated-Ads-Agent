@@ -1,11 +1,11 @@
+/**
+ * ContentPlanner — Strategic content planning guide
+ *
+ * Business logic extracted to useContentPlanner hook.
+ * MarkAsPostedDialog kept as sub-component (was already extracted).
+ */
 import { useState } from 'react';
-import { useLocation } from 'wouter';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Header } from '@/components/layout/Header';
-
-interface ContentPlannerProps {
-  embedded?: boolean;
-}
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,7 +24,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
 import {
   Loader2,
   ChevronDown,
@@ -42,67 +41,7 @@ import {
   MessageSquare,
   Trash2,
 } from 'lucide-react';
-
-// Types from backend
-interface ContentTemplate {
-  id: string;
-  category: string;
-  categoryPercentage: number;
-  subType: string;
-  title: string;
-  description: string;
-  hookFormulas: string[];
-  postStructure: string;
-  bestPlatforms: { platform: string; format: string }[];
-  exampleTopics: string[];
-  whatToAvoid: string[];
-}
-
-interface ContentCategory {
-  id: string;
-  name: string;
-  percentage: number;
-  description: string;
-  weeklyTarget: number;
-  bestPractices: string[];
-  templates: ContentTemplate[];
-}
-
-interface BalanceData {
-  balance: Record<string, { current: number; target: number; percentage: number }>;
-  suggested: { categoryId: string; categoryName: string; reason: string };
-  totalPosts: number;
-}
-
-interface SuggestionData {
-  category: {
-    id: string;
-    name: string;
-    percentage: number;
-    weeklyTarget: number;
-    currentCount: number;
-    bestPractices: string[];
-  };
-  suggestedTemplate: {
-    id: string;
-    title: string;
-    subType: string;
-    description: string;
-    hookFormulas: string[];
-  } | null;
-  reason: string;
-}
-
-interface ContentPlannerPost {
-  id: string;
-  userId: string;
-  category: string;
-  subType: string;
-  platform: string | null;
-  notes: string | null;
-  postedAt: string;
-  createdAt: string;
-}
+import { useContentPlanner, type ContentCategory, type ContentTemplate } from '@/hooks/useContentPlanner';
 
 // Category icons
 const categoryIcons: Record<string, React.ElementType> = {
@@ -114,7 +53,7 @@ const categoryIcons: Record<string, React.ElementType> = {
   engagement: MessageSquare,
 };
 
-// Category colors for visual distinction
+// Category colors
 const categoryColors: Record<string, string> = {
   product_showcase: 'bg-blue-500',
   educational: 'bg-green-500',
@@ -124,167 +63,14 @@ const categoryColors: Record<string, string> = {
   engagement: 'bg-cyan-500',
 };
 
-/**
- * ContentPlanner - Strategic content planning guide
- *
- * Features:
- * - Weekly balance tracker across 6 content categories
- * - Smart suggestion for what to post next
- * - 30 researched templates with hooks, structures, examples
- * - Mark as posted functionality
- */
+interface ContentPlannerProps {
+  embedded?: boolean;
+}
+
 export default function ContentPlanner({ embedded = false }: ContentPlannerProps) {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [, setLocation] = useLocation();
+  const planner = useContentPlanner();
 
-  // State for modals
-  const [selectedTemplate, setSelectedTemplate] = useState<ContentTemplate | null>(null);
-  const [markAsPostedCategory, setMarkAsPostedCategory] = useState<string | null>(null);
-  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
-
-  // State for Start Fresh warning modal
-  const [showStartFreshModal, setShowStartFreshModal] = useState(false);
-  const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
-  const [pendingTemplateName, setPendingTemplateName] = useState<string>('');
-
-  // Fetch templates
-  const { data: templatesData, isLoading: templatesLoading } = useQuery<{
-    categories: ContentCategory[];
-    templates: ContentTemplate[];
-  }>({
-    queryKey: ['/api/content-planner/templates'],
-    staleTime: 1000 * 60 * 60, // Cache for 1 hour
-  });
-
-  // Fetch balance
-  const { data: balanceData, isLoading: balanceLoading } = useQuery<BalanceData>({
-    queryKey: ['/api/content-planner/balance'],
-    staleTime: 1000 * 60, // Refresh every minute
-  });
-
-  // Fetch suggestion
-  const { data: suggestionData, isLoading: suggestionLoading } = useQuery<SuggestionData>({
-    queryKey: ['/api/content-planner/suggestion'],
-    staleTime: 1000 * 60,
-  });
-
-  // Fetch recent posts (last 7 days)
-  const { data: recentPosts = [], refetch: refetchPosts } = useQuery<ContentPlannerPost[]>({
-    queryKey: ['/api/content-planner/posts'],
-    queryFn: async () => {
-      const res = await fetch('/api/content-planner/posts', { credentials: 'include' });
-      if (!res.ok) return [];
-      return res.json();
-    },
-  });
-
-  // Delete post mutation
-  const deletePostMutation = useMutation({
-    mutationFn: async (postId: string) => {
-      const res = await fetch(`/api/content-planner/posts/${postId}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('Failed to delete');
-    },
-    onSuccess: () => {
-      refetchPosts();
-      queryClient.invalidateQueries({ queryKey: ['/api/content-planner/balance'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/content-planner/suggestion'] });
-      toast({
-        title: 'Post removed',
-        description: 'Your weekly balance has been updated.',
-      });
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to remove post. Please try again.',
-        variant: 'destructive',
-      });
-    },
-  });
-
-  // Mark as posted mutation
-  const markAsPostedMutation = useMutation({
-    mutationFn: async (data: {
-      category: string;
-      subType: string;
-      platform?: string | undefined;
-      notes?: string | undefined;
-    }) => {
-      const response = await fetch('/api/content-planner/posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error('Failed to mark as posted');
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/content-planner/balance'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/content-planner/suggestion'] });
-      refetchPosts();
-      toast({
-        title: 'Post recorded',
-        description: 'Your weekly balance has been updated.',
-      });
-      setMarkAsPostedCategory(null);
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to record post. Please try again.',
-        variant: 'destructive',
-      });
-    },
-  });
-
-  const toggleCategory = (categoryId: string) => {
-    setExpandedCategories((prev) =>
-      prev.includes(categoryId) ? prev.filter((id) => id !== categoryId) : [...prev, categoryId],
-    );
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({
-      title: 'Copied',
-      description: 'Hook formula copied to clipboard.',
-    });
-  };
-
-  // Handler to initiate "Create in Studio" flow with warning modal
-  const handleCreateInStudio = (templateId: string, templateName: string) => {
-    setPendingTemplateId(templateId);
-    setPendingTemplateName(templateName);
-    setShowStartFreshModal(true);
-  };
-
-  // Handler when user confirms "Start Fresh"
-  const handleConfirmStartFresh = () => {
-    if (pendingTemplateId) {
-      // Navigate to Studio with the template and fresh=true flag
-      setLocation(`/?cpTemplateId=${pendingTemplateId}&fresh=true`);
-    }
-    // Reset modal state
-    setShowStartFreshModal(false);
-    setPendingTemplateId(null);
-    setPendingTemplateName('');
-    // Close the template detail dialog if open
-    setSelectedTemplate(null);
-  };
-
-  // Handler when user cancels the modal
-  const handleCancelStartFresh = () => {
-    setShowStartFreshModal(false);
-    setPendingTemplateId(null);
-    setPendingTemplateName('');
-  };
-
-  if (templatesLoading || balanceLoading) {
+  if (planner.isLoading) {
     return (
       <div className={embedded ? '' : 'min-h-screen bg-background'}>
         {!embedded && <Header currentPage="content-planner" />}
@@ -300,8 +86,6 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
       </div>
     );
   }
-
-  const categories = templatesData?.categories || [];
 
   return (
     <div className={embedded ? '' : 'min-h-screen bg-background'}>
@@ -326,8 +110,8 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
               <CardDescription>Track your posting distribution across categories</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {categories.map((category) => {
-                const balance = balanceData?.balance[category.id];
+              {planner.categories.map((category) => {
+                const balance = planner.balanceData?.balance[category.id];
                 const Icon = categoryIcons[category.id] || Target;
                 return (
                   <div key={category.id} className="space-y-2">
@@ -350,7 +134,7 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
               <div className="pt-2 border-t">
                 <div className="flex justify-between text-sm font-medium">
                   <span>Total Posts This Week</span>
-                  <span>{balanceData?.totalPosts || 0}</span>
+                  <span>{planner.balanceData?.totalPosts || 0}</span>
                 </div>
               </div>
             </CardContent>
@@ -366,35 +150,38 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
               <CardDescription>Based on your current balance, we recommend:</CardDescription>
             </CardHeader>
             <CardContent>
-              {suggestionLoading ? (
+              {planner.suggestionLoading ? (
                 <Loader2 className="w-6 h-6 animate-spin" />
-              ) : suggestionData ? (
+              ) : planner.suggestionData ? (
                 <div className="space-y-4">
                   <div>
-                    <Badge className={`${categoryColors[suggestionData.category.id]} text-white mb-2`}>
-                      {suggestionData.category.name}
+                    <Badge className={`${categoryColors[planner.suggestionData.category.id]} text-white mb-2`}>
+                      {planner.suggestionData.category.name}
                     </Badge>
-                    {suggestionData.suggestedTemplate && (
-                      <h3 className="font-semibold text-lg">{suggestionData.suggestedTemplate.title}</h3>
+                    {planner.suggestionData.suggestedTemplate && (
+                      <h3 className="font-semibold text-lg">{planner.suggestionData.suggestedTemplate.title}</h3>
                     )}
-                    <p className="text-sm text-muted-foreground mt-1">{suggestionData.reason}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{planner.suggestionData.reason}</p>
                   </div>
-                  {suggestionData.suggestedTemplate && (
+                  {planner.suggestionData.suggestedTemplate && (
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          const fullTemplate = categories
-                            .find((c) => c.id === suggestionData.category.id)
-                            ?.templates.find((t) => t.id === suggestionData.suggestedTemplate?.id);
-                          if (fullTemplate) setSelectedTemplate(fullTemplate);
+                          const fullTemplate = planner.categories
+                            .find((c) => c.id === planner.suggestionData?.category.id)
+                            ?.templates.find((t) => t.id === planner.suggestionData?.suggestedTemplate?.id);
+                          if (fullTemplate) planner.setSelectedTemplate(fullTemplate);
                         }}
                       >
                         <BookOpen className="w-4 h-4 mr-2" />
                         View Guide
                       </Button>
-                      <Button size="sm" onClick={() => setMarkAsPostedCategory(suggestionData.category.id)}>
+                      <Button
+                        size="sm"
+                        onClick={() => planner.setMarkAsPostedCategory(planner.suggestionData!.category.id)}
+                      >
                         <Check className="w-4 h-4 mr-2" />
                         Mark as Posted
                       </Button>
@@ -409,7 +196,7 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
         </div>
 
         {/* Recent Posts Section */}
-        {recentPosts.length > 0 && (
+        {planner.recentPosts.length > 0 && (
           <Card className="mb-6">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -420,8 +207,8 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {recentPosts.map((post) => {
-                  const category = categories.find((c) => c.id === post.category);
+                {planner.recentPosts.map((post) => {
+                  const category = planner.categories.find((c) => c.id === post.category);
                   const Icon = categoryIcons[post.category] || Target;
                   const postedDate = new Date(post.postedAt);
                   const formattedDate = postedDate.toLocaleDateString('en-US', {
@@ -438,9 +225,7 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
                     >
                       <div className="flex items-center gap-3 flex-1">
                         <div
-                          className={`w-8 h-8 rounded-lg ${
-                            categoryColors[post.category] || 'bg-gray-500'
-                          } flex items-center justify-center shrink-0`}
+                          className={`w-8 h-8 rounded-lg ${categoryColors[post.category] || 'bg-gray-500'} flex items-center justify-center shrink-0`}
                         >
                           <Icon className="w-4 h-4 text-white" />
                         </div>
@@ -468,10 +253,10 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
                         variant="ghost"
                         size="sm"
                         className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
-                        onClick={() => deletePostMutation.mutate(post.id)}
-                        disabled={deletePostMutation.isPending}
+                        onClick={() => planner.deletePostMutation.mutate(post.id)}
+                        disabled={planner.deletePostMutation.isPending}
                       >
-                        {deletePostMutation.isPending ? (
+                        {planner.deletePostMutation.isPending ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
                           <Trash2 className="w-4 h-4" />
@@ -489,12 +274,15 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
         <div className="space-y-4">
           <h2 className="text-xl font-semibold">Content Categories</h2>
           <div className="space-y-3">
-            {categories.map((category) => {
+            {planner.categories.map((category) => {
               const Icon = categoryIcons[category.id] || Target;
-              const isExpanded = expandedCategories.includes(category.id);
-
+              const isExpanded = planner.expandedCategories.includes(category.id);
               return (
-                <Collapsible key={category.id} open={isExpanded} onOpenChange={() => toggleCategory(category.id)}>
+                <Collapsible
+                  key={category.id}
+                  open={isExpanded}
+                  onOpenChange={() => planner.toggleCategory(category.id)}
+                >
                   <Card>
                     <CollapsibleTrigger asChild>
                       <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
@@ -522,7 +310,6 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <CardContent className="pt-0 space-y-4">
-                        {/* Best Practices */}
                         <div className="p-3 bg-muted/50 rounded-lg">
                           <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
                             <Sparkles className="w-4 h-4 text-yellow-500" />
@@ -534,14 +321,12 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
                             ))}
                           </ul>
                         </div>
-
-                        {/* Templates List */}
                         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                           {category.templates.map((template) => (
                             <Card
                               key={template.id}
                               className="cursor-pointer hover:border-primary/50 transition-colors"
-                              onClick={() => setSelectedTemplate(template)}
+                              onClick={() => planner.setSelectedTemplate(template)}
                             >
                               <CardContent className="p-4">
                                 <h4 className="font-medium text-sm mb-1">{template.title}</h4>
@@ -557,15 +342,13 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
                             </Card>
                           ))}
                         </div>
-
-                        {/* Mark as Posted Button */}
                         <div className="flex justify-end">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setMarkAsPostedCategory(category.id);
+                              planner.setMarkAsPostedCategory(category.id);
                             }}
                           >
                             <Check className="w-4 h-4 mr-2" />
@@ -582,137 +365,43 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
         </div>
 
         {/* Template Detail Modal */}
-        <Dialog open={!!selectedTemplate} onOpenChange={() => setSelectedTemplate(null)}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            {selectedTemplate && (
-              <>
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <Badge className={`${categoryColors[selectedTemplate.category]} text-white`}>
-                      {categories.find((c) => c.id === selectedTemplate.category)?.name}
-                    </Badge>
-                    {selectedTemplate.title}
-                  </DialogTitle>
-                  <DialogDescription>{selectedTemplate.description}</DialogDescription>
-                </DialogHeader>
-
-                <div className="space-y-6 mt-4">
-                  {/* Hook Formulas */}
-                  <div>
-                    <h4 className="font-semibold mb-3 flex items-center gap-2">🎣 Hook Formulas That Work</h4>
-                    <div className="space-y-2">
-                      {selectedTemplate.hookFormulas.map((hook, i) => (
-                        <div key={i} className="p-3 bg-muted rounded-lg flex items-start justify-between gap-2">
-                          <p className="text-sm italic">{hook}</p>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="shrink-0"
-                            onClick={() => copyToClipboard(hook)}
-                          >
-                            <Copy className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Post Structure */}
-                  <div>
-                    <h4 className="font-semibold mb-3">📝 Post Structure Template</h4>
-                    <pre className="p-4 bg-muted rounded-lg text-sm whitespace-pre-wrap font-mono">
-                      {selectedTemplate.postStructure}
-                    </pre>
-                  </div>
-
-                  {/* Best Platforms */}
-                  <div>
-                    <h4 className="font-semibold mb-3">📱 Best Platforms</h4>
-                    <div className="space-y-2">
-                      {selectedTemplate.bestPlatforms.map((platform, i) => (
-                        <div key={i} className="flex items-center gap-2">
-                          <Badge variant="outline">{platform.platform}</Badge>
-                          <span className="text-sm text-muted-foreground">{platform.format}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Example Topics */}
-                  <div>
-                    <h4 className="font-semibold mb-3">💡 Example Topics for Steel/Construction</h4>
-                    <ul className="space-y-1">
-                      {selectedTemplate.exampleTopics.map((topic, i) => (
-                        <li key={i} className="text-sm text-muted-foreground">
-                          • {topic}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* What to Avoid */}
-                  <div>
-                    <h4 className="font-semibold mb-3 text-destructive">⚠️ What to Avoid</h4>
-                    <ul className="space-y-1">
-                      {selectedTemplate.whatToAvoid.map((avoid, i) => (
-                        <li key={i} className="text-sm text-muted-foreground">
-                          • {avoid}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-3 pt-4 border-t">
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => {
-                        setMarkAsPostedCategory(selectedTemplate.category);
-                        setSelectedTemplate(null);
-                      }}
-                    >
-                      <Check className="w-4 h-4 mr-2" />
-                      Mark as Posted
-                    </Button>
-                    <Button
-                      className="flex-1"
-                      onClick={() => handleCreateInStudio(selectedTemplate.id, selectedTemplate.title)}
-                    >
-                      <ExternalLink className="w-4 h-4 mr-2" />
-                      Create in Studio
-                    </Button>
-                  </div>
-                </div>
-              </>
-            )}
-          </DialogContent>
-        </Dialog>
+        <TemplateDetailDialog
+          template={planner.selectedTemplate}
+          categories={planner.categories}
+          categoryColors={categoryColors}
+          onClose={() => planner.setSelectedTemplate(null)}
+          onCopyHook={planner.copyToClipboard}
+          onMarkAsPosted={(catId) => {
+            planner.setMarkAsPostedCategory(catId);
+            planner.setSelectedTemplate(null);
+          }}
+          onCreateInStudio={planner.handleCreateInStudio}
+        />
 
         {/* Mark as Posted Modal */}
         <MarkAsPostedDialog
-          open={!!markAsPostedCategory}
-          onOpenChange={() => setMarkAsPostedCategory(null)}
-          categoryId={markAsPostedCategory}
-          categories={categories}
-          onSubmit={(data) => markAsPostedMutation.mutate(data)}
-          isSubmitting={markAsPostedMutation.isPending}
+          open={!!planner.markAsPostedCategory}
+          onOpenChange={() => planner.setMarkAsPostedCategory(null)}
+          categoryId={planner.markAsPostedCategory}
+          categories={planner.categories}
+          onSubmit={(data) => planner.markAsPostedMutation.mutate(data)}
+          isSubmitting={planner.markAsPostedMutation.isPending}
         />
 
         {/* Start Fresh Warning Modal */}
-        <AlertDialog open={showStartFreshModal} onOpenChange={setShowStartFreshModal}>
+        <AlertDialog open={planner.showStartFreshModal} onOpenChange={planner.setShowStartFreshModal}>
           <AlertDialogContent className="max-h-[90vh] overflow-y-auto">
             <AlertDialogHeader>
               <AlertDialogTitle>Start Fresh with Template</AlertDialogTitle>
               <AlertDialogDescription>
                 You're about to create content using:
-                <span className="block mt-2 font-medium text-foreground">"{pendingTemplateName}"</span>
+                <span className="block mt-2 font-medium text-foreground">"{planner.pendingTemplateName}"</span>
                 <span className="block mt-3">This will clear your current work and start fresh in the Studio.</span>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel onClick={handleCancelStartFresh}>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleConfirmStartFresh}>Start Fresh</AlertDialogAction>
+              <AlertDialogCancel onClick={planner.handleCancelStartFresh}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={planner.handleConfirmStartFresh}>Start Fresh</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -721,7 +410,108 @@ export default function ContentPlanner({ embedded = false }: ContentPlannerProps
   );
 }
 
-// Mark as Posted Dialog Component
+// ── Sub-components ──────────────────────────────────────
+
+function TemplateDetailDialog({
+  template,
+  categories,
+  categoryColors,
+  onClose,
+  onCopyHook,
+  onMarkAsPosted,
+  onCreateInStudio,
+}: {
+  template: ContentTemplate | null;
+  categories: ContentCategory[];
+  categoryColors: Record<string, string>;
+  onClose: () => void;
+  onCopyHook: (text: string) => void;
+  onMarkAsPosted: (categoryId: string) => void;
+  onCreateInStudio: (templateId: string, templateName: string) => void;
+}) {
+  return (
+    <Dialog open={!!template} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        {template && (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Badge className={`${categoryColors[template.category]} text-white`}>
+                  {categories.find((c) => c.id === template.category)?.name}
+                </Badge>
+                {template.title}
+              </DialogTitle>
+              <DialogDescription>{template.description}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-6 mt-4">
+              <div>
+                <h4 className="font-semibold mb-3 flex items-center gap-2">Hook Formulas That Work</h4>
+                <div className="space-y-2">
+                  {template.hookFormulas.map((hook, i) => (
+                    <div key={i} className="p-3 bg-muted rounded-lg flex items-start justify-between gap-2">
+                      <p className="text-sm italic">{hook}</p>
+                      <Button variant="ghost" size="icon" className="shrink-0" onClick={() => onCopyHook(hook)}>
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-3">Post Structure Template</h4>
+                <pre className="p-4 bg-muted rounded-lg text-sm whitespace-pre-wrap font-mono">
+                  {template.postStructure}
+                </pre>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-3">Best Platforms</h4>
+                <div className="space-y-2">
+                  {template.bestPlatforms.map((platform, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <Badge variant="outline">{platform.platform}</Badge>
+                      <span className="text-sm text-muted-foreground">{platform.format}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-3">Example Topics</h4>
+                <ul className="space-y-1">
+                  {template.exampleTopics.map((topic, i) => (
+                    <li key={i} className="text-sm text-muted-foreground">
+                      • {topic}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-3 text-destructive">What to Avoid</h4>
+                <ul className="space-y-1">
+                  {template.whatToAvoid.map((avoid, i) => (
+                    <li key={i} className="text-sm text-muted-foreground">
+                      • {avoid}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="flex gap-3 pt-4 border-t">
+                <Button variant="outline" className="flex-1" onClick={() => onMarkAsPosted(template.category)}>
+                  <Check className="w-4 h-4 mr-2" />
+                  Mark as Posted
+                </Button>
+                <Button className="flex-1" onClick={() => onCreateInStudio(template.id, template.title)}>
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Create in Studio
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function MarkAsPostedDialog({
   open,
   onOpenChange,
@@ -750,13 +540,7 @@ function MarkAsPostedDialog({
 
   const handleSubmit = () => {
     if (!categoryId) return;
-    onSubmit({
-      category: categoryId,
-      subType,
-      platform: platform || undefined,
-      notes: notes || undefined,
-    });
-    // Reset form
+    onSubmit({ category: categoryId, subType, platform: platform || undefined, notes: notes || undefined });
     setSubType('general');
     setPlatform('');
     setNotes('');
@@ -771,9 +555,7 @@ function MarkAsPostedDialog({
             Record that you've posted {category?.name.toLowerCase()} content this week.
           </DialogDescription>
         </DialogHeader>
-
         <div className="space-y-4 mt-4">
-          {/* Sub-type Selection */}
           {category && category.templates.length > 0 && (
             <div className="space-y-2">
               <label className="text-sm font-medium">Post Type</label>
@@ -792,8 +574,6 @@ function MarkAsPostedDialog({
               </Select>
             </div>
           )}
-
-          {/* Platform Selection */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Platform (Optional)</label>
             <Select value={platform} onValueChange={setPlatform}>
@@ -810,8 +590,6 @@ function MarkAsPostedDialog({
               </SelectContent>
             </Select>
           </div>
-
-          {/* Notes */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Notes (Optional)</label>
             <Textarea
@@ -821,8 +599,6 @@ function MarkAsPostedDialog({
               rows={3}
             />
           </div>
-
-          {/* Submit Button */}
           <div className="flex justify-end gap-2 pt-4">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
