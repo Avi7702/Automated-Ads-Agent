@@ -34,6 +34,7 @@ import { addToQueue } from '../approvalQueueService';
 
 // Model — same as ideaBankService
 const REASONING_MODEL = process.env['GEMINI_REASONING_MODEL'] || 'gemini-3-flash-preview';
+const CANCELLED_BY_USER_ERROR = 'Cancelled by user';
 
 // Platform character limits (same source-of-truth as copywritingService)
 const PLATFORM_LIMITS: Record<string, number> = {
@@ -897,13 +898,33 @@ async function runExecutionSteps(
     return;
   }
 
-  // 2. Mark execution as running
-  await storage.updateAgentExecution(executionId, { status: 'running', startedAt: new Date() });
-  await storage.updateAgentPlan(planId, { status: 'executing' });
-
-  // 3. Get current execution to read steps
-  const execution = await storage.getAgentExecutionById(executionId);
+  // 2. Transition execution to running with compare-and-set semantics.
+  // This prevents queued -> cancelled races from being overwritten.
+  let execution = await storage.getAgentExecutionById(executionId);
   if (!execution) return;
+  if (execution.status === 'queued') {
+    const claimed = await storage.updateAgentExecutionIfStatus(executionId, 'queued', {
+      status: 'running',
+      startedAt: new Date(),
+    });
+    if (!claimed) {
+      const latest = await storage.getAgentExecutionById(executionId);
+      logger.info(
+        { module: 'AgentOrchestrator', executionId, status: latest?.status },
+        'Execution start skipped because status changed before worker claim',
+      );
+      return;
+    }
+    execution = claimed;
+  } else if (execution.status !== 'running') {
+    logger.info(
+      { module: 'AgentOrchestrator', executionId, status: execution.status },
+      'Execution is not runnable in current state',
+    );
+    return;
+  }
+
+  await storage.updateAgentPlan(planId, { status: 'executing' });
 
   const steps = [...(execution.steps as ExecutionStep[])];
   const posts = (planRecord.posts || []) as PlanPost[];
@@ -914,6 +935,7 @@ async function runExecutionSteps(
   const allApprovalQueueIds: string[] = [];
 
   let hasFailure = false;
+  let wasCancelled = false;
 
   // 5. Execute each post
   for (let i = 0; i < posts.length; i++) {
@@ -933,6 +955,11 @@ async function runExecutionSteps(
     // Check if execution was cancelled externally
     const currentExec = await storage.getAgentExecutionById(executionId);
     if (currentExec?.status === 'failed') {
+      if (currentExec.errorMessage === CANCELLED_BY_USER_ERROR) {
+        wasCancelled = true;
+      } else {
+        hasFailure = true;
+      }
       logger.info({ module: 'AgentOrchestrator', executionId }, 'Execution cancelled externally, stopping');
       break;
     }
@@ -987,6 +1014,18 @@ async function runExecutionSteps(
     if (i < posts.length - 1) {
       await new Promise((r) => setTimeout(r, 1000));
     }
+  }
+
+  // Respect cancellation status without overwriting plan/execution to completed.
+  if (wasCancelled) {
+    await storage.updateAgentExecution(executionId, {
+      steps,
+      generationIds: allGenerationIds,
+      adCopyIds: allAdCopyIds,
+      approvalQueueIds: allApprovalQueueIds,
+    });
+    logger.info({ module: 'AgentOrchestrator', executionId }, 'Execution cancelled by user');
+    return;
   }
 
   // 6. Determine final status
@@ -1087,16 +1126,25 @@ export async function cancelExecution(storage: IStorage, executionId: string, us
     throw new PlanNotFoundError(executionId);
   }
   if (execution.status !== 'running' && execution.status !== 'queued') {
-    throw new Error('Cannot cancel execution that is not running or queued');
+    throw new ConflictError('Cannot cancel execution that is not running or queued');
   }
 
-  // Mark as failed with cancellation message
-  // The runExecutionSteps loop checks for status === 'failed' before each step
-  await storage.updateAgentExecution(executionId, {
-    status: 'failed',
-    errorMessage: 'Cancelled by user',
-    completedAt: new Date(),
-  });
+  // Compare-and-set cancellation to avoid racing with queued -> running transition.
+  // If we observed queued, allow fallback on running in case state advanced.
+  const candidateStatuses = execution.status === 'queued' ? ['queued', 'running'] : ['running'];
+  let cancelled = null;
+  for (const expectedStatus of candidateStatuses) {
+    cancelled = await storage.updateAgentExecutionIfStatus(executionId, expectedStatus, {
+      status: 'failed',
+      errorMessage: CANCELLED_BY_USER_ERROR,
+      completedAt: new Date(),
+    });
+    if (cancelled) break;
+  }
+  if (!cancelled) {
+    const latest = await storage.getAgentExecutionById(executionId);
+    throw new ConflictError(`Cannot cancel execution in state "${latest?.status ?? 'unknown'}"`);
+  }
 
   // Also update the plan status
   await storage.updateAgentPlan(execution.planId, {
@@ -1112,7 +1160,10 @@ export async function retryFailedSteps(storage: IStorage, executionId: string, u
     throw new PlanNotFoundError(executionId);
   }
   if (execution.status !== 'failed') {
-    throw new Error('Can only retry failed executions');
+    throw new ConflictError('Can only retry failed executions');
+  }
+  if (execution.errorMessage === CANCELLED_BY_USER_ERROR) {
+    throw new ConflictError('Cannot retry a cancelled execution');
   }
 
   const plan = await storage.getAgentPlanById(execution.planId);
@@ -1125,12 +1176,16 @@ export async function retryFailedSteps(storage: IStorage, executionId: string, u
     s.status === 'failed' ? { ...s, status: 'pending' as const, result: undefined } : s,
   );
 
-  await storage.updateAgentExecution(executionId, {
+  const claimed = await storage.updateAgentExecutionIfStatus(executionId, 'failed', {
     status: 'running',
     steps,
     errorMessage: null,
     completedAt: null,
   });
+  if (!claimed) {
+    const latest = await storage.getAgentExecutionById(executionId);
+    throw new ConflictError(`Cannot retry execution in state "${latest?.status ?? 'unknown'}"`);
+  }
 
   // Update plan status back to executing
   await storage.updateAgentPlan(plan.id, {
@@ -1150,5 +1205,12 @@ export class PlanNotFoundError extends Error {
   constructor(planId: string) {
     super(`Plan not found: ${planId}`);
     this.name = 'NotFoundError';
+  }
+}
+
+export class ConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ConflictError';
   }
 }

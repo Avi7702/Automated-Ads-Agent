@@ -432,6 +432,11 @@ export interface IStorage {
   getAgentExecutionById(executionId: string): Promise<AgentExecution | undefined>;
   getAgentExecutionByIdempotencyKey(planId: string, key: string): Promise<AgentExecution | undefined>;
   updateAgentExecution(executionId: string, updates: Partial<InsertAgentExecution>): Promise<AgentExecution>;
+  updateAgentExecutionIfStatus(
+    executionId: string,
+    expectedStatus: string,
+    updates: Partial<InsertAgentExecution>,
+  ): Promise<AgentExecution | null>;
 }
 
 export class DbStorage implements IStorage {
@@ -1107,6 +1112,13 @@ export class DbStorage implements IStorage {
   }
   async updateAgentExecution(executionId: string, updates: Partial<InsertAgentExecution>): Promise<AgentExecution> {
     return agentPlanRepo.updateExecution(executionId, updates);
+  }
+  async updateAgentExecutionIfStatus(
+    executionId: string,
+    expectedStatus: string,
+    updates: Partial<InsertAgentExecution>,
+  ): Promise<AgentExecution | null> {
+    return agentPlanRepo.updateExecutionIfCurrentStatus(executionId, expectedStatus, updates);
   }
 }
 

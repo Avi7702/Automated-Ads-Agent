@@ -111,3 +111,26 @@ export async function updateExecution(
   logger.info({ executionId, status: execution.status }, 'Agent execution updated');
   return execution;
 }
+
+export async function updateExecutionIfCurrentStatus(
+  executionId: string,
+  expectedStatus: string,
+  updates: Partial<InsertAgentExecution>,
+): Promise<AgentExecution | null> {
+  const [execution] = await db
+    .update(agentExecutions)
+    .set({
+      ...updates,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(agentExecutions.id, executionId), eq(agentExecutions.status, expectedStatus)))
+    .returning();
+
+  if (!execution) {
+    logger.info({ executionId, expectedStatus }, 'Agent execution compare-and-set did not match');
+    return null;
+  }
+
+  logger.info({ executionId, expectedStatus, status: execution.status }, 'Agent execution compare-and-set updated');
+  return execution;
+}

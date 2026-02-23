@@ -16,9 +16,7 @@ export function createRouter(): Router {
 /**
  * Wrap async route handlers to catch errors
  */
-export function asyncHandler(
-  fn: (req: Request, res: Response, next: NextFunction) => Promise<any>
-) {
+export function asyncHandler(fn: (req: Request, res: Response, next: NextFunction) => Promise<any>) {
   return (req: Request, res: Response, next: NextFunction) => {
     Promise.resolve(fn(req, res, next)).catch(next);
   };
@@ -36,11 +34,7 @@ export interface ErrorResponse {
 /**
  * Handle route errors with consistent format
  */
-export function handleRouteError(
-  res: Response,
-  error: unknown,
-  context: string
-): void {
+export function handleRouteError(res: Response, error: unknown, context: string): void {
   logger.error({ err: error, context }, `Route error in ${context}`);
 
   if (error instanceof Error) {
@@ -48,7 +42,7 @@ export function handleRouteError(
     if (error.name === 'ValidationError') {
       res.status(400).json({
         error: error.message,
-        code: 'VALIDATION_ERROR'
+        code: 'VALIDATION_ERROR',
       } as ErrorResponse);
       return;
     }
@@ -56,7 +50,7 @@ export function handleRouteError(
     if (error.name === 'NotFoundError') {
       res.status(404).json({
         error: error.message,
-        code: 'NOT_FOUND'
+        code: 'NOT_FOUND',
       } as ErrorResponse);
       return;
     }
@@ -64,7 +58,7 @@ export function handleRouteError(
     if (error.name === 'UnauthorizedError') {
       res.status(401).json({
         error: error.message,
-        code: 'UNAUTHORIZED'
+        code: 'UNAUTHORIZED',
       } as ErrorResponse);
       return;
     }
@@ -72,7 +66,15 @@ export function handleRouteError(
     if (error.name === 'ForbiddenError') {
       res.status(403).json({
         error: error.message,
-        code: 'FORBIDDEN'
+        code: 'FORBIDDEN',
+      } as ErrorResponse);
+      return;
+    }
+
+    if (error.name === 'ConflictError') {
+      res.status(409).json({
+        error: error.message,
+        code: 'CONFLICT',
       } as ErrorResponse);
       return;
     }
@@ -81,7 +83,7 @@ export function handleRouteError(
     if (error.message.includes('rate limit') || error.message.includes('quota')) {
       res.status(429).json({
         error: error.message,
-        code: 'RATE_LIMITED'
+        code: 'RATE_LIMITED',
       } as ErrorResponse);
       return;
     }
@@ -90,6 +92,6 @@ export function handleRouteError(
   // Generic server error
   res.status(500).json({
     error: 'Internal server error',
-    code: 'INTERNAL_ERROR'
+    code: 'INTERNAL_ERROR',
   } as ErrorResponse);
 }
