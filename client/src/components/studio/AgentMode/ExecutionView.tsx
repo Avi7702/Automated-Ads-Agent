@@ -1,12 +1,11 @@
-// @ts-nocheck
 /**
  * ExecutionView — Step-by-step execution progress display.
  *
  * Shows each step with status indicator:
- *  pending  → grey circle
- *  running  → animated spinner
- *  complete → green checkmark
- *  failed   → red X with retry option
+ *  pending  -> grey circle
+ *  running  -> animated spinner
+ *  complete -> green checkmark
+ *  failed   -> red X with retry option
  *
  * Overall progress bar at top.
  */
@@ -42,7 +41,6 @@ const STATUS_COLOR = {
 export function ExecutionView({ steps, isComplete, onRetry, onDone }: ExecutionViewProps) {
   const completedCount = steps.filter((s) => s.status === 'complete').length;
   const failedCount = steps.filter((s) => s.status === 'failed').length;
-  const runningCount = steps.filter((s) => s.status === 'running').length;
   const total = steps.length;
   const progressValue = total > 0 ? (completedCount / total) * 100 : 0;
   const isQueued = total > 0 && steps.every((s) => s.status === 'pending') && !isComplete;

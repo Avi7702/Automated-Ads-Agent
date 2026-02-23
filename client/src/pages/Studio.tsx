@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Studio - Unified creative workspace
  *
@@ -76,7 +75,7 @@ function KeyboardShortcutsPanel({
   shortcuts: ShortcutConfig[];
   onClose: () => void;
   onToggle: () => void;
-  haptic: (intensity: string) => void;
+  haptic: (intensity: 'light' | 'medium' | 'heavy') => void;
 }) {
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">

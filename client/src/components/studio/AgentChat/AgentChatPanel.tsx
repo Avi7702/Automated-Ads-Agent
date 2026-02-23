@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * AgentChatPanel - Chat panel for Studio workspace
  *
@@ -23,15 +22,15 @@ import type { IdeaBankContextSnapshot } from '@/components/ideabank/types';
 
 interface AgentChatPanelProps {
   orch: StudioOrchestrator;
-  title?: string;
-  className?: string;
-  bodyMaxHeightClassName?: string;
-  forceExpanded?: boolean;
-  showCollapseToggle?: boolean;
-  ideaBankContext?: IdeaBankContextSnapshot | null;
-  ideaBankBridgeState?: 'idle' | 'waiting' | 'ready' | 'error' | 'sent';
-  externalMessage?: { id: string; text: string } | null;
-  onExternalMessageConsumed?: (id: string) => void;
+  title?: string | undefined;
+  className?: string | undefined;
+  bodyMaxHeightClassName?: string | undefined;
+  forceExpanded?: boolean | undefined;
+  showCollapseToggle?: boolean | undefined;
+  ideaBankContext?: IdeaBankContextSnapshot | null | undefined;
+  ideaBankBridgeState?: 'idle' | 'waiting' | 'ready' | 'error' | 'sent' | undefined;
+  externalMessage?: { id: string; text: string } | null | undefined;
+  onExternalMessageConsumed?: ((id: string) => void) | undefined;
 }
 
 export function AgentChatPanel({
@@ -167,7 +166,7 @@ export function AgentChatPanel({
         setIsUploading(false);
       }
     },
-    [analyzeUpload, isUploading, maxImageInputs, orch, remainingUploadSlots, toast],
+    [analyzeUpload, isUploading, maxImageInputs, orch, remainingUploadSlots],
   );
 
   const handleUploadInputChange = useCallback(
@@ -185,9 +184,9 @@ export function AgentChatPanel({
       try {
         switch (action) {
           case 'select_products': {
-            const products = payload.products as Record<string, unknown>[];
-            if (products && orch.setSelectedProducts) {
-              orch.setSelectedProducts(products);
+            const products = payload['products'];
+            if (Array.isArray(products) && orch.setSelectedProducts) {
+              orch.setSelectedProducts(products as typeof orch.selectedProducts);
               toast({
                 title: 'Products selected',
                 description: `${products.length} product(s) selected by the assistant.`,
@@ -196,38 +195,38 @@ export function AgentChatPanel({
             break;
           }
           case 'set_prompt': {
-            const prompt = payload.prompt as string;
-            if (prompt && orch.setPrompt) {
+            const prompt = payload['prompt'];
+            if (typeof prompt === 'string' && orch.setPrompt) {
               orch.setPrompt(prompt);
               toast({ title: 'Prompt updated', description: 'The assistant set your generation prompt.' });
             }
             break;
           }
           case 'set_platform': {
-            const platform = payload.platform as string;
-            if (platform && orch.setPlatform) {
+            const platform = payload['platform'];
+            if (typeof platform === 'string' && orch.setPlatform) {
               orch.setPlatform(platform);
               toast({ title: 'Platform set', description: `Target platform: ${platform}` });
             }
             break;
           }
           case 'set_aspect_ratio': {
-            const aspectRatio = payload.aspectRatio as string;
-            if (aspectRatio && orch.setAspectRatio) {
+            const aspectRatio = payload['aspectRatio'];
+            if (typeof aspectRatio === 'string' && orch.setAspectRatio) {
               orch.setAspectRatio(aspectRatio);
             }
             break;
           }
           case 'set_resolution': {
-            const resolution = payload.resolution as string;
-            if (resolution && orch.setResolution) {
+            const resolution = payload['resolution'];
+            if (typeof resolution === 'string' && orch.setResolution) {
               orch.setResolution(resolution);
             }
             break;
           }
           case 'generation_complete': {
-            const imageUrl = payload.imageUrl as string;
-            if (imageUrl && orch.setGeneratedImage) {
+            const imageUrl = payload['imageUrl'];
+            if (typeof imageUrl === 'string' && orch.setGeneratedImage) {
               orch.setGeneratedImage(imageUrl);
               if (orch.setState) orch.setState('result');
               toast({ title: 'Image generated!', description: 'Check the result in the canvas.' });
@@ -235,13 +234,17 @@ export function AgentChatPanel({
             break;
           }
           case 'copy_generated': {
-            const copies = payload.copies as Record<string, unknown>[];
-            if (copies?.length > 0) {
-              const firstCopy = copies[0];
-              if (orch.setGeneratedCopyFull) {
-                orch.setGeneratedCopyFull(firstCopy);
-              } else if (orch.setGeneratedCopy) {
-                orch.setGeneratedCopy(firstCopy?.caption ?? firstCopy?.bodyText ?? '');
+            const copies = payload['copies'];
+            if (Array.isArray(copies) && copies.length > 0) {
+              const firstCopy = copies[0] as Record<string, unknown> | undefined;
+              if (firstCopy) {
+                if (orch.setGeneratedCopyFull) {
+                  orch.setGeneratedCopyFull(firstCopy as Parameters<typeof orch.setGeneratedCopyFull>[0]);
+                } else if (orch.setGeneratedCopy) {
+                  const caption = typeof firstCopy['caption'] === 'string' ? firstCopy['caption'] : '';
+                  const bodyText = typeof firstCopy['bodyText'] === 'string' ? firstCopy['bodyText'] : '';
+                  orch.setGeneratedCopy(caption || bodyText);
+                }
               }
               toast({
                 title: 'Ad copy generated',
@@ -255,7 +258,7 @@ export function AgentChatPanel({
         // UI action dispatch should never crash the chat panel
       }
     },
-    [orch, toast],
+    [orch],
   );
 
   const { messages, isStreaming, error, sendMessage, stopStreaming, clearMessages } = useAgentChat({
@@ -284,7 +287,7 @@ export function AgentChatPanel({
       selectedProducts,
       uploadedReferences,
       ideaBank: {
-        status: ideaBankContext?.status,
+        status: ideaBankContext?.status ?? undefined,
         suggestionCount: ideaBankContext?.suggestionCount ?? 0,
         topIdeas,
       },

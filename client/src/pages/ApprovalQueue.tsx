@@ -40,7 +40,7 @@ interface ApprovalQueueItem {
   aiConfidenceScore?: number;
   aiRecommendation?: 'auto_approve' | 'manual_review' | 'auto_reject';
   aiReasoning?: string;
-  safetyChecksPassed?: any;
+  safetyChecksPassed?: Record<string, boolean>;
   complianceFlags?: string[];
   reviewedBy?: string;
   reviewedAt?: string;
@@ -55,7 +55,7 @@ interface ApprovalQueueItem {
     cta?: string;
     platform: string;
     framework?: string;
-    qualityScore?: any;
+    qualityScore?: number;
   };
   generation?: {
     generatedImagePath: string;
@@ -116,11 +116,7 @@ export default function ApprovalQueue({ embedded = false }: ApprovalQueueProps) 
   });
   const activeAccounts = socialAccounts.filter((a) => a.isActive);
 
-  useEffect(() => {
-    fetchQueue();
-  }, [statusFilter, priorityFilter, platformFilter]);
-
-  const fetchQueue = async () => {
+  const fetchQueue = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -140,33 +136,39 @@ export default function ApprovalQueue({ embedded = false }: ApprovalQueueProps) 
 
       const data = await response.json();
       // Handle both response formats: {items:[]} or {data:{items:[]}}
-      const items = data.data?.items || data.items || [];
-      setItems(items);
+      const fetchedItems: ApprovalQueueItem[] = (data as Record<string, unknown>)?.data
+        ? ((data as Record<string, Record<string, unknown>>).data?.items as ApprovalQueueItem[]) ?? []
+        : ((data as Record<string, unknown>).items as ApprovalQueueItem[]) ?? [];
+      setItems(fetchedItems);
 
       // Calculate stats
-      const pending = items.filter((item: ApprovalQueueItem) => item.status === 'pending_review');
+      const pending = fetchedItems.filter((item) => item.status === 'pending_review');
       const avgScore =
-        pending.reduce((sum: number, item: ApprovalQueueItem) => sum + (item.aiConfidenceScore || 0), 0) /
-        (pending.length || 1);
+        pending.reduce((sum, item) => sum + (item.aiConfidenceScore ?? 0), 0) / (pending.length || 1);
 
       setStats({
         totalPending: pending.length,
         avgConfidenceScore: Math.round(avgScore),
-        urgentCount: pending.filter((item: ApprovalQueueItem) => item.priority === 'urgent').length,
-        highPriorityCount: pending.filter((item: ApprovalQueueItem) => item.priority === 'high').length,
+        urgentCount: pending.filter((item) => item.priority === 'urgent').length,
+        highPriorityCount: pending.filter((item) => item.priority === 'high').length,
       });
 
       setSelectedIds(new Set());
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to load approval queue';
       toast({
         title: 'Error',
-        description: error.message || 'Failed to load approval queue',
+        description: message,
         variant: 'destructive',
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter, priorityFilter, platformFilter]);
+
+  useEffect(() => {
+    fetchQueue();
+  }, [fetchQueue]);
 
   const handleQuickApprove = async (itemId: string) => {
     try {
@@ -190,10 +192,11 @@ export default function ApprovalQueue({ embedded = false }: ApprovalQueueProps) 
       });
 
       fetchQueue();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to approve content';
       toast({
         title: 'Error',
-        description: error.message || 'Failed to approve content',
+        description: message,
         variant: 'destructive',
       });
     } finally {
@@ -224,10 +227,11 @@ export default function ApprovalQueue({ embedded = false }: ApprovalQueueProps) 
 
       setReviewingItem(null);
       fetchQueue();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to approve content';
       toast({
         title: 'Error',
-        description: error.message || 'Failed to approve content',
+        description: message,
         variant: 'destructive',
       });
     } finally {
@@ -260,7 +264,7 @@ export default function ApprovalQueue({ embedded = false }: ApprovalQueueProps) 
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || 'Failed to approve and schedule');
+        throw new Error((data as { error?: string }).error ?? 'Failed to approve and schedule');
       }
 
       const formatted =
@@ -269,8 +273,9 @@ export default function ApprovalQueue({ embedded = false }: ApprovalQueueProps) 
       setScheduleDialogItemId(null);
       setReviewingItem(null);
       fetchQueue();
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message || 'Failed to approve and schedule', variant: 'destructive' });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to approve and schedule';
+      toast({ title: 'Error', description: message, variant: 'destructive' });
     } finally {
       setIsScheduling(false);
     }
@@ -299,10 +304,11 @@ export default function ApprovalQueue({ embedded = false }: ApprovalQueueProps) 
 
       setReviewingItem(null);
       fetchQueue();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to reject content';
       toast({
         title: 'Error',
-        description: error.message || 'Failed to reject content',
+        description: message,
         variant: 'destructive',
       });
     } finally {
@@ -336,10 +342,11 @@ export default function ApprovalQueue({ embedded = false }: ApprovalQueueProps) 
 
       setReviewingItem(null);
       fetchQueue();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to request revision';
       toast({
         title: 'Error',
-        description: error.message || 'Failed to request revision',
+        description: message,
         variant: 'destructive',
       });
     } finally {
@@ -367,10 +374,11 @@ export default function ApprovalQueue({ embedded = false }: ApprovalQueueProps) 
       });
 
       fetchQueue();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to delete item';
       toast({
         title: 'Error',
-        description: error.message || 'Failed to delete item',
+        description: message,
         variant: 'destructive',
       });
     }
@@ -396,7 +404,7 @@ export default function ApprovalQueue({ embedded = false }: ApprovalQueueProps) 
         throw new Error('Failed to bulk approve');
       }
 
-      const result = await response.json();
+      const result = (await response.json()) as { approved: number };
 
       toast({
         title: 'Success',
@@ -405,10 +413,11 @@ export default function ApprovalQueue({ embedded = false }: ApprovalQueueProps) 
       });
 
       fetchQueue();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to bulk approve';
       toast({
         title: 'Error',
-        description: error.message || 'Failed to bulk approve',
+        description: message,
         variant: 'destructive',
       });
     } finally {
@@ -441,10 +450,11 @@ export default function ApprovalQueue({ embedded = false }: ApprovalQueueProps) 
       });
 
       fetchQueue();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to bulk reject';
       toast({
         title: 'Error',
-        description: error.message || 'Failed to bulk reject',
+        description: message,
         variant: 'destructive',
       });
     } finally {

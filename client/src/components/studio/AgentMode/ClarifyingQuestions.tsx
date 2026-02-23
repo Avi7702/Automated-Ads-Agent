@@ -1,20 +1,17 @@
-// @ts-nocheck
 /**
  * ClarifyingQuestions — Renders 1-3 clarifying questions after a suggestion is selected.
  *
  * Question types:
- *  - 'select'      → radio buttons
- *  - 'text'        → textarea
- *  - 'multiselect' → checkboxes
+ *  - 'select'      -> radio buttons
+ *  - 'text'        -> textarea
+ *  - 'multiselect' -> checkboxes
  *
- * Back button → return to suggestions.
- * Continue button → disabled until all required questions are answered.
+ * Back button -> return to suggestions.
+ * Continue button -> disabled until all required questions are answered.
  */
 
-import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -30,7 +27,7 @@ interface ClarifyingQuestionsProps {
   onBack: () => void;
   onContinue: () => void;
   isLoading: boolean;
-  suggestionTitle?: string;
+  suggestionTitle?: string | undefined;
 }
 
 function SelectQuestion({
@@ -88,7 +85,6 @@ function MultiselectQuestion({
 }
 
 function TextQuestion({
-  question,
   value,
   onChange,
 }: {

@@ -1,13 +1,12 @@
-// @ts-nocheck
 /**
- * DayPostsSheet — Premium slide-over panel showing all posts for a selected day
+ * DayPostsSheet -- Premium slide-over panel showing all posts for a selected day
  *
  * Timeline layout with rich post cards, micro-animations, full mobile support,
  * dark mode, and proper empty/loading/error states.
  */
 
 import { useState, useCallback } from 'react';
-import { format, parseISO, isToday, isTomorrow, isPast } from 'date-fns';
+import { format, parseISO, isToday, isTomorrow } from 'date-fns';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import {
@@ -73,6 +72,14 @@ function getDayLabel(day: Date): string {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Extended post type for platform/account fields                     */
+/* ------------------------------------------------------------------ */
+interface ExtendedPost extends ScheduledPost {
+  platform?: string;
+  accountName?: string;
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main Component                                                     */
 /* ------------------------------------------------------------------ */
 
@@ -89,10 +96,11 @@ export function DayPostsSheet({ open, onOpenChange, day, posts }: DayPostsSheetP
       try {
         await cancelPost.mutateAsync(postId);
         toast({ title: 'Post cancelled', description: 'The scheduled post has been cancelled.' });
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
         toast({
           title: 'Failed to cancel',
-          description: err.message || 'Something went wrong. Please try again.',
+          description: message,
           variant: 'destructive',
         });
       } finally {
@@ -108,10 +116,11 @@ export function DayPostsSheet({ open, onOpenChange, day, posts }: DayPostsSheetP
       try {
         await retryPost.mutateAsync({ postId });
         toast({ title: 'Post rescheduled for retry', description: 'The post has been queued for retry.' });
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
         toast({
           title: 'Failed to retry',
-          description: err.message || 'Something went wrong. Please try again.',
+          description: message,
           variant: 'destructive',
         });
       } finally {
@@ -208,7 +217,7 @@ export function DayPostsSheet({ open, onOpenChange, day, posts }: DayPostsSheetP
                 {sortedPosts.map((post, index) => (
                   <TimelinePostCard
                     key={post.id}
-                    post={post}
+                    post={post as ExtendedPost}
                     index={index}
                     onCancel={handleCancel}
                     onRetry={handleRetry}
@@ -245,7 +254,7 @@ function TimelinePostCard({
   isCancelling,
   isRetrying,
 }: {
-  post: ScheduledPost;
+  post: ExtendedPost;
   index: number;
   onCancel: (id: string) => void;
   onRetry: (id: string) => void;
@@ -260,13 +269,12 @@ function TimelinePostCard({
   const isPublishing = post.status === 'publishing';
   const isPublished = post.status === 'published';
 
-  const platform = (post as any).platform || '';
-  const accountName = (post as any).accountName || '';
-  const gradient = PLATFORM_GRADIENTS[platform.toLowerCase()] || 'from-gray-400 to-gray-600';
-  const platformLabel = PLATFORM_ICONS[platform.toLowerCase()] || '';
+  const platform = post.platform ?? '';
+  const accountName = post.accountName ?? '';
+  const gradient = PLATFORM_GRADIENTS[platform.toLowerCase()] ?? 'from-gray-400 to-gray-600';
+  const platformLabel = PLATFORM_ICONS[platform.toLowerCase()] ?? '';
 
   // Caption truncation
-  const captionLines = post.caption?.split('\n') || [];
   const isLongCaption = post.caption && post.caption.length > 180;
 
   return (

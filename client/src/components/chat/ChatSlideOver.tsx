@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * ChatSlideOver -- Full-height slide-over chat panel (Sheet-based).
  *
@@ -8,15 +7,14 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { Bot, Send, Square, Trash2, Mic, MicOff, RefreshCw, Wrench, User } from 'lucide-react';
+import { Bot, Send, Square, Mic, MicOff, RefreshCw, Wrench, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { useAgentChat, type ChatMessage as ChatMessageType } from '@/components/studio/AgentChat/useAgentChat';
 
 /* ------------------------------------------------------------------ */
-/*  Tool labels — same map used by the Studio ChatMessage              */
+/*  Tool labels -- same map used by the Studio ChatMessage              */
 /* ------------------------------------------------------------------ */
 const TOOL_LABELS: Record<string, string> = {
   list_products: 'Searching products',
@@ -40,7 +38,7 @@ const TOOL_LABELS: Record<string, string> = {
 };
 
 /* ------------------------------------------------------------------ */
-/*  Inline ChatBubble (self-contained — no import from Studio)         */
+/*  Inline ChatBubble (self-contained -- no import from Studio)         */
 /* ------------------------------------------------------------------ */
 function ChatBubble({ message }: { message: ChatMessageType }) {
   const isUser = message.role === 'user';
@@ -103,7 +101,7 @@ export function ChatSlideOver({ isOpen, onOpenChange }: ChatSlideOverProps) {
   const [isListening, setIsListening] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   const { messages, isStreaming, error, sendMessage, stopStreaming, clearMessages } = useAgentChat();
 
@@ -119,6 +117,7 @@ export function ChatSlideOver({ isOpen, onOpenChange }: ChatSlideOverProps) {
       const t = setTimeout(() => inputRef.current?.focus(), 300);
       return () => clearTimeout(t);
     }
+    return undefined;
   }, [isOpen]);
 
   // Clean up speech recognition on unmount
@@ -158,13 +157,15 @@ export function ChatSlideOver({ isOpen, onOpenChange }: ChatSlideOverProps) {
       return;
     }
 
-    const SpeechRecognitionCtor = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognitionCtor =
+      window.SpeechRecognition ||
+      (window as unknown as { webkitSpeechRecognition: typeof SpeechRecognition }).webkitSpeechRecognition;
     const recognition = new SpeechRecognitionCtor();
     recognition.continuous = false;
     recognition.interimResults = false;
     recognition.lang = 'en-US';
 
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
       const transcript = event.results[0]?.[0]?.transcript;
       if (transcript) {
         setInput(transcript);

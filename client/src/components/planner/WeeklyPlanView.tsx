@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * WeeklyPlanView — Dashboard component for the weekly content plan.
  *
@@ -8,7 +7,7 @@
 
 import { useMemo, useState, useCallback } from 'react';
 import { useLocation } from 'wouter';
-import { useWeeklyPlan, useUpdatePlanPost, useRegeneratePlan } from '@/hooks/useWeeklyPlan';
+import { useWeeklyPlan, useRegeneratePlan } from '@/hooks/useWeeklyPlan';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -26,6 +25,7 @@ import {
   Package,
   Eye,
 } from 'lucide-react';
+import type { WeeklyPlanPost } from '@shared/schema';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -122,7 +122,6 @@ export default function WeeklyPlanView() {
   } | null>(null);
 
   const { data: plan, isLoading, error } = useWeeklyPlan(weekStart);
-  const updatePost = useUpdatePlanPost();
   const regenerate = useRegeneratePlan();
 
   // Compute the display week label from plan or fallback
@@ -132,10 +131,15 @@ export default function WeeklyPlanView() {
     return getMonday(new Date()).toISOString();
   }, [plan, weekStart]);
 
+  // Get typed posts array
+  const typedPosts = useMemo((): WeeklyPlanPost[] => {
+    if (!plan?.posts) return [];
+    return plan.posts as WeeklyPlanPost[];
+  }, [plan]);
+
   // Progress counts
   const counts = useMemo(() => {
-    if (!plan?.posts) return { total: 0, planned: 0, generated: 0, scheduled: 0, inProgress: 0, approved: 0 };
-    const posts = plan.posts as any[];
+    const posts = typedPosts;
     return {
       total: posts.length,
       planned: posts.filter((p) => p.status === 'planned').length,
@@ -144,14 +148,16 @@ export default function WeeklyPlanView() {
       approved: posts.filter((p) => p.status === 'approved').length,
       scheduled: posts.filter((p) => p.status === 'scheduled').length,
     };
-  }, [plan]);
+  }, [typedPosts]);
 
   // Strategy balance (actual vs target from metadata)
   const strategyBalance = useMemo(() => {
-    if (!plan?.posts) return [];
-    const posts = plan.posts as any[];
+    const posts = typedPosts;
+    if (posts.length === 0) return [];
     const total = posts.length || 1;
-    const categoryTargets = (plan.metadata as any)?.categoryTargets ?? {};
+
+    const metadata = plan?.metadata as { categoryTargets?: Record<string, number> } | null | undefined;
+    const categoryTargets = metadata?.categoryTargets ?? {};
 
     // Compute actual percentages
     const actual: Record<string, number> = {};
@@ -165,9 +171,9 @@ export default function WeeklyPlanView() {
     return Array.from(allCategories).map((cat) => ({
       category: cat,
       actualPercent: Math.round(((actual[cat] ?? 0) / total) * 100),
-      targetPercent: categoryTargets[cat] != null ? Math.round(categoryTargets[cat] * 100) : undefined,
+      targetPercent: categoryTargets[cat] != null ? Math.round(categoryTargets[cat]! * 100) : undefined,
     }));
-  }, [plan]);
+  }, [plan, typedPosts]);
 
   // Handlers
   const handlePrevWeek = useCallback(() => {
@@ -187,32 +193,36 @@ export default function WeeklyPlanView() {
   const handleCreateNow = useCallback(
     (postIndex: number) => {
       if (!plan) return;
-      const post = (plan.posts as any[])[postIndex];
+      const post = typedPosts[postIndex];
       const params = new URLSearchParams({
         planId: plan.id,
         postIndex: String(postIndex),
       });
       if (post?.productIds?.length) {
-        params.set('productId', post.productIds[0]);
+        const firstProductId = post.productIds[0];
+        if (firstProductId) {
+          params.set('productId', firstProductId);
+        }
       }
       navigate(`/?${params.toString()}`);
     },
-    [plan, navigate],
+    [plan, typedPosts, navigate],
   );
 
   const handleSchedule = useCallback(
     (postIndex: number) => {
       if (!plan) return;
-      const post = (plan.posts as any[])[postIndex];
-      const defaultDate = post?.scheduledDate ? new Date(post.scheduledDate) : undefined;
+      const post = typedPosts[postIndex];
+      if (!post) return;
+      const defaultDate = post.scheduledDate ? new Date(post.scheduledDate) : undefined;
       setSchedulePrefill({
-        caption: post?.briefing ?? post?.content ?? undefined,
-        generationId: post?.generationId ?? undefined,
+        caption: post.briefing ?? undefined,
+        generationId: post.generationId ?? undefined,
         defaultDate,
       });
       setScheduleDialogOpen(true);
     },
-    [plan],
+    [plan, typedPosts],
   );
 
   /* ---------------------------------------------------------------- */
@@ -262,7 +272,7 @@ export default function WeeklyPlanView() {
   /*  Render — Empty                                                   */
   /* ---------------------------------------------------------------- */
 
-  if (!plan || !(plan.posts as any[])?.length) {
+  if (!plan || typedPosts.length === 0) {
     return (
       <Card>
         <CardContent className="py-12 text-center">
@@ -278,7 +288,7 @@ export default function WeeklyPlanView() {
   /*  Render — Plan                                                    */
   /* ---------------------------------------------------------------- */
 
-  const posts = plan.posts as any[];
+  const posts = typedPosts;
 
   return (
     <Card>
@@ -319,7 +329,7 @@ export default function WeeklyPlanView() {
       <CardContent className="space-y-3">
         {/* Post cards */}
         {posts.map((post, idx) => {
-          const statusCfg = STATUS_CONFIG[post.status] ?? STATUS_CONFIG.planned;
+          const statusCfg = STATUS_CONFIG[post.status] ?? STATUS_CONFIG['planned']!;
           const StatusIcon = statusCfg.icon;
           const catColor = CATEGORY_COLORS[post.category] ?? 'bg-gray-100 text-gray-700 border-gray-200';
 
@@ -412,7 +422,6 @@ export default function WeeklyPlanView() {
             <h4 className="text-sm font-medium mb-3">Strategy Balance</h4>
             <div className="space-y-2">
               {strategyBalance.map(({ category, actualPercent, targetPercent }) => {
-                const catColor = CATEGORY_COLORS[category] ?? 'bg-gray-100 text-gray-700';
                 const overTarget = targetPercent != null && actualPercent > targetPercent + 10;
 
                 return (
