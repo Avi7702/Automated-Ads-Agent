@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * useStyleReferences — Fetch and manage style references for the current user
  */
@@ -14,7 +13,7 @@ export interface StyleReference {
   category: 'character' | 'style' | 'scene';
   tags: string[] | null;
   styleDescription: string | null;
-  extractedElements: any | null;
+  extractedElements: Record<string, unknown> | null;
   confidence: number;
   imageFingerprint: string;
   analyzedAt: string | null;
@@ -26,7 +25,7 @@ export interface StyleReference {
 
 async function fetchCsrfToken(): Promise<string> {
   const res = await fetch('/api/csrf-token', { credentials: 'include' });
-  const data = await res.json();
+  const data = (await res.json()) as { csrfToken: string };
   return data.csrfToken;
 }
 

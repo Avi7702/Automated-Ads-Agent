@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * useVoiceInput — Web Speech API voice-to-text hook
  *
@@ -11,6 +10,61 @@
  * - Language detection (defaults to English)
  * - Graceful fallback when API unavailable
  */
+
+/* eslint-disable @typescript-eslint/no-unsafe-declaration-merging */
+
+// Web Speech API type augmentation (not yet in standard TS DOM lib)
+interface SpeechRecognitionEvent extends Event {
+  readonly resultIndex: number;
+  readonly results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  readonly error: string;
+  readonly message: string;
+}
+
+interface SpeechRecognitionResult {
+  readonly isFinal: boolean;
+  readonly length: number;
+  [index: number]: SpeechRecognitionAlternative;
+}
+
+interface SpeechRecognitionAlternative {
+  readonly transcript: string;
+  readonly confidence: number;
+}
+
+interface SpeechRecognitionResultList {
+  readonly length: number;
+  [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  maxAlternatives: number;
+  onstart: ((this: SpeechRecognition, ev: Event) => void) | null;
+  onresult: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => void) | null;
+  onerror: ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => void) | null;
+  onend: ((this: SpeechRecognition, ev: Event) => void) | null;
+  start(): void;
+  stop(): void;
+  abort(): void;
+}
+
+interface SpeechRecognitionConstructor {
+  new (): SpeechRecognition;
+  prototype: SpeechRecognition;
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  }
+}
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 
@@ -53,7 +107,7 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
   const [transcript, setTranscript] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const recognitionRef = useRef<InstanceType<typeof SpeechRecognition> | null>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const finalTranscriptRef = useRef('');
 
@@ -111,10 +165,13 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
+        if (!result) continue;
+        const firstAlt = result[0];
+        if (!firstAlt) continue;
         if (result.isFinal) {
-          finalText += result[0].transcript;
+          finalText += firstAlt.transcript;
         } else {
-          interimTranscript += result[0].transcript;
+          interimTranscript += firstAlt.transcript;
         }
       }
 
