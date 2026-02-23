@@ -1,6 +1,8 @@
 import { useState, memo, useMemo } from 'react';
+import { motion } from 'motion/react';
 import { Link, useLocation } from 'wouter';
 import { cn } from '@/lib/utils';
+import { MOTION, useReducedMotion } from '@/lib/motion';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { LogOut, Menu } from 'lucide-react';
@@ -25,6 +27,7 @@ export function Header({ currentPage }: HeaderProps) {
   const [location] = useLocation();
   const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const reduced = useReducedMotion();
 
   // Determine active page from location if not provided
   // Unified Studio: 4 main routes
@@ -57,14 +60,22 @@ export function Header({ currentPage }: HeaderProps) {
   ];
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-md">
+    <header
+      className="sticky top-0 z-50 w-full header-shadow bg-background/80 backdrop-blur-md"
+      style={{ viewTransitionName: 'header' }}
+    >
       <div className="container flex h-14 md:h-16 items-center justify-between px-4 md:px-6">
         {/* Logo & Brand */}
         <div className="flex items-center gap-4">
           <Link href="/" className="flex items-center gap-2">
-            <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 text-white text-xs font-bold">
+            <motion.span
+              className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 text-white text-xs font-bold"
+              whileHover={reduced ? undefined : { scale: 1.08 }}
+              whileTap={reduced ? undefined : { scale: 0.95 }}
+              transition={MOTION.transitions.fast}
+            >
               V3
-            </span>
+            </motion.span>
             <span className="font-semibold text-lg hidden sm:inline">Product Content Studio</span>
           </Link>
         </div>
@@ -84,16 +95,20 @@ export function Header({ currentPage }: HeaderProps) {
         <nav className="hidden md:flex items-center gap-1" aria-label="Main navigation">
           {navItems.map((item) => (
             <Link key={item.id} href={item.href} aria-current={activePage === item.id ? 'page' : undefined}>
-              <span
+              <motion.span
                 className={cn(
-                  'px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer',
+                  'nav-indicator px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer inline-block',
                   activePage === item.id
                     ? 'bg-primary/10 text-primary'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted',
                 )}
+                data-active={activePage === item.id}
+                whileHover={reduced ? undefined : { scale: 1.04 }}
+                whileTap={reduced ? undefined : { scale: 0.97 }}
+                transition={MOTION.transitions.fast}
               >
                 {item.label}
-              </span>
+              </motion.span>
             </Link>
           ))}
         </nav>

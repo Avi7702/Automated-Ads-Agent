@@ -36,9 +36,9 @@ export default function Pipeline() {
   return (
     <div className="min-h-screen bg-background">
       <Header currentPage="pipeline" />
-      <div className="container px-4 md:px-6 py-4 md:py-6">
+      <div className="container px-4 md:px-6 py-6 md:py-8 stagger-container">
         <Tabs value={activeTab} className="w-full">
-          <TabsList className="grid w-full max-w-3xl grid-cols-5 mb-6">
+          <TabsList className="grid w-full max-w-3xl grid-cols-5 mb-8">
             {TAB_CONFIG.map(({ id, label, icon: Icon }) => (
               <TabsTrigger
                 key={id}
