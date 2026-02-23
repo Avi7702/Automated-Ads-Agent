@@ -139,15 +139,16 @@ describe('Database Health Check', () => {
     });
 
     it('should return degraded for query at exactly 200ms', async () => {
-      // Source uses >= 200ms threshold for degraded status
-      mockQuery.mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve({ rows: [{ '?column?': 1 }] }), 200)),
-      );
+      // Avoid timer jitter by controlling Date.now() directly.
+      mockQuery.mockResolvedValue({ rows: [{ '?column?': 1 }] });
+      const nowSpy = vi.spyOn(Date, 'now');
+      nowSpy.mockReturnValueOnce(1000).mockReturnValueOnce(1200);
 
       const result = await checkDbHealth();
+      nowSpy.mockRestore();
 
       expect(result.status).toBe('degraded');
-      expect(result.averageQueryTime).toBeGreaterThanOrEqual(200);
+      expect(result.averageQueryTime).toBe(200);
     });
   });
 
@@ -180,14 +181,16 @@ describe('Database Health Check', () => {
     });
 
     it('should return unhealthy for query at exactly 500ms', async () => {
-      mockQuery.mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve({ rows: [{ '?column?': 1 }] }), 500)),
-      );
+      // Avoid timer jitter by controlling Date.now() directly.
+      mockQuery.mockResolvedValue({ rows: [{ '?column?': 1 }] });
+      const nowSpy = vi.spyOn(Date, 'now');
+      nowSpy.mockReturnValueOnce(2000).mockReturnValueOnce(2500);
 
       const result = await checkDbHealth();
+      nowSpy.mockRestore();
 
       expect(result.status).toBe('unhealthy');
-      expect(result.averageQueryTime).toBeGreaterThanOrEqual(500);
+      expect(result.averageQueryTime).toBe(500);
     });
 
     it('should return unhealthy on connection failure', async () => {
