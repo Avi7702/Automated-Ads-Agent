@@ -1,12 +1,12 @@
-@import "tailwindcss";
-@import "tw-animate-css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --font-sans: 'Inter', sans-serif;
   --font-display: 'Space Grotesk', sans-serif;
-  
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -67,8 +67,36 @@
   --color-source-template: hsl(var(--source-template));
 }
 
+/* ========================================
+   CSS @property registrations for animatable tokens
+   ======================================== */
+@property --glow-opacity {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --glow-spread {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 0px;
+}
+
+@property --glow-blur {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 0px;
+}
+
+@property --shimmer-x {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: -100%;
+}
+
 /* LIGHT MODE (default) */
 :root {
+  /* ── Legacy HSL tokens (backward compat) ── */
   --background: 0 0% 100%;
   --foreground: 240 10% 3.9%;
 
@@ -108,7 +136,7 @@
   --sidebar-border: 240 5.9% 90%;
   --sidebar-ring: 217.2 91.2% 59.8%;
 
-  /* Status colors */
+  /* Legacy status colors */
   --success: 142 76% 36%;
   --success-text: 142 71% 25%;
   --warning: 43 96% 56%;
@@ -124,10 +152,66 @@
   --source-kb: 280 65% 60%;
   --source-web: 142 76% 36%;
   --source-template: 30 80% 55%;
+
+  /* ── OKLCH color system (Phase 4) ── */
+  --oklch-bg: oklch(1 0 0);
+  --oklch-fg: oklch(0.15 0.02 265);
+  --oklch-primary: oklch(0.55 0.2 270);
+  --oklch-primary-fg: oklch(1 0 0);
+  --oklch-muted: oklch(0.96 0.005 265);
+  --oklch-muted-fg: oklch(0.55 0.02 265);
+  --oklch-border: oklch(0.91 0.01 265);
+
+  /* ── Surface layers (cards, elevated, highest) ── */
+  --surface-1: oklch(0.99 0.002 265);
+  --surface-2: oklch(1 0 0);
+  --surface-3: oklch(1 0 0);
+
+  /* ── AI glow system ── */
+  --glow-primary: oklch(0.7 0.15 250);
+  --glow-success: oklch(0.75 0.15 155);
+  --glow-accent: oklch(0.7 0.12 300);
+  --glow-opacity: 0;
+  --glow-spread: 0px;
+  --glow-blur: 0px;
+
+  /* ── Hover-responsive border tokens ── */
+  --border-hover: oklch(0.65 0.1 250 / 0.3);
+  --border-active: oklch(0.65 0.15 250 / 0.5);
+
+  /* ── Typography scale ── */
+  --text-display: clamp(2.5rem, 4vw, 3.5rem);
+  --text-display-lh: 1.1;
+  --text-heading: clamp(1.75rem, 3vw, 2.25rem);
+  --text-heading-lh: 1.2;
+  --text-title: clamp(1.25rem, 2vw, 1.5rem);
+  --text-title-lh: 1.3;
+  --text-body: 1rem;
+  --text-body-lh: 1.6;
+  --text-small: 0.875rem;
+  --text-small-lh: 1.5;
+  --text-micro: 0.75rem;
+  --text-micro-lh: 1.4;
+
+  /* ── Letter spacing tokens ── */
+  --tracking-tight: -0.025em;
+  --tracking-normal: 0em;
+  --tracking-wide: 0.025em;
+
+  /* ── 8px grid spacing system ── */
+  --space-1: 0.25rem; /* 4px */
+  --space-2: 0.5rem; /* 8px */
+  --space-3: 0.75rem; /* 12px */
+  --space-4: 1rem; /* 16px */
+  --space-6: 1.5rem; /* 24px */
+  --space-8: 2rem; /* 32px */
+  --space-12: 3rem; /* 48px */
+  --space-16: 4rem; /* 64px */
 }
 
 /* DARK MODE */
 .dark {
+  /* ── Legacy HSL tokens (backward compat) ── */
   --background: 240 10% 3.9%;
   --foreground: 0 0% 98%;
 
@@ -165,7 +249,7 @@
   --sidebar-border: 240 3.7% 15.9%;
   --sidebar-ring: 217.2 91.2% 59.8%;
 
-  /* Status colors - lighter variants for dark backgrounds */
+  /* Legacy status colors - lighter variants for dark backgrounds */
   --success: 142 76% 45%;
   --success-text: 142 70% 60%;
   --warning: 43 96% 65%;
@@ -181,6 +265,29 @@
   --source-kb: 280 65% 75%;
   --source-web: 142 76% 55%;
   --source-template: 30 80% 70%;
+
+  /* ── OKLCH color system (Phase 4) ── */
+  --oklch-bg: oklch(0.15 0.02 265);
+  --oklch-fg: oklch(0.97 0.005 265);
+  --oklch-primary: oklch(0.75 0.18 270);
+  --oklch-primary-fg: oklch(0.2 0.02 265);
+  --oklch-muted: oklch(0.25 0.01 265);
+  --oklch-muted-fg: oklch(0.7 0.02 265);
+  --oklch-border: oklch(0.25 0.01 265);
+
+  /* ── Surface layers (cards, elevated, highest) ── */
+  --surface-1: oklch(0.2 0.015 265);
+  --surface-2: oklch(0.25 0.015 265);
+  --surface-3: oklch(0.3 0.015 265);
+
+  /* ── AI glow system ── */
+  --glow-primary: oklch(0.7 0.15 250);
+  --glow-success: oklch(0.75 0.15 155);
+  --glow-accent: oklch(0.7 0.12 300);
+
+  /* ── Hover-responsive border tokens ── */
+  --border-hover: oklch(0.65 0.1 250 / 0.3);
+  --border-active: oklch(0.65 0.15 250 / 0.5);
 }
 
 @layer base {
@@ -190,7 +297,12 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply font-display tracking-tight;
   }
 
@@ -200,8 +312,8 @@
     transition-duration: 200ms;
     transition-timing-function: ease-in-out;
   }
-  *[class*="animate-"],
-  *[class*="transition-transform"] {
+  *[class*='animate-'],
+  *[class*='transition-transform'] {
     transition-property: transform, opacity !important;
   }
 }
@@ -231,13 +343,20 @@
 
 /* 2026 UX: Button Feedback Animations */
 @keyframes button-press {
-  0% { transform: scale(1); }
-  50% { transform: scale(0.95); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 @keyframes success-pulse {
-  0%, 100% {
+  0%,
+  100% {
     background-color: transparent;
     border-color: inherit;
   }
@@ -342,19 +461,18 @@
   inset: 0;
   border-radius: inherit;
   padding: 2px;
-  background: linear-gradient(135deg,
-    hsl(var(--primary)) 0%,
-    hsl(280 65% 60%) 50%,
-    hsl(var(--primary)) 100%
-  );
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(280 65% 60%) 50%, hsl(var(--primary)) 100%);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
 }
 
 /* AI Sparkle animations - rotating, glowing magic indicators */
 @keyframes sparkle {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
     transform: scale(1) rotate(0deg);
   }
@@ -365,7 +483,8 @@
 }
 
 @keyframes glow-pulse {
-  0%, 100% {
+  0%,
+  100% {
     filter: drop-shadow(0 0 4px currentColor);
   }
   50% {
@@ -383,12 +502,7 @@
 
 /* Animated gradient text */
 .text-gradient-animated {
-  background: linear-gradient(
-    90deg,
-    hsl(var(--primary)),
-    hsl(280 65% 60%),
-    hsl(var(--primary))
-  );
+  background: linear-gradient(90deg, hsl(var(--primary)), hsl(280 65% 60%), hsl(var(--primary)));
   background-size: 200% auto;
   background-clip: text;
   -webkit-background-clip: text;
@@ -397,7 +511,8 @@
 }
 
 @keyframes gradient-shift {
-  0%, 100% {
+  0%,
+  100% {
     background-position: 0% center;
   }
   50% {
@@ -407,7 +522,8 @@
 
 /* Floating animations for background gradients */
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0) translateX(0);
   }
   50% {
@@ -416,7 +532,8 @@
 }
 
 @keyframes float-delayed {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0) translateX(0);
   }
   50% {
@@ -484,7 +601,8 @@
 
 /* Animated gradient for floating action button */
 @keyframes gradient-x {
-  0%, 100% {
+  0%,
+  100% {
     background-position: 0% 50%;
   }
   50% {
@@ -570,4 +688,184 @@
   font-weight: 600;
   text-decoration: none;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* ========================================
+   PHASE 4A: VIEW TRANSITIONS
+   ======================================== */
+@keyframes vt-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes vt-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes vt-slide-out {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-8px);
+    opacity: 0;
+  }
+}
+
+@keyframes vt-slide-in {
+  from {
+    transform: translateX(8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+::view-transition-old(root) {
+  animation: vt-fade-out 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+::view-transition-new(root) {
+  animation: vt-fade-in 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+}
+
+/* ========================================
+   PHASE 4A: SKELETON SHIMMER
+   ======================================== */
+@keyframes shimmer {
+  from {
+    --shimmer-x: -100%;
+  }
+  to {
+    --shimmer-x: 100%;
+  }
+}
+
+@keyframes shimmer-fallback {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-1);
+}
+
+.skeleton-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    oklch(0.85 0.01 265 / 0.4) 40%,
+    oklch(0.9 0.02 265 / 0.6) 50%,
+    oklch(0.85 0.01 265 / 0.4) 60%,
+    transparent 100%
+  );
+  animation: shimmer-fallback 1.8s ease-in-out infinite;
+}
+
+.dark .skeleton-shimmer {
+  background: var(--surface-1);
+}
+
+.dark .skeleton-shimmer::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    oklch(0.3 0.015 265 / 0.3) 40%,
+    oklch(0.35 0.02 265 / 0.5) 50%,
+    oklch(0.3 0.015 265 / 0.3) 60%,
+    transparent 100%
+  );
+}
+
+/* ========================================
+   PHASE 4A: GLOW EFFECTS (OKLCH)
+   ======================================== */
+.glow-ai {
+  box-shadow: 0 0 var(--glow-blur, 0px) var(--glow-spread, 0px) var(--glow-primary);
+  transition: box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glow-ai:hover {
+  --glow-blur: 20px;
+  --glow-spread: 4px;
+}
+
+.glow-success-ring {
+  box-shadow: 0 0 var(--glow-blur, 0px) var(--glow-spread, 0px) var(--glow-success);
+  transition: box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glow-accent-ring {
+  box-shadow: 0 0 var(--glow-blur, 0px) var(--glow-spread, 0px) var(--glow-accent);
+  transition: box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ========================================
+   PHASE 4A: TYPOGRAPHY UTILITY CLASSES
+   ======================================== */
+.text-display {
+  font-size: var(--text-display);
+  line-height: var(--text-display-lh);
+  letter-spacing: var(--tracking-tight);
+  font-family: var(--font-display);
+}
+
+.text-heading {
+  font-size: var(--text-heading);
+  line-height: var(--text-heading-lh);
+  letter-spacing: var(--tracking-tight);
+  font-family: var(--font-display);
+}
+
+.text-title {
+  font-size: var(--text-title);
+  line-height: var(--text-title-lh);
+  letter-spacing: var(--tracking-tight);
+  font-family: var(--font-display);
+}
+
+.text-body {
+  font-size: var(--text-body);
+  line-height: var(--text-body-lh);
+  letter-spacing: var(--tracking-normal);
+}
+
+.text-small {
+  font-size: var(--text-small);
+  line-height: var(--text-small-lh);
+  letter-spacing: var(--tracking-normal);
+}
+
+.text-micro {
+  font-size: var(--text-micro);
+  line-height: var(--text-micro-lh);
+  letter-spacing: var(--tracking-wide);
 }
