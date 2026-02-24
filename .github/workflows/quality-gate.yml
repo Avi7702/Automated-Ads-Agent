@@ -115,7 +115,7 @@ jobs:
             echo "No TS/TSX files changed - skipping lint."
           else
             echo "Linting: $CHANGED"
-            npx eslint --max-warnings 0 $CHANGED
+            npx eslint --max-warnings 0 --no-warn-ignored $CHANGED
           fi
 
   full-lint:
