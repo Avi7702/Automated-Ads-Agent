@@ -3,8 +3,7 @@ import { lazy, Suspense, useEffect } from 'react';
 import { queryClient, initializeCsrf } from './lib/queryClient';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
-import { Toaster } from '@/components/ui/toaster';
-import { Toaster as SonnerToaster } from 'sonner';
+import { Toaster } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -165,8 +164,7 @@ function App() {
               <a href="#main-content" className="skip-to-content">
                 Skip to main content
               </a>
-              <Toaster />
-              <SonnerToaster
+              <Toaster
                 position="bottom-right"
                 toastOptions={{
                   duration: 3000,

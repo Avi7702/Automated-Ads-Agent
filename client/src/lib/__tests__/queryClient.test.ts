@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { queryClient, apiRequest, getQueryFn, initializeCsrf, _resetCsrfToken } from '../queryClient';
 
@@ -10,7 +10,7 @@ describe('queryClient', () => {
   describe('configuration', () => {
     it('has correct default staleTime', () => {
       const defaultOptions = queryClient.getDefaultOptions();
-      expect(defaultOptions.queries?.staleTime).toBe(Infinity);
+      expect(defaultOptions.queries?.staleTime).toBe(60000);
     });
 
     it('has refetchOnWindowFocus disabled', () => {

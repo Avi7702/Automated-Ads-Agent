@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/exhaustive-deps */
 import { useState, useEffect, useCallback } from 'react';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { Header } from '@/components/layout/Header';
 
 interface ApprovalQueueProps {
@@ -72,7 +73,6 @@ interface QueueStats {
 }
 
 export default function ApprovalQueue({ embedded = false }: ApprovalQueueProps) {
-  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<ApprovalQueueItem[]>([]);
   const [stats, setStats] = useState<QueueStats>({
@@ -158,10 +158,8 @@ export default function ApprovalQueue({ embedded = false }: ApprovalQueueProps) 
 
       setSelectedIds(new Set());
     } catch (error: any) {
-      toast({
-        title: 'Error',
+      toast.error('Error', {
         description: error.message || 'Failed to load approval queue',
-        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -183,18 +181,14 @@ export default function ApprovalQueue({ embedded = false }: ApprovalQueueProps) 
         throw new Error('Failed to approve content');
       }
 
-      toast({
-        title: 'Success',
+      toast.success('Success', {
         description: 'Content approved successfully',
-        variant: 'default',
       });
 
       fetchQueue();
     } catch (error: any) {
-      toast({
-        title: 'Error',
+      toast.error('Error', {
         description: error.message || 'Failed to approve content',
-        variant: 'destructive',
       });
     } finally {
       setIsProcessing(false);
@@ -216,19 +210,15 @@ export default function ApprovalQueue({ embedded = false }: ApprovalQueueProps) 
         throw new Error('Failed to approve content');
       }
 
-      toast({
-        title: 'Success',
+      toast.success('Success', {
         description: 'Content approved',
-        variant: 'default',
       });
 
       setReviewingItem(null);
       fetchQueue();
     } catch (error: any) {
-      toast({
-        title: 'Error',
+      toast.error('Error', {
         description: error.message || 'Failed to approve content',
-        variant: 'destructive',
       });
     } finally {
       setIsProcessing(false);
@@ -265,12 +255,16 @@ export default function ApprovalQueue({ embedded = false }: ApprovalQueueProps) 
 
       const formatted =
         format(new Date(scheduledFor), 'MMM d, yyyy') + ' at ' + format(new Date(scheduledFor), 'h:mm a');
-      toast({ title: 'Approved & scheduled', description: `Content approved and scheduled for ${formatted}.` });
+      toast.success('Approved & scheduled', {
+        description: `Content approved and scheduled for ${formatted}`,
+      });
       setScheduleDialogItemId(null);
       setReviewingItem(null);
       fetchQueue();
     } catch (error: any) {
-      toast({ title: 'Error', description: error.message || 'Failed to approve and schedule', variant: 'destructive' });
+      toast.error('Error', {
+        description: error.message || 'Failed to approve and schedule',
+      });
     } finally {
       setIsScheduling(false);
     }
@@ -291,19 +285,15 @@ export default function ApprovalQueue({ embedded = false }: ApprovalQueueProps) 
         throw new Error('Failed to reject content');
       }
 
-      toast({
-        title: 'Success',
+      toast.success('Success', {
         description: 'Content rejected',
-        variant: 'default',
       });
 
       setReviewingItem(null);
       fetchQueue();
     } catch (error: any) {
-      toast({
-        title: 'Error',
+      toast.error('Error', {
         description: error.message || 'Failed to reject content',
-        variant: 'destructive',
       });
     } finally {
       setIsProcessing(false);
@@ -328,19 +318,15 @@ export default function ApprovalQueue({ embedded = false }: ApprovalQueueProps) 
         throw new Error('Failed to request revision');
       }
 
-      toast({
-        title: 'Success',
+      toast.success('Success', {
         description: 'Revision requested',
-        variant: 'default',
       });
 
       setReviewingItem(null);
       fetchQueue();
     } catch (error: any) {
-      toast({
-        title: 'Error',
+      toast.error('Error', {
         description: error.message || 'Failed to request revision',
-        variant: 'destructive',
       });
     } finally {
       setIsProcessing(false);
@@ -360,18 +346,14 @@ export default function ApprovalQueue({ embedded = false }: ApprovalQueueProps) 
         throw new Error('Failed to delete item');
       }
 
-      toast({
-        title: 'Success',
+      toast.success('Success', {
         description: 'Item deleted',
-        variant: 'default',
       });
 
       fetchQueue();
     } catch (error: any) {
-      toast({
-        title: 'Error',
+      toast.error('Error', {
         description: error.message || 'Failed to delete item',
-        variant: 'destructive',
       });
     }
   };
@@ -398,18 +380,14 @@ export default function ApprovalQueue({ embedded = false }: ApprovalQueueProps) 
 
       const result = await response.json();
 
-      toast({
-        title: 'Success',
+      toast.success('Success', {
         description: `${result.approved} items approved successfully`,
-        variant: 'default',
       });
 
       fetchQueue();
     } catch (error: any) {
-      toast({
-        title: 'Error',
+      toast.error('Error', {
         description: error.message || 'Failed to bulk approve',
-        variant: 'destructive',
       });
     } finally {
       setIsProcessing(false);
@@ -434,18 +412,14 @@ export default function ApprovalQueue({ embedded = false }: ApprovalQueueProps) 
 
       await Promise.all(promises);
 
-      toast({
-        title: 'Success',
+      toast.success('Success', {
         description: `${selectedIds.size} items rejected`,
-        variant: 'default',
       });
 
       fetchQueue();
     } catch (error: any) {
-      toast({
-        title: 'Error',
+      toast.error('Error', {
         description: error.message || 'Failed to bulk reject',
-        variant: 'destructive',
       });
     } finally {
       setIsProcessing(false);
