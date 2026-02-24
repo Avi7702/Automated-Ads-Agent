@@ -35,6 +35,7 @@ export function useStudioHistory(deps: {
         })
         .catch(console.error);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deps setters are stable and intentionally omitted.
   }, [selectedGenerationId, deps.generatedImage]);
 
   const handleLoadFromHistory = useCallback(

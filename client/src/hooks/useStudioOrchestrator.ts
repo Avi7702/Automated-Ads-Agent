@@ -199,7 +199,7 @@ export function useStudioOrchestrator() {
         generation.videoPollTimeoutRef.current = null;
       }
     };
-  }, []);
+  }, [generation.videoPollIntervalRef, generation.videoPollTimeoutRef]);
 
   // Keyboard shortcuts
   const { shortcuts } = useStudioKeyboard({

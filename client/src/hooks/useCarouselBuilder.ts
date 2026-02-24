@@ -3,7 +3,7 @@
  * useCarouselBuilder — Business logic for CarouselBuilder.
  * Handles outline generation, slide image generation, downloads, and clipboard.
  */
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
@@ -188,6 +188,7 @@ export function useCarouselBuilder({
   // Initial outline generation
   useEffect(() => {
     generateOutlineMutation.mutate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mutation object identity is unstable across renders.
   }, [templateId, topic]);
 
   // Derived state

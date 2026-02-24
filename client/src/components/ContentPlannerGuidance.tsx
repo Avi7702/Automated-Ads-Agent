@@ -84,7 +84,7 @@ export function ContentPlannerGuidance({
   onSetAspectRatio,
   onGenerateImage,
   onGenerateComplete,
-  productNames = [],
+  productNames: _productNames = [],
   hasProductsSelected = false,
   availableProducts = [],
   selectedProductIds = [],

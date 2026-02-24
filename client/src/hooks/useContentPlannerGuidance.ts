@@ -217,8 +217,9 @@ export function useContentPlannerGuidance({
         GenerateCopyResponse,
       );
       const firstCopy = data.copies?.[0];
+      const fallbackCopy = data as { variations?: Array<{ copy?: string }>; copy?: string };
       return (
-        firstCopy?.caption || (data as any).variations?.[0]?.copy || (data as any).copy || 'Copy generation failed'
+        firstCopy?.caption || fallbackCopy.variations?.[0]?.copy || fallbackCopy.copy || 'Copy generation failed'
       );
     },
     onSuccess: (copy) => {

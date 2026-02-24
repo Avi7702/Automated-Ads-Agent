@@ -66,7 +66,7 @@ interface CarouselBuilderProps {
   productImageUrls?: string[];
   aspectRatio?: string;
   onClose: () => void;
-  onComplete?: (outline: any) => void;
+  onComplete?: (outline: unknown) => void;
 }
 
 export function CarouselBuilder({
@@ -77,7 +77,7 @@ export function CarouselBuilder({
   productImageUrls = [],
   aspectRatio = '1080x1350',
   onClose,
-  onComplete,
+  onComplete: _onComplete,
 }: CarouselBuilderProps) {
   const q = useCarouselBuilder({ templateId, topic, platform, productNames, productImageUrls, aspectRatio });
 

@@ -103,8 +103,9 @@ export function useStudioDeepLink(deps: UseStudioDeepLinkDeps) {
       const contentPlannerTemplate = getTemplateById(cpTemplateId);
       if (contentPlannerTemplate) {
         setCpTemplate(contentPlannerTemplate);
-        if (contentPlannerTemplate.bestPlatforms.length > 0) {
-          const bestPlatform = contentPlannerTemplate.bestPlatforms[0].platform;
+        const bestPlatformEntry = contentPlannerTemplate.bestPlatforms[0];
+        if (bestPlatformEntry) {
+          const bestPlatform = bestPlatformEntry.platform;
           const platformMap: Record<string, string> = {
             linkedin: 'LinkedIn',
             instagram: 'Instagram',
@@ -115,15 +116,15 @@ export function useStudioDeepLink(deps: UseStudioDeepLinkDeps) {
           const mappedPlatform = platformMap[bestPlatform?.toLowerCase()] || bestPlatform || 'LinkedIn';
           deps.setPlatform(mappedPlatform);
 
-          const format = contentPlannerTemplate.bestPlatforms[0]?.format;
+          const format = bestPlatformEntry.format;
           const formatLower = (format || '').toLowerCase();
-          const formatAspectRatioMap: Record<string, string> = {
+          const formatAspectRatioMap = {
             carousel: '1080x1350',
             reel: '1080x1920',
             story: '1080x1920',
             video: '1920x1080',
             post: '1200x627',
-          };
+          } as const;
           let detectedRatio = '1200x627';
           if (formatLower.includes('carousel')) detectedRatio = formatAspectRatioMap.carousel;
           else if (formatLower.includes('reel') || formatLower.includes('story'))
@@ -132,8 +133,9 @@ export function useStudioDeepLink(deps: UseStudioDeepLinkDeps) {
           else detectedRatio = formatAspectRatioMap.post;
           deps.setAspectRatio(detectedRatio);
         }
-        if (contentPlannerTemplate.exampleTopics.length > 0 && !deps.prompt) {
-          deps.setPrompt(contentPlannerTemplate.exampleTopics[0]);
+        const firstTopic = contentPlannerTemplate.exampleTopics[0];
+        if (firstTopic && !deps.prompt) {
+          deps.setPrompt(firstTopic);
         }
       }
     }
@@ -192,6 +194,7 @@ export function useStudioDeepLink(deps: UseStudioDeepLinkDeps) {
         })
         .catch(console.error);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- setters on deps are stable and intentionally omitted.
   }, [deps.templates, deps.prompt, cpTemplate, deps.products, planContext]);
 
   const clearPlanContext = useCallback(() => {

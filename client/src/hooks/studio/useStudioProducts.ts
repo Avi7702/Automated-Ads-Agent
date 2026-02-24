@@ -7,6 +7,31 @@ import { typedGet } from '@/lib/typedFetch';
 import { ListProductsResponse } from '@shared/contracts/products.contract';
 import type { Product, AdSceneTemplate, PerformingAdTemplate } from './types';
 
+function normalizeProduct(product: ListProductsResponse[number]): Product {
+  return {
+    ...product,
+    cloudinaryUrl: product.cloudinaryUrl ?? '',
+    cloudinaryPublicId: product.cloudinaryPublicId ?? '',
+    category: product.category ?? null,
+    description: product.description ?? null,
+    features: product.features ?? null,
+    benefits: product.benefits ?? null,
+    specifications: product.specifications ?? null,
+    tags: product.tags ?? [],
+    sku: product.sku ?? null,
+    enrichmentStatus: product.enrichmentStatus ?? null,
+    enrichmentDraft: product.enrichmentDraft ?? null,
+    enrichmentVerifiedAt:
+      product.enrichmentVerifiedAt == null
+        ? null
+        : product.enrichmentVerifiedAt instanceof Date
+          ? product.enrichmentVerifiedAt
+          : new Date(product.enrichmentVerifiedAt),
+    enrichmentSource: product.enrichmentSource ?? null,
+    createdAt: product.createdAt instanceof Date ? product.createdAt : new Date(product.createdAt),
+  };
+}
+
 export function useStudioProducts() {
   // ── Selection State ───────────────────────────────────
   const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
@@ -34,9 +59,9 @@ export function useStudioProducts() {
 
   const { data: products = [] } = useQuery<Product[]>({
     queryKey: ['products'],
-    queryFn: async () => {
+    queryFn: async (): Promise<Product[]> => {
       const data = await typedGet('/api/products', ListProductsResponse);
-      return Array.isArray(data) ? data : [];
+      return (Array.isArray(data) ? data : []).map(normalizeProduct);
     },
   });
 

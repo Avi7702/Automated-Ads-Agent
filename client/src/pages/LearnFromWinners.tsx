@@ -20,9 +20,6 @@ import {
   Palette,
   Layout,
   Target,
-  Image as ImageIcon,
-  BarChart3,
-  Star,
   Clock,
   RefreshCw,
 } from 'lucide-react';

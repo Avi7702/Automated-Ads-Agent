@@ -57,7 +57,7 @@ export function useStudioGeneration(options: UseStudioGenerationOptions) {
   // ── Ad Copy ───────────────────────────────────────────
   const [generatedCopy, setGeneratedCopy] = useState('');
   const [isGeneratingCopy, setIsGeneratingCopy] = useState(false);
-  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+  const generatedImageUrl = generatedImage;
   const [generatedCopyFull, setGeneratedCopyFull] = useState<CopyResult | null>(null);
 
   // ── Video Mode ──────────────────────────────────────
@@ -121,8 +121,8 @@ export function useStudioGeneration(options: UseStudioGenerationOptions) {
       const data = await typedPostFormData('/api/transform', formData, TransformResponse, {
         signal: controller.signal,
       });
-      setGeneratedImage(data.imageUrl);
-      setGenerationId(data.generationId);
+      setGeneratedImage(data.imageUrl ?? null);
+      setGenerationId(data.generationId ?? null);
       setState('result');
       localStorage.removeItem('studio-prompt-draft');
 
