@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * useCollaboration — Real-time collaboration hook
  *

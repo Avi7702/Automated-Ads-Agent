@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * useStudioOrchestrator — Extracted from Studio.tsx
  *
@@ -187,12 +186,12 @@ export function useStudioOrchestrator() {
   const videoPollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Queries ───────────────────────────────────────────
-  const { data: authUser } = useQuery({
+  const { data: authUser } = useQuery<{ id: string; email: string } | null>({
     queryKey: ['auth'],
     queryFn: async () => {
       const res = await fetch('/api/auth/me', { credentials: 'include' });
       if (!res.ok) return null;
-      return res.json();
+      return res.json() as Promise<{ id: string; email: string }>;
     },
     retry: false,
   });
@@ -201,7 +200,7 @@ export function useStudioOrchestrator() {
     queryKey: ['products'],
     queryFn: async () => {
       const data = await typedGet('/api/products', ListProductsResponse);
-      return Array.isArray(data) ? data : [];
+      return (Array.isArray(data) ? data : []) as Product[];
     },
   });
 
@@ -210,8 +209,8 @@ export function useStudioOrchestrator() {
     queryFn: async () => {
       const res = await fetch('/api/templates');
       if (!res.ok) return [];
-      const data = await res.json();
-      return data.templates || [];
+      const data = (await res.json()) as { templates?: AdSceneTemplate[] };
+      return data.templates ?? [];
     },
   });
 
@@ -220,7 +219,7 @@ export function useStudioOrchestrator() {
     queryFn: async () => {
       const res = await fetch('/api/performing-ad-templates/featured', { credentials: 'include' });
       if (!res.ok) return [];
-      return res.json();
+      return res.json() as Promise<PerformingAdTemplate[]>;
     },
     enabled: showTemplateInspiration,
   });
@@ -300,12 +299,12 @@ export function useStudioOrchestrator() {
   useEffect(() => {
     if (selectedGenerationId && !generatedImage) {
       fetch(`/api/generations/${selectedGenerationId}`, { credentials: 'include' })
-        .then((res) => res.json())
+        .then((res) => res.json() as Promise<{ imageUrl?: string; id?: string; prompt?: string }>)
         .then((data) => {
           if (data.imageUrl) {
             setGeneratedImage(data.imageUrl);
-            setGenerationId(data.id);
-            setPrompt(data.prompt || '');
+            setGenerationId(data.id ?? null);
+            setPrompt(data.prompt ?? '');
             setState('result');
           }
         })
@@ -330,7 +329,10 @@ export function useStudioOrchestrator() {
           promptChars: String(promptChars),
         });
         const res = await fetch(`/api/pricing/estimate?${params}`);
-        if (res.ok) setPriceEstimate(await res.json());
+        if (res.ok)
+          setPriceEstimate(
+            (await res.json()) as { estimatedCost: number; p90: number; sampleCount: number; usedFallback: boolean },
+          );
       } catch {}
     }, 300);
     return () => clearTimeout(debounceTimer);
@@ -384,8 +386,9 @@ export function useStudioOrchestrator() {
       const contentPlannerTemplate = getTemplateById(cpTemplateId);
       if (contentPlannerTemplate) {
         setCpTemplate(contentPlannerTemplate);
-        if (contentPlannerTemplate.bestPlatforms.length > 0) {
-          const bestPlatform = contentPlannerTemplate.bestPlatforms[0].platform;
+        const firstPlatformEntry = contentPlannerTemplate.bestPlatforms[0];
+        if (firstPlatformEntry) {
+          const bestPlatform = firstPlatformEntry.platform;
           const platformMap: Record<string, string> = {
             linkedin: 'LinkedIn',
             instagram: 'Instagram',
@@ -393,28 +396,29 @@ export function useStudioOrchestrator() {
             twitter: 'Twitter',
             tiktok: 'TikTok',
           };
-          const mappedPlatform = platformMap[bestPlatform?.toLowerCase()] || bestPlatform || 'LinkedIn';
+          const mappedPlatform =
+            (bestPlatform ? platformMap[bestPlatform.toLowerCase()] : undefined) ?? bestPlatform ?? 'LinkedIn';
           setPlatform(mappedPlatform);
 
-          const format = contentPlannerTemplate.bestPlatforms[0]?.format;
-          const formatLower = (format || '').toLowerCase();
-          const formatAspectRatioMap: Record<string, string> = {
+          const format = firstPlatformEntry.format;
+          const formatLower = (format ?? '').toLowerCase();
+          const ASPECT_RATIOS = {
             carousel: '1080x1350',
             reel: '1080x1920',
             story: '1080x1920',
             video: '1920x1080',
             post: '1200x627',
-          };
-          let detectedRatio = '1200x627';
-          if (formatLower.includes('carousel')) detectedRatio = formatAspectRatioMap.carousel;
-          else if (formatLower.includes('reel') || formatLower.includes('story'))
-            detectedRatio = formatAspectRatioMap.reel;
-          else if (formatLower.includes('video')) detectedRatio = formatAspectRatioMap.video;
-          else detectedRatio = formatAspectRatioMap.post;
+          } as const;
+          let detectedRatio: string = ASPECT_RATIOS.post;
+          if (formatLower.includes('carousel')) detectedRatio = ASPECT_RATIOS.carousel;
+          else if (formatLower.includes('reel') || formatLower.includes('story')) detectedRatio = ASPECT_RATIOS.reel;
+          else if (formatLower.includes('video')) detectedRatio = ASPECT_RATIOS.video;
+          else detectedRatio = ASPECT_RATIOS.post;
           setAspectRatio(detectedRatio);
         }
-        if (contentPlannerTemplate.exampleTopics.length > 0 && !prompt) {
-          setPrompt(contentPlannerTemplate.exampleTopics[0]);
+        const firstTopic = contentPlannerTemplate.exampleTopics[0];
+        if (firstTopic && !prompt) {
+          setPrompt(firstTopic);
         }
       }
     }
@@ -429,25 +433,36 @@ export function useStudioOrchestrator() {
     const postIndexParam = params.get('postIndex');
     if (planId && postIndexParam !== null && !planContext) {
       const postIdx = Number(postIndexParam);
+      interface WeeklyPlanResponse {
+        id?: string;
+        posts?: Array<{
+          briefing?: string;
+          category?: string;
+          dayOfWeek?: string;
+          productIds?: string[];
+          platform?: string;
+        }>;
+      }
       fetch(`/api/planner/weekly/current`, { credentials: 'include' })
-        .then((res) => res.json())
+        .then((res) => res.json() as Promise<WeeklyPlanResponse>)
         .then((plan) => {
-          if (!plan || !plan.posts) return;
+          if (!plan?.posts) return;
           const post = plan.posts[postIdx];
           if (!post) return;
 
           // Set plan context
           setPlanContext({
-            planId: plan.id || planId,
+            planId: plan.id ?? planId,
             postIndex: postIdx,
-            briefing: post.briefing || '',
-            category: post.category || '',
-            dayOfWeek: post.dayOfWeek || '',
+            briefing: post.briefing ?? '',
+            category: post.category ?? '',
+            dayOfWeek: post.dayOfWeek ?? '',
           });
 
           // Auto-select products from plan
           if (post.productIds && post.productIds.length > 0 && products.length > 0) {
-            const planProducts = products.filter((p) => post.productIds.includes(String(p.id)));
+            const pids = post.productIds;
+            const planProducts = products.filter((p) => pids.includes(String(p.id)));
             if (planProducts.length > 0) setSelectedProducts(planProducts);
           }
 
@@ -460,7 +475,7 @@ export function useStudioOrchestrator() {
               twitter: 'Twitter',
               tiktok: 'TikTok',
             };
-            const mapped = platformMap[post.platform.toLowerCase()] || 'LinkedIn';
+            const mapped = platformMap[post.platform.toLowerCase()] ?? 'LinkedIn';
             setPlatform(mapped);
           }
 
@@ -570,8 +585,8 @@ export function useStudioOrchestrator() {
       const data = await typedPostFormData('/api/transform', formData, TransformResponse, {
         signal: controller.signal,
       });
-      setGeneratedImage(data.imageUrl);
-      setGenerationId(data.generationId);
+      setGeneratedImage(data.imageUrl ?? null);
+      setGenerationId(data.generationId ?? null);
       setState('result');
       localStorage.removeItem('studio-prompt-draft');
 
@@ -647,11 +662,11 @@ export function useStudioOrchestrator() {
       });
 
       if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || 'Failed to start video generation');
+        const errData = (await response.json()) as { error?: string };
+        throw new Error(errData.error ?? 'Failed to start video generation');
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as { generationId: string; jobId: string };
       setGenerationId(data.generationId);
       setVideoJobId(data.jobId);
 
@@ -671,7 +686,11 @@ export function useStudioOrchestrator() {
           const statusRes = await fetch(`/api/jobs/${data.jobId}`, { credentials: 'include' });
           if (!statusRes.ok) return;
 
-          const statusData = await statusRes.json();
+          const statusData = (await statusRes.json()) as {
+            state?: string;
+            generation?: { generatedImagePath?: string };
+            failedReason?: string;
+          };
 
           if (statusData.state === 'completed' && statusData.generation?.generatedImagePath) {
             clearInterval(pollInterval);
@@ -691,7 +710,7 @@ export function useStudioOrchestrator() {
               clearTimeout(videoPollTimeoutRef.current);
               videoPollTimeoutRef.current = null;
             }
-            toast.error(`Video generation failed: ${statusData.failedReason || 'Unknown error'}`);
+            toast.error(`Video generation failed: ${statusData.failedReason ?? 'Unknown error'}`);
             setState('idle');
             setVideoJobId(null);
           }
@@ -770,11 +789,11 @@ export function useStudioOrchestrator() {
         credentials: 'include',
         body: JSON.stringify({ editPrompt: editPrompt.trim() }),
       });
-      const data = await response.json();
-      if (!response.ok || !data.success) throw new Error(data.error || 'Edit failed');
+      const data = (await response.json()) as { success?: boolean; error?: string; generationId?: string };
+      if (!response.ok || !data.success) throw new Error(data.error ?? 'Edit failed');
       haptic('medium');
       toast.success('Changes applied!', { duration: 2000 });
-      setLocation(`/generation/${data.generationId}`);
+      setLocation(`/generation/${data.generationId ?? ''}`);
     } catch (error: unknown) {
       haptic('heavy');
       toast.error(error instanceof Error ? error.message : 'Edit failed');
@@ -838,10 +857,15 @@ export function useStudioOrchestrator() {
           variations: 1,
         }),
       });
-      const data = await response.json();
-      if (!response.ok || !data.success) throw new Error(data.error || 'Failed to generate copy');
-      if (data.variations && data.variations.length > 0) {
-        setGeneratedCopy(data.variations[0].copy);
+      const data = (await response.json()) as {
+        success?: boolean;
+        error?: string;
+        variations?: Array<{ copy: string }>;
+      };
+      if (!response.ok || !data.success) throw new Error(data.error ?? 'Failed to generate copy');
+      const firstVariation = data.variations?.[0];
+      if (firstVariation) {
+        setGeneratedCopy(firstVariation.copy);
         haptic('medium');
         toast.success('Copy generated!', { duration: 2000 });
       }
@@ -884,9 +908,9 @@ export function useStudioOrchestrator() {
         credentials: 'include',
         body: JSON.stringify({ question: askAIQuestion.trim() }),
       });
-      const data = await response.json();
-      if (!response.ok || !data.success) throw new Error(data.error || 'Failed to get response');
-      setAskAIResponse(data.answer);
+      const data = (await response.json()) as { success?: boolean; error?: string; answer?: string };
+      if (!response.ok || !data.success) throw new Error(data.error ?? 'Failed to get response');
+      setAskAIResponse(data.answer ?? null);
       setAskAIQuestion('');
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : 'Failed to get response');
@@ -912,12 +936,14 @@ export function useStudioOrchestrator() {
         '4:5': '1080x1350',
         '1.91:1': '1200x627',
       };
-      if (template.targetPlatforms && template.targetPlatforms.length > 0) {
-        const mapped = platformMap[template.targetPlatforms[0]];
+      const firstTargetPlatform = template.targetPlatforms?.[0];
+      if (firstTargetPlatform) {
+        const mapped = platformMap[firstTargetPlatform];
         if (mapped) setPlatform(mapped);
       }
-      if (template.targetAspectRatios && template.targetAspectRatios.length > 0) {
-        const mapped = aspectRatioMap[template.targetAspectRatios[0]];
+      const firstTargetRatio = template.targetAspectRatios?.[0];
+      if (firstTargetRatio) {
+        const mapped = aspectRatioMap[firstTargetRatio];
         if (mapped) setAspectRatio(mapped);
       }
       const styleHints: string[] = [];

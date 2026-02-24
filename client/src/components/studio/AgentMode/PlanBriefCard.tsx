@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * PlanBriefCard — Displays a plan brief preview with approval score gauge,
  * content mix chart, score breakdown, cost estimate, and post list.
@@ -24,7 +23,7 @@ interface PlanBriefCardProps {
   isLoading: boolean;
 }
 
-// ── Approval Score Gauge ────────────────────────────────
+// -- Approval Score Gauge
 function ScoreGauge({ score }: { score: number }) {
   const radius = 40;
   const circumference = 2 * Math.PI * radius;
@@ -63,7 +62,7 @@ function ScoreGauge({ score }: { score: number }) {
   );
 }
 
-// ── Content Mix Bar ─────────────────────────────────────
+// -- Content Mix Bar
 const MIX_COLORS = ['bg-blue-500', 'bg-purple-500', 'bg-emerald-500', 'bg-amber-500', 'bg-pink-500', 'bg-cyan-500'];
 
 function ContentMixBar({ mix }: { mix: { type: string; count: number }[] }) {
@@ -93,7 +92,7 @@ function ContentMixBar({ mix }: { mix: { type: string; count: number }[] }) {
   );
 }
 
-// ── Score Breakdown ─────────────────────────────────────
+// -- Score Breakdown
 function ScoreBreakdown({ breakdown }: { breakdown: { criterion: string; score: number; max: number }[] }) {
   return (
     <div className="space-y-1.5">
@@ -115,7 +114,7 @@ function ScoreBreakdown({ breakdown }: { breakdown: { criterion: string; score: 
   );
 }
 
-// ── Post List ───────────────────────────────────────────
+// -- Post List
 function PostList({ posts }: { posts: PlanPost[] }) {
   const [expanded, setExpanded] = useState(false);
   const visible = expanded ? posts : posts.slice(0, 3);
@@ -168,7 +167,7 @@ function PostList({ posts }: { posts: PlanPost[] }) {
   );
 }
 
-// ── Main Component ──────────────────────────────────────
+// -- Main Component
 export function PlanBriefCard({ plan, onApprove, onRevise, onCancel, isLoading }: PlanBriefCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [feedback, setFeedback] = useState('');

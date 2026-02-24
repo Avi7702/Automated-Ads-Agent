@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * useWeeklyPlan — React Query hooks for weekly content planner
  *
@@ -42,10 +41,10 @@ export function useWeeklyPlan(weekStart?: string) {
         : '/api/planner/weekly/current';
       const res = await fetch(url, { credentials: 'include' });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Failed to fetch weekly plan');
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(data.error ?? 'Failed to fetch weekly plan');
       }
-      return res.json();
+      return res.json() as Promise<WeeklyPlan>;
     },
     staleTime: 60_000,
     refetchOnWindowFocus: true,
@@ -66,7 +65,7 @@ export function useUpdatePlanPost() {
         generationId,
         scheduledPostId,
       });
-      return res.json();
+      return res.json() as Promise<{ message: string }>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['weekly-plan'] });
@@ -84,7 +83,7 @@ export function useRegeneratePlan() {
   return useMutation<WeeklyPlan, Error, string>({
     mutationFn: async (planId) => {
       const res = await apiRequest('POST', `/api/planner/weekly/${planId}/regenerate`);
-      return res.json();
+      return res.json() as Promise<WeeklyPlan>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['weekly-plan'] });
