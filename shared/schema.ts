@@ -554,7 +554,10 @@ export const performingAdTemplates = pgTable(
     isActiveIdx: index('performing_ad_templates_is_active_idx').on(table.isActive),
     isFeaturedIdx: index('performing_ad_templates_is_featured_idx').on(table.isFeatured),
     createdAtIdx: index('performing_ad_templates_created_at_idx').on(table.createdAt),
-    targetPlatformsGinIdx: index('performing_ad_templates_target_platforms_gin_idx').using('gin', table.targetPlatforms),
+    targetPlatformsGinIdx: index('performing_ad_templates_target_platforms_gin_idx').using(
+      'gin',
+      table.targetPlatforms,
+    ),
     bestForIndustriesGinIdx: index('performing_ad_templates_best_industries_gin_idx').using(
       'gin',
       table.bestForIndustries,

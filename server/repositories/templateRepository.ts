@@ -153,10 +153,7 @@ export async function getPerformingAdTemplatesByPlatform(
     .select()
     .from(performingAdTemplates)
     .where(
-      and(
-        eq(performingAdTemplates.userId, userId),
-        arrayContains(performingAdTemplates.targetPlatforms, [platform]),
-      ),
+      and(eq(performingAdTemplates.userId, userId), arrayContains(performingAdTemplates.targetPlatforms, [platform])),
     )
     .orderBy(desc(performingAdTemplates.createdAt));
 }
