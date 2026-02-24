@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles,
@@ -137,9 +137,10 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
   // Fetch current enrichment status
   useEffect(() => {
     fetchEnrichmentStatus();
-  }, [fetchEnrichmentStatus]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.id]);
 
-  const fetchEnrichmentStatus = useCallback(async () => {
+  async function fetchEnrichmentStatus() {
     setIsLoading(true);
     setError(null);
     try {
@@ -171,7 +172,7 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
     } finally {
       setIsLoading(false);
     }
-  }, [product.id, product.description, product.features, product.benefits, product.tags, product.sku]);
+  }
 
   // Flatten features object to string values for editing
   function flattenFeatures(features: Record<string, unknown>): Record<string, string> {
