@@ -10,14 +10,18 @@ vi.mock('../db', () => ({
   },
 }));
 
-/** Typed mock matching Drizzle's fluent query builder chain */
+/**
+ * Typed mock matching Drizzle's fluent query builder chain.
+ * Terminal methods (where, orderBy, limit, offset) resolve to an empty array
+ * so the chain is awaitable without a `then` property (which Biome forbids
+ * on plain objects via lint/suspicious/noThenProperty).
+ */
 interface DrizzleMockChain {
   from: Mock;
   where: Mock;
   orderBy: Mock;
   limit: Mock;
   offset: Mock;
-  then: Mock;
 }
 
 describe('Performance Optimizations - Repository Layer', () => {
@@ -26,18 +30,23 @@ describe('Performance Optimizations - Repository Layer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Setup a mock chain for Drizzle
-    mockSelectChain = {
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      orderBy: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockReturnThis(),
-      offset: vi.fn().mockReturnThis(),
-      // Mock then to make it awaitable
-      then: vi.fn(function (resolve) {
-        return Promise.resolve([]).then(resolve);
-      }),
-    };
+    const resolved = Promise.resolve([]);
+
+    // Setup a mock chain for Drizzle — each method returns the chain,
+    // but also acts as a thenable via the resolved promise prototype
+    mockSelectChain = Object.assign(resolved, {
+      from: vi.fn().mockReturnValue(resolved),
+      where: vi.fn().mockReturnValue(resolved),
+      orderBy: vi.fn().mockReturnValue(resolved),
+      limit: vi.fn().mockReturnValue(resolved),
+      offset: vi.fn().mockReturnValue(resolved),
+    });
+
+    // Re-wire chaining: each method returns the full mock so intermediate
+    // calls still expose .from/.where/.orderBy etc.
+    for (const method of ['from', 'where', 'orderBy', 'limit', 'offset'] as const) {
+      mockSelectChain[method].mockReturnValue(mockSelectChain);
+    }
 
     vi.mocked(db.select).mockReturnValue(mockSelectChain as unknown as ReturnType<typeof db.select>);
   });
