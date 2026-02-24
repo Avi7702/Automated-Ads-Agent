@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * useBusinessIntelligence — React Query hooks for business intelligence APIs
  *
@@ -92,8 +91,10 @@ export function useBusinessIntelligence() {
       const res = await fetch('/api/intelligence/business', { credentials: 'include' });
       if (res.status === 404) return null;
       if (!res.ok) throw new Error('Failed to fetch business intelligence');
-      const data = await res.json();
-      return data.businessIntelligence ?? data;
+      const data = (await res.json()) as { businessIntelligence?: BusinessIntelligenceData } | BusinessIntelligenceData;
+      return 'businessIntelligence' in data && data.businessIntelligence
+        ? data.businessIntelligence
+        : (data as BusinessIntelligenceData);
     },
     staleTime: 60_000,
   });
@@ -108,7 +109,7 @@ export function useSaveBusinessIntelligence() {
   return useMutation<BusinessIntelligenceData, Error, Partial<BusinessIntelligenceData>>({
     mutationFn: async (data) => {
       const res = await apiRequest('PUT', '/api/intelligence/business', data);
-      return res.json();
+      return res.json() as Promise<BusinessIntelligenceData>;
     },
     onSuccess: (data) => {
       queryClient.setQueryData(['intelligence', 'business'], data);
@@ -126,8 +127,8 @@ export function useProductPriorities() {
     queryFn: async () => {
       const res = await fetch('/api/intelligence/priorities', { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch product priorities');
-      const data = await res.json();
-      return data.priorities ?? data;
+      const data = (await res.json()) as { priorities?: ProductPriorityData[] } | ProductPriorityData[];
+      return Array.isArray(data) ? data : (data.priorities ?? []);
     },
     staleTime: 60_000,
   });
@@ -142,7 +143,7 @@ export function useSaveProductPriority() {
   return useMutation<ProductPriorityData, Error, { productId: string; data: Partial<ProductPriorityData> }>({
     mutationFn: async ({ productId, data }) => {
       const res = await apiRequest('PUT', `/api/intelligence/priorities/${productId}`, data);
-      return res.json();
+      return res.json() as Promise<ProductPriorityData>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['intelligence', 'priorities'] });
@@ -163,7 +164,7 @@ export function useBulkSetPriorities() {
   >({
     mutationFn: async (priorities) => {
       const res = await apiRequest('POST', '/api/intelligence/priorities/bulk', { priorities });
-      return res.json();
+      return res.json() as Promise<ProductPriorityData[]>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['intelligence', 'priorities'] });
@@ -193,7 +194,7 @@ export function useOnboardingStatus(options: UseOnboardingStatusOptions = {}) {
       }
 
       if (!res.ok) throw new Error('Failed to fetch onboarding status');
-      return res.json();
+      return res.json() as Promise<OnboardingStatus>;
     },
     staleTime: 30_000,
   });
@@ -208,8 +209,8 @@ export function useProductStats() {
     queryFn: async () => {
       const res = await fetch('/api/intelligence/stats', { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch product stats');
-      const data = await res.json();
-      return data.stats ?? data;
+      const data = (await res.json()) as { stats?: ProductStats[] } | ProductStats[];
+      return Array.isArray(data) ? data : (data.stats ?? []);
     },
     staleTime: 60_000,
   });

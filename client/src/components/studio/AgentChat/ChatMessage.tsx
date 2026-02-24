@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * ChatMessage — Single message bubble with tool call badges
  */

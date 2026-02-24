@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * useAgentChat — SSE consumer for Studio Agent
  *
@@ -101,7 +100,7 @@ export function useAgentChat(options: UseAgentChatOptions = {}) {
 
         if (!response.ok) {
           const errBody = await response.json().catch(() => ({ error: 'Request failed' }));
-          throw new Error(errBody.error || `HTTP ${response.status}`);
+          throw new Error((errBody as { error?: string }).error ?? `HTTP ${response.status}`);
         }
 
         // Extract session ID from first response if not set
@@ -132,13 +131,20 @@ export function useAgentChat(options: UseAgentChatOptions = {}) {
             if (!jsonStr) continue;
 
             try {
-              const event = JSON.parse(jsonStr);
+              const event = JSON.parse(jsonStr) as {
+                type: string;
+                content?: string;
+                name?: string;
+                args?: Record<string, unknown>;
+                action?: string;
+                payload?: Record<string, unknown>;
+              };
 
               switch (event.type) {
                 case 'text_delta':
                   sawAssistantOutput = true;
                   setMessages((prev) =>
-                    prev.map((m) => (m.id === assistantId ? { ...m, content: m.content + event.content } : m)),
+                    prev.map((m) => (m.id === assistantId ? { ...m, content: m.content + (event.content ?? '') } : m)),
                   );
                   break;
 
@@ -149,7 +155,7 @@ export function useAgentChat(options: UseAgentChatOptions = {}) {
                       m.id === assistantId
                         ? {
                             ...m,
-                            toolCalls: [...(m.toolCalls ?? []), { name: event.name, args: event.args }],
+                            toolCalls: [...(m.toolCalls ?? []), { name: event.name ?? '', args: event.args ?? {} }],
                           }
                         : m,
                     ),
@@ -158,11 +164,13 @@ export function useAgentChat(options: UseAgentChatOptions = {}) {
 
                 case 'ui_action':
                   sawAssistantOutput = true;
-                  onUiActionRef.current?.(event.action, event.payload);
+                  if (event.action && event.payload) {
+                    onUiActionRef.current?.(event.action, event.payload);
+                  }
                   break;
 
                 case 'error':
-                  setError(event.content);
+                  setError(event.content ?? 'Unknown error');
                   break;
 
                 case 'done':

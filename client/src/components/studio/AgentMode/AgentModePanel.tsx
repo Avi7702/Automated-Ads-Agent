@@ -1,23 +1,21 @@
-// @ts-nocheck
 /**
  * AgentModePanel — Orchestrates the full Agent Mode flow.
  *
  * Renders the appropriate sub-component based on the current stage:
- *   idle        → empty prompt to select products
- *   suggestions → SuggestionCards grid
- *   questions   → ClarifyingQuestions form
- *   preview     → PlanBriefCard with approval score
- *   executing   → ExecutionView step list
- *   complete    → ExecutionView (done state)
+ *   idle        -> empty prompt to select products
+ *   suggestions -> SuggestionCards grid
+ *   questions   -> ClarifyingQuestions form
+ *   preview     -> PlanBriefCard with approval score
+ *   executing   -> ExecutionView step list
+ *   complete    -> ExecutionView (done state)
  *
  * Receives `orch` prop (StudioOrchestrator) for product selection context.
- * Does NOT modify Studio.tsx — that integration is handled elsewhere.
+ * Does NOT modify Studio.tsx -- that integration is handled elsewhere.
  */
 
 import { useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Sparkles, AlertCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useAgentPlan } from '@/hooks/useAgentPlan';
 import { SuggestionCards } from './SuggestionCards';
@@ -28,8 +26,8 @@ import { ExecutionView } from './ExecutionView';
 interface AgentModePanelProps {
   /** The studio orchestrator, provides selectedProducts and other state */
   orch: {
-    selectedProducts: { id: number; name: string }[];
-    products: { id: number; name: string }[];
+    selectedProducts: { id: string; name: string }[];
+    products: { id: string; name: string }[];
   };
 }
 
@@ -49,9 +47,9 @@ export function AgentModePanel({ orch }: AgentModePanelProps) {
     if (orch.selectedProducts.length > 0 && agent.stage === 'idle') {
       agent.fetchSuggestions(orch.selectedProducts.map((p) => p.id));
     }
-  }, [orch.selectedProducts]);
+  }, [orch.selectedProducts, agent]);
 
-  // ── Render based on stage ─────────────────────────────
+  // -- Render based on stage
   return (
     <div className="flex flex-col h-full">
       {/* Error banner */}
