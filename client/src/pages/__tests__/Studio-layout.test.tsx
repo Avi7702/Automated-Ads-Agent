@@ -102,7 +102,7 @@ vi.mock('@/components/ErrorBoundary', () => ({
   ),
 }));
 
-vi.mock('@/context/StudioContext', () => ({
+vi.mock('@/contexts/StudioContext', () => ({
   StudioProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="mock-studio-provider">{children}</div>
   ),
@@ -158,7 +158,7 @@ vi.mock('sonner', () => ({
   },
 }));
 
-vi.mock('framer-motion', () => ({
+vi.mock('motion/react', () => ({
   motion: {
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
     section: ({ children, ...props }: any) => <section {...props}>{children}</section>,
