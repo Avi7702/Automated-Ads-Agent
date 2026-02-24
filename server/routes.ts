@@ -960,7 +960,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete generation
-  app.delete('/api/generations/:id', async (req, res) => {
+  app.delete('/api/generations/:id', requireAuth, async (req, res) => {
     try {
       const generation = await storage.getGenerationById(String(req.params['id']));
       if (!generation) {
@@ -985,7 +985,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Edit generation - Async version using BullMQ job queue
   // Returns immediately with jobId, client polls /api/jobs/:jobId for status
-  app.post('/api/generations/:id/edit', promptInjectionGuard, async (req, res) => {
+  app.post('/api/generations/:id/edit', requireAuth, promptInjectionGuard, async (req, res) => {
     const userId = (req as any).session?.userId;
 
     try {
@@ -1070,7 +1070,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       return res.status(500).json({
         success: false,
-        error: error.message || 'Failed to start edit job',
+        error: 'Failed to start edit job',
       });
     }
   });
@@ -1128,7 +1128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       logger.error({ module: 'JobStatus', err: error }, 'Error getting job status');
       return res.status(500).json({
         success: false,
-        error: error.message || 'Failed to get job status',
+        error: 'Failed to get job status',
       });
     }
   });
@@ -1234,7 +1234,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Analyze generation - Ask AI about the transformation
-  app.post('/api/generations/:id/analyze', async (req, res) => {
+  app.post('/api/generations/:id/analyze', requireAuth, async (req, res) => {
     try {
       const id = String(req.params['id']);
       const { question } = req.body;
@@ -1356,13 +1356,13 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       logger.error({ module: 'Analyze', err: error }, 'Analyze error');
       return res.status(500).json({
         success: false,
-        error: error.message || 'Failed to analyze image',
+        error: 'Failed to analyze image',
       });
     }
   });
 
   // Product routes - Upload product to Cloudinary and save to DB
-  app.post('/api/products', upload.single('image'), async (req, res) => {
+  app.post('/api/products', upload.single('image'), requireAuth, async (req, res) => {
     try {
       if (!isCloudinaryConfigured) {
         return res.status(503).json({ error: 'Product library is not configured' });
@@ -1419,7 +1419,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       res.json(product);
     } catch (error: any) {
       logger.error({ module: 'ProductUpload', err: error }, 'Upload error');
-      res.status(500).json({ error: 'Failed to upload product', details: error.message });
+      res.status(500).json({ error: 'Failed to upload product' });
     }
   });
 
@@ -1451,7 +1451,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   });
 
   // Delete product
-  app.delete('/api/products/:id', async (req, res) => {
+  app.delete('/api/products/:id', requireAuth, async (req, res) => {
     try {
       const product = await storage.getProductById(String(req.params['id']));
       if (!product) {
@@ -1481,7 +1481,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   });
 
   // Clear all products from database
-  app.delete('/api/products', async (_req, res) => {
+  app.delete('/api/products', requireAuth, async (_req, res) => {
     try {
       const products = await storage.getProducts();
       const productIds = products.map((p) => p.id);
@@ -1506,7 +1506,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   });
 
   // Sync products from Cloudinary
-  app.post('/api/products/sync', async (req, res) => {
+  app.post('/api/products/sync', requireAuth, async (req, res) => {
     try {
       if (!isCloudinaryConfigured) {
         return res.status(503).json({ error: 'Cloudinary is not configured' });
@@ -1564,12 +1564,12 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       });
     } catch (error: any) {
       logger.error({ module: 'CloudinarySync', err: error }, 'Sync error');
-      res.status(500).json({ error: 'Failed to sync from Cloudinary', details: error.message });
+      res.status(500).json({ error: 'Failed to sync from Cloudinary' });
     }
   });
 
   // Prompt template routes
-  app.post('/api/prompt-templates', async (req, res) => {
+  app.post('/api/prompt-templates', requireAuth, async (req, res) => {
     try {
       const { title, prompt, category, tags } = req.body;
       if (!title || !prompt) {
@@ -1603,7 +1603,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   });
 
   // Delete prompt template
-  app.delete('/api/prompt-templates/:id', async (req, res) => {
+  app.delete('/api/prompt-templates/:id', requireAuth, async (req, res) => {
     try {
       await storage.deletePromptTemplate(String(req.params['id']));
       res.json({ success: true });
@@ -1752,7 +1752,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // COPYWRITING ENDPOINTS
 
   // Generate ad copy with multiple variations
-  app.post('/api/copy/generate', promptInjectionGuard, async (req, res) => {
+  app.post('/api/copy/generate', requireAuth, promptInjectionGuard, async (req, res) => {
     try {
       // Use session userId if available, otherwise use a default for demo
       const userId = req.session?.userId || 'demo-user';
@@ -1842,7 +1842,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       if (error.name === 'ZodError') {
         return res.status(400).json({ error: 'Validation failed', details: error.issues });
       }
-      res.status(500).json({ error: 'Failed to generate copy', details: error.message });
+      res.status(500).json({ error: 'Failed to generate copy' });
     }
   });
 
@@ -1872,7 +1872,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   });
 
   // Delete copy
-  app.delete('/api/copy/:id', async (req, res) => {
+  app.delete('/api/copy/:id', requireAuth, async (req, res) => {
     try {
       await storage.deleteAdCopy(String(req.params['id']));
       res.json({ success: true });
@@ -1884,7 +1884,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
 
   // Standalone copy generation (no generationId required)
   // Used by BeforeAfterBuilder and TextOnlyMode components
-  app.post('/api/copywriting/standalone', async (req, res) => {
+  app.post('/api/copywriting/standalone', requireAuth, async (req, res) => {
     try {
       const {
         platform = 'linkedin',
@@ -1942,7 +1942,6 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       logger.error({ module: 'StandaloneCopy', err: error }, 'Error generating standalone copy');
       res.status(500).json({
         error: 'Failed to generate copy',
-        details: error.message,
       });
     }
   });
@@ -2179,9 +2178,16 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         return res.status(400).json({ error: 'Directory path and category are required' });
       }
 
+      // Prevent path traversal: restrict to project data directory
+      const SAFE_BASE_DIR = path.resolve(process.cwd(), 'data');
+      const resolvedPath = path.resolve(directoryPath);
+      if (!resolvedPath.startsWith(SAFE_BASE_DIR + path.sep) && resolvedPath !== SAFE_BASE_DIR) {
+        return res.status(403).json({ error: 'Access denied: directory path must be within the data directory' });
+      }
+
       const { uploadDirectoryToFileSearch } = await import('./services/fileSearchService');
       const results = await uploadDirectoryToFileSearch({
-        directoryPath,
+        directoryPath: resolvedPath,
         category,
         description,
       });
@@ -2290,7 +2296,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   // ===== ARBITRARY IMAGE ANALYSIS =====
   // Analyze a temporary upload image (not a product) for IdeaBank context
 
-  app.post('/api/analyze-image', upload.single('image'), async (req, res) => {
+  app.post('/api/analyze-image', upload.single('image'), requireAuth, async (req, res) => {
     try {
       const userId = (req.session as any)?.userId || 'system-user';
       const file = req.file;
@@ -3015,8 +3021,8 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
     }
   });
 
-  // Generate idea bank suggestions (optional auth for single-tenant mode)
-  app.post('/api/idea-bank/suggest', promptInjectionGuard, async (req, res) => {
+  // Generate idea bank suggestions
+  app.post('/api/idea-bank/suggest', requireAuth, promptInjectionGuard, async (req, res) => {
     try {
       // Use authenticated user ID, otherwise scope anonymous requests by session/IP
       // so one shared "system-user" key doesn't trigger global rate-limit collisions.
@@ -3556,7 +3562,7 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
   });
 
   // POST /api/quota/google/sync - Trigger manual sync
-  app.post('/api/quota/google/sync', async (_req, res) => {
+  app.post('/api/quota/google/sync', requireAuth, async (_req, res) => {
     try {
       const service = await getGoogleCloudService();
       if (!service) {
