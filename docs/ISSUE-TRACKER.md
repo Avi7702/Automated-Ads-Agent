@@ -55,12 +55,14 @@ Request Flow:
 ```
 
 **Impact:**
+
 - Complete failure of Social Accounts feature
 - Users cannot view connected social media accounts
 - Blocks scheduled posting functionality
 - Production feature unavailable since Phase 8.1 deployment
 
 **Investigation Method:**
+
 - Deployed investigation agent (a724096) to analyze database state
 - Checked `migrations/meta/0002_snapshot.json` - shows 25 tables, missing `social_connections`
 - Verified schema exists in `shared/schema.ts` lines 1157-1195
@@ -68,6 +70,7 @@ Request Flow:
 - Confirmed API routes exist in `server/routes.ts` lines 4421-4579
 
 **Solution Applied:**
+
 ```bash
 # Step 1: Generate migration files
 npm run db:generate
@@ -81,12 +84,14 @@ npm run db:studio
 ```
 
 **Files Modified:**
+
 - `migrations/` (new migration files generated)
 - Database schema applied via Drizzle migration system
 
 **Commit Hash:** TBD (pending deployment)
 
 **Prevention:**
+
 1. **Always run migrations after schema changes**
    - Add to deployment checklist: `npm run db:generate && npm run db:push`
 2. **Add pre-deployment hook** to verify all tables exist
@@ -97,6 +102,7 @@ npm run db:studio
 **Related Issues:** None (first occurrence)
 
 **Lessons Learned:**
+
 - Schema definitions in code ≠ database reality
 - Backend code can be 100% correct but fail due to missing infrastructure
 - Need automated checks for schema drift
@@ -121,18 +127,21 @@ JavaScript bundles (727KB) served without gzip/brotli compression. Users on slow
 Express server missing compression middleware. No compression package installed in `package.json`. `server/app.ts` has no compression configuration.
 
 **Impact:**
+
 - 727KB bundle transferred instead of ~250KB (with gzip)
 - 3x slower on 3G/4G connections
 - Poor user experience in regions with slow internet
 - Unnecessary bandwidth costs
 
 **Investigation Method:**
+
 - Deployed performance investigation agent (ad8875f)
 - Checked `server/app.ts` - no compression import
 - Checked `package.json` - no compression dependency
 - Used browser DevTools Network tab - confirmed no `Content-Encoding` header
 
 **Solution Applied:**
+
 ```bash
 # Install compression middleware
 npm install compression @types/compression
@@ -143,36 +152,42 @@ npm install compression @types/compression
 import compression from 'compression';
 
 // Add before express.json()
-app.use(compression({
-  // Compress all responses
-  filter: (req, res) => {
-    if (req.headers['x-no-compression']) {
-      return false;
-    }
-    return compression.filter(req, res);
-  },
-  // Level 6 (default) - good balance of speed/compression
-  level: 6
-}));
+app.use(
+  compression({
+    // Compress all responses
+    filter: (req, res) => {
+      if (req.headers['x-no-compression']) {
+        return false;
+      }
+      return compression.filter(req, res);
+    },
+    // Level 6 (default) - good balance of speed/compression
+    level: 6,
+  }),
+);
 ```
 
 **Files Modified:**
+
 - `server/app.ts` (+3 lines)
 - `package.json` (+2 dependencies)
 
 **Commit Hash:** TBD (pending deployment)
 
 **Prevention:**
+
 1. **Add to project template** - compression should be default
 2. **Add performance tests** that verify compression headers
 3. **Lighthouse CI** in GitHub Actions to catch missing compression
 4. **Document in CLAUDE.md** as mandatory for all Express apps
 
 **Related Issues:**
+
 - Issue #003: No cache headers (related performance issue)
 - Issue #004: Header not memoized (related performance issue)
 
 **Lessons Learned:**
+
 - Basic production optimizations often overlooked in rapid development
 - Performance should be validated before "production-ready" claims
 - User reported "slow" before we investigated properly
@@ -197,47 +212,56 @@ Static assets served with no `Cache-Control` headers. Browser re-downloads 727KB
 `express.static()` in `server/index-prod.ts` has no cache configuration. Default behavior sends no cache headers, forcing browser to re-validate every request.
 
 **Impact:**
+
 - Repeat visits 20-30% slower than necessary
 - Unnecessary server load (serving cached content)
 - Poor user experience for returning users
 - Wasted bandwidth for content that never changes
 
 **Investigation Method:**
+
 - Performance investigation agent (ad8875f) checked `server/index-prod.ts` line 24
 - Found: `app.use(express.static(distPath))` with zero configuration
 - Browser DevTools Network tab showed no `Cache-Control` headers
 - Content-hashed filenames (e.g., `vendor-react.abc123.js`) never reused
 
 **Solution Applied:**
+
 ```typescript
 // server/index-prod.ts (replace line 24)
-app.use(express.static(distPath, {
-  maxAge: '1y',  // Cache for 1 year (safe due to content-hash in filenames)
-  immutable: true,  // Tell browser file will NEVER change
-  setHeaders: (res, path) => {
-    // HTML always fresh (no content hash in filename)
-    if (path.endsWith('.html')) {
-      res.setHeader('Cache-Control', 'no-cache');
-    }
-  }
-}));
+app.use(
+  express.static(distPath, {
+    maxAge: '1y', // Cache for 1 year (safe due to content-hash in filenames)
+    immutable: true, // Tell browser file will NEVER change
+    setHeaders: (res, path) => {
+      // HTML always fresh (no content hash in filename)
+      if (path.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-cache');
+      }
+    },
+  }),
+);
 ```
 
 **Files Modified:**
+
 - `server/index-prod.ts` (~8 lines modified)
 
 **Commit Hash:** TBD (pending deployment)
 
 **Prevention:**
+
 1. **Add to Express template** - cache headers should be default
 2. **Document in CLAUDE.md** - explain immutable pattern for content-hashed assets
 3. **Add performance tests** that verify cache headers present
 4. **Lighthouse CI** should catch missing cache headers
 
 **Related Issues:**
+
 - Issue #002: No compression (related performance issue)
 
 **Lessons Learned:**
+
 - Content hashing meaningless without proper cache headers
 - Near-instant repeat visits possible with 8 lines of code
 - Production optimizations need systematic checklist, not assumptions
@@ -261,18 +285,21 @@ Header component re-renders on every page navigation despite no prop changes. Co
 `client/src/components/layout/Header.tsx` not wrapped in `React.memo()`. Every route change triggers full app re-render, Header included. No memoization of `activePage` calculation.
 
 **Impact:**
+
 - 300-500ms delay on every navigation
 - Poor perceived performance
 - Unnecessary React reconciliation
 - User complaints about "slow" app
 
 **Investigation Method:**
+
 - Performance investigation agent (ad8875f) analyzed Header component
 - Lines 21-32: Complex activePage logic with no memoization
 - NOT wrapped in `React.memo()`
 - React DevTools Profiler showed Header in every render
 
 **Solution Applied:**
+
 ```typescript
 // client/src/components/layout/Header.tsx
 
@@ -282,12 +309,12 @@ import { useMemo, memo } from 'react';
 // Inside component, memoize activePage
 const activePage = useMemo(() => {
   if (currentPage) return currentPage;
-  if (location === "/" || location.startsWith("/?")) return "studio";
-  if (location.startsWith("/library")) return "library";
-  if (location.startsWith("/settings")) return "settings";
-  if (location.startsWith("/content-planner")) return "content-planner";
-  if (location.startsWith("/social-accounts")) return "social-accounts";
-  return "studio";
+  if (location === '/' || location.startsWith('/?')) return 'studio';
+  if (location.startsWith('/library')) return 'library';
+  if (location.startsWith('/settings')) return 'settings';
+  if (location.startsWith('/content-planner')) return 'content-planner';
+  if (location.startsWith('/social-accounts')) return 'social-accounts';
+  return 'studio';
 }, [currentPage, location]);
 
 // At bottom, replace export
@@ -295,20 +322,24 @@ export default memo(Header);
 ```
 
 **Files Modified:**
+
 - `client/src/components/layout/Header.tsx` (+3 lines added)
 
 **Commit Hash:** TBD (pending deployment)
 
 **Prevention:**
+
 1. **Document in CLAUDE.md** - layout components should be memoized
 2. **Add ESLint rule** - warn when layout components not memoized
 3. **Add performance tests** - measure navigation speed
 4. **Code review checklist** - verify memoization of heavy components
 
 **Related Issues:**
+
 - Issue #002, #003: Combined with other optimizations for smooth navigation
 
 **Lessons Learned:**
+
 - React re-renders are expensive, even for "simple" components
 - Layout components render frequently, must be optimized
 - User perception of "slow" often from accumulated small delays (300ms + 200ms + 100ms = "feels slow")
@@ -332,11 +363,13 @@ export default memo(Header);
 Component assumed `status` field exists, but `SocialConnection` schema in `shared/schema.ts` doesn't have a `status` column. Status should be computed from existing fields (`isActive`, `lastErrorAt`, `tokenExpiresAt`).
 
 **Impact:**
+
 - TypeScript compilation failure
 - Blocked deployment of Social Accounts feature
 - Would cause runtime error if deployed without types
 
 **Investigation Method:**
+
 - TypeScript error during `npm run check`
 - Checked `shared/schema.ts` lines 1157-1195 - no `status` field
 - Checked `client/src/types/social.ts` - type mirrors schema (no status)
@@ -369,11 +402,13 @@ const status = computeStatus();
 ```
 
 **Files Modified:**
+
 - `client/src/components/social/ConnectedAccountCard.tsx` (lines 94-114 added)
 
 **Commit Hash:** 0032151 (deployed)
 
 **Prevention:**
+
 1. **Always run `npm run check`** before committing
 2. **Add pre-commit hook** to run TypeScript check
 3. **CI/CD pipeline** should fail on TypeScript errors
@@ -382,6 +417,7 @@ const status = computeStatus();
 **Related Issues:** None
 
 **Lessons Learned:**
+
 - Computed properties better than storing derived state
 - TypeScript caught this before production - validates type system investment
 - Clear UX feedback (active/error/expiring) improves user experience
@@ -405,51 +441,58 @@ Social Accounts page (`/social-accounts`) implemented but no navigation link in 
 Header component's `navItems` array missing "social-accounts" entry. `activePage` logic missing "social-accounts" case. `HeaderProps` type missing "social-accounts" option.
 
 **Impact:**
+
 - Feature invisible to users
 - Users must manually type URL
 - Poor UX - feature appears broken/incomplete
 - Wasted development effort on hidden feature
 
 **Investigation Method:**
+
 - Manual testing showed page works at `/social-accounts` URL
 - Checked Header component - no link to Social Accounts
 - Checked `client/src/App.tsx` - route exists (line 78-84)
 
 **Solution Applied:**
+
 ```typescript
 // client/src/components/layout/Header.tsx
 
 // Updated HeaderProps type
 interface HeaderProps {
-  currentPage?: "studio" | "library" | "settings" | "content-planner" | "social-accounts";
+  currentPage?: 'studio' | 'library' | 'settings' | 'content-planner' | 'social-accounts';
 }
 
 // Updated activePage logic
-const activePage = currentPage || (() => {
-  if (location === "/" || location.startsWith("/?")) return "studio";
-  if (location.startsWith("/library")) return "library";
-  if (location.startsWith("/settings")) return "settings";
-  if (location.startsWith("/content-planner")) return "content-planner";
-  if (location.startsWith("/social-accounts")) return "social-accounts";  // ADDED
-  return "studio";
-})();
+const activePage =
+  currentPage ||
+  (() => {
+    if (location === '/' || location.startsWith('/?')) return 'studio';
+    if (location.startsWith('/library')) return 'library';
+    if (location.startsWith('/settings')) return 'settings';
+    if (location.startsWith('/content-planner')) return 'content-planner';
+    if (location.startsWith('/social-accounts')) return 'social-accounts'; // ADDED
+    return 'studio';
+  })();
 
 // Updated navItems array
 const navItems = [
-  { id: "studio", label: "Studio", href: "/" },
-  { id: "content-planner", label: "Content Planner", href: "/content-planner" },
-  { id: "social-accounts", label: "Social Accounts", href: "/social-accounts" },  // ADDED
-  { id: "library", label: "Library", href: "/library" },
-  { id: "settings", label: "Settings", href: "/settings" },
+  { id: 'studio', label: 'Studio', href: '/' },
+  { id: 'content-planner', label: 'Content Planner', href: '/content-planner' },
+  { id: 'social-accounts', label: 'Social Accounts', href: '/social-accounts' }, // ADDED
+  { id: 'library', label: 'Library', href: '/library' },
+  { id: 'settings', label: 'Settings', href: '/settings' },
 ];
 ```
 
 **Files Modified:**
+
 - `client/src/components/layout/Header.tsx` (3 sections updated)
 
 **Commit Hash:** 0032151 (deployed)
 
 **Prevention:**
+
 1. **Add navigation link BEFORE implementing feature**
 2. **Manual testing checklist** - verify feature discoverable
 3. **Code review** should check navigation updated for new pages
@@ -458,6 +501,7 @@ const navItems = [
 **Related Issues:** None
 
 **Lessons Learned:**
+
 - Features need discoverability, not just implementation
 - Navigation is part of feature completeness
 - Test as user would experience, not just as developer with URLs
@@ -479,17 +523,20 @@ Implemented lazy loading and code splitting (commit 4740922). Reduced bundle fro
 
 **Root Cause:**
 Focused on code splitting (bottleneck #5) without addressing more critical issues:
+
 - No compression middleware (bottleneck #1 - CRITICAL)
 - No cache headers (bottleneck #2 - HIGH)
 - Header not memoized (bottleneck #3 - HIGH)
 
 **Impact:**
+
 - Improvement felt minimal despite 15% bundle reduction
 - User still experiences slow navigation
 - False sense of completion ("we optimized performance")
 - Systematic investigation needed, not isolated fixes
 
 **Investigation Method:**
+
 - User reported still slow after lazy loading deployed
 - Deployed performance investigation agent (ad8875f)
 - Discovered 7 bottlenecks, only 1 addressed
@@ -499,6 +546,7 @@ Focused on code splitting (bottleneck #5) without addressing more critical issue
 See Issues #002, #003, #004 for specific fixes.
 
 **Files Modified:**
+
 - `client/src/App.tsx` (lazy loading - already done)
 - `vite.config.ts` (code splitting - already done)
 - Pending: compression, cache, memoization
@@ -506,15 +554,18 @@ See Issues #002, #003, #004 for specific fixes.
 **Commit Hash:** 4740922 (lazy loading deployed)
 
 **Prevention:**
+
 1. **Professional investigation BEFORE fixing** (user's key insight)
 2. **Prioritize by impact** - compression (65%) more valuable than code splitting (15%)
 3. **Deploy agents for complex issues** - avoid throwing patches
 4. **Performance testing** should be comprehensive, not isolated metrics
 
 **Related Issues:**
+
 - Issues #002, #003, #004 (the other bottlenecks)
 
 **Lessons Learned:**
+
 - "Do not just throw patches, make a professional plan" - user's critical feedback
 - Systematic investigation reveals root causes better than guessing
 - Multiple small issues compound into "feels slow"
@@ -551,6 +602,7 @@ Production users logged out immediately after page refresh. Session persistence 
    - Check **always returns false** → never calls `/api/auth/me` → never restores session
 
 **Impact:**
+
 - Complete authentication failure on refresh
 - Users must re-login every page load
 - Production unusable for regular workflow
@@ -558,6 +610,7 @@ Production users logged out immediately after page refresh. Session persistence 
 - 100% of users affected
 
 **Investigation Method:**
+
 - Deployed authentication architecture analysis agent (abef812)
 - Checked `package.json` - `connect-redis` not listed in dependencies
 - Reviewed git history - commit 3069b42 (Dec 24) added `connect-redis` but package removed later
@@ -567,11 +620,13 @@ Production users logged out immediately after page refresh. Session persistence 
 
 **Solution Applied:**
 Phase 1: Add missing dependency
+
 ```bash
 npm install connect-redis@^7.1.1
 ```
 
 Phase 2: Remove broken cookie check from `client/src/contexts/AuthContext.tsx`
+
 ```typescript
 // DELETE lines 32-46 (hasSessionCookie function and early return)
 // Browser automatically sends httpOnly cookie via credentials: "include"
@@ -580,10 +635,12 @@ Phase 2: Remove broken cookie check from `client/src/contexts/AuthContext.tsx`
 Phase 3: Remove cookie check from `client/src/pages/Studio.tsx` lines 473-475
 
 Phase 4: Verify Railway Redis configuration
+
 - REDIS_URL environment variable (from Railway Redis plugin)
 - SESSION_SECRET environment variable (`openssl rand -base64 32`)
 
 **Files Modified:**
+
 - `package.json` (+1 dependency: `connect-redis@^7.1.1`)
 - `client/src/contexts/AuthContext.tsx` (lines 32-46 reverted)
 - `client/src/pages/Studio.tsx` (lines 473-475 reverted)
@@ -591,6 +648,7 @@ Phase 4: Verify Railway Redis configuration
 **Commit Hash:** TBD (pending deployment)
 
 **Prevention:**
+
 1. **Package audit after dependency changes** - verify all required packages present in package.json
 2. **Never check httpOnly cookies from JavaScript** - browser sends them automatically with credentials: "include"
 3. **Add integration test** - verify session persists across server restarts
@@ -599,10 +657,12 @@ Phase 4: Verify Railway Redis configuration
 6. **Pre-commit hook** - verify `connect-redis` present if using Redis sessions
 
 **Related Issues:**
+
 - Issue #001: Database migration (similar "works locally, fails in production" pattern)
 - Self-inflicted by commit 2fc2097 attempting to "fix" 401 console errors
 
 **Lessons Learned:**
+
 - Silent fallbacks hide critical failures (MemoryStore fallback masked missing dependency)
 - httpOnly cookies are **invisible to JavaScript by design** - checking them is impossible
 - Express Session MemoryStore explicitly not for production ([Express docs](https://github.com/expressjs/session#sessionoptions))
@@ -628,6 +688,7 @@ Console errors mentioning "CSP" and "Cloudinary" led to assumption that Content 
 
 **Root Cause:**
 **No bug exists.** Cloudinary is correctly excluded from `connect-src` CSP directive because:
+
 - ALL Cloudinary uploads happen **server-side** (`server/fileStorage.ts` lines 94-107)
 - Server-to-server HTTP calls **bypass browser CSP entirely**
 - CSP only affects browser JavaScript, not Node.js server requests
@@ -635,18 +696,22 @@ Console errors mentioning "CSP" and "Cloudinary" led to assumption that Content 
 - Adding Cloudinary to `connectSrc` would **wrongly imply** client-side uploads (security risk)
 
 **Impact:**
+
 - None - system working as designed
 - Investigation time spent validating correct architecture
 - Prevented incorrect "fix" that would weaken security
 
 **Investigation Method:**
+
 - Deployed CSP/Cloudinary architecture analysis agent (aa7c098)
 - Searched entire `client/` codebase for Cloudinary API calls: **ZERO results**
+
 ```bash
 grep -r "fetch.*cloudinary" client/   # No matches
 grep -r "cloudinary.upload" client/   # No matches
 grep -r "api.cloudinary.com" .        # No matches
 ```
+
 - Verified all uploads via `server/fileStorage.ts` (server-side only)
 - Checked git history: 502 errors were from Google Cloud Monitoring, not Cloudinary
   - Commit 3f47d20 (Dec 31): "Temporarily disable auto-sync to troubleshoot Railway 502"
@@ -654,6 +719,7 @@ grep -r "api.cloudinary.com" .        # No matches
 
 **Solution Applied:**
 **None needed.** Confirmed current architecture follows Cloudinary security best practices:
+
 1. Client uploads via `/api/transform` endpoint
 2. Server receives file buffer (`multer.memoryStorage()`)
 3. Server calls `cloudinary.uploader.upload()` with API secret (server-side)
@@ -661,6 +727,7 @@ grep -r "api.cloudinary.com" .        # No matches
 5. Client displays via `<img src>` (uses `imgSrc` CSP directive)
 
 This matches [Cloudinary's recommended security pattern](https://cloudinary.com/blog/signed-urls-the-why-and-how):
+
 - ✅ Signatures generated server-side
 - ✅ API secrets never exposed to client
 - ✅ Direct client-side upload NOT used
@@ -670,6 +737,7 @@ This matches [Cloudinary's recommended security pattern](https://cloudinary.com/
 **Commit Hash:** N/A (no changes needed)
 
 **Prevention:**
+
 1. **Distinguish console errors from actual bugs** - not all errors indicate problems
 2. **Investigate before assuming bug exists** - this validated correct architecture
 3. **Document CSP rationale in code comments** - explain why domains included/excluded
@@ -677,9 +745,11 @@ This matches [Cloudinary's recommended security pattern](https://cloudinary.com/
 5. **Reference security documentation** - Cloudinary best practices confirmed
 
 **Related Issues:**
+
 - Lesson from Issue #007: Professional investigation prevents false fixes
 
 **Lessons Learned:**
+
 - Not all console errors mean bugs exist
 - Adding Cloudinary to `connectSrc` would be architecturally **wrong**
 - Server-side upload pattern is security best practice
@@ -709,6 +779,7 @@ Database table `social_connections` does not exist in production database. See *
 See Issue #001 for complete impact assessment.
 
 **Investigation Method:**
+
 - Deployed social accounts investigation agent (aecea6f)
 - Confirmed endpoint exists (`server/routes.ts` line 4421)
 - Confirmed storage methods exist (`server/storage.ts` lines 1907-1982)
@@ -729,10 +800,12 @@ See **Issue #001** for solution (`npm run db:push` to create missing tables).
 See Issue #001 prevention strategies.
 
 **Related Issues:**
+
 - **Issue #001:** Original discovery and documentation of missing `social_connections` table
 - Demonstrates value of comprehensive investigation - multiple symptoms, single cause
 
 **Lessons Learned:**
+
 - Multiple error reports can share same root cause
 - Cross-referencing issues prevents duplicate fixes
 - Comprehensive investigation identifies shared causes across different symptoms
@@ -757,12 +830,14 @@ Clicking "Preview" button auto-triggers `handleGenerateCopy()` if no copy exists
 **Intentional "helpful" feature** added in commit ecf35c7 (Dec 2025) implements "do what I mean" (DWIM) UX pattern:
 
 File: `client/src/pages/Studio.tsx`
+
 - Lines 1514-1516: `if (!generatedCopy) { handleGenerateCopy(); }` - Auto-triggers generation
 - Line 1073: `setCollapsedSections((prev) => ({ ...prev, preview: false }));` - Auto-expands section
 
 **Design intent:** Reduce clicks by auto-generating copy when user opens Preview section
 
 **Why it's a problem:**
+
 - No explicit user consent for API call (costs money, uses tokens)
 - "Preview" button label doesn't indicate generation will occur
 - Confusing when loading from history (`?generation=abc123`)
@@ -770,12 +845,14 @@ File: `client/src/pages/Studio.tsx`
 - Write operations (API calls) require explicit user action
 
 **Impact:**
+
 - User confusion: "Why did it generate copy when I clicked Preview?"
 - Unexpected API costs and token consumption
 - Poor UX for users loading generation history
 - Violates explicit action principle for operations with side effects
 
 **Investigation Method:**
+
 - Deployed preview behavior analysis agent (a322715)
 - Traced complete behavior chain:
   1. User loads `?generation=abc123` from history → image loads
@@ -786,11 +863,12 @@ File: `client/src/pages/Studio.tsx`
 - Analyzed user feedback: unexpected behavior reported as confusion
 
 **Solution Applied:**
+
 ```typescript
 // Phase 1: Remove auto-generation trigger
 // DELETE client/src/pages/Studio.tsx lines 1514-1516:
 if (!generatedCopy) {
-  handleGenerateCopy();  // ← DELETE THESE 3 LINES
+  handleGenerateCopy(); // ← DELETE THESE 3 LINES
 }
 
 // Phase 2: Remove auto-expand after generation
@@ -805,6 +883,7 @@ setCollapsedSections((prev) => ({ ...prev, preview: false }));
 ```
 
 **Expected User Flow After Fix:**
+
 1. User clicks "Preview" → section expands
 2. If no copy: User sees empty state with "Generate Ad Copy" button
 3. User clicks button → copy generates
@@ -812,11 +891,13 @@ setCollapsedSections((prev) => ({ ...prev, preview: false }));
 5. ✅ **Clear, explicit, predictable flow**
 
 **Files Modified:**
+
 - `client/src/pages/Studio.tsx` (2 deletions: line 1073, lines 1514-1516)
 
 **Commit Hash:** TBD (pending deployment)
 
 **Prevention:**
+
 1. **Write operations require explicit consent** - API calls that cost money/tokens need clear user action
 2. **Button labels must match behavior** - "Preview" shouldn't trigger generation
 3. **Avoid DWIM patterns for operations with side effects** - "helpful" can be surprising
@@ -825,10 +906,12 @@ setCollapsedSections((prev) => ({ ...prev, preview: false }));
 6. **Code review checklist** - verify button labels match actual behavior
 
 **Related Issues:**
+
 - Lesson from Issue #007: User feedback about "unexpected behavior" requires investigation
 - Contrast with Issue #009: Investigation confirmed correct behavior vs fixing surprise behavior
 
 **Lessons Learned:**
+
 - Convenience features can violate user expectations
 - Explicit actions > implicit "helpful" behavior for operations with side effects
 - Empty state UI with explicit button = better UX than auto-generation
@@ -853,12 +936,14 @@ CSS file request returns HTML (404 page or redirect) instead of actual CSS file.
 
 **Root Cause:**
 **Unknown - requires further investigation.** Possible causes:
+
 1. **Vite build issue** - CSS not included in bundle output
 2. **Railway routing issue** - static assets not served correctly
 3. **Cache issue** - old bundle hash stuck in browser
 4. **Express static middleware misconfiguration** - wrong path or missing files
 
 **Impact:**
+
 - Page loads without styles (CSS missing)
 - UI completely broken - no visual styling
 - Poor user experience (unusable interface)
@@ -866,6 +951,7 @@ CSS file request returns HTML (404 page or redirect) instead of actual CSS file.
 
 **Investigation Method:**
 **Incomplete.** User reported symptom but investigation needs:
+
 - Railway deployment logs (check for 404 errors on `/assets/*.css` paths)
 - Output of `npm run build` locally (verify CSS files generated in dist/)
 - Browser Network tab screenshot (exact 404 request details)
@@ -874,6 +960,7 @@ CSS file request returns HTML (404 page or redirect) instead of actual CSS file.
 
 **Solution Applied:**
 **None yet.** Temporary workaround suggested:
+
 - Hard refresh: `Ctrl+Shift+R` to bypass browser cache
 - Clear Railway build cache and redeploy
 
@@ -882,6 +969,7 @@ CSS file request returns HTML (404 page or redirect) instead of actual CSS file.
 **Commit Hash:** TBD (pending investigation)
 
 **Prevention:**
+
 1. **Add build verification step** - CI/CD ensures CSS files generated in dist/assets/
 2. **Add integration test** - verify static assets accessible at expected URLs
 3. **Monitor Railway logs** - catch 404 errors on static assets early
@@ -889,10 +977,12 @@ CSS file request returns HTML (404 page or redirect) instead of actual CSS file.
 5. **Document build process** - clear checklist for CSS inclusion
 
 **Related Issues:**
+
 - Requires more data for proper root cause diagnosis
 - Cannot proceed with fix until logs provided
 
 **Lessons Learned:**
+
 - Incomplete investigation noted for future follow-up
 - User provided symptoms, need logs/evidence for root cause
 - "Investigate first, fix second" principle applies - cannot guess without evidence
@@ -910,10 +1000,12 @@ CSS file request returns HTML (404 page or redirect) instead of actual CSS file.
 **False Alarms (No Bug):** 1 (8%)
 
 **Status Breakdown:**
+
 - Fixed & Deployed: 2 (29%)
 - Fixed (Pending Deployment): 5 (71%)
 
 **Common Root Causes:**
+
 1. Missing production optimizations (compression, caching) - 3 issues
 2. Schema/database drift - 1 issue
 3. Missing navigation/discoverability - 1 issue
@@ -921,6 +1013,7 @@ CSS file request returns HTML (404 page or redirect) instead of actual CSS file.
 5. Incomplete optimization (only partial fixes) - 1 issue
 
 **Top Lessons:**
+
 1. **Professional investigation before fixing** (Issue #007)
 2. **Always run migrations after schema changes** (Issue #001)
 3. **Production optimizations need checklist** (Issues #002, #003, #004)
@@ -934,6 +1027,7 @@ CSS file request returns HTML (404 page or redirect) instead of actual CSS file.
 ### When to Add an Issue
 
 Add an entry whenever:
+
 - Production error occurs
 - User reports a problem
 - TypeScript/build fails
@@ -945,6 +1039,7 @@ Add an entry whenever:
 ### When to Update an Issue
 
 Update status when:
+
 - Investigation reveals root cause
 - Fix is implemented
 - Fix is deployed to production
@@ -979,11 +1074,13 @@ How we identified the root cause.
 What we did to fix it (include code snippets).
 
 **Files Modified:**
+
 - file/path.ts (lines changed)
 
 **Commit Hash:** abc1234 or TBD
 
 **Prevention:**
+
 1. How to avoid this in future
 2. Process changes needed
 3. Tools/checks to add
@@ -1013,12 +1110,14 @@ During Sprint 2, Days 1-2, the `architect` subagent was tasked with creating `do
 The architect agent (a3c6351) performed analysis and returned the design document content as text output, but did not use the Write tool to persist it to disk. The agent completed its task conceptually but missed the final step of file creation.
 
 **Impact:**
+
 - Sprint 2, Days 1-2 showed 80% compliance instead of 100%
 - Design documentation existed only in conversation context
 - Would be lost on context compaction or session end
 - Router migration could not reference the design document
 
 **Investigation Method:**
+
 - Ran comprehensive verification check against plan specifications
 - Used `Glob` to search for `docs/ROUTER-ARCHITECTURE.md` - file not found
 - Confirmed agent output contained full document content
@@ -1026,17 +1125,20 @@ The architect agent (a3c6351) performed analysis and returned the design documen
 
 **Solution Applied:**
 Used `doc-updater` subagent to create the file:
+
 ```bash
 # Task: Create docs/ROUTER-ARCHITECTURE.md with full design content
 # Result: File created with 2,407 lines (exceeded 900+ requirement)
 ```
 
 **Files Modified:**
+
 - `docs/ROUTER-ARCHITECTURE.md` (2,407 lines created)
 
 **Commit Hash:** TBD (uncommitted)
 
 **Prevention:**
+
 1. **Verification step after subagent tasks** - always check file existence
 2. **Explicit file creation in prompts** - tell agents "write to file X" not just "create document"
 3. **Add file existence check** before marking tasks complete
@@ -1045,6 +1147,7 @@ Used `doc-updater` subagent to create the file:
 **Related Issues:** None
 
 **Lessons Learned:**
+
 - Subagent output ≠ file creation - must verify artifacts exist
 - "Complete" status requires deliverable verification
 - Always run compliance checks after major milestones
@@ -1067,6 +1170,7 @@ The CSRF implementation initially allowed the application to start in production
 
 **Root Cause:**
 Original implementation in `server/app.ts` lines 116-121:
+
 ```javascript
 const csrfSecret = process.env.CSRF_SECRET;
 if (process.env.NODE_ENV === 'production' && !csrfSecret) {
@@ -1075,48 +1179,56 @@ if (process.env.NODE_ENV === 'production' && !csrfSecret) {
 // Generate a random secret if not provided (for development or fallback)
 const effectiveCsrfSecret = csrfSecret || require('crypto').randomBytes(32).toString('hex');
 ```
+
 - Only logged a warning, didn't prevent startup
 - Each Railway instance would generate different random secret
 - Tokens from one instance rejected by another
 
 **Impact:**
+
 - Multi-instance deployments broken (intermittent 403 errors)
 - Tokens invalidated on every server restart
 - False sense of security (app starts, appears to work)
 - Unpredictable production behavior
 
 **Investigation Method:**
+
 - `security-reviewer` subagent (ab7ce8f) performed comprehensive CSRF review
 - Identified critical issue in production configuration handling
 - Verified multi-instance impact analysis
 
 **Solution Applied:**
 Changed to fail-fast in production:
+
 ```javascript
 const csrfSecret = process.env.CSRF_SECRET;
 if (process.env.NODE_ENV === 'production' && !csrfSecret) {
   logger.error({ security: true }, 'CRITICAL: CSRF_SECRET not set in production. Application cannot start securely.');
-  process.exit(1);  // Fail fast
+  process.exit(1); // Fail fast
 }
 // Generate a random secret if not provided (for development only)
 const effectiveCsrfSecret = csrfSecret || require('crypto').randomBytes(32).toString('hex');
 ```
 
 **Files Modified:**
+
 - `server/app.ts` (lines 117-121 modified)
 
 **Commit Hash:** TBD (uncommitted)
 
 **Prevention:**
+
 1. **Fail-fast for missing security config** - never use fallbacks in production
 2. **Environment validation on startup** - check all required vars before proceeding
 3. **Deployment checklist** - CSRF_SECRET required for Railway
 4. **Security review for all auth changes** - mandatory security-reviewer subagent
 
 **Related Issues:**
+
 - Issue #008: Session logout (similar missing config pattern with connect-redis)
 
 **Lessons Learned:**
+
 - Silent fallbacks hide critical security misconfigurations
 - Production should fail loudly, not degrade silently
 - Multi-instance deployments require shared secrets
@@ -1141,12 +1253,14 @@ CSRF protection implementation has no dedicated test coverage. No tests verify t
 CSRF was implemented as part of Sprint 1, Day 1 security hardening. Focus was on implementation, not test coverage. Testing deferred to Sprint 3.
 
 **Impact:**
+
 - Cannot verify CSRF protection survives refactoring
 - No regression testing for token validation
 - No proof that implementation works as intended
 - Risk of silent CSRF bypass if code changes
 
 **Investigation Method:**
+
 - security-reviewer subagent (ab7ce8f) searched for CSRF tests
 - Found `attack-scenarios.test.ts` exists but only covers input validation
 - No dedicated CSRF test file found
@@ -1155,6 +1269,7 @@ CSRF was implemented as part of Sprint 1, Day 1 security hardening. Focus was on
 **Deferred to Sprint 3, Week 3: Complex Feature Tests**
 
 Recommended test file `server/__tests__/csrf.test.ts`:
+
 ```typescript
 describe('CSRF Protection', () => {
   it('returns 403 for POST without CSRF token');
@@ -1170,14 +1285,17 @@ describe('CSRF Protection', () => {
 **Commit Hash:** TBD
 
 **Prevention:**
+
 1. **TDD for security features** - write tests first
 2. **Security review includes test coverage check** - no approval without tests
 3. **CI/CD gate** - security-critical code requires 80%+ coverage
 
 **Related Issues:**
+
 - Part of Sprint 3, Week 3 testing effort
 
 **Lessons Learned:**
+
 - Security features need immediate test coverage
 - Deferring tests creates risk window
 - TDD should be mandatory for auth/security code
@@ -1199,6 +1317,7 @@ Client-side CSRF token management uses `console.warn` and `console.error` for er
 
 **Root Cause:**
 `client/src/lib/queryClient.ts` lines 53-54, 84-85, 108:
+
 ```javascript
 console.warn('Failed to initialize CSRF token:', error);
 console.warn('Failed to get CSRF token for request:', error);
@@ -1206,17 +1325,20 @@ console.error('Failed to refresh CSRF token:', refreshError);
 ```
 
 **Impact:**
+
 - Information disclosure about CSRF implementation
 - Attackers can observe token refresh behavior
 - Violates CLAUDE.md rule: "No console.log in production code"
 - Minor security concern (implementation details exposed)
 
 **Investigation Method:**
+
 - security-reviewer subagent (ab7ce8f) flagged during CSRF review
 - Grep search confirmed console usage in CSRF code
 
 **Solution Applied:**
 **Low priority - acknowledged but not fixed.** Options:
+
 1. Use logging utility that respects production mode
 2. Conditionally log only in development
 3. Remove console statements entirely (fail silently)
@@ -1226,6 +1348,7 @@ console.error('Failed to refresh CSRF token:', refreshError);
 **Commit Hash:** TBD
 
 **Prevention:**
+
 1. **ESLint rule** - no-console in production builds
 2. **Code review checklist** - check for console statements
 3. **Use proper logger** - structured logging that can be disabled
@@ -1233,15 +1356,78 @@ console.error('Failed to refresh CSRF token:', refreshError);
 **Related Issues:** None
 
 **Lessons Learned:**
+
 - Console statements often slip through in rapid development
 - Security-sensitive code needs extra scrutiny
 - ESLint rules can catch these automatically
 
 ---
 
+### Issue #018: In-memory Filtering on Large Datasets
+
+**Timestamp:** 2026-01-27 10:45 UTC
+
+**Subject:** Performance Degradation Due to In-memory Filtering in Repositories
+
+**Severity:** HIGH
+
+**Status:** Fixed (pending deployment)
+
+**Description:**
+Multiple repository functions fetch all records from a table and filter them in JavaScript instead of using SQL `WHERE` clauses. This causes excessive memory usage, high CPU load on the server, and slow API responses as the database grows.
+
+**Root Cause:**
+Repository functions like `getBrandImagesForProducts` in `knowledgeRepository.ts`, and `getPerformingAdTemplatesByPlatform` and `searchPerformingAdTemplates` in `templateRepository.ts` fetch the entire table and then use `.filter()` in memory.
+
+**Impact:**
+
+- API latency increases linearly with table size
+- High memory pressure on Node.js process
+- Inefficient database utilization (fetching data that is immediately discarded)
+
+**Investigation Method:**
+
+- Code review of `server/repositories/knowledgeRepository.ts` and `server/repositories/templateRepository.ts`
+- Found `.filter()` calls on results of `db.select().from(...)` without `where` clauses
+
+**Solution Applied:**
+
+1. Refactored `getBrandImagesForProducts` in `knowledgeRepository.ts` to use database-level filtering with PostgreSQL array overlap operator (`&&`).
+2. Refactored `getPerformingAdTemplatesByPlatform` and `searchPerformingAdTemplates` in `templateRepository.ts` to use database-level filtering with `arrayContains` and dynamic `where` clauses.
+3. Added GIN indexes to `shared/schema.ts` for all frequently queried array columns: `installation_scenarios.secondary_product_ids`, `brand_images.product_ids`, `performing_ad_templates.target_platforms`, `performing_ad_templates.best_for_industries`, and `performing_ad_templates.best_for_objectives`.
+4. Verified functionality with new test suite `server/__tests__/performanceOptimizations.test.ts`.
+
+**Files Modified:**
+
+- `shared/schema.ts` (added GIN indexes)
+- `server/repositories/knowledgeRepository.ts` (refactored `getBrandImagesForProducts`)
+- `server/repositories/templateRepository.ts` (refactored search functions)
+- `server/__tests__/performanceOptimizations.test.ts` (new tests)
+
+**Commit Hash:** TBD
+
+**Prevention:**
+
+1. **Mandatory code review** for all new repository functions to ensure database-level filtering
+2. **Performance linting** or rules against fetching all records without `limit` or `where`
+3. **Use GIN indexes** for all frequently queried array columns
+4. **Training** for developers on PostgreSQL array performance patterns
+
+**Related Issues:**
+
+- Issue #007: Performance optimizations incomplete
+
+**Lessons Learned:**
+
+- Baseline performance for small datasets hides scalability issues
+- In-memory filtering is a major anti-pattern in database-backed applications
+- Always use SQL `WHERE` clauses for filtering whenever possible
+
+---
+
 ## Statistics
 
-**Total Issues:** 17
+**Total Issues:** 18
 **Critical:** 4 (24%)
 **High:** 5 (29%)
 **Medium:** 7 (41%)
@@ -1249,12 +1435,14 @@ console.error('Failed to refresh CSRF token:', refreshError);
 **False Alarms (No Bug):** 1 (6%)
 
 **Status Breakdown:**
+
 - Fixed & Deployed: 5 (29%)
 - Fixed (Pending Deployment): 7 (41%)
 - Acknowledged/Deferred: 3 (18%)
 - Investigating: 2 (12%)
 
 **New Issues from 3-Month Plan (Sprint 1-2):**
+
 - #013: Router architecture doc not written (FIXED)
 - #014: CSRF fallback secret in production (FIXED)
 - #015: Missing CSRF tests (DEFERRED to Sprint 3)
@@ -1262,6 +1450,7 @@ console.error('Failed to refresh CSRF token:', refreshError);
 - #017: Approval Queue not wired into UI (FIXED)
 
 **Common Root Causes:**
+
 1. Missing production optimizations (compression, caching) - 3 issues
 2. Schema/database drift - 1 issue
 3. Missing navigation/discoverability - 1 issue
@@ -1272,6 +1461,7 @@ console.error('Failed to refresh CSRF token:', refreshError);
 8. **NEW: Missing test coverage** - 1 issue
 
 **Top Lessons:**
+
 1. **Professional investigation before fixing** (Issue #007)
 2. **Always run migrations after schema changes** (Issue #001)
 3. **Production optimizations need checklist** (Issues #002, #003, #004)
@@ -1297,6 +1487,7 @@ User asked "where is the approval queue?" - discovered the feature was fully bui
 
 **Root Cause:**
 Feature development was incomplete:
+
 1. Frontend components created but never wired into the app
 2. `client/src/pages/ApprovalQueue.tsx` existed (665 lines)
 3. `client/src/components/approval/` had 4 sub-components (QueueCard, ReviewModal, BulkActions, PriorityBadge)
@@ -1308,12 +1499,14 @@ Feature development was incomplete:
 9. Files all untracked (`??` in git status)
 
 **Impact:**
+
 - Feature completely invisible to users
 - User confusion: "where are all the features you developed?"
 - Blocked Phase 8 approval workflow functionality
 - 100% of users affected (feature unusable)
 
 **Investigation Method:**
+
 - User asked where approval queue was
 - Grep searched for "ApprovalQueue" in client/src
 - Found component files existed but App.tsx had no route
@@ -1325,6 +1518,7 @@ Feature development was incomplete:
 
 **Solution Applied:**
 **Phase 1: Wire Frontend (2 files)**
+
 ```typescript
 // client/src/App.tsx - Added route
 <Route path="/approval-queue">
@@ -1344,18 +1538,21 @@ const navItems = [
 ```
 
 **Phase 2: Add Database Schema (shared/schema.ts)**
+
 - `approvalQueue` table - stores queue items with AI confidence scores
 - `approvalAuditLog` table - complete decision history
 - `approvalSettings` table - user auto-approve preferences
 - Types: `ApprovalQueue`, `ApprovalAuditLog`, `ApprovalSettings`
 
 **Phase 3: Add Storage Methods (server/storage.ts)**
+
 - `createApprovalQueue`, `getApprovalQueue`, `getApprovalQueueForUser`
 - `updateApprovalQueue`, `deleteApprovalQueue`
 - `createApprovalAuditLog`, `getApprovalAuditLog`
 - `getApprovalSettings`, `updateApprovalSettings`
 
 **Phase 4: Create API Router (server/routes/approvalQueue.router.ts)**
+
 - `GET /api/approval-queue` - List queue items with stats
 - `GET /api/approval-queue/:id` - Get single item
 - `POST /api/approval-queue/:id/approve` - Approve content
@@ -1367,16 +1564,19 @@ const navItems = [
 - `PUT /api/approval-queue/settings` - Update settings
 
 **Phase 5: Register Router (server/routes/index.ts)**
+
 - Added import for `approvalQueueRouterModule`
 - Added to `routerModules` array
 - Added export
 
 **Phase 6: Database Migration**
+
 ```bash
 npm run db:push
 ```
 
 **Files Modified:**
+
 - `client/src/App.tsx` (+10 lines)
 - `client/src/components/layout/Header.tsx` (+5 lines)
 - `shared/schema.ts` (+150 lines - 3 tables)
@@ -1387,6 +1587,7 @@ npm run db:push
 **Commit Hash:** TBD (uncommitted)
 
 **Prevention:**
+
 1. **Feature completion checklist:**
    - [ ] Route added to App.tsx
    - [ ] Navigation link in Header
@@ -1400,9 +1601,11 @@ npm run db:push
 5. **Add to CLAUDE.md** - new pages require route + navigation link
 
 **Related Issues:**
+
 - Issue #006: Social Accounts page not accessible (same pattern)
 
 **Lessons Learned:**
+
 - Building a feature ≠ making it accessible
 - Features need route + navigation + backend + schema + storage
 - User asking "where is X?" reveals hidden features
@@ -1415,6 +1618,7 @@ npm run db:push
 ## Integration with Workflow
 
 This tracker is referenced in:
+
 - `CLAUDE.md` - Mandatory issue logging requirement
 - Pre-commit hooks - Remind to log issues if errors fixed
 - Code review checklist - Verify issue logged
