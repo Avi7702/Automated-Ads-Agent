@@ -261,7 +261,7 @@ export function useAgentPlan(): UseAgentPlanReturn {
             }
             setError(pollData.errorMessage || 'Execution failed');
           }
-        } catch (_pollErr) {
+        } catch {
           // Silently ignore individual poll failures — will retry next interval
         }
       }, POLL_INTERVAL_MS);
