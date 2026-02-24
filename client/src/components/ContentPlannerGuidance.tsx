@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * ContentPlannerGuidance Component
  *
@@ -94,9 +93,9 @@ export function ContentPlannerGuidance({
     template,
     platform,
     onGenerateCopy,
-    onGenerateComplete,
+    ...(onGenerateComplete ? { onGenerateComplete } : {}),
+    ...(onProductSelectionChange ? { onProductSelectionChange } : {}),
     selectedProductIds,
-    onProductSelectionChange,
   });
 
   const FormatIcon = getFormatIcon(q.visualFormat.type);
@@ -142,9 +141,9 @@ export function ContentPlannerGuidance({
         <VisualFormatSection
           visualFormat={q.visualFormat}
           FormatIcon={FormatIcon}
-          onSetAspectRatio={onSetAspectRatio}
-          onGenerateImage={onGenerateImage}
           hasProductsSelected={hasProductsSelected}
+          {...(onSetAspectRatio ? { onSetAspectRatio } : {})}
+          {...(onGenerateImage ? { onGenerateImage } : {})}
         />
 
         {/* AI-Powered Generation */}
@@ -153,7 +152,7 @@ export function ContentPlannerGuidance({
           template={template}
           availableProducts={availableProducts}
           selectedProductIds={selectedProductIds}
-          onGenerateImage={onGenerateImage}
+          {...(onGenerateImage ? { onGenerateImage } : {})}
         />
       </CardHeader>
 

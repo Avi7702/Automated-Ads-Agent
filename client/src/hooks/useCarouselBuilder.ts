@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * useCarouselBuilder — Business logic for CarouselBuilder.
  * Handles outline generation, slide image generation, downloads, and clipboard.
@@ -38,6 +37,8 @@ interface UseCarouselBuilderOptions {
   productNames?: string[];
   aspectRatio?: string;
 }
+
+export type EditableSlideField = 'headline' | 'body' | 'imagePrompt';
 
 // ── Hook ─────────────────────────────────────────────────
 
@@ -90,7 +91,13 @@ export function useCarouselBuilder({
     const slide = slides[slideIndex];
     if (!slide) return;
 
-    setSlides((prev) => prev.map((s, i) => (i === slideIndex ? { ...s, isGenerating: true, error: undefined } : s)));
+    setSlides((prev) =>
+      prev.map((s, i) => {
+        if (i !== slideIndex) return s;
+        const { error: _error, ...rest } = s;
+        return { ...rest, isGenerating: true };
+      }),
+    );
 
     try {
       const imagePrompt = `${slide.imagePrompt}.
@@ -134,7 +141,7 @@ export function useCarouselBuilder({
   };
 
   // Update a single slide's field
-  const updateSlide = (index: number, field: keyof CarouselSlide, value: string) => {
+  const updateSlide = (index: number, field: EditableSlideField, value: string) => {
     setSlides((prev) => prev.map((s, i) => (i === index ? { ...s, [field]: value } : s)));
   };
 
@@ -225,3 +232,4 @@ export function useCarouselBuilder({
     copyCaption,
   };
 }
+
