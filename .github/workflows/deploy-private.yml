@@ -30,7 +30,6 @@ jobs:
   deploy-staging:
     name: Deploy Staging
     runs-on: ubuntu-latest
-    continue-on-error: true
     outputs:
       staging_url: ${{ steps.deploy.outputs.staging_url }}
     steps:
@@ -48,7 +47,7 @@ jobs:
           railway up \
             --service "$RAILWAY_SERVICE_ID" \
             --environment staging \
-            --detach 2>&1 || true
+            --detach 2>&1
 
           STAGING_URL="https://automated-ads-agent-staging.up.railway.app"
           echo "staging_url=$STAGING_URL" >> "$GITHUB_OUTPUT"
@@ -76,7 +75,6 @@ jobs:
   smoke-staging:
     name: Staging Smoke Checks
     runs-on: ubuntu-latest
-    continue-on-error: true
     needs: [deploy-staging]
     steps:
       - name: Health endpoint
@@ -133,7 +131,7 @@ jobs:
           railway up \
             --service "$RAILWAY_SERVICE_ID" \
             --environment production \
-            --detach 2>&1 || true
+            --detach 2>&1
 
       - name: Wait for production to be healthy
         run: |
