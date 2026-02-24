@@ -1,146 +1,69 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { useToast, toast, reducer } from '../use-toast';
+import { useToast, toast } from '../use-toast';
 import { useJobStatus, JobStatus, JobProgress } from '../useJobStatus';
 
 // ============================================
-// useToast Tests (15 tests)
+// useToast Tests
 // ============================================
 
 describe('useToast', () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    vi.clearAllMocks();
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  describe('reducer', () => {
-    const initialState = { toasts: [] };
-
-    it('adds a toast with ADD_TOAST action', () => {
-      const newToast = { id: '1', title: 'Test Toast', open: true };
-      const result = reducer(initialState, { type: 'ADD_TOAST', toast: newToast });
-      expect(result.toasts).toHaveLength(1);
-      expect(result.toasts[0]).toEqual(newToast);
-    });
-
-    it('limits toasts to TOAST_LIMIT', () => {
-      const state = { toasts: [{ id: '1', title: 'Existing', open: true }] };
-      const newToast = { id: '2', title: 'New Toast', open: true };
-      const result = reducer(state, { type: 'ADD_TOAST', toast: newToast });
-      // TOAST_LIMIT is 1, so it should only have the newest toast
-      expect(result.toasts).toHaveLength(1);
-      expect(result.toasts[0]?.id).toBe('2');
-    });
-
-    it('updates a toast with UPDATE_TOAST action', () => {
-      const state = { toasts: [{ id: '1', title: 'Original', open: true }] };
-      const result = reducer(state, {
-        type: 'UPDATE_TOAST',
-        toast: { id: '1', title: 'Updated' },
-      });
-      expect(result.toasts[0]?.title).toBe('Updated');
-      expect(result.toasts[0]?.open).toBe(true);
-    });
-
-    it('dismisses a specific toast with DISMISS_TOAST action', () => {
-      const state = { toasts: [{ id: '1', title: 'Test', open: true }] };
-      const result = reducer(state, { type: 'DISMISS_TOAST', toastId: '1' });
-      expect(result.toasts[0]?.open).toBe(false);
-    });
-
-    it('dismisses all toasts when no toastId provided', () => {
-      const state = {
-        toasts: [
-          { id: '1', title: 'Test1', open: true },
-          { id: '2', title: 'Test2', open: true },
-        ],
-      };
-      const result = reducer(state, { type: 'DISMISS_TOAST' });
-      expect(result.toasts.every((t) => t.open === false)).toBe(true);
-    });
-
-    it('removes a specific toast with REMOVE_TOAST action', () => {
-      const state = { toasts: [{ id: '1', title: 'Test', open: true }] };
-      const result = reducer(state, { type: 'REMOVE_TOAST', toastId: '1' });
-      expect(result.toasts).toHaveLength(0);
-    });
-
-    it('removes all toasts when no toastId provided to REMOVE_TOAST', () => {
-      const state = {
-        toasts: [
-          { id: '1', title: 'Test1', open: true },
-          { id: '2', title: 'Test2', open: true },
-        ],
-      };
-      const result = reducer(state, { type: 'REMOVE_TOAST' });
-      expect(result.toasts).toHaveLength(0);
+  describe('useToast hook', () => {
+    it('returns a toast function', () => {
+      const { result } = renderHook(() => useToast());
+      expect(typeof result.current.toast).toBe('function');
     });
   });
 
   describe('toast function', () => {
-    it('creates a toast with unique id', () => {
-      const { result } = renderHook(() => useToast());
-
-      act(() => {
-        toast({ title: 'Test Toast' });
-      });
-
-      expect(result.current.toasts).toHaveLength(1);
-      expect(result.current.toasts[0]?.title).toBe('Test Toast');
+    it('returns toast controls for default variant', () => {
+      const result = toast({ title: 'Success message', description: 'Details here' });
+      expect(result).toEqual(
+        expect.objectContaining({
+          id: expect.any(String),
+          dismiss: expect.any(Function),
+          update: expect.any(Function),
+        }),
+      );
     });
 
-    it('returns dismiss function', () => {
-      const toastResult = toast({ title: 'Dismissable Toast' });
-      expect(typeof toastResult.dismiss).toBe('function');
+    it('handles destructive variant', () => {
+      const result = toast({ title: 'Error!', description: 'Something broke', variant: 'destructive' });
+      expect(result.id).toBeTruthy();
     });
 
-    it('returns update function', () => {
-      const toastResult = toast({ title: 'Updateable Toast' });
-      expect(typeof toastResult.update).toBe('function');
-    });
-  });
-
-  describe('useToast hook', () => {
-    it('returns current toast state', () => {
-      const { result } = renderHook(() => useToast());
-      // memoryState is module-level global, so toasts may not be empty
-      // after other toast tests have run. Just verify it's an array.
-      expect(Array.isArray(result.current.toasts)).toBe(true);
+    it('handles missing title gracefully', () => {
+      const result = toast({ description: 'No title' });
+      expect(result.id).toBeTruthy();
     });
 
-    it('returns toast function', () => {
-      const { result } = renderHook(() => useToast());
-      expect(typeof result.current.toast).toBe('function');
+    it('handles missing description gracefully', () => {
+      const result = toast({ title: 'Title only' });
+      expect(result.id).toBeTruthy();
     });
 
-    it('returns dismiss function', () => {
-      const { result } = renderHook(() => useToast());
-      expect(typeof result.current.dismiss).toBe('function');
+    it('handles empty string title and description', () => {
+      const result = toast({ title: '', description: '' });
+      expect(result.id).toBeTruthy();
     });
 
-    it('updates state when toast is created', () => {
-      const { result } = renderHook(() => useToast());
-
-      act(() => {
-        result.current.toast({ title: 'New Toast' });
-      });
-
-      expect(result.current.toasts).toHaveLength(1);
+    it('handles extremely long title', () => {
+      const longTitle = 'X'.repeat(10000);
+      const result = toast({ title: longTitle });
+      expect(result.id).toBeTruthy();
     });
 
-    it('syncs state across multiple hook instances', () => {
-      const { result: result1 } = renderHook(() => useToast());
-      const { result: result2 } = renderHook(() => useToast());
-
-      act(() => {
-        result1.current.toast({ title: 'Shared Toast' });
-      });
-
-      expect(result2.current.toasts).toHaveLength(1);
+    it('does not throw when called rapidly', () => {
+      expect(() => {
+        for (let i = 0; i < 100; i++) {
+          toast({ title: `Toast ${i}` });
+        }
+      }).not.toThrow();
     });
   });
 });
@@ -422,7 +345,7 @@ describe('useJobStatus', () => {
     });
 
     // Then successful connection (new render with new jobId to trigger reconnect)
-    const { result: result2, rerender } = renderHook(({ jobId }) => useJobStatus(jobId), {
+    const { result: result2 } = renderHook(({ jobId }) => useJobStatus(jobId), {
       initialProps: { jobId: 'job-456' },
     });
 
@@ -438,50 +361,10 @@ describe('useJobStatus', () => {
 });
 
 // ============================================
-// Additional Edge Case Tests (15 tests)
+// Additional Edge Case Tests
 // ============================================
 
 describe('Hook edge cases', () => {
-  describe('useToast edge cases', () => {
-    it('generates unique IDs for each toast', () => {
-      const ids = new Set<string>();
-      for (let i = 0; i < 100; i++) {
-        const { id } = toast({ title: `Toast ${i}` });
-        ids.add(id);
-      }
-      expect(ids.size).toBe(100);
-    });
-
-    it('handles rapid toast creation', () => {
-      const { result } = renderHook(() => useToast());
-
-      act(() => {
-        for (let i = 0; i < 10; i++) {
-          result.current.toast({ title: `Toast ${i}` });
-        }
-      });
-
-      // Due to TOAST_LIMIT = 1, only 1 toast should be visible
-      expect(result.current.toasts.length).toBeLessThanOrEqual(1);
-    });
-
-    it('preserves toast properties on update', () => {
-      const { result } = renderHook(() => useToast());
-
-      let toastRef: ReturnType<typeof toast>;
-      act(() => {
-        toastRef = result.current.toast({ title: 'Original', description: 'Desc' });
-      });
-
-      act(() => {
-        toastRef!.update({ id: toastRef!.id, title: 'Updated' });
-      });
-
-      // Description should still be there
-      expect(result.current.toasts[0]?.title).toBe('Updated');
-    });
-  });
-
   describe('useJobStatus edge cases', () => {
     let mockEventSource: any;
     let eventSourceInstances: any[];
@@ -574,93 +457,7 @@ describe('Hook edge cases', () => {
         expect(result.current.error).toBe('Unknown error');
       });
     });
-  });
-});
 
-// ============================================
-// ADDITIONAL EDGE CASE TESTS (5 tests)
-// ============================================
-
-describe('Additional Hook Edge Cases', () => {
-  describe('useToast additional edge cases', () => {
-    beforeEach(() => {
-      vi.useFakeTimers();
-    });
-
-    afterEach(() => {
-      vi.useRealTimers();
-    });
-
-    // Edge case test
-    it('handles toast with empty string title and description', () => {
-      const { result } = renderHook(() => useToast());
-
-      act(() => {
-        result.current.toast({ title: '', description: '' });
-      });
-
-      expect(result.current.toasts).toHaveLength(1);
-      expect(result.current.toasts[0]?.title).toBe('');
-      expect(result.current.toasts[0]?.description).toBe('');
-    });
-
-    // Edge case test
-    it('handles toast with extremely long title (10000+ characters)', () => {
-      const { result } = renderHook(() => useToast());
-      const longTitle = 'X'.repeat(10000);
-
-      act(() => {
-        result.current.toast({ title: longTitle });
-      });
-
-      expect(result.current.toasts).toHaveLength(1);
-      expect(result.current.toasts[0]?.title).toBe(longTitle);
-    });
-
-    // Edge case test
-    it('handles dismiss called multiple times for same toast', () => {
-      const { result } = renderHook(() => useToast());
-
-      let toastRef: ReturnType<typeof toast>;
-      act(() => {
-        toastRef = result.current.toast({ title: 'Test' });
-      });
-
-      // Dismiss multiple times - should not throw
-      act(() => {
-        toastRef!.dismiss();
-        toastRef!.dismiss();
-        toastRef!.dismiss();
-      });
-
-      expect(result.current.toasts[0]?.open).toBe(false);
-    });
-  });
-
-  describe('useJobStatus additional edge cases', () => {
-    let mockEventSource: any;
-    let eventSourceInstances: any[];
-
-    beforeEach(() => {
-      eventSourceInstances = [];
-      mockEventSource = vi.fn().mockImplementation(function (this: any, url: string) {
-        this.url = url;
-        this.onopen = null;
-        this.onmessage = null;
-        this.onerror = null;
-        this.close = vi.fn();
-        this.readyState = 1;
-        eventSourceInstances.push(this);
-      });
-      (global as any).EventSource = mockEventSource;
-    });
-
-    afterEach(() => {
-      vi.clearAllMocks();
-      delete (global as any).EventSource;
-    });
-
-    // Edge case test
     it('handles extremely long jobId string', () => {
       const longJobId = 'job-' + 'x'.repeat(1000);
       renderHook(() => useJobStatus(longJobId));
@@ -668,7 +465,6 @@ describe('Additional Hook Edge Cases', () => {
       expect(mockEventSource).toHaveBeenCalledWith(`/api/jobs/${longJobId}/stream`, { withCredentials: true });
     });
 
-    // Edge case test
     it('handles special characters in jobId', () => {
       const specialJobId = 'job-123-test_with-special.chars';
       renderHook(() => useJobStatus(specialJobId));

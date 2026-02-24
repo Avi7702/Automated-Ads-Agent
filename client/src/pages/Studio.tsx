@@ -13,7 +13,7 @@ import { Link } from 'wouter';
 import { cn } from '@/lib/utils';
 
 import { Header } from '@/components/layout/Header';
-import { StudioProvider } from '@/context/StudioContext';
+import { StudioProvider } from '@/contexts/StudioContext';
 import { ComposerView, ResultViewEnhanced, GeneratingView } from '@/components/studio/MainCanvas';
 import { InspectorPanel } from '@/components/studio/InspectorPanel';
 import { IdeaBankBar } from '@/components/studio/IdeaBankBar';

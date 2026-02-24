@@ -216,9 +216,9 @@ export default function WeeklyPlanView() {
       if (!post) return;
       const defaultDate = post.scheduledDate ? new Date(post.scheduledDate) : undefined;
       setSchedulePrefill({
-        caption: post.briefing ?? undefined,
-        generationId: post.generationId ?? undefined,
-        defaultDate,
+        ...(post.briefing ? { caption: post.briefing } : {}),
+        ...(post.generationId ? { generationId: post.generationId } : {}),
+        ...(defaultDate ? { defaultDate } : {}),
       });
       setScheduleDialogOpen(true);
     },
@@ -454,7 +454,7 @@ export default function WeeklyPlanView() {
           if (!open) setSchedulePrefill(null);
         }}
         defaultDate={schedulePrefill?.defaultDate ?? null}
-        prefill={schedulePrefill ?? undefined}
+        {...(schedulePrefill ? { prefill: schedulePrefill } : {})}
       />
     </Card>
   );

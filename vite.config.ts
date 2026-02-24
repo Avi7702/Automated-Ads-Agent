@@ -127,6 +127,7 @@ export default defineConfig({
       '@': path.resolve(import.meta.dirname, 'client', 'src'),
       '@shared': path.resolve(import.meta.dirname, 'shared'),
       '@assets': path.resolve(import.meta.dirname, 'attached_assets'),
+      'motion/react': 'framer-motion',
     },
     dedupe: ['react', 'react-dom'],
   },
@@ -152,7 +153,6 @@ export default defineConfig({
             '@radix-ui/react-dropdown-menu',
             '@radix-ui/react-select',
             '@radix-ui/react-tabs',
-            '@radix-ui/react-toast',
             '@radix-ui/react-tooltip',
             '@radix-ui/react-popover',
             '@radix-ui/react-alert-dialog',
@@ -164,8 +164,6 @@ export default defineConfig({
           ],
           // Separate heavy charting library (used only in QuotaDashboard)
           'vendor-charts': ['recharts'],
-          // Separate flow diagram library (used only in SystemMap)
-          'vendor-flow': ['@xyflow/react'],
           // Separate date/form utilities
           'vendor-utils': ['date-fns', 'react-hook-form', 'zod'],
           // Separate icons

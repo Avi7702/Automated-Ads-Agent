@@ -73,7 +73,7 @@ export interface UseAgentPlanReturn {
   isLoading: boolean;
 
   // Actions
-  fetchSuggestions: (productIds?: number[]) => Promise<void>;
+  fetchSuggestions: (productIds?: Array<number | string>) => Promise<void>;
   selectSuggestion: (suggestion: AgentSuggestion) => void;
   answerQuestion: (questionId: string, answer: string) => void;
   submitAnswers: () => Promise<void>;
@@ -133,7 +133,7 @@ export function useAgentPlan(): UseAgentPlanReturn {
   }, [stage, suggestions, selectedSuggestion, questions, answers, planBrief, executionSteps]);
 
   // ── Fetch Suggestions ────────────────────────────────────
-  const fetchSuggestions = useCallback(async (productIds?: number[]) => {
+  const fetchSuggestions = useCallback(async (productIds?: Array<number | string>) => {
     setIsLoading(true);
     setError(null);
     try {
