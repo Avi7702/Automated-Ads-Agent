@@ -385,8 +385,7 @@ export default function Studio() {
                     className={cn('mode-card flex items-center gap-2 text-sm font-medium')}
                     data-active={workspaceMode === mode}
                     onClick={() => setWorkspaceMode(mode)}
-                    whileHover={reduced ? undefined : { scale: 1.03 }}
-                    whileTap={reduced ? undefined : { scale: 0.97 }}
+                    {...(!reduced ? { whileHover: { scale: 1.03 }, whileTap: { scale: 0.97 } } : {})}
                     transition={MOTION.transitions.fast}
                   >
                     <Icon
