@@ -1,16 +1,10 @@
 /**
  * Learn from Winners - Pattern Library
  *
- * World-class UI implementing 2026 best practices:
- * - Shape of AI patterns: Stream of Thought, Footprints, Disclosure, Trust Builders
- * - Spatial design with layered depth and glassmorphism accents
- * - Framer Motion micro-interactions (150-250ms for UI changes)
- * - Accessibility: prefers-reduced-motion support
- * - Data visualization for extracted patterns
+ * Business logic extracted to useLearnFromWinners hook.
+ * Sub-components PatternVisualization, PatternCard, PatternSkeleton kept in-file.
  */
-
-import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion, type Variants } from 'framer-motion';
 import {
   Sparkles,
@@ -26,14 +20,10 @@ import {
   Palette,
   Layout,
   Target,
-  Image as ImageIcon,
-  BarChart3,
-  Star,
   Clock,
   RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useUploadStatus } from '../hooks/useUploadStatus';
 import { AdaptiveUploadZone } from '../components/AdaptiveUploadZone';
 
 // UI Components
@@ -43,7 +33,6 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
-
 import {
   Dialog,
   DialogContent,
@@ -55,61 +44,20 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Header } from '@/components/layout/Header';
-import { toast } from 'sonner';
 
-// Types
+// Hook & constants
+import { useLearnFromWinners, PATTERN_CATEGORIES, PLATFORMS, ENGAGEMENT_TIERS } from '@/hooks/useLearnFromWinners';
 import type { LearnedAdPattern } from '@shared/schema';
 
-// ============================================
-// TYPES
-// ============================================
-
-interface UploadMetadata {
-  name: string;
-  category: string;
-  platform: string;
-  industry?: string;
-  engagementTier?: string;
-}
+// ── Types ────────────────────────────────────────────────
 
 interface LearnFromWinnersProps {
   embedded?: boolean;
   selectedId?: string | null;
 }
 
-// ============================================
-// CONSTANTS
-// ============================================
+// ── Animation variants ──────────────────────────────────
 
-const PATTERN_CATEGORIES = [
-  { value: 'product_showcase', label: 'Product Showcase', icon: ImageIcon, color: 'blue' },
-  { value: 'testimonial', label: 'Testimonial', icon: Star, color: 'yellow' },
-  { value: 'comparison', label: 'Comparison', icon: BarChart3, color: 'green' },
-  { value: 'educational', label: 'Educational', icon: Brain, color: 'purple' },
-  { value: 'promotional', label: 'Promotional', icon: Zap, color: 'orange' },
-  { value: 'brand_awareness', label: 'Brand Awareness', icon: Target, color: 'pink' },
-];
-
-const PLATFORMS = [
-  { value: 'linkedin', label: 'LinkedIn' },
-  { value: 'facebook', label: 'Facebook' },
-  { value: 'instagram', label: 'Instagram' },
-  { value: 'twitter', label: 'Twitter/X' },
-  { value: 'tiktok', label: 'TikTok' },
-  { value: 'youtube', label: 'YouTube' },
-  { value: 'pinterest', label: 'Pinterest' },
-  { value: 'general', label: 'General' },
-];
-
-const ENGAGEMENT_TIERS = [
-  { value: 'top-1', label: 'Top 1%', color: 'text-yellow-900 dark:text-yellow-400' },
-  { value: 'top-5', label: 'Top 5%', color: 'text-orange-900 dark:text-orange-400' },
-  { value: 'top-10', label: 'Top 10%', color: 'text-blue-900 dark:text-blue-400' },
-  { value: 'top-25', label: 'Top 25%', color: 'text-green-900 dark:text-green-400' },
-  { value: 'unverified', label: 'Unverified', color: 'text-muted-foreground' },
-];
-
-// Animation variants
 const cardVariants: Variants = {
   hidden: { opacity: 0, y: 20, scale: 0.95 },
   visible: {
@@ -133,9 +81,267 @@ const staggerContainer = {
   },
 };
 
-// ============================================
-// PATTERN VISUALIZATION - Data Viz Component
-// ============================================
+// ── Main Component ──────────────────────────────────────
+
+export default function LearnFromWinners({ embedded = false, selectedId: _selectedId }: LearnFromWinnersProps) {
+  const q = useLearnFromWinners();
+
+  const mainContent = (
+    <>
+      {/* Page Header */}
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+            <Brain className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-display font-semibold">Learn from Winners</h1>
+            <p className="text-sm text-muted-foreground">Extract success patterns from high-performing ads</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Upload Zone */}
+      <div className="mb-8">
+        <AdaptiveUploadZone
+          patterns={q.patterns || []}
+          onUpload={q.handleUpload}
+          isUploading={q.isPolling}
+          uploadProgress={q.uploadStatusData?.progress || 0}
+          uploadStatus={q.uploadStatusData?.status}
+          uploadError={q.uploadStatusData?.error}
+        />
+      </div>
+
+      {/* Content */}
+      {q.isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <PatternSkeleton key={i} />
+          ))}
+        </div>
+      ) : q.error ? (
+        <div className="text-center py-12">
+          <AlertTriangle className="w-12 h-12 text-destructive mx-auto mb-4" />
+          <h3 className="text-lg font-medium mb-2">Failed to load patterns</h3>
+          <p className="text-muted-foreground mb-4">Please try refreshing the page.</p>
+          <Button variant="outline" onClick={q.handleRetry}>
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Retry
+          </Button>
+        </div>
+      ) : q.patterns && q.patterns.length > 0 ? (
+        <>
+          {/* Filters & Search */}
+          <FiltersBar
+            searchQuery={q.searchQuery}
+            onSearchChange={q.setSearchQuery}
+            categoryFilter={q.categoryFilter}
+            onCategoryChange={q.setCategoryFilter}
+            platformFilter={q.platformFilter}
+            onPlatformChange={q.setPlatformFilter}
+            viewMode={q.viewMode}
+            onViewModeChange={q.setViewMode}
+          />
+
+          {/* Results Count */}
+          <div className="text-sm text-muted-foreground mb-4">
+            {q.filteredPatterns?.length || 0} pattern{(q.filteredPatterns?.length || 0) !== 1 ? 's' : ''} found
+          </div>
+
+          {/* Pattern Grid */}
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
+            className={cn(
+              q.viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'flex flex-col gap-4',
+            )}
+          >
+            <AnimatePresence mode="popLayout">
+              {q.filteredPatterns?.map((pattern) => (
+                <PatternCard
+                  key={pattern.id}
+                  pattern={pattern}
+                  onView={() => q.handleViewPattern(pattern)}
+                  onDelete={() => q.handleDeletePattern(pattern.id)}
+                  onApply={() => q.handleApplyPattern(pattern)}
+                />
+              ))}
+            </AnimatePresence>
+          </motion.div>
+        </>
+      ) : null}
+
+      {/* Pattern Detail Dialog */}
+      <PatternDetailDialog
+        pattern={q.selectedPattern}
+        open={q.showDetailDialog}
+        onOpenChange={q.setShowDetailDialog}
+        onApply={q.handleApplyPattern}
+      />
+    </>
+  );
+
+  if (embedded) {
+    return mainContent;
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Header />
+      <main className="container max-w-7xl mx-auto py-8 px-4 sm:px-6">{mainContent}</main>
+    </div>
+  );
+}
+
+// ── Sub-components ──────────────────────────────────────
+
+function FiltersBar({
+  searchQuery,
+  onSearchChange,
+  categoryFilter,
+  onCategoryChange,
+  platformFilter,
+  onPlatformChange,
+  viewMode,
+  onViewModeChange,
+}: {
+  searchQuery: string;
+  onSearchChange: (v: string) => void;
+  categoryFilter: string;
+  onCategoryChange: (v: string) => void;
+  platformFilter: string;
+  onPlatformChange: (v: string) => void;
+  viewMode: 'grid' | 'list';
+  onViewModeChange: (v: 'grid' | 'list') => void;
+}) {
+  return (
+    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
+      <div className="relative flex-1 max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder="Search patterns..."
+          className="pl-9"
+        />
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Select value={categoryFilter} onValueChange={onCategoryChange}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="Category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            {PATTERN_CATEGORIES.map((cat) => (
+              <SelectItem key={cat.value} value={cat.value}>
+                {cat.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={platformFilter} onValueChange={onPlatformChange}>
+          <SelectTrigger className="w-36">
+            <SelectValue placeholder="Platform" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Platforms</SelectItem>
+            {PLATFORMS.map((plat) => (
+              <SelectItem key={plat.value} value={plat.value}>
+                {plat.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <div className="flex items-center border rounded-lg p-1">
+          <Button
+            variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => onViewModeChange('grid')}
+          >
+            <Grid3X3 className="w-4 h-4" />
+          </Button>
+          <Button
+            variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => onViewModeChange('list')}
+          >
+            <List className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PatternDetailDialog({
+  pattern,
+  open,
+  onOpenChange,
+  onApply,
+}: {
+  pattern: LearnedAdPattern | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onApply: (pattern: LearnedAdPattern) => void;
+}) {
+  if (!pattern) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <div className="flex items-start justify-between">
+            <div>
+              <DialogTitle className="text-xl">{pattern.name}</DialogTitle>
+              <DialogDescription className="flex items-center gap-2 mt-1">
+                <Badge variant="outline">{PATTERN_CATEGORIES.find((c) => c.value === pattern.category)?.label}</Badge>
+                <Badge variant="secondary">{pattern.platform}</Badge>
+                {pattern.industry && <Badge variant="outline">{pattern.industry}</Badge>}
+              </DialogDescription>
+            </div>
+            {pattern.engagementTier && pattern.engagementTier !== 'unverified' && (
+              <Badge className="bg-gradient-to-r from-yellow-500/20 dark:from-yellow-500/30 to-orange-500/20 dark:to-orange-500/30 border-yellow-500/30 dark:border-yellow-500/20">
+                <TrendingUp className="w-3 h-3 mr-1" />
+                {ENGAGEMENT_TIERS.find((t) => t.value === pattern.engagementTier)?.label}
+              </Badge>
+            )}
+          </div>
+        </DialogHeader>
+
+        <div className="py-4">
+          <PatternVisualization pattern={pattern} />
+        </div>
+
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mr-auto">
+            <Zap className="w-4 h-4" />
+            Used {pattern.usageCount} times
+            {pattern.lastUsedAt && <span>Last used {new Date(pattern.lastUsedAt).toLocaleDateString()}</span>}
+          </div>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
+          <Button
+            onClick={() => {
+              onApply(pattern);
+              onOpenChange(false);
+            }}
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            Apply Pattern
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Pattern Visualization ───────────────────────────────
 
 interface PatternVisualizationProps {
   pattern: LearnedAdPattern;
@@ -145,11 +351,9 @@ interface PatternVisualizationProps {
 function PatternVisualization({ pattern, compact = false }: PatternVisualizationProps) {
   const shouldReduceMotion = useReducedMotion();
 
-  // Calculate pattern strength scores for visualization
   const getPatternStrength = () => {
     let score = 0;
     let total = 0;
-
     if (pattern.layoutPattern) {
       score += 25;
       total += 25;
@@ -166,7 +370,6 @@ function PatternVisualization({ pattern, compact = false }: PatternVisualization
       score += 25;
       total += 25;
     }
-
     return total > 0 ? Math.round((score / total) * 100) : 0;
   };
 
@@ -176,22 +379,17 @@ function PatternVisualization({ pattern, compact = false }: PatternVisualization
   if (compact) {
     return (
       <div className="flex items-center gap-3">
-        {/* Mini radar chart representation */}
         <div className="relative w-12 h-12">
           <svg viewBox="0 0 100 100" className="w-full h-full">
-            {/* Background */}
             <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeOpacity="0.1" strokeWidth="2" />
             <circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" strokeOpacity="0.1" strokeWidth="1" />
             <circle cx="50" cy="50" r="15" fill="none" stroke="currentColor" strokeOpacity="0.1" strokeWidth="1" />
-
-            {/* Pattern indicators */}
             {pattern.layoutPattern && <circle cx="50" cy="10" r="4" fill="hsl(var(--primary))" />}
             {pattern.colorPsychology && <circle cx="90" cy="50" r="4" fill="hsl(217 91% 60%)" />}
             {pattern.hookPatterns && <circle cx="50" cy="90" r="4" fill="hsl(142 71% 45%)" />}
             {pattern.visualElements && <circle cx="10" cy="50" r="4" fill="hsl(280 65% 60%)" />}
           </svg>
         </div>
-
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1">
             <span className="text-xs text-muted-foreground">Pattern Completeness</span>
@@ -205,21 +403,15 @@ function PatternVisualization({ pattern, compact = false }: PatternVisualization
 
   return (
     <div className="space-y-4">
-      {/* Pattern Categories Grid */}
       <div className="grid grid-cols-2 gap-3">
-        {/* Layout Pattern */}
-        <motion.div
-          initial={shouldReduceMotion ? {} : { opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className={cn(
-            'p-3 rounded-xl border transition-colors',
-            pattern.layoutPattern ? 'bg-primary/5 border-primary/30' : 'bg-muted/30 border-transparent opacity-50',
-          )}
+        <PatternCategoryBox
+          icon={<Layout className="w-4 h-4 text-primary" />}
+          label="Layout"
+          active={!!pattern.layoutPattern}
+          activeClass="bg-primary/5 border-primary/30"
+          shouldReduceMotion={shouldReduceMotion}
+          delay={0}
         >
-          <div className="flex items-center gap-2 mb-2">
-            <Layout className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium">Layout</span>
-          </div>
           {pattern.layoutPattern ? (
             <div className="space-y-1 text-xs text-muted-foreground">
               <p>
@@ -232,24 +424,16 @@ function PatternVisualization({ pattern, compact = false }: PatternVisualization
           ) : (
             <p className="text-xs text-muted-foreground">Not detected</p>
           )}
-        </motion.div>
+        </PatternCategoryBox>
 
-        {/* Color Psychology */}
-        <motion.div
-          initial={shouldReduceMotion ? {} : { opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.05 }}
-          className={cn(
-            'p-3 rounded-xl border transition-colors',
-            pattern.colorPsychology
-              ? 'bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/30 dark:border-blue-500/20'
-              : 'bg-muted/30 border-transparent opacity-50',
-          )}
+        <PatternCategoryBox
+          icon={<Palette className="w-4 h-4 text-blue-600 dark:text-blue-400" />}
+          label="Color"
+          active={!!pattern.colorPsychology}
+          activeClass="bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/30 dark:border-blue-500/20"
+          shouldReduceMotion={shouldReduceMotion}
+          delay={0.05}
         >
-          <div className="flex items-center gap-2 mb-2">
-            <Palette className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            <span className="text-sm font-medium">Color</span>
-          </div>
           {pattern.colorPsychology ? (
             <div className="space-y-1 text-xs text-muted-foreground">
               <p>
@@ -262,24 +446,16 @@ function PatternVisualization({ pattern, compact = false }: PatternVisualization
           ) : (
             <p className="text-xs text-muted-foreground">Not detected</p>
           )}
-        </motion.div>
+        </PatternCategoryBox>
 
-        {/* Hook Patterns */}
-        <motion.div
-          initial={shouldReduceMotion ? {} : { opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.1 }}
-          className={cn(
-            'p-3 rounded-xl border transition-colors',
-            pattern.hookPatterns
-              ? 'bg-green-500/5 dark:bg-green-500/10 border-green-500/30 dark:border-green-500/20'
-              : 'bg-muted/30 border-transparent opacity-50',
-          )}
+        <PatternCategoryBox
+          icon={<Target className="w-4 h-4 text-green-600 dark:text-green-400" />}
+          label="Hook"
+          active={!!pattern.hookPatterns}
+          activeClass="bg-green-500/5 dark:bg-green-500/10 border-green-500/30 dark:border-green-500/20"
+          shouldReduceMotion={shouldReduceMotion}
+          delay={0.1}
         >
-          <div className="flex items-center gap-2 mb-2">
-            <Target className="w-4 h-4 text-green-600 dark:text-green-400" />
-            <span className="text-sm font-medium">Hook</span>
-          </div>
           {pattern.hookPatterns ? (
             <div className="space-y-1 text-xs text-muted-foreground">
               <p>
@@ -292,24 +468,16 @@ function PatternVisualization({ pattern, compact = false }: PatternVisualization
           ) : (
             <p className="text-xs text-muted-foreground">Not detected</p>
           )}
-        </motion.div>
+        </PatternCategoryBox>
 
-        {/* Visual Elements */}
-        <motion.div
-          initial={shouldReduceMotion ? {} : { opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.15 }}
-          className={cn(
-            'p-3 rounded-xl border transition-colors',
-            pattern.visualElements
-              ? 'bg-purple-500/5 dark:bg-purple-500/10 border-purple-500/30 dark:border-purple-500/20'
-              : 'bg-muted/30 border-transparent opacity-50',
-          )}
+        <PatternCategoryBox
+          icon={<Eye className="w-4 h-4 text-purple-600 dark:text-purple-400" />}
+          label="Visuals"
+          active={!!pattern.visualElements}
+          activeClass="bg-purple-500/5 dark:bg-purple-500/10 border-purple-500/30 dark:border-purple-500/20"
+          shouldReduceMotion={shouldReduceMotion}
+          delay={0.15}
         >
-          <div className="flex items-center gap-2 mb-2">
-            <Eye className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-            <span className="text-sm font-medium">Visuals</span>
-          </div>
           {pattern.visualElements ? (
             <div className="space-y-1 text-xs text-muted-foreground">
               <p>
@@ -322,10 +490,10 @@ function PatternVisualization({ pattern, compact = false }: PatternVisualization
           ) : (
             <p className="text-xs text-muted-foreground">Not detected</p>
           )}
-        </motion.div>
+        </PatternCategoryBox>
       </div>
 
-      {/* Confidence Score - Trust Builder */}
+      {/* Confidence Score */}
       <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30">
         <div className="flex items-center gap-2">
           <Brain className="w-4 h-4 text-primary" />
@@ -340,9 +508,43 @@ function PatternVisualization({ pattern, compact = false }: PatternVisualization
   );
 }
 
-// ============================================
-// PATTERN CARD - Gallery Card Component
-// ============================================
+function PatternCategoryBox({
+  icon,
+  label,
+  active,
+  activeClass,
+  shouldReduceMotion,
+  delay,
+  children,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  activeClass: string;
+  shouldReduceMotion: boolean | null;
+  delay: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <motion.div
+      initial={shouldReduceMotion ? {} : { opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ delay }}
+      className={cn(
+        'p-3 rounded-xl border transition-colors',
+        active ? activeClass : 'bg-muted/30 border-transparent opacity-50',
+      )}
+    >
+      <div className="flex items-center gap-2 mb-2">
+        {icon}
+        <span className="text-sm font-medium">{label}</span>
+      </div>
+      {children}
+    </motion.div>
+  );
+}
+
+// ── Pattern Card ────────────────────────────────────────
 
 interface PatternCardProps {
   pattern: LearnedAdPattern;
@@ -393,7 +595,6 @@ function PatternCard({ pattern, onView, onDelete, onApply }: PatternCardProps) {
           isHovered && 'ring-1 ring-primary/20',
         )}
       >
-        {/* Header with badges */}
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
@@ -407,8 +608,6 @@ function PatternCard({ pattern, onView, onDelete, onApply }: PatternCardProps) {
                 </Badge>
               </div>
             </div>
-
-            {/* Engagement Tier Badge */}
             {pattern.engagementTier && pattern.engagementTier !== 'unverified' && (
               <Tooltip>
                 <TooltipTrigger>
@@ -429,10 +628,8 @@ function PatternCard({ pattern, onView, onDelete, onApply }: PatternCardProps) {
         </CardHeader>
 
         <CardContent className="pt-0">
-          {/* Pattern Visualization */}
           <PatternVisualization pattern={pattern} compact />
 
-          {/* Usage Stats */}
           <div className="flex items-center justify-between mt-4 pt-4 border-t text-xs text-muted-foreground">
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-1">
@@ -448,7 +645,6 @@ function PatternCard({ pattern, onView, onDelete, onApply }: PatternCardProps) {
             </div>
           </div>
 
-          {/* Action Buttons - Show on Hover */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{
@@ -475,9 +671,7 @@ function PatternCard({ pattern, onView, onDelete, onApply }: PatternCardProps) {
   );
 }
 
-// ============================================
-// LOADING SKELETON
-// ============================================
+// ── Loading Skeleton ────────────────────────────────────
 
 function PatternSkeleton() {
   return (
@@ -505,365 +699,5 @@ function PatternSkeleton() {
         <Skeleton className="h-8 w-full mt-4" />
       </CardContent>
     </Card>
-  );
-}
-
-// ============================================
-// MAIN PAGE COMPONENT
-// ============================================
-
-export default function LearnFromWinners({ embedded = false, selectedId: _selectedId }: LearnFromWinnersProps) {
-  const queryClient = useQueryClient();
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [platformFilter, setPlatformFilter] = useState<string>('all');
-  const [currentUploadId, setCurrentUploadId] = useState<string | null>(null);
-  const uploadStatusData = useUploadStatus(currentUploadId);
-  const { isPolling } = uploadStatusData;
-  const [selectedPattern, setSelectedPattern] = useState<LearnedAdPattern | null>(null);
-  const [showDetailDialog, setShowDetailDialog] = useState(false);
-
-  // Fetch patterns - API returns { patterns: [...], count: number, filters: {...} }
-  interface PatternsResponse {
-    patterns: LearnedAdPattern[];
-    count: number;
-    filters?: { category?: string; platform?: string; industry?: string };
-  }
-
-  const {
-    data: patternsResponse,
-    isLoading,
-    error,
-  } = useQuery<PatternsResponse>({
-    queryKey: ['learned-patterns', categoryFilter, platformFilter],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (categoryFilter !== 'all') params.set('category', categoryFilter);
-      if (platformFilter !== 'all') params.set('platform', platformFilter);
-
-      const res = await fetch(`/api/learned-patterns?${params}`, {
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('Failed to fetch patterns');
-      return res.json();
-    },
-  });
-
-  // Extract patterns array with defensive check
-  const patterns = Array.isArray(patternsResponse?.patterns) ? patternsResponse.patterns : [];
-
-  // Upload mutation
-  const uploadMutation = useMutation({
-    mutationFn: async ({ file, metadata }: { file: File; metadata: UploadMetadata }) => {
-      const formData = new FormData();
-      formData.append('image', file);
-      formData.append('name', metadata.name);
-      formData.append('category', metadata.category);
-      formData.append('platform', metadata.platform);
-      if (metadata.industry) formData.append('industry', metadata.industry);
-      if (metadata.engagementTier) formData.append('engagementTier', metadata.engagementTier);
-
-      const res = await fetch('/api/learned-patterns/upload', {
-        method: 'POST',
-        credentials: 'include',
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Upload failed');
-      }
-
-      return res.json();
-    },
-    onSuccess: (data) => {
-      setCurrentUploadId(data.uploadId);
-      toast.success('Upload accepted', {
-        description: 'Processing your ad pattern...',
-      });
-    },
-    onError: (error: Error) => {
-      toast.error('Upload failed', {
-        description: error.message,
-      });
-    },
-  });
-
-  // Delete mutation
-  const deleteMutation = useMutation({
-    mutationFn: async (patternId: string) => {
-      const res = await fetch(`/api/learned-patterns/${patternId}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('Failed to delete pattern');
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['learned-patterns'] });
-      toast.success('Pattern deleted', {
-        description: 'The pattern has been removed from your library.',
-      });
-    },
-    onError: () => {
-      toast.error('Delete failed', {
-        description: 'Could not delete the pattern. Please try again.',
-      });
-    },
-  });
-
-  // Completion watcher effect
-  useEffect(() => {
-    if (uploadStatusData?.isComplete) {
-      if (uploadStatusData.status === 'completed') {
-        queryClient.invalidateQueries({ queryKey: ['learned-patterns'] });
-        toast.success('Pattern extracted successfully');
-        setCurrentUploadId(null);
-      } else if (uploadStatusData.status === 'failed') {
-        toast.error('Extraction failed', {
-          description: uploadStatusData.error,
-        });
-        setCurrentUploadId(null);
-      }
-    }
-  }, [uploadStatusData, queryClient]);
-
-  // Filter patterns - patterns is guaranteed to be an array
-  const filteredPatterns = patterns.filter((p) => {
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      return (
-        (p.name || '').toLowerCase().includes(query) ||
-        (p.category || '').toLowerCase().includes(query) ||
-        (p.platform || '').toLowerCase().includes(query) ||
-        (p.industry || '').toLowerCase().includes(query)
-      );
-    }
-    return true;
-  });
-
-  const handleUpload = (file: File, metadata: UploadMetadata) => {
-    uploadMutation.mutate({ file, metadata });
-  };
-
-  const handleViewPattern = (pattern: LearnedAdPattern) => {
-    setSelectedPattern(pattern);
-    setShowDetailDialog(true);
-  };
-
-  const handleDeletePattern = (patternId: string) => {
-    if (confirm('Are you sure you want to delete this pattern?')) {
-      deleteMutation.mutate(patternId);
-    }
-  };
-
-  const handleApplyPattern = (pattern: LearnedAdPattern) => {
-    // Navigate to studio with pattern pre-selected
-    window.location.href = `/?patternId=${pattern.id}`;
-  };
-
-  const mainContent = (
-    <>
-      {/* Page Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
-            <Brain className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-display font-semibold">Learn from Winners</h1>
-            <p className="text-sm text-muted-foreground">Extract success patterns from high-performing ads</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Upload Zone */}
-      <div className="mb-8">
-        <AdaptiveUploadZone
-          patterns={patterns || []}
-          onUpload={handleUpload}
-          isUploading={isPolling}
-          uploadProgress={uploadStatusData?.progress || 0}
-          uploadStatus={uploadStatusData?.status}
-          uploadError={uploadStatusData?.error}
-        />
-      </div>
-
-      {/* Content */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <PatternSkeleton key={i} />
-          ))}
-        </div>
-      ) : error ? (
-        <div className="text-center py-12">
-          <AlertTriangle className="w-12 h-12 text-destructive mx-auto mb-4" />
-          <h3 className="text-lg font-medium mb-2">Failed to load patterns</h3>
-          <p className="text-muted-foreground mb-4">Please try refreshing the page.</p>
-          <Button variant="outline" onClick={() => queryClient.invalidateQueries({ queryKey: ['learned-patterns'] })}>
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Retry
-          </Button>
-        </div>
-      ) : patterns && patterns.length > 0 ? (
-        <>
-          {/* Filters & Search */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search patterns..."
-                className="pl-9"
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {PATTERN_CATEGORIES.map((cat) => (
-                    <SelectItem key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={platformFilter} onValueChange={setPlatformFilter}>
-                <SelectTrigger className="w-36">
-                  <SelectValue placeholder="Platform" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Platforms</SelectItem>
-                  {PLATFORMS.map((plat) => (
-                    <SelectItem key={plat.value} value={plat.value}>
-                      {plat.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <div className="flex items-center border rounded-lg p-1">
-                <Button
-                  variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('grid')}
-                >
-                  <Grid3X3 className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('list')}
-                >
-                  <List className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Results Count */}
-          <div className="text-sm text-muted-foreground mb-4">
-            {filteredPatterns?.length || 0} pattern{(filteredPatterns?.length || 0) !== 1 ? 's' : ''} found
-          </div>
-
-          {/* Pattern Grid */}
-          <motion.div
-            variants={staggerContainer}
-            initial="hidden"
-            animate="visible"
-            className={cn(
-              viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'flex flex-col gap-4',
-            )}
-          >
-            <AnimatePresence mode="popLayout">
-              {filteredPatterns?.map((pattern) => (
-                <PatternCard
-                  key={pattern.id}
-                  pattern={pattern}
-                  onView={() => handleViewPattern(pattern)}
-                  onDelete={() => handleDeletePattern(pattern.id)}
-                  onApply={() => handleApplyPattern(pattern)}
-                />
-              ))}
-            </AnimatePresence>
-          </motion.div>
-        </>
-      ) : null}
-
-      {/* Pattern Detail Dialog */}
-      <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-        <DialogContent className="sm:max-w-2xl">
-          {selectedPattern && (
-            <>
-              <DialogHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <DialogTitle className="text-xl">{selectedPattern.name}</DialogTitle>
-                    <DialogDescription className="flex items-center gap-2 mt-1">
-                      <Badge variant="outline">
-                        {PATTERN_CATEGORIES.find((c) => c.value === selectedPattern.category)?.label}
-                      </Badge>
-                      <Badge variant="secondary">{selectedPattern.platform}</Badge>
-                      {selectedPattern.industry && <Badge variant="outline">{selectedPattern.industry}</Badge>}
-                    </DialogDescription>
-                  </div>
-                  {selectedPattern.engagementTier && selectedPattern.engagementTier !== 'unverified' && (
-                    <Badge className="bg-gradient-to-r from-yellow-500/20 dark:from-yellow-500/30 to-orange-500/20 dark:to-orange-500/30 border-yellow-500/30 dark:border-yellow-500/20">
-                      <TrendingUp className="w-3 h-3 mr-1" />
-                      {ENGAGEMENT_TIERS.find((t) => t.value === selectedPattern.engagementTier)?.label}
-                    </Badge>
-                  )}
-                </div>
-              </DialogHeader>
-
-              <div className="py-4">
-                <PatternVisualization pattern={selectedPattern} />
-              </div>
-
-              <DialogFooter className="flex-col sm:flex-row gap-2">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mr-auto">
-                  <Zap className="w-4 h-4" />
-                  Used {selectedPattern.usageCount} times
-                  {selectedPattern.lastUsedAt && (
-                    <span>• Last used {new Date(selectedPattern.lastUsedAt).toLocaleDateString()}</span>
-                  )}
-                </div>
-                <Button variant="outline" onClick={() => setShowDetailDialog(false)}>
-                  Close
-                </Button>
-                <Button
-                  onClick={() => {
-                    handleApplyPattern(selectedPattern);
-                    setShowDetailDialog(false);
-                  }}
-                >
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Apply Pattern
-                </Button>
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-
-  if (embedded) {
-    return mainContent;
-  }
-
-  return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="container max-w-7xl mx-auto py-8 px-4 sm:px-6">{mainContent}</main>
-    </div>
   );
 }
