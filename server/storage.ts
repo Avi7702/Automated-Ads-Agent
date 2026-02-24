@@ -104,6 +104,7 @@ export interface IStorage {
   // Generation CRUD operations
   saveGeneration(generation: InsertGeneration): Promise<Generation>;
   getGenerations(limit?: number, offset?: number): Promise<Generation[]>;
+  getGenerationsByUserId(userId: string, limit?: number, offset?: number): Promise<Generation[]>;
   getGenerationById(id: string): Promise<Generation | undefined>;
   updateGeneration(id: number | string, updates: Partial<InsertGeneration>): Promise<Generation>;
   deleteGeneration(id: string): Promise<void>;
@@ -443,6 +444,9 @@ export class DbStorage implements IStorage {
   }
   async getGenerations(limit?: number, offset?: number): Promise<Generation[]> {
     return generationRepo.getGenerations(limit, offset);
+  }
+  async getGenerationsByUserId(userId: string, limit?: number, offset?: number): Promise<Generation[]> {
+    return generationRepo.getGenerationsByUserId(userId, limit, offset);
   }
   async getGenerationById(id: string): Promise<Generation | undefined> {
     return generationRepo.getGenerationById(id);

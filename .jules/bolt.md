@@ -1,3 +1,8 @@
+## 2026-02-23 - [Database-level User Filtering]
+
+**Learning:** Found critical paths (data export and Brand DNA analysis) fetching hundreds of records globally and filtering by `userId` in Node.js. This causes O(N) data transfer and memory usage, and incorrectly scopes data if the global fetch limit is hit before finding user records.
+**Action:** Implement specific `getByUserId` methods in repositories to offload filtering to PostgreSQL. Never use global list fetches followed by manual `.filter((x) => x.userId === id)`.
+
 ## 2026-02-22 - [Database-side Aggregation]
 
 **Learning:** In-memory filtering and aggregation are recurring anti-patterns in this codebase. Offloading these to PostgreSQL using `groupBy`, `count`, and array operators (`&&`) significantly reduces memory footprint and data transfer.

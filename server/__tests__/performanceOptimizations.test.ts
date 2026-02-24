@@ -1,6 +1,7 @@
 import { vi, describe, it, expect, beforeEach, type Mock } from 'vitest';
 import { getBrandImagesForProducts } from '../repositories/knowledgeRepository';
 import { getPerformingAdTemplatesByPlatform, searchPerformingAdTemplates } from '../repositories/templateRepository';
+import { getGenerationsByUserId } from '../repositories/generationRepository';
 import { db } from '../db';
 
 // Mock Drizzle db
@@ -119,6 +120,20 @@ describe('Performance Optimizations - Repository Layer', () => {
 
       expect(db.select).toHaveBeenCalled();
       expect(mockSelectChain.where).toHaveBeenCalled();
+    });
+  });
+
+  describe('generationRepository.getGenerationsByUserId', () => {
+    it('should filter by userId at the database level', async () => {
+      const userId = 'user-123';
+      await getGenerationsByUserId(userId);
+
+      expect(db.select).toHaveBeenCalled();
+      expect(mockSelectChain.where).toHaveBeenCalled();
+
+      // Ensure limit and orderBy are called for performance
+      expect(mockSelectChain.limit).toHaveBeenCalled();
+      expect(mockSelectChain.orderBy).toHaveBeenCalled();
     });
   });
 });
