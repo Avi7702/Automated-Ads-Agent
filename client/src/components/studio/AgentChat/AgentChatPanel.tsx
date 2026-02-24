@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * AgentChatPanel - Chat panel for Studio workspace
  *
@@ -20,6 +19,28 @@ import { useAgentChat, type AgentChatMessageContext } from './useAgentChat';
 import type { StudioOrchestrator } from '@/hooks/useStudioOrchestrator';
 import type { AnalyzedUpload, ImageAnalysisResponse } from '@/types/analyzedUpload';
 import type { IdeaBankContextSnapshot } from '@/components/ideabank/types';
+import type { CopyResult, Product } from '@/hooks/studio/types';
+
+interface SpeechRecognitionEventLike {
+  results: ArrayLike<ArrayLike<{ transcript?: string }>>;
+}
+
+interface SpeechRecognitionLike extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: ((event: Event) => void) | null;
+  onend: ((event: Event) => void) | null;
+  start(): void;
+  stop(): void;
+}
+
+type SpeechRecognitionCtorLike = new () => SpeechRecognitionLike;
+type SpeechRecognitionWindow = Window & {
+  SpeechRecognition?: SpeechRecognitionCtorLike;
+  webkitSpeechRecognition?: SpeechRecognitionCtorLike;
+};
 
 interface AgentChatPanelProps {
   orch: StudioOrchestrator;
@@ -32,6 +53,36 @@ interface AgentChatPanelProps {
   ideaBankBridgeState?: 'idle' | 'waiting' | 'ready' | 'error' | 'sent';
   externalMessage?: { id: string; text: string } | null;
   onExternalMessageConsumed?: (id: string) => void;
+}
+
+const RESOLUTION_VALUES = ['1K', '2K', '4K'] as const;
+
+function isResolution(value: string): value is (typeof RESOLUTION_VALUES)[number] {
+  return (RESOLUTION_VALUES as readonly string[]).includes(value);
+}
+
+function isCopyResult(value: unknown): value is CopyResult {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Partial<CopyResult>;
+  return (
+    typeof candidate.headline === 'string' &&
+    typeof candidate.hook === 'string' &&
+    typeof candidate.bodyText === 'string' &&
+    typeof candidate.cta === 'string' &&
+    typeof candidate.caption === 'string' &&
+    Array.isArray(candidate.hashtags) &&
+    typeof candidate.framework === 'string'
+  );
+}
+
+function extractProductIds(items: unknown[]): string[] {
+  return items
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null;
+      const id = (item as { id?: unknown })['id'];
+      return typeof id === 'string' || typeof id === 'number' ? String(id) : null;
+    })
+    .filter((id): id is string => Boolean(id));
 }
 
 export function AgentChatPanel({
@@ -65,7 +116,7 @@ export function AgentChatPanel({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<{ stop: () => void } | null>(null);
   const consumedExternalMessageRef = useRef<string | null>(null);
 
   const remainingUploadSlots = Math.max(0, maxImageInputs - orch.selectedProducts.length - orch.tempUploads.length);
@@ -176,18 +227,22 @@ export function AgentChatPanel({
       try {
         switch (action) {
           case 'select_products': {
-            const products = payload.products as Record<string, unknown>[];
-            if (products && orch.setSelectedProducts) {
-              orch.setSelectedProducts(products);
+            const incoming = Array.isArray(payload['products']) ? payload['products'] : [];
+            const selectedIds = extractProductIds(incoming);
+            if (selectedIds.length > 0 && orch.setSelectedProducts) {
+              const selectedProducts: Product[] = orch.products.filter((product) =>
+                selectedIds.includes(String(product.id)),
+              );
+              orch.setSelectedProducts(selectedProducts);
               toast.success('Products selected', {
-                description: `${products.length} product(s) selected by the assistant.`,
+                description: `${selectedProducts.length} product(s) selected by the assistant.`,
               });
             }
             break;
           }
           case 'set_prompt': {
-            const prompt = payload.prompt as string;
-            if (prompt && orch.setPrompt) {
+            const prompt = payload['prompt'];
+            if (typeof prompt === 'string' && prompt.trim().length > 0 && orch.setPrompt) {
               orch.setPrompt(prompt);
               toast.success('Prompt updated', {
                 description: 'The assistant set your generation prompt.',
@@ -196,8 +251,8 @@ export function AgentChatPanel({
             break;
           }
           case 'set_platform': {
-            const platform = payload.platform as string;
-            if (platform && orch.setPlatform) {
+            const platform = payload['platform'];
+            if (typeof platform === 'string' && platform.trim().length > 0 && orch.setPlatform) {
               orch.setPlatform(platform);
               toast.success('Platform set', {
                 description: `Target platform: ${platform}`,
@@ -206,22 +261,22 @@ export function AgentChatPanel({
             break;
           }
           case 'set_aspect_ratio': {
-            const aspectRatio = payload.aspectRatio as string;
-            if (aspectRatio && orch.setAspectRatio) {
+            const aspectRatio = payload['aspectRatio'];
+            if (typeof aspectRatio === 'string' && aspectRatio.trim().length > 0 && orch.setAspectRatio) {
               orch.setAspectRatio(aspectRatio);
             }
             break;
           }
           case 'set_resolution': {
-            const resolution = payload.resolution as string;
-            if (resolution && orch.setResolution) {
+            const resolution = payload['resolution'];
+            if (typeof resolution === 'string' && isResolution(resolution) && orch.setResolution) {
               orch.setResolution(resolution);
             }
             break;
           }
           case 'generation_complete': {
-            const imageUrl = payload.imageUrl as string;
-            if (imageUrl && orch.setGeneratedImage) {
+            const imageUrl = payload['imageUrl'];
+            if (typeof imageUrl === 'string' && imageUrl.trim().length > 0 && orch.setGeneratedImage) {
               orch.setGeneratedImage(imageUrl);
               if (orch.setState) orch.setState('result');
               toast.success('Image generated!', {
@@ -231,13 +286,23 @@ export function AgentChatPanel({
             break;
           }
           case 'copy_generated': {
-            const copies = payload.copies as Record<string, unknown>[];
-            if (copies?.length > 0) {
+            const copies = Array.isArray(payload['copies']) ? payload['copies'] : [];
+            if (copies.length > 0) {
               const firstCopy = copies[0];
-              if (orch.setGeneratedCopyFull) {
+              if (orch.setGeneratedCopyFull && isCopyResult(firstCopy)) {
                 orch.setGeneratedCopyFull(firstCopy);
               } else if (orch.setGeneratedCopy) {
-                orch.setGeneratedCopy(firstCopy?.caption ?? firstCopy?.bodyText ?? '');
+                const caption =
+                  firstCopy && typeof firstCopy === 'object'
+                    ? (firstCopy as { caption?: unknown })['caption']
+                    : undefined;
+                const bodyText =
+                  firstCopy && typeof firstCopy === 'object'
+                    ? (firstCopy as { bodyText?: unknown })['bodyText']
+                    : undefined;
+                orch.setGeneratedCopy(
+                  typeof caption === 'string' ? caption : typeof bodyText === 'string' ? bodyText : '',
+                );
               }
               toast.success('Ad copy generated', {
                 description: `${copies.length} variation(s) ready in the Inspector.`,
@@ -279,7 +344,7 @@ export function AgentChatPanel({
       selectedProducts,
       uploadedReferences,
       ideaBank: {
-        status: ideaBankContext?.status,
+        ...(ideaBankContext?.status ? { status: ideaBankContext.status } : {}),
         suggestionCount: ideaBankContext?.suggestionCount ?? 0,
         topIdeas,
       },
@@ -351,15 +416,15 @@ export function AgentChatPanel({
       return;
     }
 
-    const SpeechRecognitionCtor =
-      window.SpeechRecognition ||
-      (window as unknown as { webkitSpeechRecognition: typeof SpeechRecognition }).webkitSpeechRecognition;
+    const speechWindow = window as SpeechRecognitionWindow;
+    const SpeechRecognitionCtor = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
+    if (!SpeechRecognitionCtor) return;
     const recognition = new SpeechRecognitionCtor();
     recognition.continuous = false;
     recognition.interimResults = false;
     recognition.lang = 'en-US';
 
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
+    recognition.onresult = (event: SpeechRecognitionEventLike) => {
       const transcript = event.results[0]?.[0]?.transcript;
       if (transcript) {
         setInput(transcript);

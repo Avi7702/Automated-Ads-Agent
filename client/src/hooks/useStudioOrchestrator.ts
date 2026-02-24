@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * useStudioOrchestrator — Thin composer that combines focused sub-hooks.
  *
@@ -165,11 +164,13 @@ export function useStudioOrchestrator() {
         '1.91:1': '1200x627',
       };
       if (template.targetPlatforms && template.targetPlatforms.length > 0) {
-        const mapped = platformMap[template.targetPlatforms[0]];
+        const targetPlatform = template.targetPlatforms[0];
+        const mapped = targetPlatform ? platformMap[targetPlatform] : undefined;
         if (mapped) setPlatform(mapped);
       }
       if (template.targetAspectRatios && template.targetAspectRatios.length > 0) {
-        const mapped = aspectRatioMap[template.targetAspectRatios[0]];
+        const targetAspectRatio = template.targetAspectRatios[0];
+        const mapped = targetAspectRatio ? aspectRatioMap[targetAspectRatio] : undefined;
         if (mapped) setAspectRatio(mapped);
       }
       const styleHints: string[] = [];
