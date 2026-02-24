@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 // @vitest-environment jsdom
 /**
  * Integration Tests: Product Library Page Workflows
@@ -92,11 +91,13 @@ vi.mock('react-dropzone', () => ({
   }),
 }));
 
-// Mock toast for tracking notifications
-const mockToast = vi.fn();
-vi.mock('@/hooks/use-toast', () => ({
-  useToast: () => ({
-    toast: mockToast,
+// Mock sonner toast for tracking notifications
+const mockToastSuccess = vi.fn();
+const mockToastError = vi.fn();
+vi.mock('sonner', () => ({
+  toast: Object.assign(vi.fn(), {
+    success: mockToastSuccess,
+    error: mockToastError,
   }),
 }));
 
@@ -291,7 +292,8 @@ beforeEach(async () => {
   vi.resetAllMocks();
   resetIdCounter();
   mockNavigate.mockClear();
-  mockToast.mockClear();
+  mockToastSuccess.mockClear();
+  mockToastError.mockClear();
 
   // Reset server products to initial state
   serverProducts = [...mockProducts];
@@ -509,10 +511,11 @@ describe('Integration Test 3: Delete Product Workflow', () => {
       // Verify the deleted product is no longer in the list
       expect(serverProducts.find((p) => p.id === productToDelete?.id)).toBeUndefined();
 
-      // Verify toast was called
-      expect(mockToast).toHaveBeenCalledWith(
+      // Verify success toast was called
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        'Product deleted',
         expect.objectContaining({
-          title: 'Product deleted',
+          description: expect.stringContaining(productToDelete?.name ?? ''),
         }),
       );
     }
@@ -840,7 +843,8 @@ describe('Integration Edge Cases', () => {
     vi.resetAllMocks();
     resetIdCounter();
     mockNavigate.mockClear();
-    mockToast.mockClear();
+    mockToastSuccess.mockClear();
+    mockToastError.mockClear();
     serverProducts = [...mockProducts];
 
     const module = await import('@/pages/ProductLibrary');

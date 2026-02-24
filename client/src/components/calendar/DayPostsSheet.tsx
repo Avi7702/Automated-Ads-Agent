@@ -7,7 +7,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { format, parseISO, isToday, isTomorrow, isPast } from 'date-fns';
+import { format, parseISO, isToday, isTomorrow } from 'date-fns';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,7 +27,7 @@ import {
 import { PostStatusBadge } from './PostStatusBadge';
 import { useCancelPost, useRetryPost } from '@/hooks/useScheduledPosts';
 import type { ScheduledPost } from '@/hooks/useScheduledPosts';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 /* ------------------------------------------------------------------ */
 /*  Platform colors for gradient placeholders                          */
@@ -79,7 +79,6 @@ function getDayLabel(day: Date): string {
 export function DayPostsSheet({ open, onOpenChange, day, posts }: DayPostsSheetProps) {
   const cancelPost = useCancelPost();
   const retryPost = useRetryPost();
-  const { toast } = useToast();
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
 
@@ -88,18 +87,18 @@ export function DayPostsSheet({ open, onOpenChange, day, posts }: DayPostsSheetP
       setCancellingId(postId);
       try {
         await cancelPost.mutateAsync(postId);
-        toast({ title: 'Post cancelled', description: 'The scheduled post has been cancelled.' });
-      } catch (err: any) {
-        toast({
-          title: 'Failed to cancel',
-          description: err.message || 'Something went wrong. Please try again.',
-          variant: 'destructive',
+        toast.success('Post cancelled', {
+          description: 'The scheduled post has been cancelled.',
+        });
+      } catch (err: unknown) {
+        toast.error('Failed to cancel', {
+          description: err instanceof Error ? err.message : 'Something went wrong. Please try again.',
         });
       } finally {
         setCancellingId(null);
       }
     },
-    [cancelPost, toast],
+    [cancelPost],
   );
 
   const handleRetry = useCallback(
@@ -107,18 +106,18 @@ export function DayPostsSheet({ open, onOpenChange, day, posts }: DayPostsSheetP
       setRetryingId(postId);
       try {
         await retryPost.mutateAsync({ postId });
-        toast({ title: 'Post rescheduled for retry', description: 'The post has been queued for retry.' });
-      } catch (err: any) {
-        toast({
-          title: 'Failed to retry',
-          description: err.message || 'Something went wrong. Please try again.',
-          variant: 'destructive',
+        toast.success('Post rescheduled for retry', {
+          description: 'The post has been queued for retry.',
+        });
+      } catch (err: unknown) {
+        toast.error('Failed to retry', {
+          description: err instanceof Error ? err.message : 'Something went wrong. Please try again.',
         });
       } finally {
         setRetryingId(null);
       }
     },
-    [retryPost, toast],
+    [retryPost],
   );
 
   if (!day) return null;
@@ -260,13 +259,12 @@ function TimelinePostCard({
   const isPublishing = post.status === 'publishing';
   const isPublished = post.status === 'published';
 
-  const platform = (post as any).platform || '';
-  const accountName = (post as any).accountName || '';
+  const platform = (post as { platform?: string }).platform || '';
+  const accountName = (post as { accountName?: string }).accountName || '';
   const gradient = PLATFORM_GRADIENTS[platform.toLowerCase()] || 'from-gray-400 to-gray-600';
   const platformLabel = PLATFORM_ICONS[platform.toLowerCase()] || '';
 
   // Caption truncation
-  const captionLines = post.caption?.split('\n') || [];
   const isLongCaption = post.caption && post.caption.length > 180;
 
   return (
