@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Phase 4A: Premium Skeleton Component
  *
