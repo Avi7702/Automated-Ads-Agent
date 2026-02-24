@@ -5,7 +5,7 @@ on:
     branches: [main]
 
 concurrency:
-  group: quality-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  group: quality-${{ github.workflow_ref }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 env:
