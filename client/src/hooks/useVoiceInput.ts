@@ -11,8 +11,6 @@
  * - Graceful fallback when API unavailable
  */
 
-/* eslint-disable @typescript-eslint/no-unsafe-declaration-merging */
-
 // Web Speech API type augmentation (not yet in standard TS DOM lib)
 interface SpeechRecognitionEvent extends Event {
   readonly resultIndex: number;
@@ -208,7 +206,7 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
 
     try {
       recognition.start();
-    } catch (_err) {
+    } catch {
       setError('Failed to start speech recognition. Please check microphone permissions.');
     }
   }, [lang, onTranscript, resetSilenceTimer]);
