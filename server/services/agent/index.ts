@@ -13,8 +13,5 @@ export {
   revisePlan,
   getPlan,
   getExecution,
-  listPlans,
-  cancelExecution,
-  retryFailedSteps,
   PlanNotFoundError,
 } from './orchestratorService';

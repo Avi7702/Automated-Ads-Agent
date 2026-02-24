@@ -38,6 +38,7 @@ const sharedResolve = {
     '@shared': path.resolve(__dirname, './shared'),
     '@server': path.resolve(__dirname, './server'),
     '@': path.resolve(__dirname, './client/src'),
+    'posthog-js': path.resolve(__dirname, './client/src/__mocks__/posthog-js.ts'),
   },
   dedupe: ['react', 'react-dom'],
 };
