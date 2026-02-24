@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * CarouselBuilder Component
  *
@@ -34,10 +33,10 @@ import {
   Zap,
   Target,
 } from 'lucide-react';
-import { useCarouselBuilder, type CarouselSlide } from '@/hooks/useCarouselBuilder';
+import { useCarouselBuilder, type CarouselSlide, type EditableSlideField } from '@/hooks/useCarouselBuilder';
 
 // Purpose labels and colors
-const purposeConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
+const purposeConfig: Record<CarouselSlide['purpose'], { label: string; color: string; icon: React.ElementType }> = {
   hook: { label: 'Hook', color: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20', icon: Zap },
   problem: {
     label: 'Problem',
@@ -332,7 +331,7 @@ function SlideThumbnails({
       <ScrollArea className="h-[500px] pr-4">
         <div className="space-y-2">
           {slides.map((slide, index) => {
-            const config = purposeConfig[slide.purpose] || purposeConfig.point;
+            const config = purposeConfig[slide.purpose];
             const Icon = config.icon;
             return (
               <div
@@ -409,7 +408,7 @@ function SlideEditor({
 }: {
   slide: CarouselSlide | undefined;
   slideIndex: number;
-  onUpdate: (index: number, field: keyof CarouselSlide, value: string) => void;
+  onUpdate: (index: number, field: EditableSlideField, value: string) => void;
   onGenerate: (index: number) => void;
   onDownload: (index: number) => void;
 }) {
