@@ -25,14 +25,14 @@ export interface JobStatus {
   type: 'status' | 'progress' | 'completed' | 'failed' | 'error';
   state?: 'waiting' | 'active' | 'completed' | 'failed' | 'delayed';
   progress?: JobProgress;
-  result?: any;
+  result?: unknown;
   error?: string;
   message?: string;
 }
 
 export interface UseJobStatusOptions {
   /** Callback fired when job completes successfully */
-  onComplete?: (result: any) => void;
+  onComplete?: (result: unknown) => void;
   /** Callback fired when job fails */
   onFailed?: (error: string) => void;
   /** Callback fired on progress updates */

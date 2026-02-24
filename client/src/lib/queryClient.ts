@@ -138,7 +138,11 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: 'throw' }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
+      // Default: data considered fresh for 60s. Override per-query for different needs:
+      // - Real-time data (gallery feed): staleTime: 0
+      // - Semi-static data (products, templates): staleTime: 5 * 60 * 1000
+      // - Static config (user profile, brand): staleTime: Infinity
+      staleTime: 60_000,
       retry: false,
     },
     mutations: {

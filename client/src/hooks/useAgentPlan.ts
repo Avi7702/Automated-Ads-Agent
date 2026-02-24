@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * useAgentPlan — State machine hook for Agent Mode flow.
  *
@@ -12,7 +11,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { apiRequest, getCsrfToken } from '@/lib/queryClient';
+import { apiRequest } from '@/lib/queryClient';
 import type { AgentSuggestion, ClarifyingQuestion, PlanBrief, ExecutionStep } from '@shared/types/agentPlan';
 
 export type AgentPlanStage = 'idle' | 'suggestions' | 'questions' | 'preview' | 'executing' | 'complete';
@@ -74,7 +73,7 @@ export interface UseAgentPlanReturn {
   isLoading: boolean;
 
   // Actions
-  fetchSuggestions: (productIds?: number[]) => Promise<void>;
+  fetchSuggestions: (productIds?: Array<number | string>) => Promise<void>;
   selectSuggestion: (suggestion: AgentSuggestion) => void;
   answerQuestion: (questionId: string, answer: string) => void;
   submitAnswers: () => Promise<void>;
@@ -134,7 +133,7 @@ export function useAgentPlan(): UseAgentPlanReturn {
   }, [stage, suggestions, selectedSuggestion, questions, answers, planBrief, executionSteps]);
 
   // ── Fetch Suggestions ────────────────────────────────────
-  const fetchSuggestions = useCallback(async (productIds?: number[]) => {
+  const fetchSuggestions = useCallback(async (productIds?: Array<number | string>) => {
     setIsLoading(true);
     setError(null);
     try {
@@ -145,8 +144,8 @@ export function useAgentPlan(): UseAgentPlanReturn {
       params.set('limit', '6');
       const url = `/api/agent/suggestions?${params.toString()}`;
       const res = await apiRequest('GET', url);
-      const data = await res.json();
-      const items: AgentSuggestion[] = data.suggestions ?? data ?? [];
+      const data = (await res.json()) as { suggestions?: AgentSuggestion[] } | AgentSuggestion[];
+      const items: AgentSuggestion[] = (Array.isArray(data) ? data : data.suggestions) ?? [];
       setSuggestions(items);
       setStage('suggestions');
     } catch (err) {
@@ -180,13 +179,13 @@ export function useAgentPlan(): UseAgentPlanReturn {
         suggestionId: selectedSuggestion.id,
         answers,
       });
-      const data = await res.json();
+      const data = (await res.json()) as { questions?: ClarifyingQuestion[]; plan?: PlanBrief };
       // The response includes both questions and plan
       if (data.questions && data.questions.length > 0 && !data.plan) {
         setQuestions(data.questions);
         setStage('questions');
       } else {
-        setPlanBrief(data.plan ?? data);
+        setPlanBrief(data.plan ?? null);
         setQuestions(data.questions ?? []);
         setStage('preview');
       }
@@ -212,7 +211,7 @@ export function useAgentPlan(): UseAgentPlanReturn {
         planId: planBrief.id,
         idempotencyKey,
       });
-      const data = await res.json();
+      const data = (await res.json()) as { executionId: string; steps?: ExecutionStep[] };
       const executionId = data.executionId;
       const steps: ExecutionStep[] = data.steps ?? [];
       setExecutionSteps(steps);
@@ -241,7 +240,11 @@ export function useAgentPlan(): UseAgentPlanReturn {
 
         try {
           const pollRes = await apiRequest('GET', `/api/agent/execution/${executionId}`);
-          const pollData = await pollRes.json();
+          const pollData = (await pollRes.json()) as {
+            steps?: ExecutionStep[];
+            status?: string;
+            errorMessage?: string;
+          };
           const polledSteps: ExecutionStep[] = pollData.steps ?? [];
           setExecutionSteps(polledSteps);
 
@@ -258,7 +261,7 @@ export function useAgentPlan(): UseAgentPlanReturn {
             }
             setError(pollData.errorMessage || 'Execution failed');
           }
-        } catch (pollErr) {
+        } catch {
           // Silently ignore individual poll failures — will retry next interval
         }
       }, POLL_INTERVAL_MS);
@@ -280,8 +283,8 @@ export function useAgentPlan(): UseAgentPlanReturn {
           planId: planBrief.id,
           feedback,
         });
-        const data = await res.json();
-        setPlanBrief(data.plan ?? data);
+        const data = (await res.json()) as { plan?: PlanBrief };
+        setPlanBrief(data.plan ?? null);
         setStage('preview');
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to revise plan');

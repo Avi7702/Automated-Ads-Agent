@@ -137,6 +137,7 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
   // Fetch current enrichment status
   useEffect(() => {
     fetchEnrichmentStatus();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product.id]);
 
   async function fetchEnrichmentStatus() {
@@ -166,8 +167,8 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
           sku: product.sku || '',
         });
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -198,8 +199,8 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
       }
       await fetchEnrichmentStatus();
       setIsExpanded(true);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setIsGenerating(false);
     }
@@ -249,8 +250,8 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
       await fetchEnrichmentStatus();
       setIsExpanded(true);
       setProductUrl(''); // Clear the input after success
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setIsFetchingUrl(false);
     }
@@ -273,8 +274,8 @@ export function ProductEnrichmentForm({ product, onComplete, className }: Produc
       }
       await fetchEnrichmentStatus();
       onComplete?.();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setIsSaving(false);
     }

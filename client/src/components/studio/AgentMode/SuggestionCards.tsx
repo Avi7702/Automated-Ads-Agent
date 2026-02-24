@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * SuggestionCards — Grid of AI-generated content suggestions for Agent Mode.
  *

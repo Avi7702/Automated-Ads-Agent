@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * useScheduledPosts — React Query hook for calendar data
  *
@@ -9,7 +8,7 @@
  * - retry mutation for failed posts
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, type QueryKey } from '@tanstack/react-query';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -70,18 +69,21 @@ export interface CalendarApiError {
 
 async function fetchCsrfToken(): Promise<string> {
   const res = await fetch('/api/csrf-token', { credentials: 'include' });
-  const data = await res.json();
+  const data = (await res.json()) as { csrfToken: string };
   return data.csrfToken;
 }
 
 /** Parse an API error response into a typed CalendarApiError */
 async function parseApiError(res: Response, fallbackMsg: string): Promise<CalendarApiError> {
-  const data = await res.json().catch(() => ({}));
-  return {
-    message: data.error || fallbackMsg,
+  const data = (await res.json().catch(() => ({}))) as { error?: string; code?: string };
+  const result: CalendarApiError = {
+    message: data.error ?? fallbackMsg,
     status: res.status,
-    code: data.code,
   };
+  if (data.code !== undefined) {
+    result.code = data.code;
+  }
+  return result;
 }
 
 /* ------------------------------------------------------------------ */
@@ -99,7 +101,7 @@ export function useCalendarPosts(startDate: string, endDate: string) {
       const params = new URLSearchParams({ start: startDate, end: endDate });
       const res = await fetch(`/api/calendar/posts?${params}`, { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch calendar posts');
-      return res.json();
+      return res.json() as Promise<ScheduledPost[]>;
     },
     enabled: !!startDate && !!endDate,
     staleTime: 30_000,
@@ -121,7 +123,7 @@ export function useCalendarCounts(year: number, month: number) {
       });
       const res = await fetch(`/api/calendar/counts?${params}`, { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch calendar counts');
-      return res.json();
+      return res.json() as Promise<DayCount[]>;
     },
     enabled: year > 0 && month > 0,
     staleTime: 30_000,
@@ -150,7 +152,7 @@ export function useSchedulePost() {
       if (!res.ok) {
         throw await parseApiError(res, 'Failed to schedule post');
       }
-      return res.json();
+      return res.json() as Promise<ScheduledPost>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['calendar-posts'] });
@@ -167,7 +169,12 @@ export function useSchedulePost() {
 export function useReschedulePost() {
   const queryClient = useQueryClient();
 
-  return useMutation<ScheduledPost, CalendarApiError, { postId: string; scheduledFor: string }>({
+  return useMutation<
+    ScheduledPost,
+    CalendarApiError,
+    { postId: string; scheduledFor: string },
+    { previousEntries: [QueryKey, ScheduledPost[] | undefined][] }
+  >({
     mutationFn: async ({ postId, scheduledFor }) => {
       const csrfToken = await fetchCsrfToken();
       const res = await fetch(`/api/calendar/posts/${postId}/reschedule`, {
@@ -182,7 +189,7 @@ export function useReschedulePost() {
       if (!res.ok) {
         throw await parseApiError(res, 'Failed to reschedule post');
       }
-      return res.json();
+      return res.json() as Promise<ScheduledPost>;
     },
     onMutate: async ({ postId, scheduledFor }) => {
       // Cancel in-flight queries so they don't overwrite our optimistic update
@@ -226,7 +233,12 @@ export function useReschedulePost() {
 export function useCancelPost() {
   const queryClient = useQueryClient();
 
-  return useMutation<ScheduledPost, CalendarApiError, string>({
+  return useMutation<
+    ScheduledPost,
+    CalendarApiError,
+    string,
+    { previousEntries: [QueryKey, ScheduledPost[] | undefined][] }
+  >({
     mutationFn: async (postId) => {
       const csrfToken = await fetchCsrfToken();
       const res = await fetch(`/api/calendar/posts/${postId}/cancel`, {
@@ -237,7 +249,7 @@ export function useCancelPost() {
       if (!res.ok) {
         throw await parseApiError(res, 'Failed to cancel post');
       }
-      return res.json();
+      return res.json() as Promise<ScheduledPost>;
     },
     onMutate: async (postId) => {
       await queryClient.cancelQueries({ queryKey: ['calendar-posts'] });
@@ -292,7 +304,7 @@ export function useRetryPost() {
       if (!res.ok) {
         throw await parseApiError(res, 'Failed to retry post');
       }
-      return res.json();
+      return res.json() as Promise<ScheduledPost>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['calendar-posts'] });

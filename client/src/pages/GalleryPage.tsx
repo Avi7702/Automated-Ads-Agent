@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { ArrowLeft, Search, SortDesc, Trash2, Image as ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import type { GenerationDTO } from '@shared/types/api';
 
 type SortOption = 'newest' | 'oldest';
@@ -26,7 +26,6 @@ type SortOption = 'newest' | 'oldest';
 export default function GalleryPage() {
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -94,25 +93,20 @@ export default function GalleryPage() {
       const succeeded = results.filter((r) => r.status === 'fulfilled').length;
 
       if (failed > 0) {
-        toast({
-          title: 'Partial delete',
+        toast.error('Partial delete', {
           description: `Deleted ${succeeded} of ${ids.length} generations. ${failed} failed.`,
-          variant: 'destructive',
         });
       } else {
-        toast({
-          title: 'Deleted',
+        toast.success('Deleted', {
           description: `${succeeded} generation${succeeded !== 1 ? 's' : ''} deleted.`,
         });
       }
 
       queryClient.invalidateQueries({ queryKey: ['generations'] });
       setSelectedIds(new Set());
-    } catch (error: any) {
-      toast({
-        title: 'Delete failed',
-        description: error.message || 'Failed to delete generations',
-        variant: 'destructive',
+    } catch (error: unknown) {
+      toast.error('Delete failed', {
+        description: error instanceof Error ? error.message : 'Failed to delete generations',
       });
     } finally {
       setIsDeleting(false);
@@ -124,15 +118,15 @@ export default function GalleryPage() {
     <div className="min-h-screen bg-background">
       <Header currentPage="gallery" />
 
-      <div className="container px-4 md:px-6 py-4 md:py-6">
+      <div className="container px-4 md:px-6 py-6 md:py-8 stagger-container">
         {/* Top bar */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" onClick={() => navigate('/')}>
               <ArrowLeft className="h-4 w-4 mr-1" />
               Studio
             </Button>
-            <h1 className="text-xl font-semibold">Gallery</h1>
+            <h1 className="text-2xl font-bold">Gallery</h1>
             {generations && (
               <span className="text-sm text-muted-foreground">
                 {filteredGenerations.length} generation{filteredGenerations.length !== 1 ? 's' : ''}
@@ -201,12 +195,12 @@ export default function GalleryPage() {
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
             {filteredGenerations.map((gen) => (
               <div
                 key={gen.id}
                 className={cn(
-                  'group relative aspect-square rounded-lg overflow-hidden border cursor-pointer transition-all',
+                  'group relative aspect-square rounded-lg overflow-hidden border cursor-pointer transition-all card-hover-lift',
                   selectedIds.has(gen.id)
                     ? 'ring-2 ring-primary border-primary'
                     : 'border-border hover:border-primary/50',

@@ -55,13 +55,13 @@ export default function Settings() {
     <div className="min-h-screen bg-background">
       <Header currentPage="settings" />
 
-      <main className="container mx-auto px-4 py-6">
-        <div className="mb-6">
+      <main className="container mx-auto px-4 py-6 md:py-8 stagger-container">
+        <div className="mb-8">
           <h1 className="text-2xl font-bold">Settings</h1>
-          <p className="text-muted-foreground">Configure your account and preferences</p>
+          <p className="text-muted-foreground mt-1">Configure your account and preferences</p>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-6 min-h-0">
+        <div className="flex flex-col lg:flex-row gap-8 min-h-0">
           {/* Navigation Sidebar */}
           <nav className="w-full lg:w-64 shrink-0">
             <div className="space-y-1">

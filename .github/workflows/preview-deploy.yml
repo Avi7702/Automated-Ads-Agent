@@ -17,6 +17,11 @@ on:
 env:
   NODE_VERSION: '20'
 
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
 jobs:
   # ============================================
   # Deploy preview environment
@@ -24,7 +29,7 @@ jobs:
   deploy-preview:
     name: Deploy Preview
     runs-on: ubuntu-latest
-    if: github.event.action != 'closed'
+    if: github.event.action != 'closed' && github.event.pull_request.head.repo.fork == false
     steps:
       - uses: actions/checkout@v4
 
@@ -50,7 +55,7 @@ jobs:
           railway up \
             --service "${{ secrets.RAILWAY_SERVICE_ID || '28ce02bc-f4ad-4ea7-aab6-bffc98a47e2f' }}" \
             --environment "$ENVIRONMENT_NAME" \
-            --detach 2>&1 || true
+            --detach 2>&1
 
           # Get the deployment URL
           PREVIEW_URL="https://${ENVIRONMENT_NAME}.up.railway.app"
@@ -58,6 +63,7 @@ jobs:
           echo "Preview URL: $PREVIEW_URL"
 
       - name: Comment preview URL on PR
+        continue-on-error: true
         uses: actions/github-script@v7
         with:
           script: |
@@ -104,7 +110,7 @@ jobs:
   cleanup-preview:
     name: Cleanup Preview
     runs-on: ubuntu-latest
-    if: github.event.action == 'closed'
+    if: github.event.action == 'closed' && github.event.pull_request.head.repo.fork == false
     steps:
       - name: Install Railway CLI
         run: npm install -g @railway/cli
@@ -120,6 +126,7 @@ jobs:
           railway environment delete "$ENVIRONMENT_NAME" --yes 2>&1 || echo "Environment may already be cleaned up"
 
       - name: Update PR comment
+        continue-on-error: true
         uses: actions/github-script@v7
         with:
           script: |
