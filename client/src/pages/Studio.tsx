@@ -7,10 +7,11 @@
  * - Split View: assistant + composer side by side
  */
 
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
 import { cn } from '@/lib/utils';
+import { MOTION, useReducedMotion, motionSafe } from '@/lib/motion';
 
 import { Header } from '@/components/layout/Header';
 import { StudioProvider } from '@/contexts/StudioContext';
@@ -25,7 +26,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles, History, TrendingUp, Star, Layout, X } from 'lucide-react';
+import { Sparkles, History, TrendingUp, Star, Layout, X, MessageSquare, Paintbrush, Columns } from 'lucide-react';
 
 import { useStudioOrchestrator } from '@/hooks/useStudioOrchestrator';
 import type { ShortcutConfig } from '@/hooks/useKeyboardShortcuts';
@@ -135,8 +136,15 @@ function KeyboardShortcutsPanel({
   );
 }
 
+const MODE_OPTIONS = [
+  { mode: 'agent' as WorkspaceMode, label: 'Agent Mode', icon: MessageSquare },
+  { mode: 'studio' as WorkspaceMode, label: 'Studio Mode', icon: Paintbrush },
+  { mode: 'split' as WorkspaceMode, label: 'Split View', icon: Columns },
+];
+
 export default function Studio() {
   const orch = useStudioOrchestrator();
+  const reduced = useReducedMotion();
 
   const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>(() => {
     if (typeof window === 'undefined') return 'split';
@@ -297,7 +305,7 @@ export default function Studio() {
         </div>
 
         <div className="hidden lg:block min-w-0">
-          <div className="sticky top-24 max-h-[calc(100vh-120px)] rounded-2xl border border-border bg-card/30 overflow-hidden">
+          <div className="sticky top-24 max-h-[calc(100vh-120px)] rounded-2xl border border-border bg-card/30 overflow-hidden card-hover-lift">
             <InspectorPanel orch={orch} />
           </div>
         </div>
@@ -318,7 +326,7 @@ export default function Studio() {
         />
       </div>
 
-      <div className="mt-6 hidden lg:block">
+      <div className="mt-8 hidden lg:block">
         <IdeaBankBar orch={orch} />
       </div>
     </>
@@ -351,51 +359,57 @@ export default function Studio() {
         >
           <motion.div
             ref={orch.heroRef}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center space-y-4 py-8"
+            initial="hidden"
+            animate="visible"
+            variants={motionSafe(MOTION.presets.staggerChildren, reduced)}
+            className="text-center space-y-4 py-12 hero-glow"
           >
-            <h1 className="font-display text-4xl md:text-5xl font-bold tracking-tight bg-gradient-to-b from-zinc-900 to-zinc-900/60 dark:from-white dark:to-white/60 bg-clip-text text-transparent">
+            <motion.h1
+              variants={motionSafe(MOTION.presets.fadeUp, reduced)}
+              className="font-display text-4xl md:text-5xl font-bold tracking-tight bg-gradient-to-b from-zinc-900 to-zinc-900/60 dark:from-white dark:to-white/60 bg-clip-text text-transparent"
+            >
               {workspaceHeadline}
-            </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">{workspaceSubheading}</p>
+            </motion.h1>
+            <motion.p
+              variants={motionSafe(MOTION.presets.fadeUp, reduced)}
+              className="text-lg text-muted-foreground max-w-2xl mx-auto"
+            >
+              {workspaceSubheading}
+            </motion.p>
 
-            <div className="flex justify-center pt-1">
-              <div className="inline-flex rounded-xl border border-border bg-card/40 p-1">
-                <Button
-                  variant={workspaceMode === 'agent' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setWorkspaceMode('agent')}
-                >
-                  Agent Mode
-                </Button>
-                <Button
-                  variant={workspaceMode === 'studio' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setWorkspaceMode('studio')}
-                >
-                  Studio Mode
-                </Button>
-                <Button
-                  variant={workspaceMode === 'split' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setWorkspaceMode('split')}
-                >
-                  Split View
-                </Button>
+            <motion.div variants={motionSafe(MOTION.presets.fadeUp, reduced)} className="flex justify-center pt-1">
+              <div className="inline-flex gap-3">
+                {MODE_OPTIONS.map(({ mode, label, icon: Icon }) => (
+                  <motion.button
+                    key={mode}
+                    className={cn('mode-card flex items-center gap-2 text-sm font-medium')}
+                    data-active={workspaceMode === mode}
+                    onClick={() => setWorkspaceMode(mode)}
+                    {...(!reduced ? { whileHover: { scale: 1.03 }, whileTap: { scale: 0.97 } } : {})}
+                    transition={MOTION.transitions.fast}
+                  >
+                    <Icon
+                      className={cn('w-4 h-4', workspaceMode === mode ? 'text-primary' : 'text-muted-foreground')}
+                    />
+                    <span className={workspaceMode === mode ? 'text-primary' : 'text-muted-foreground'}>{label}</span>
+                  </motion.button>
+                ))}
               </div>
-            </div>
+            </motion.div>
 
-            <div className="flex justify-center gap-3 pt-2">
+            <motion.div
+              variants={motionSafe(MOTION.presets.fadeUp, reduced)}
+              className="flex justify-center gap-3 pt-2"
+            >
               <Button variant="outline" size="sm" onClick={orch.handleHistoryToggle} className="gap-2">
                 <History className="w-4 h-4" />
                 {orch.historyPanelOpen ? 'Hide History' : 'History'}
               </Button>
-            </div>
+            </motion.div>
           </motion.div>
 
           {workspaceMode === 'agent' && (
-            <div className="mx-auto max-w-5xl grid gap-6 xl:grid-cols-[1fr_380px]">
+            <div className="mx-auto max-w-5xl grid gap-8 xl:grid-cols-[1fr_380px]">
               <div className="min-w-0 order-2 xl:order-1">
                 <AgentModePanel orch={orch} />
               </div>
@@ -432,7 +446,7 @@ export default function Studio() {
           )}
 
           {workspaceMode === 'split' && (
-            <div className="grid gap-6 xl:grid-cols-[minmax(320px,420px)_1fr]">
+            <div className="grid gap-8 xl:grid-cols-[minmax(320px,420px)_1fr]">
               <div className="min-w-0">
                 <div className="xl:sticky xl:top-24">
                   <AgentChatPanel
@@ -498,7 +512,7 @@ export default function Studio() {
                     <button
                       key={template.id}
                       onClick={() => orch.handleSelectPerformingTemplate(template)}
-                      className="rounded-xl border border-border bg-card overflow-hidden hover:border-primary/50 transition-colors text-left"
+                      className="rounded-xl border border-border bg-card overflow-hidden hover:border-primary/50 transition-colors text-left card-hover-lift"
                     >
                       <div className="aspect-[4/3] overflow-hidden bg-muted relative">
                         {template.previewImageUrl ? (

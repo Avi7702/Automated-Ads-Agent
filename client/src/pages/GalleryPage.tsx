@@ -118,15 +118,15 @@ export default function GalleryPage() {
     <div className="min-h-screen bg-background">
       <Header currentPage="gallery" />
 
-      <div className="container px-4 md:px-6 py-4 md:py-6">
+      <div className="container px-4 md:px-6 py-6 md:py-8 stagger-container">
         {/* Top bar */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" onClick={() => navigate('/')}>
               <ArrowLeft className="h-4 w-4 mr-1" />
               Studio
             </Button>
-            <h1 className="text-xl font-semibold">Gallery</h1>
+            <h1 className="text-2xl font-bold">Gallery</h1>
             {generations && (
               <span className="text-sm text-muted-foreground">
                 {filteredGenerations.length} generation{filteredGenerations.length !== 1 ? 's' : ''}
@@ -195,12 +195,12 @@ export default function GalleryPage() {
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
             {filteredGenerations.map((gen) => (
               <div
                 key={gen.id}
                 className={cn(
-                  'group relative aspect-square rounded-lg overflow-hidden border cursor-pointer transition-all',
+                  'group relative aspect-square rounded-lg overflow-hidden border cursor-pointer transition-all card-hover-lift',
                   selectedIds.has(gen.id)
                     ? 'ring-2 ring-primary border-primary'
                     : 'border-border hover:border-primary/50',
