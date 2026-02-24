@@ -1,21 +1,17 @@
-// @ts-nocheck
 /**
- * Phase 4B: MotionCard — hover lift + shadow micro-interaction
+ * Phase 4B: MotionCard - hover lift + shadow micro-interaction
  *
  * Wraps any card-like element with translateY(-2px) + shadow lift on hover.
  * Uses motion/react for hardware-accelerated transform + opacity only.
- *
- * Usage:
- *   import { MotionCard } from '@/components/ui/motion-card';
- *   <MotionCard className="p-6 rounded-xl border">...content...</MotionCard>
  */
 
 import { motion } from 'motion/react';
+import type { HTMLAttributes, ReactNode } from 'react';
 import { MOTION, useReducedMotion } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 
-interface MotionCardProps extends React.HTMLAttributes<HTMLDivElement> {
-  children: React.ReactNode;
+interface MotionCardProps extends HTMLAttributes<HTMLDivElement> {
+  children: ReactNode;
 }
 
 export function MotionCard({ children, className, ...props }: MotionCardProps) {

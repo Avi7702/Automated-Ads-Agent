@@ -94,7 +94,7 @@ interface UploadMetadata {
 }
 
 interface AdaptiveUploadZoneProps {
-  patterns: any[];
+  patterns: unknown[];
   onUpload: (file: File, metadata: UploadMetadata) => void;
   isUploading: boolean;
   uploadProgress: number;
@@ -111,7 +111,7 @@ export function AdaptiveUploadZone({
   onUpload,
   isUploading,
   uploadProgress,
-  uploadStatus,
+  uploadStatus: _uploadStatus,
   uploadError,
 }: AdaptiveUploadZoneProps) {
   const isEmpty = patterns.length === 0;

@@ -70,8 +70,7 @@ export function Header({ currentPage }: HeaderProps) {
           <Link href="/" className="flex items-center gap-2">
             <motion.span
               className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 text-white text-xs font-bold"
-              whileHover={reduced ? undefined : { scale: 1.08 }}
-              whileTap={reduced ? undefined : { scale: 0.95 }}
+              {...(!reduced ? { whileHover: { scale: 1.08 }, whileTap: { scale: 0.95 } } : {})}
               transition={MOTION.transitions.fast}
             >
               V3
@@ -103,8 +102,7 @@ export function Header({ currentPage }: HeaderProps) {
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted',
                 )}
                 data-active={activePage === item.id}
-                whileHover={reduced ? undefined : { scale: 1.04 }}
-                whileTap={reduced ? undefined : { scale: 0.97 }}
+                {...(!reduced ? { whileHover: { scale: 1.04 }, whileTap: { scale: 0.97 } } : {})}
                 transition={MOTION.transitions.fast}
               >
                 {item.label}

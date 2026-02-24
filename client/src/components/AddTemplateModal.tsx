@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 // Options
 const CATEGORIES = ['product_showcase', 'installation', 'worksite', 'professional', 'educational'];
@@ -32,7 +32,6 @@ interface AddTemplateModalProps {
 
 export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form state
@@ -171,8 +170,7 @@ export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
       return response.json();
     },
     onSuccess: () => {
-      toast({
-        title: 'Template created',
+      toast.success('Template created', {
         description: 'Your template has been added to the library.',
       });
       queryClient.invalidateQueries({ queryKey: ['performing-ad-templates'] });
@@ -180,10 +178,8 @@ export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
       onClose();
     },
     onError: (error: Error) => {
-      toast({
-        title: 'Error',
+      toast.error('Error', {
         description: error.message,
-        variant: 'destructive',
       });
     },
   });
@@ -191,10 +187,8 @@ export function AddTemplateModal({ isOpen, onClose }: AddTemplateModalProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) {
-      toast({
-        title: 'Name required',
+      toast.error('Name required', {
         description: 'Please enter a template name.',
-        variant: 'destructive',
       });
       return;
     }

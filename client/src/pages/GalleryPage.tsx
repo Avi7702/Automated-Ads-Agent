@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { ArrowLeft, Search, SortDesc, Trash2, Image as ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import type { GenerationDTO } from '@shared/types/api';
 
 type SortOption = 'newest' | 'oldest';
@@ -26,7 +26,6 @@ type SortOption = 'newest' | 'oldest';
 export default function GalleryPage() {
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -98,13 +97,17 @@ export default function GalleryPage() {
           description: `Deleted ${succeeded} of ${ids.length} generations. ${failed} failed.`,
         });
       } else {
-        toast.success('Deleted', { description: `${succeeded} generation${succeeded !== 1 ? 's' : ''} deleted.` });
+        toast.success('Deleted', {
+          description: `${succeeded} generation${succeeded !== 1 ? 's' : ''} deleted.`,
+        });
       }
 
       queryClient.invalidateQueries({ queryKey: ['generations'] });
       setSelectedIds(new Set());
-    } catch (error: any) {
-      toast.error('Delete failed', { description: error.message || 'Failed to delete generations' });
+    } catch (error: unknown) {
+      toast.error('Delete failed', {
+        description: error instanceof Error ? error.message : 'Failed to delete generations',
+      });
     } finally {
       setIsDeleting(false);
       setShowDeleteDialog(false);

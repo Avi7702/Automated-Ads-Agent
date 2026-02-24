@@ -1,25 +1,15 @@
-// @ts-nocheck
 /**
- * Phase 4B: PageStagger — staggered entrance animation for page content
+ * Phase 4B: PageStagger - staggered entrance animation for page content
  *
  * Wraps direct children with staggered fadeUp entrance on mount.
- * Uses motion/react AnimatePresence + staggerChildren preset.
- *
- * Usage:
- *   import { PageStagger } from '@/components/ui/page-stagger';
- *   <PageStagger>
- *     <h1>Title</h1>
- *     <div>Content block 1</div>
- *     <div>Content block 2</div>
- *   </PageStagger>
  */
 
 import { motion } from 'motion/react';
+import type { HTMLAttributes, ReactNode } from 'react';
 import { MOTION, useReducedMotion, motionSafe } from '@/lib/motion';
-import { cn } from '@/lib/utils';
 
-interface PageStaggerProps extends React.HTMLAttributes<HTMLDivElement> {
-  children: React.ReactNode;
+interface PageStaggerProps extends HTMLAttributes<HTMLDivElement> {
+  children: ReactNode;
 }
 
 export function PageStagger({ children, className, ...props }: PageStaggerProps) {

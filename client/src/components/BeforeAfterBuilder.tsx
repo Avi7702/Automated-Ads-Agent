@@ -15,13 +15,11 @@
 
 import { useState, useCallback } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Tooltip,
   TooltipContent,
@@ -37,7 +35,6 @@ import {
   X,
   AlertCircle,
   CheckCircle2,
-  RefreshCw,
   ArrowLeftRight,
   Lightbulb,
 } from "lucide-react";
@@ -81,11 +78,9 @@ const TRANSFORMATION_TIPS = [
 ];
 
 export function BeforeAfterBuilder({
-  templateId,
   topic,
   platform,
   productNames = [],
-  productImageUrls = [],
   aspectRatio = "1080x1080",
   onClose,
   onComplete,
@@ -185,7 +180,7 @@ export function BeforeAfterBuilder({
         url: result.imageUrl || result.url,
         isGenerating: false,
       }));
-    } catch (error) {
+    } catch {
       setBeforeImage((prev) => ({
         ...prev,
         isGenerating: false,
@@ -211,7 +206,7 @@ export function BeforeAfterBuilder({
         url: result.imageUrl || result.url,
         isGenerating: false,
       }));
-    } catch (error) {
+    } catch {
       setAfterImage((prev) => ({
         ...prev,
         isGenerating: false,
