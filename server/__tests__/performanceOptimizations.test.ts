@@ -1,4 +1,4 @@
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach, type Mock } from 'vitest';
 import { getBrandImagesForProducts } from '../repositories/knowledgeRepository';
 import { getPerformingAdTemplatesByPlatform, searchPerformingAdTemplates } from '../repositories/templateRepository';
 import { db } from '../db';
@@ -10,8 +10,18 @@ vi.mock('../db', () => ({
   },
 }));
 
+/** Typed mock matching Drizzle's fluent query builder chain */
+interface DrizzleMockChain {
+  from: Mock;
+  where: Mock;
+  orderBy: Mock;
+  limit: Mock;
+  offset: Mock;
+  then: Mock;
+}
+
 describe('Performance Optimizations - Repository Layer', () => {
-  let mockSelectChain: any;
+  let mockSelectChain: DrizzleMockChain;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -29,7 +39,7 @@ describe('Performance Optimizations - Repository Layer', () => {
       }),
     };
 
-    (db.select as any).mockReturnValue(mockSelectChain);
+    vi.mocked(db.select).mockReturnValue(mockSelectChain as unknown as ReturnType<typeof db.select>);
   });
 
   describe('knowledgeRepository.getBrandImagesForProducts', () => {
@@ -78,7 +88,7 @@ describe('Performance Optimizations - Repository Layer', () => {
         style: 'modern',
         engagementTier: 'top-10',
         industry: 'fashion',
-        objective: 'conversion'
+        objective: 'conversion',
       };
 
       await searchPerformingAdTemplates(userId, filters);
