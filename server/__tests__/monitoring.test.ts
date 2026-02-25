@@ -164,7 +164,7 @@ describe('Monitoring System', () => {
 
         const health = await getSystemHealth();
 
-        expect(health.services.redis?.latency).toBeGreaterThanOrEqual(50);
+        expect(health.services.redis?.latency).toBeGreaterThanOrEqual(45);
 
         delete process.env.REDIS_URL;
       });

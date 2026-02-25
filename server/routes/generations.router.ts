@@ -703,3 +703,330 @@ export const jobsRouterModule: RouterModule = {
   requiresAuth: false, // Status is public, stream requires auth
   tags: ['jobs', 'queue', 'sse'],
 };
+
+/**
+ * Transform Router
+ * Image transformation and text-only generation
+ * Mounted at /api prefix to preserve /api/transform path
+ */
+export const transformRouter: RouterFactory = (ctx: RouterContext): Router => {
+  const { promptInjectionGuard } = require('../middleware/promptInjectionGuard') as {
+    promptInjectionGuard: import('express').RequestHandler;
+  };
+  const router = createRouter();
+  const { storage, logger, telemetry } = ctx.services;
+  const { requireAuth } = ctx.middleware;
+
+  router.post(
+    '/transform',
+    ctx.middleware.extendedTimeout,
+    ctx.middleware.haltOnTimeout,
+    requireAuth,
+    ctx.uploads.array('images', 6),
+    promptInjectionGuard,
+    asyncHandler(async (req: Request, res: Response) => {
+      const startTime = Date.now();
+      const userId = (req as any).user?.id;
+      let success = false;
+      let errorType: string | undefined;
+      let totalImageCount = 0;
+
+      try {
+        const files = Array.isArray(req.files) ? (req.files as Express.Multer.File[]) : [];
+        const { prompt, resolution, mode, templateId, templateReferenceUrls, recipe: recipeJson } = req.body;
+
+        if (typeof prompt !== 'string' || prompt.trim().length === 0) {
+          return res.status(400).json({ error: 'No prompt provided' });
+        }
+
+        const parseStringArray = (value: unknown): string[] => {
+          if (Array.isArray(value)) {
+            return value.filter((v): v is string => typeof v === 'string' && v.trim().length > 0);
+          }
+          if (typeof value === 'string') {
+            const trimmed = value.trim();
+            if (!trimmed) return [];
+            try {
+              const parsed = JSON.parse(trimmed);
+              if (Array.isArray(parsed)) {
+                return parsed.filter((v): v is string => typeof v === 'string' && v.trim().length > 0);
+              }
+            } catch {
+              // Fall through to single-string interpretation.
+            }
+            return [trimmed];
+          }
+          return [];
+        };
+
+        let recipe: Record<string, unknown> | undefined;
+        if (recipeJson) {
+          try {
+            const parsed: unknown = typeof recipeJson === 'string' ? JSON.parse(recipeJson) : recipeJson;
+            if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
+              recipe = parsed as Record<string, unknown>;
+            }
+          } catch {
+            logger.warn({ module: 'Transform' }, 'Failed to parse recipe JSON');
+          }
+        }
+
+        const parsedProductIds = parseStringArray(req.body.productIds).slice(0, 6);
+
+        const generationMode = mode || 'standard';
+        const validModes = ['standard', 'exact_insert', 'inspiration'];
+        if (!validModes.includes(generationMode)) {
+          return res.status(400).json({ error: `Invalid mode. Must be one of: ${validModes.join(', ')}` });
+        }
+
+        if ((generationMode === 'exact_insert' || generationMode === 'inspiration') && !templateId) {
+          return res.status(400).json({ error: `templateId is required for ${generationMode} mode` });
+        }
+
+        const { normalizeResolution } = ctx.domainServices.pricingEstimator;
+        const selectedResolution = normalizeResolution(resolution) || '2K';
+        logger.info(
+          {
+            module: 'Transform',
+            imageCount: files.length,
+            productIdsCount: parsedProductIds.length,
+            promptPreview: prompt.substring(0, 100),
+            mode: generationMode,
+          },
+          'Processing request',
+        );
+
+        const imageInputs = files.map((f: Express.Multer.File) => ({
+          buffer: f.buffer,
+          mimetype: f.mimetype,
+          originalname: f.originalname,
+        }));
+        const recipeProductsFromIds: Array<{
+          id: string;
+          name: string;
+          category?: string;
+          description?: string;
+          imageUrls: string[];
+        }> = [];
+
+        if (parsedProductIds.length > 0 && imageInputs.length < 6) {
+          for (const productId of parsedProductIds) {
+            if (imageInputs.length >= 6) break;
+            const product = await storage.getProductById(productId);
+            if (!product) continue;
+
+            recipeProductsFromIds.push({
+              id: String(product.id),
+              name: product.name ?? String(product.id),
+              ...(product.category ? { category: product.category } : {}),
+              ...(product.description ? { description: product.description } : {}),
+              imageUrls: product.cloudinaryUrl ? [product.cloudinaryUrl] : [],
+            });
+
+            if (!product.cloudinaryUrl) continue;
+
+            let productUrl: URL;
+            try {
+              productUrl = new URL(product.cloudinaryUrl);
+            } catch {
+              logger.warn({ module: 'Transform', productId }, 'Invalid product cloudinaryUrl');
+              continue;
+            }
+
+            const isAllowedHost =
+              productUrl.hostname === 'res.cloudinary.com' ||
+              productUrl.hostname.endsWith('.cloudinary.com') ||
+              productUrl.hostname === 'images.unsplash.com' ||
+              productUrl.hostname === 'nextdaysteel.co.uk' ||
+              productUrl.hostname.endsWith('.nextdaysteel.co.uk');
+
+            if (productUrl.protocol !== 'https:' || !isAllowedHost) {
+              logger.warn(
+                { module: 'Transform', productId, hostname: productUrl.hostname },
+                'Blocked product image host',
+              );
+              continue;
+            }
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 12000);
+            try {
+              const response = await fetch(product.cloudinaryUrl, { signal: controller.signal });
+
+              if (!response.ok) {
+                logger.warn(
+                  { module: 'Transform', productId, status: response.status },
+                  'Failed to fetch product image server-side',
+                );
+                continue;
+              }
+
+              const contentType = response.headers.get('content-type') || 'image/jpeg';
+              if (!contentType.startsWith('image/')) {
+                logger.warn({ module: 'Transform', productId, contentType }, 'Skipped non-image product URL');
+                continue;
+              }
+
+              const buffer = Buffer.from(await response.arrayBuffer());
+              if (!buffer.length) continue;
+
+              const extension = contentType.split('/')[1]?.split(';')[0] || 'jpg';
+              imageInputs.push({
+                buffer,
+                mimetype: contentType,
+                originalname: `${String(product.id)}.${extension}`,
+              });
+            } catch (fetchError) {
+              logger.warn(
+                { module: 'Transform', productId, err: fetchError },
+                'Server-side fetch failed for product image',
+              );
+            } finally {
+              clearTimeout(timeoutId);
+            }
+          }
+        }
+
+        totalImageCount = imageInputs.length;
+
+        type GenRecipe = import('@shared/types/ideaBank').GenerationRecipe;
+        const parsedRecipe = recipe;
+        const effectiveRecipe =
+          recipeProductsFromIds.length > 0 &&
+          (!Array.isArray(parsedRecipe?.['products']) || parsedRecipe['products'].length === 0)
+            ? ({
+                version: '1.0',
+                products: recipeProductsFromIds,
+                relationships: Array.isArray(parsedRecipe?.['relationships']) ? parsedRecipe['relationships'] : [],
+                scenarios: Array.isArray(parsedRecipe?.['scenarios']) ? parsedRecipe['scenarios'] : [],
+                ...(parsedRecipe?.['template'] ? { template: parsedRecipe['template'] } : {}),
+                ...(Array.isArray(parsedRecipe?.['brandImages']) ? { brandImages: parsedRecipe['brandImages'] } : {}),
+                ...(parsedRecipe?.['brandVoice'] ? { brandVoice: parsedRecipe['brandVoice'] } : {}),
+                ...(parsedRecipe?.['debugContext'] ? { debugContext: parsedRecipe['debugContext'] } : {}),
+              } as GenRecipe)
+            : (parsedRecipe as GenRecipe | undefined);
+
+        let parsedTemplateReferenceUrls: string[] | undefined;
+        if (templateReferenceUrls) {
+          try {
+            parsedTemplateReferenceUrls =
+              typeof templateReferenceUrls === 'string' ? JSON.parse(templateReferenceUrls) : templateReferenceUrls;
+          } catch {
+            parsedTemplateReferenceUrls = Array.isArray(templateReferenceUrls)
+              ? templateReferenceUrls
+              : [templateReferenceUrls];
+          }
+        }
+
+        const { executeGenerationPipeline } = await import('../services/generation');
+        const pipelineResult = await executeGenerationPipeline({
+          prompt,
+          mode: generationMode as 'standard' | 'exact_insert' | 'inspiration',
+          images: imageInputs,
+          resolution: selectedResolution as '1K' | '2K' | '4K',
+          userId: userId ?? 'anonymous',
+          ...(templateId ? { templateId } : {}),
+          ...(parsedTemplateReferenceUrls ? { templateReferenceUrls: parsedTemplateReferenceUrls } : {}),
+          ...(effectiveRecipe ? { recipe: effectiveRecipe } : {}),
+          ...(req.body.styleReferenceIds ? { styleReferenceIds: req.body.styleReferenceIds } : {}),
+          ...(req.body.aspectRatio ? { aspectRatio: req.body.aspectRatio } : {}),
+          ...(parsedProductIds.length > 0 ? { productIds: parsedProductIds } : {}),
+        });
+
+        success = true;
+
+        res.json({
+          success: true,
+          imageUrl: pipelineResult.imageUrl,
+          generationId: pipelineResult.generationId,
+          prompt: pipelineResult.prompt,
+          canEdit: pipelineResult.canEdit,
+          mode: pipelineResult.mode,
+          templateId: pipelineResult.templateId || null,
+          stagesCompleted: pipelineResult.stagesCompleted,
+        });
+      } catch (error: any) {
+        logger.error({ module: 'Transform', err: error }, 'Transform error');
+        errorType = errorType || error.name || 'unknown';
+
+        if (error.name === 'PreGenGateError') {
+          telemetry.trackError({
+            endpoint: '/api/transform',
+            errorType: 'pre_gen_gate_blocked',
+            statusCode: 400,
+            ...(userId != null && { userId }),
+          });
+
+          return res.status(400).json({
+            error: 'Generation request does not meet quality threshold',
+            details: error.message,
+            score: error.score,
+            suggestions: error.suggestions,
+            breakdown: error.breakdown,
+          });
+        }
+
+        telemetry.trackError({
+          endpoint: '/api/transform',
+          errorType: errorType || 'unknown',
+          statusCode: 500,
+          ...(userId != null && { userId }),
+        });
+
+        res.status(500).json({
+          error: 'Failed to transform image',
+          details: error.message,
+        });
+      } finally {
+        const durationMs = Date.now() - startTime;
+        const inputTokensEstimate = Math.ceil((req.body.prompt?.length || 0) * 0.25);
+
+        telemetry.trackGeminiUsage({
+          model: 'gemini-3-pro-image-preview',
+          operation: 'generate',
+          inputTokens: inputTokensEstimate,
+          outputTokens: 0,
+          durationMs,
+          success,
+          ...(userId != null && { userId }),
+          ...(errorType != null && { errorType }),
+        });
+
+        const { quotaMonitoring } = ctx.domainServices;
+        try {
+          await quotaMonitoring.trackApiCall({
+            brandId: userId || 'anonymous',
+            operation: 'generate',
+            model: 'gemini-3-pro-image-preview',
+            success,
+            durationMs,
+            inputTokens: inputTokensEstimate,
+            outputTokens: 0,
+            costMicros: success
+              ? ctx.domainServices.pricingEstimator.estimateGenerationCostMicros({
+                  resolution: req.body.resolution || '2K',
+                  inputImagesCount: totalImageCount,
+                  promptChars: String(req.body.prompt || '').length,
+                }).estimatedCostMicros
+              : 0,
+            ...(errorType != null && { errorType }),
+            isRateLimited: errorType === 'RESOURCE_EXHAUSTED' || errorType === 'rate_limit',
+          });
+        } catch (trackError) {
+          logger.warn({ module: 'Transform', err: trackError }, 'Failed to track quota');
+        }
+      }
+    }),
+  );
+
+  return router;
+};
+
+export const transformRouterModule: RouterModule = {
+  prefix: '/api',
+  factory: transformRouter,
+  description: 'Image transformation and generation pipeline',
+  endpointCount: 1,
+  requiresAuth: true,
+  tags: ['generations', 'ai', 'images', 'transform'],
+};

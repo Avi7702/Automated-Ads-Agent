@@ -21,7 +21,7 @@ import { authRouterModule } from './auth.router';
 
 // Core domain routers (Sprint 2 Day 6-7)
 import { productsRouterModule } from './products.router';
-import { generationsRouterModule, jobsRouterModule } from './generations.router';
+import { generationsRouterModule, jobsRouterModule, transformRouterModule } from './generations.router';
 
 // Content management
 import { templatesRouterModule } from './templates.router';
@@ -97,6 +97,7 @@ export const routerModules: RouterModule[] = [
   productsRouterModule,
   generationsRouterModule,
   jobsRouterModule,
+  transformRouterModule,
 
   // Templates
   templatesRouterModule,
@@ -187,7 +188,7 @@ export { healthRouterModule } from './health.router';
 export { authRouterModule } from './auth.router';
 export { monitoringRouterModule } from './monitoring.router';
 export { productsRouterModule } from './products.router';
-export { generationsRouterModule, jobsRouterModule } from './generations.router';
+export { generationsRouterModule, jobsRouterModule, transformRouterModule } from './generations.router';
 export { ideaBankRouterModule } from './ideaBank.router';
 export { productRelationshipsRouterModule, relationshipsRAGRouterModule } from './relationships.router';
 export { templatesRouterModule } from './templates.router';
