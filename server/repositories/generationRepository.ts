@@ -46,6 +46,43 @@ export async function getGenerations(limit: number = 50, offset: number = 0): Pr
   return results.map((r) => ({ ...r, conversationHistory: null })) as Generation[];
 }
 
+export async function getGenerationsByUserId(
+  userId: string,
+  limit: number = 50,
+  offset: number = 0,
+): Promise<Generation[]> {
+  // Exclude conversationHistory to avoid exceeding Neon's 64MB response limit
+  const results = await db
+    .select({
+      id: generations.id,
+      userId: generations.userId,
+      prompt: generations.prompt,
+      originalImagePaths: generations.originalImagePaths,
+      generatedImagePath: generations.generatedImagePath,
+      imagePath: generations.imagePath,
+      resolution: generations.resolution,
+      model: generations.model,
+      aspectRatio: generations.aspectRatio,
+      status: generations.status,
+      parentGenerationId: generations.parentGenerationId,
+      editPrompt: generations.editPrompt,
+      editCount: generations.editCount,
+      createdAt: generations.createdAt,
+      updatedAt: generations.updatedAt,
+      productIds: generations.productIds,
+      templateId: generations.templateId,
+      generationMode: generations.generationMode,
+    })
+    .from(generations)
+    .where(eq(generations.userId, userId))
+    .orderBy(desc(generations.createdAt))
+    .limit(limit)
+    .offset(offset);
+
+  // Return with null conversationHistory
+  return results.map((r) => ({ ...r, conversationHistory: null })) as Generation[];
+}
+
 export async function getGenerationById(id: string): Promise<Generation | undefined> {
   const [generation] = await db.select().from(generations).where(eq(generations.id, id));
   return generation;
