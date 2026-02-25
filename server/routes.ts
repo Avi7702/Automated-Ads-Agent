@@ -527,13 +527,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = (req.session as any).userId;
       const user = await storage.getUserById(userId);
-      const generations = await storage.getGenerations(1000);
+      // OPTIMIZATION: Filter by userId in the database instead of in-memory
+      const generations = await storage.getGenerationsByUserId(userId, 1000);
       const products = await storage.getProducts(1000);
 
       res.json({
         exportedAt: new Date().toISOString(),
         user: user ? { id: user.id, email: user.email, createdAt: user.createdAt } : null,
-        generations: generations.filter((g) => g.userId === userId),
+        generations,
         products,
       });
     } catch (error: any) {
