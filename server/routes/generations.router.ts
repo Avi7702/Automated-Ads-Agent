@@ -729,12 +729,13 @@ export const transformRouter: RouterFactory = (ctx: RouterContext): Router => {
       const userId = (req as any).user?.id;
       let success = false;
       let errorType: string | undefined;
+      let totalImageCount = 0;
 
       try {
         const files = Array.isArray(req.files) ? (req.files as Express.Multer.File[]) : [];
         const { prompt, resolution, mode, templateId, templateReferenceUrls, recipe: recipeJson } = req.body;
 
-        if (!prompt) {
+        if (typeof prompt !== 'string' || prompt.trim().length === 0) {
           return res.status(400).json({ error: 'No prompt provided' });
         }
 
@@ -758,12 +759,15 @@ export const transformRouter: RouterFactory = (ctx: RouterContext): Router => {
           return [];
         };
 
-        let recipe: Record<string, any> | undefined;
+        let recipe: Record<string, unknown> | undefined;
         if (recipeJson) {
           try {
-            recipe = typeof recipeJson === 'string' ? JSON.parse(recipeJson) : recipeJson;
-          } catch (e) {
-            logger.warn({ module: 'Transform', err: e }, 'Failed to parse recipe JSON');
+            const parsed: unknown = typeof recipeJson === 'string' ? JSON.parse(recipeJson) : recipeJson;
+            if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
+              recipe = parsed as Record<string, unknown>;
+            }
+          } catch {
+            logger.warn({ module: 'Transform' }, 'Failed to parse recipe JSON');
           }
         }
 
@@ -844,11 +848,10 @@ export const transformRouter: RouterFactory = (ctx: RouterContext): Router => {
               continue;
             }
 
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 12000);
             try {
-              const controller = new AbortController();
-              const timeoutId = setTimeout(() => controller.abort(), 12000);
               const response = await fetch(product.cloudinaryUrl, { signal: controller.signal });
-              clearTimeout(timeoutId);
 
               if (!response.ok) {
                 logger.warn(
@@ -878,9 +881,13 @@ export const transformRouter: RouterFactory = (ctx: RouterContext): Router => {
                 { module: 'Transform', productId, err: fetchError },
                 'Server-side fetch failed for product image',
               );
+            } finally {
+              clearTimeout(timeoutId);
             }
           }
         }
+
+        totalImageCount = imageInputs.length;
 
         type GenRecipe = import('@shared/types/ideaBank').GenerationRecipe;
         const parsedRecipe = recipe;
@@ -917,7 +924,7 @@ export const transformRouter: RouterFactory = (ctx: RouterContext): Router => {
           mode: generationMode as 'standard' | 'exact_insert' | 'inspiration',
           images: imageInputs,
           resolution: selectedResolution as '1K' | '2K' | '4K',
-          userId: userId!,
+          userId: userId ?? 'anonymous',
           ...(templateId ? { templateId } : {}),
           ...(parsedTemplateReferenceUrls ? { templateReferenceUrls: parsedTemplateReferenceUrls } : {}),
           ...(effectiveRecipe ? { recipe: effectiveRecipe } : {}),
@@ -998,7 +1005,7 @@ export const transformRouter: RouterFactory = (ctx: RouterContext): Router => {
             costMicros: success
               ? ctx.domainServices.pricingEstimator.estimateGenerationCostMicros({
                   resolution: req.body.resolution || '2K',
-                  inputImagesCount: Array.isArray(req.files) ? req.files.length : 0,
+                  inputImagesCount: totalImageCount,
                   promptChars: String(req.body.prompt || '').length,
                 }).estimatedCostMicros
               : 0,
