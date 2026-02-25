@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 import 'dotenv/config';
 import { db } from '../db';
-import { installationScenarios, products } from '@shared/schema';
+import { installationScenarios, products, users } from '@shared/schema';
 import { eq, ilike } from 'drizzle-orm';
 
 /**
@@ -328,7 +328,7 @@ export async function seedInstallationScenarios() {
   console.log('🌱 Seeding NDS Installation Scenarios...');
 
   // Get first user (single-tenant for now)
-  const user = await db.query.users.findFirst();
+  const [user] = await db.select().from(users).limit(1);
   if (!user) {
     console.log('⚠️ No users found. Create a user first.');
     return { created: 0, updated: 0, errors: 0 };
@@ -341,14 +341,10 @@ export async function seedInstallationScenarios() {
   for (const scenario of INSTALLATION_SCENARIOS) {
     try {
       // Check if scenario exists by title
-      const existing = await db.query.installationScenarios.findFirst({
-        where: eq(installationScenarios.title, scenario.title),
-      });
+      const [existing] = await db.select().from(installationScenarios).where(eq(installationScenarios.title, scenario.title)).limit(1);
 
       // Try to find primary product by category
-      const primaryProduct = await db.query.products.findFirst({
-        where: ilike(products.category, scenario.productCategory),
-      });
+      const [primaryProduct] = await db.select().from(products).where(ilike(products.category, scenario.productCategory)).limit(1);
 
       const scenarioRecord = {
         userId: user.id,

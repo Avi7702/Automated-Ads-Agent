@@ -20,7 +20,7 @@ export async function createApprovalQueue(data: InsertApprovalQueue): Promise<Ap
       ...data,
       createdAt: new Date(),
       updatedAt: new Date(),
-    })
+    } as typeof approvalQueue.$inferInsert)
     .returning();
 
   logger.info({ userId: data.userId, queueItemId: item!.id }, 'Approval queue item created');
@@ -109,7 +109,7 @@ export async function createApprovalAuditLog(data: InsertApprovalAuditLog): Prom
     .values({
       ...data,
       createdAt: new Date(),
-    })
+    } as typeof approvalAuditLog.$inferInsert)
     .returning();
 
   logger.info({ approvalQueueId: data.approvalQueueId, eventType: data.eventType }, 'Audit log created');

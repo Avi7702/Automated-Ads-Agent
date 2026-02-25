@@ -477,9 +477,7 @@ export async function seedProductsFromSampleData() {
   for (const productData of SAMPLE_PRODUCTS) {
     try {
       // Check if product exists by SKU
-      const existing = await db.query.products.findFirst({
-        where: eq(products.sku, productData.sku!),
-      });
+      const [existing] = await db.select().from(products).where(eq(products.sku, productData.sku!)).limit(1);
 
       const cloudinaryUrl = getPlaceholderCloudinaryUrl(productData.category, productData.sku!);
       const cloudinaryPublicId = getPlaceholderPublicId(productData.category, productData.sku!);
@@ -552,9 +550,7 @@ export async function seedProductsFromCloudinary(folder: string = 'product-libra
     for (const resource of result.resources) {
       try {
         // Check if product already exists
-        const existing = await db.query.products.findFirst({
-          where: eq(products.cloudinaryPublicId, resource.public_id),
-        });
+        const [existing] = await db.select().from(products).where(eq(products.cloudinaryPublicId, resource.public_id)).limit(1);
 
         if (existing) {
           skipped++;

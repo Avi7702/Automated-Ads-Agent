@@ -357,7 +357,7 @@ export async function addToQueue(content: GeneratedContent): Promise<ApprovalQue
   const queueItem = await db.transaction(async (tx) => {
     const items = await tx
       .insert(approvalQueue)
-      .values({ ...queueData, createdAt: new Date(), updatedAt: new Date() })
+      .values({ ...queueData, createdAt: new Date(), updatedAt: new Date() } as typeof approvalQueue.$inferInsert)
       .returning();
     const item = items[0];
     if (!item) throw new Error('Failed to insert approval queue item');

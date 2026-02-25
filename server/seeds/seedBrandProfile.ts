@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 import 'dotenv/config';
-import { brandProfiles } from '@shared/schema';
+import { brandProfiles, users } from '@shared/schema';
 import { db } from '../db';
 import { eq } from 'drizzle-orm';
 
@@ -149,7 +149,7 @@ export async function seedBrandProfile() {
 // Helper to get users without importing whole storage (circular dependency risk)
 const helpers = {
   getUsers: async () => {
-    return await db.query.users.findMany({ limit: 1 });
+    return await db.select().from(users).limit(1);
   },
 };
 

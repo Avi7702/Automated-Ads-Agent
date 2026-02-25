@@ -2,6 +2,7 @@ import pg from 'pg';
 const { Pool } = pg;
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from '@shared/schema';
+import { relations } from '@shared/relations';
 import { logger } from './lib/logger';
 
 if (!process.env['DATABASE_URL']) {
@@ -60,7 +61,7 @@ pool.on('acquire', () => {
   logger.debug({ module: 'db', total: pool.totalCount, idle: pool.idleCount }, 'Client acquired from pool');
 });
 
-export const db = drizzle(pool, { schema });
+export const db = drizzle({ client: pool, schema, relations });
 logger.info(
   {
     module: 'db',
