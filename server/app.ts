@@ -228,8 +228,9 @@ const csrfSecrets = csrfSecret
   : [randomBytes(32).toString('hex')];
 const effectiveCsrfSecret = csrfSecrets[0] ?? randomBytes(32).toString('hex');
 
-const { generateToken, doubleCsrfProtection } = doubleCsrf({
+const { generateCsrfToken, doubleCsrfProtection } = doubleCsrf({
   getSecret: () => effectiveCsrfSecret,
+  getSessionIdentifier: (req) => req.session?.id ?? req.ip ?? 'anonymous',
   cookieName: process.env['NODE_ENV'] === 'production' ? '__Host-csrf' : 'csrf',
   cookieOptions: {
     sameSite: 'strict',
@@ -257,7 +258,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 // CSRF token endpoint - clients must fetch this before making state-changing requests
 app.get('/api/csrf-token', (req: Request, res: Response) => {
-  res.json({ csrfToken: generateToken(req, res) });
+  res.json({ csrfToken: generateCsrfToken(req, res) });
 });
 
 app.use((req, res, next) => {
