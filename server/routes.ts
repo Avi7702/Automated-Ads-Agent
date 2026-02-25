@@ -230,7 +230,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           database: 'ok',
         },
       });
-    } catch (err) {
+    } catch (_err) {
       res.status(503).json({
         status: 'not_ready',
         timestamp: new Date().toISOString(),
@@ -971,7 +971,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             data: imageBuffer.toString('base64'),
             mimeType: getMimeType(imagePath),
           });
-        } catch (e) {
+        } catch (_e) {
           logger.warn({ module: 'Analyze', imagePath }, 'Could not load original image');
         }
       }
