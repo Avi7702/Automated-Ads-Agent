@@ -722,8 +722,8 @@ export const transformRouter: RouterFactory = (ctx: RouterContext): Router => {
     ctx.middleware.extendedTimeout,
     ctx.middleware.haltOnTimeout,
     requireAuth,
-    promptInjectionGuard,
     ctx.uploads.array('images', 6),
+    promptInjectionGuard,
     asyncHandler(async (req: Request, res: Response) => {
       const startTime = Date.now();
       const userId = (req as any).user?.id;
