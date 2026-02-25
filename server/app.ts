@@ -230,7 +230,7 @@ const effectiveCsrfSecret = csrfSecrets[0] ?? randomBytes(32).toString('hex');
 
 const { generateCsrfToken, doubleCsrfProtection } = doubleCsrf({
   getSecret: () => effectiveCsrfSecret,
-  getSessionIdentifier: (req) => req.session?.id ?? req.ip ?? 'anonymous',
+  getSessionIdentifier: (req) => req.session?.id ?? req.ip ?? randomBytes(16).toString('hex'),
   cookieName: process.env['NODE_ENV'] === 'production' ? '__Host-csrf' : 'csrf',
   cookieOptions: {
     sameSite: 'strict',
@@ -451,10 +451,8 @@ export default async function runApp(setup: (app: Express, server: Server) => Pr
   if (process.env['ENABLE_MONITORING'] !== 'false') {
     process.on('unhandledRejection', (reason: unknown) => {
       logger.error({ err: reason, module: 'UnhandledRejection' }, 'Unhandled promise rejection');
-      const reasonObj = reason as Record<string, unknown> | null | undefined;
-      const reasonMessage =
-        typeof reasonObj?.['message'] === 'string' ? reasonObj['message'] : 'Unhandled promise rejection';
-      const reasonStack = typeof reasonObj?.['stack'] === 'string' ? reasonObj['stack'] : undefined;
+      const reasonMessage = reason instanceof Error ? reason.message : 'Unhandled promise rejection';
+      const reasonStack = reason instanceof Error ? reason.stack : undefined;
       trackError({
         statusCode: 500,
         message: reasonMessage,
