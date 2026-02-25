@@ -228,8 +228,9 @@ const csrfSecrets = csrfSecret
   : [randomBytes(32).toString('hex')];
 const effectiveCsrfSecret = csrfSecrets[0] ?? randomBytes(32).toString('hex');
 
-const { generateToken, doubleCsrfProtection } = doubleCsrf({
+const { generateCsrfToken, doubleCsrfProtection } = doubleCsrf({
   getSecret: () => effectiveCsrfSecret,
+  getSessionIdentifier: (req) => req.session?.id ?? req.ip ?? randomBytes(16).toString('hex'),
   cookieName: process.env['NODE_ENV'] === 'production' ? '__Host-csrf' : 'csrf',
   cookieOptions: {
     sameSite: 'strict',
@@ -257,13 +258,19 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 // CSRF token endpoint - clients must fetch this before making state-changing requests
 app.get('/api/csrf-token', (req: Request, res: Response) => {
-  res.json({ csrfToken: generateToken(req, res) });
+  req.session.save((err: Error | null) => {
+    if (err) {
+      res.status(500).json({ error: 'Session save failed' });
+      return;
+    }
+    res.json({ csrfToken: generateCsrfToken(req, res) });
+  });
 });
 
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+  let capturedJsonResponse: Record<string, unknown> | undefined = undefined;
 
   const originalResJson = res.json;
   res.json = function (bodyJson, ...args) {
@@ -311,7 +318,7 @@ export default async function runApp(setup: (app: Express, server: Server) => Pr
   // Sentry error handler - must be before custom error handler
   app.use(sentryErrorHandler);
 
-  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+  app.use((err: Error & { status?: number; statusCode?: number }, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || 'Internal Server Error';
 
@@ -442,10 +449,10 @@ export default async function runApp(setup: (app: Express, server: Server) => Pr
 
   // Track unhandled errors (only if monitoring enabled)
   if (process.env['ENABLE_MONITORING'] !== 'false') {
-    process.on('unhandledRejection', (reason: any) => {
+    process.on('unhandledRejection', (reason: unknown) => {
       logger.error({ err: reason, module: 'UnhandledRejection' }, 'Unhandled promise rejection');
-      const reasonMessage = typeof reason?.message === 'string' ? reason.message : 'Unhandled promise rejection';
-      const reasonStack = typeof reason?.stack === 'string' ? reason.stack : undefined;
+      const reasonMessage = reason instanceof Error ? reason.message : 'Unhandled promise rejection';
+      const reasonStack = reason instanceof Error ? reason.stack : undefined;
       trackError({
         statusCode: 500,
         message: reasonMessage,
