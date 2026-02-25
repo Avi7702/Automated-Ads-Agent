@@ -20,6 +20,7 @@ import { createRouter, asyncHandler } from './utils/createRouter';
 import { JobType, JobProgress, VIDEO_JOB_OPTIONS } from '../jobs/types';
 import type { EditJobData, VideoGenerateJobData } from '../jobs/types';
 import { getGlobalGeminiClient } from '../lib/geminiClient';
+import { promptInjectionGuard } from '../middleware/promptInjectionGuard';
 
 export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => {
   const router = createRouter();
@@ -147,6 +148,7 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
   router.post(
     '/:id/edit',
     requireAuth,
+    promptInjectionGuard,
     asyncHandler(async (req: Request, res: Response) => {
       const userId = (req as any).session?.userId;
 
