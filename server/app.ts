@@ -258,7 +258,13 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 // CSRF token endpoint - clients must fetch this before making state-changing requests
 app.get('/api/csrf-token', (req: Request, res: Response) => {
-  res.json({ csrfToken: generateCsrfToken(req, res) });
+  req.session.save((err: Error | null) => {
+    if (err) {
+      res.status(500).json({ error: 'Session save failed' });
+      return;
+    }
+    res.json({ csrfToken: generateCsrfToken(req, res) });
+  });
 });
 
 app.use((req, res, next) => {
