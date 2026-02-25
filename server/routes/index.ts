@@ -79,6 +79,9 @@ import { trainingRouterModule } from './training.router';
 // Product intelligence layer (WS-C5)
 import { intelligenceRouterModule } from './intelligence.router';
 
+// Settings (API key management)
+import { settingsModule } from './settings.router';
+
 // Admin (security-critical - must be last)
 import { adminRouterModule } from './admin.router';
 
@@ -158,6 +161,9 @@ export const routerModules: RouterModule[] = [
   // Product intelligence layer (WS-C5)
   intelligenceRouterModule,
 
+  // Settings (API key management)
+  settingsModule,
+
   // Admin (last - security critical)
   adminRouterModule,
 ];
@@ -209,4 +215,5 @@ export { trainingRouterModule } from './training.router';
 export { agentRouterModule } from './agent.router';
 export { agentPlanRouterModule } from './agentPlan.router';
 export { intelligenceRouterModule } from './intelligence.router';
+export { settingsModule } from './settings.router';
 export { adminRouterModule } from './admin.router';
