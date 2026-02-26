@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Weekly Planner Service — WS-C1
  *
@@ -10,9 +9,9 @@
  */
 
 import { db } from '../db';
-import { weeklyPlans, scheduledPosts, products as productsTable } from '@shared/schema';
+import { weeklyPlans, scheduledPosts } from '@shared/schema';
 import type { WeeklyPlanPost, WeeklyPlan, Product } from '@shared/schema';
-import { eq, and, gte, lte, desc } from 'drizzle-orm';
+import { eq, and, gte } from 'drizzle-orm';
 import { logger } from '../lib/logger';
 import { storage } from '../storage';
 
@@ -75,7 +74,7 @@ function toMonday(date: Date): Date {
 function dateForDay(monday: Date, dayIndex: number): string {
   const d = new Date(monday);
   d.setDate(d.getDate() + dayIndex);
-  return d.toISOString().split('T')[0];
+  return d.toISOString().split('T')[0] ?? d.toISOString();
 }
 
 /**
@@ -124,7 +123,7 @@ async function getRecentlyPostedProductIds(userId: string, days: number): Promis
   since.setDate(since.getDate() - days);
 
   try {
-    const recentPosts = await db
+    await db
       .select({ generationId: scheduledPosts.generationId })
       .from(scheduledPosts)
       .where(and(eq(scheduledPosts.userId, userId), gte(scheduledPosts.scheduledFor, since)));
@@ -202,7 +201,7 @@ export async function generateWeeklyPlan(userId: string, weekStartDate: Date): P
   });
 
   for (const category of categorySlots) {
-    const dayName = DAYS_OF_WEEK[dayIndex % DAYS_OF_WEEK.length];
+    const dayName = DAYS_OF_WEEK[dayIndex % DAYS_OF_WEEK.length] ?? 'monday';
     const scheduledDate = dateForDay(monday, dayIndex % 7);
     const suggestedTime = DEFAULT_TIME_SLOTS[dayName] ?? '09:00';
     const platform = CATEGORY_PLATFORM_MAP[category] ?? 'linkedin';
@@ -211,15 +210,17 @@ export async function generateWeeklyPlan(userId: string, weekStartDate: Date): P
     const assignedProductIds: string[] = [];
     if (sortedProducts.length > 0) {
       const product = sortedProducts[productIndex % sortedProducts.length];
-      assignedProductIds.push(product.id);
+      if (product) {
+        assignedProductIds.push(product.id);
+      }
       productIndex++;
     }
 
     // Build briefing
-    const productName =
-      assignedProductIds.length > 0
-        ? (sortedProducts.find((p) => p.id === assignedProductIds[0])?.name ?? 'Product')
-        : 'your brand';
+    const firstProductId = assignedProductIds[0];
+    const productName = firstProductId
+      ? (sortedProducts.find((p) => p.id === firstProductId)?.name ?? 'Product')
+      : 'your brand';
     const briefing = buildBriefing(category, productName, platform);
 
     posts.push({
@@ -237,7 +238,7 @@ export async function generateWeeklyPlan(userId: string, weekStartDate: Date): P
   }
 
   // 8. Save to DB
-  const [saved] = await db
+  const rows = await db
     .insert(weeklyPlans)
     .values({
       userId,
@@ -251,6 +252,11 @@ export async function generateWeeklyPlan(userId: string, weekStartDate: Date): P
       },
     })
     .returning();
+
+  const saved = rows[0];
+  if (!saved) {
+    throw new Error('Failed to insert weekly plan');
+  }
 
   logger.info({ planId: saved.id, postCount: posts.length }, 'Weekly plan generated');
   return saved;
@@ -292,11 +298,15 @@ export async function updatePlanPostStatus(
     throw new Error(`Invalid post index: ${postIndex}`);
   }
 
+  const existingPost = posts[postIndex];
+  if (!existingPost) {
+    throw new Error(`Post at index ${postIndex} not found`);
+  }
   posts[postIndex] = {
-    ...posts[postIndex],
+    ...existingPost,
     status: status as WeeklyPlanPost['status'],
-    ...(linkIds?.generationId && { generationId: linkIds.generationId }),
-    ...(linkIds?.scheduledPostId && { scheduledPostId: linkIds.scheduledPostId }),
+    ...(linkIds?.generationId ? { generationId: linkIds.generationId } : {}),
+    ...(linkIds?.scheduledPostId ? { scheduledPostId: linkIds.scheduledPostId } : {}),
   };
 
   await db.update(weeklyPlans).set({ posts, updatedAt: new Date() }).where(eq(weeklyPlans.id, planId));

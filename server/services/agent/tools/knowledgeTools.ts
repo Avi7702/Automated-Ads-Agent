@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Agent Tools - Knowledge Base & Templates
  * Tools for searching the knowledge base and browsing templates

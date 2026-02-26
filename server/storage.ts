@@ -127,7 +127,7 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserById(id: string): Promise<User | undefined>;
   deleteUser(id: string): Promise<void>;
-  updateUserBrandVoice(userId: string, brandVoice: any): Promise<User>;
+  updateUserBrandVoice(userId: string, brandVoice: Record<string, unknown>): Promise<User>;
   updatePasswordHash(userId: string, newHash: string): Promise<void>;
 
   // AdCopy CRUD operations
@@ -432,6 +432,31 @@ export interface IStorage {
   getAgentExecutionById(executionId: string): Promise<AgentExecution | undefined>;
   getAgentExecutionByIdempotencyKey(planId: string, key: string): Promise<AgentExecution | undefined>;
   updateAgentExecution(executionId: string, updates: Partial<InsertAgentExecution>): Promise<AgentExecution>;
+
+  // ============================================
+  // PERFORMING AD TEMPLATE OPERATIONS
+  // ============================================
+  createPerformingAdTemplate(template: InsertPerformingAdTemplate): Promise<PerformingAdTemplate>;
+  getPerformingAdTemplates(userId: string): Promise<PerformingAdTemplate[]>;
+  getPerformingAdTemplate(id: string): Promise<PerformingAdTemplate | undefined>;
+  getPerformingAdTemplatesByCategory(userId: string, category: string): Promise<PerformingAdTemplate[]>;
+  getPerformingAdTemplatesByPlatform(userId: string, platform: string): Promise<PerformingAdTemplate[]>;
+  getFeaturedPerformingAdTemplates(userId: string): Promise<PerformingAdTemplate[]>;
+  getTopPerformingAdTemplates(userId: string, limit?: number): Promise<PerformingAdTemplate[]>;
+  updatePerformingAdTemplate(id: string, updates: Partial<InsertPerformingAdTemplate>): Promise<PerformingAdTemplate>;
+  deletePerformingAdTemplate(id: string): Promise<void>;
+  searchPerformingAdTemplates(
+    userId: string,
+    filters: {
+      category?: string;
+      platform?: string;
+      mood?: string;
+      style?: string;
+      engagementTier?: string;
+      industry?: string;
+      objective?: string;
+    },
+  ): Promise<PerformingAdTemplate[]>;
 }
 
 export class DbStorage implements IStorage {
@@ -531,7 +556,7 @@ export class DbStorage implements IStorage {
   async deleteUser(id: string): Promise<void> {
     return userRepo.deleteUser(id);
   }
-  async updateUserBrandVoice(userId: string, brandVoice: any): Promise<User> {
+  async updateUserBrandVoice(userId: string, brandVoice: Record<string, unknown>): Promise<User> {
     return userRepo.updateUserBrandVoice(userId, brandVoice);
   }
   async updatePasswordHash(userId: string, newHash: string): Promise<void> {

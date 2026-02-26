@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Prompt Builder
  *
@@ -342,7 +341,8 @@ export function getPlatformGuidelines(platform: string): string {
  */
 function appendPlatformGuidelines(prompt: string, ctx: GenerationContext): string {
   // Determine platform from input or recipe
-  const platform = ctx.input.platform || (ctx.input.recipe as any)?.platform || null;
+  const recipe = ctx.input.recipe as Record<string, unknown> | undefined;
+  const platform = ctx.input.platform || (recipe?.['platform'] as string | undefined) || null;
 
   if (!platform) return prompt;
 

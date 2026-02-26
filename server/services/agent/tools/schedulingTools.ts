@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Agent Tools — Scheduling & Calendar
  * Tools for scheduling posts and viewing the content calendar
@@ -95,15 +94,19 @@ export function createExecutors(storage: IStorage): Map<string, ToolExecutor> {
         return { status: 'error', message: 'Cannot schedule a post in the past.' };
       }
 
-      const post = await createPost({
+      const postInput: Parameters<typeof createPost>[0] = {
         userId,
         connectionId,
         caption,
         hashtags,
-        imageUrl: imageUrl ?? undefined,
         scheduledFor: scheduledDate,
         timezone,
-      });
+      };
+      if (imageUrl) {
+        postInput.imageUrl = imageUrl;
+      }
+
+      const post = await createPost(postInput);
 
       return {
         status: 'success',
@@ -179,8 +182,8 @@ export function createExecutors(storage: IStorage): Map<string, ToolExecutor> {
         connections: connections.map((c) => ({
           id: c.id,
           platform: c.platform,
-          accountName: c.accountName,
-          status: c.status,
+          accountName: c.platformUsername ?? c.platform,
+          status: c.isActive ? 'active' : 'inactive',
         })),
         total: connections.length,
         message:

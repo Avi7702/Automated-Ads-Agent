@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Agent Plan Router
  * REST pipeline for Agent Mode planning & execution
@@ -32,7 +31,7 @@ import {
 
 export const agentPlanRouter: RouterFactory = (ctx: RouterContext): Router => {
   const router = createRouter();
-  const { storage, logger } = ctx.services;
+  const { storage } = ctx.services;
   const { requireAuth, validate, createRateLimiter } = ctx.middleware;
 
   // Rate limits

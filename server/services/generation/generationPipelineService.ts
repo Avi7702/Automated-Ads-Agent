@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Generation Pipeline Service
  *
@@ -26,14 +25,14 @@
 import { logger } from '../../lib/logger';
 import { storage } from '../../storage';
 import { genAI, createGeminiClient } from '../../lib/gemini';
-import { telemetry } from '../../instrumentation';
+// telemetry import reserved for future usage tracking integration
 import { buildStyleDirective } from '../styleAnalysisService';
 import { buildEnhancedContext } from '../productKnowledgeService';
 import { analyzeProductImage } from '../visionAnalysisService';
 import { queryFileSearchStore } from '../fileSearchService';
 import { getRelevantPatterns, formatPatternsForPrompt } from '../patternExtractionService';
 import { saveOriginalFile, saveGeneratedImage } from '../../fileStorage';
-import { normalizeResolution, estimateGenerationCostMicros } from '../pricingEstimator';
+import { estimateGenerationCostMicros } from '../pricingEstimator';
 import { buildPrompt } from './promptBuilder';
 import { runCriticLoop } from './criticStage';
 import { evaluatePreGenGate, BLOCK_THRESHOLD, WARN_THRESHOLD } from './preGenGate';
@@ -42,7 +41,12 @@ import { captureException } from '../../lib/sentry';
 import { notify } from '../notificationService';
 import { getBrandDNAContext } from '../brandDNAService';
 
-import type { GenerationContext, GenerationInput, GenerationResult } from '../../types/generationPipeline';
+import type {
+  GenerationContext,
+  GenerationInput,
+  GenerationResult,
+  ProductContext,
+} from '../../types/generationPipeline';
 
 // ============================================
 // MAIN PIPELINE
@@ -75,37 +79,44 @@ export async function executeGenerationPipeline(input: GenerationInput): Promise
 
   // Stage 2: Product Context
   await runStage('product', stagesCompleted, async () => {
-    ctx.product = await stageProductContext(ctx);
+    const result = await stageProductContext(ctx);
+    if (result) ctx.product = result;
   });
 
   // Stage 3: Brand Context
   await runStage('brand', stagesCompleted, async () => {
-    ctx.brand = await stageBrandContext(ctx);
+    const result = await stageBrandContext(ctx);
+    if (result) ctx.brand = result;
   });
 
   // Stage 4: Style References (was completely disconnected)
   await runStage('style', stagesCompleted, async () => {
-    ctx.style = await stageStyleReferences(ctx);
+    const result = await stageStyleReferences(ctx);
+    if (result) ctx.style = result;
   });
 
   // Stage 5: Vision Analysis
   await runStage('vision', stagesCompleted, async () => {
-    ctx.vision = await stageVisionAnalysis(ctx);
+    const result = await stageVisionAnalysis(ctx);
+    if (result) ctx.vision = result;
   });
 
   // Stage 6: KB/RAG Enrichment
   await runStage('kb', stagesCompleted, async () => {
-    ctx.kb = await stageKBEnrichment(ctx);
+    const result = await stageKBEnrichment(ctx);
+    if (result) ctx.kb = result;
   });
 
   // Stage 7: Learned Patterns
   await runStage('patterns', stagesCompleted, async () => {
-    ctx.patterns = await stageLearnedPatterns(ctx);
+    const result = await stageLearnedPatterns(ctx);
+    if (result) ctx.patterns = result;
   });
 
   // Stage 8: Template Resolution
   await runStage('template', stagesCompleted, async () => {
-    ctx.template = await stageTemplateResolution(ctx);
+    const result = await stageTemplateResolution(ctx);
+    if (result) ctx.template = result;
   });
 
   // Stage 9: Prompt Assembly (not try/catch — must succeed)
@@ -147,13 +158,15 @@ export async function executeGenerationPipeline(input: GenerationInput): Promise
         preGenGateResult.suggestions.length > 0
           ? `\nSuggestions:\n${preGenGateResult.suggestions.map((s) => `  - ${s}`).join('\n')}`
           : '';
-      const err = new Error(
-        `Pre-generation quality gate failed (score: ${preGenGateResult.score}/100).${suggestionsText}`,
+      const err = Object.assign(
+        new Error(`Pre-generation quality gate failed (score: ${preGenGateResult.score}/100).${suggestionsText}`),
+        {
+          name: 'PreGenGateError',
+          score: preGenGateResult.score,
+          suggestions: preGenGateResult.suggestions,
+          breakdown: preGenGateResult.breakdown,
+        },
       );
-      (err as any).name = 'PreGenGateError';
-      (err as any).score = preGenGateResult.score;
-      (err as any).suggestions = preGenGateResult.suggestions;
-      (err as any).breakdown = preGenGateResult.breakdown;
       throw err;
     }
 
@@ -170,9 +183,9 @@ export async function executeGenerationPipeline(input: GenerationInput): Promise
     } else {
       logger.info({ module: 'GenerationPipeline', score: preGenGateResult.score }, 'Pre-gen gate passed');
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     // If it's a PreGenGateError, re-throw — caller should handle it
-    if (err.name === 'PreGenGateError') {
+    if (err instanceof Error && err.name === 'PreGenGateError') {
       throw err;
     }
     // For any other error (LLM failure, network issue), log and continue
@@ -186,7 +199,7 @@ export async function executeGenerationPipeline(input: GenerationInput): Promise
   let genResult;
   try {
     genResult = await stageGeneration(ctx);
-  } catch (err: any) {
+  } catch (err: unknown) {
     captureException(err instanceof Error ? err : new Error(String(err)), {
       stage: 'generation',
       mode: input.mode,
@@ -195,7 +208,7 @@ export async function executeGenerationPipeline(input: GenerationInput): Promise
     notify({
       severity: 'error',
       title: 'Image Generation Failed',
-      message: err?.message || 'Gemini API call failed',
+      message: err instanceof Error ? err.message : 'Gemini API call failed',
       context: {
         mode: input.mode,
         userId: input.userId,
@@ -219,7 +232,7 @@ export async function executeGenerationPipeline(input: GenerationInput): Promise
       const revisedCtx = { ...ctx };
       revisedCtx.assembled = {
         finalPrompt: revisedPrompt,
-        imageParts: ctx.assembled.imageParts,
+        imageParts: ctx.assembled?.imageParts ?? [],
       };
       return stageGeneration(revisedCtx);
     });
@@ -257,7 +270,7 @@ export async function executeGenerationPipeline(input: GenerationInput): Promise
     prompt: input.prompt,
     canEdit: true,
     mode: input.mode,
-    templateId: input.templateId || undefined,
+    ...(input.templateId ? { templateId: input.templateId } : {}),
     stagesCompleted,
   };
 }
@@ -288,26 +301,24 @@ async function stageProductContext(ctx: GenerationContext) {
   const productIds = Array.isArray(ctx.input.recipe?.products)
     ? ctx.input.recipe.products.map((p) => (typeof p?.id === 'string' ? p.id : '')).filter(Boolean)
     : [];
-  if (productIds.length === 0) return undefined;
-
   const primaryId = productIds[0];
+  if (!primaryId) return undefined;
+
   const enhanced = await buildEnhancedContext(primaryId, ctx.input.userId);
   if (!enhanced) return undefined;
 
-  return {
+  const result: ProductContext = {
     primaryId,
     primaryName: enhanced.product.name,
-    category: enhanced.product.category,
-    description: enhanced.product.description,
     relationships: enhanced.relatedProducts.map((rp) => ({
       targetProductName: rp.product.name,
       relationshipType: rp.relationshipType,
-      description: rp.relationshipDescription,
+      ...(rp.relationshipDescription ? { description: rp.relationshipDescription } : {}),
     })),
     scenarios: enhanced.installationScenarios.map((s) => ({
       title: s.title,
       description: s.description,
-      steps: s.installationSteps,
+      ...(s.installationSteps ? { steps: s.installationSteps } : {}),
       isActive: true,
     })),
     brandImages: enhanced.brandImages.map((bi) => ({
@@ -316,6 +327,9 @@ async function stageProductContext(ctx: GenerationContext) {
     })),
     formattedContext: enhanced.formattedContext,
   };
+  if (enhanced.product.category) result.category = enhanced.product.category;
+  if (enhanced.product.description) result.description = enhanced.product.description;
+  return result;
 }
 
 /**
@@ -331,8 +345,6 @@ async function stageBrandContext(ctx: GenerationContext) {
     const dnaContext = await getBrandDNAContext(ctx.input.userId, storage);
     if (dnaContext) {
       ctx.brandDNA = {
-        visualSignature: undefined,
-        toneGuidance: undefined,
         contentRules: dnaContext,
       };
     }
@@ -347,7 +359,8 @@ async function stageBrandContext(ctx: GenerationContext) {
     styles: brandProfile.preferredStyles || [],
     values: brandProfile.brandValues || [],
     colors: brandProfile.colorPreferences || [],
-    voicePrinciples: (brandProfile.voice as any)?.principles || [],
+    voicePrinciples:
+      ((brandProfile.voice as Record<string, unknown> | null)?.['principles'] as string[] | undefined) ?? [],
   };
 }
 
@@ -367,7 +380,10 @@ async function stageStyleReferences(ctx: GenerationContext) {
 
     // Use cached analysis if available
     if (ref.styleDescription && ref.extractedElements) {
-      const directive = buildStyleDirective(ref.styleDescription, ref.extractedElements as any);
+      const directive = buildStyleDirective(
+        ref.styleDescription,
+        ref.extractedElements as Parameters<typeof buildStyleDirective>[1],
+      );
       directives.push(directive);
     }
   }
@@ -387,9 +403,10 @@ async function stageStyleReferences(ctx: GenerationContext) {
 async function stageVisionAnalysis(ctx: GenerationContext) {
   // Need a product with an image to analyze
   const productIds = ctx.input.recipe?.products?.map((p) => p.id) || [];
-  if (productIds.length === 0) return undefined;
+  const firstProductId = productIds[0];
+  if (!firstProductId) return undefined;
 
-  const product = await storage.getProductById(productIds[0]);
+  const product = await storage.getProductById(firstProductId);
   if (!product || !product.cloudinaryUrl) return undefined;
 
   const result = await analyzeProductImage(product, ctx.input.userId);
@@ -437,10 +454,10 @@ async function stageKBEnrichment(ctx: GenerationContext) {
  * Fetch relevant patterns from the user's pattern library.
  */
 async function stageLearnedPatterns(ctx: GenerationContext) {
+  const categoryVal = ctx.vision?.category || ctx.product?.category;
   const patterns = await getRelevantPatterns({
     userId: ctx.input.userId,
-    category: ctx.vision?.category || ctx.product?.category || undefined,
-    industry: ctx.brand?.name ? undefined : undefined, // Could be enhanced later
+    ...(categoryVal ? { category: categoryVal } : {}),
     maxPatterns: 3,
   });
 
@@ -470,9 +487,13 @@ async function stageTemplateResolution(ctx: GenerationContext) {
     mood: template.mood || '',
     lighting: template.lightingStyle || '',
     environment: template.environment || '',
-    placementHints: template.placementHints || {},
+    placementHints: (template.placementHints as Record<string, unknown>) ?? {},
     category: template.category,
-    referenceImageUrls: template.referenceImageUrls || [],
+    referenceImageUrls: Array.isArray(template.referenceImages)
+      ? (template.referenceImages as Array<Record<string, unknown>>)
+          .map((img) => String(img['url'] ?? ''))
+          .filter(Boolean)
+      : [],
   };
 }
 
@@ -553,7 +574,8 @@ async function stageGeneration(ctx: GenerationContext) {
   const resolution = validResolutions.includes(ctx.input.resolution) ? ctx.input.resolution : '2K';
 
   // Build content parts: images first, then prompt text
-  const userParts = [...ctx.assembled.imageParts, { text: ctx.assembled.finalPrompt }];
+  const assembled = ctx.assembled!;
+  const userParts = [...assembled.imageParts, { text: assembled.finalPrompt }];
 
   const contents = [{ role: 'user', parts: userParts }];
 
@@ -591,7 +613,7 @@ async function stageGeneration(ctx: GenerationContext) {
     imageBase64: imagePart.inlineData.data,
     mimeType: imagePart.inlineData.mimeType || 'image/png',
     conversationHistory,
-    usageMetadata: (result as any).usageMetadata || {},
+    usageMetadata: ((result as unknown as Record<string, unknown>)['usageMetadata'] as Record<string, unknown>) ?? {},
     modelResponse,
   };
 }
@@ -604,7 +626,7 @@ async function stagePersistence(
   ctx: GenerationContext,
   startTime: number,
 ): Promise<{ generationId: string; imageUrl: string }> {
-  const result = ctx.result;
+  const result = ctx.result!;
 
   // Save uploaded originals to disk
   const originalImagePaths: string[] = [];
@@ -614,7 +636,7 @@ async function stagePersistence(
   }
 
   // Save generated image
-  const format = (result.mimeType || 'image/png').split('/')[1] || 'png';
+  const format = (result.mimeType || 'image/png').split('/')[1] ?? 'png';
   const generatedImagePath = await saveGeneratedImage(result.imageBase64, format);
 
   // Save generation record

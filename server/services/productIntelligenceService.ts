@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Product Intelligence Service (WS-C5)
  *
@@ -59,7 +58,7 @@ export async function setProductPriority(
   return intelligenceRepo.upsertProductPriority({
     userId,
     productId,
-    revenueTier: data.revenueTier ?? 'core',
+    revenueTier: (data.revenueTier ?? 'core') as 'flagship' | 'core' | 'supporting' | 'new',
     revenueWeight: data.revenueWeight ?? 5,
     competitiveAngle: data.competitiveAngle ?? null,
     keySellingPoints: data.keySellingPoints ?? [],
@@ -93,7 +92,6 @@ export async function selectProductsForWeek(userId: string, numPosts: number): P
   // 3. Score each product
   const now = new Date();
   const currentMonth = now.getMonth() + 1; // 1-12
-  const daysSinceMonthStart = now.getDate();
 
   const scored = allProducts.map((product) => {
     const priority = priorityMap.get(product.id);
@@ -102,9 +100,8 @@ export async function selectProductsForWeek(userId: string, numPosts: number): P
     const tier = priority?.revenueTier ?? 'core';
     const weight = priority?.revenueWeight ?? 5;
     const monthlyTarget = priority?.monthlyTarget ?? 2;
-    const totalPosts = priority?.totalPosts ?? 0;
     const lastPostedDate = priority?.lastPostedDate ?? null;
-    const seasonal = priority?.seasonalRelevance ?? null;
+    const seasonal = priority?.seasonalRelevance as { months?: number[]; boost?: number } | null;
 
     // Base score
     const tierMultiplier = TIER_MULTIPLIERS[tier] ?? 2;
@@ -129,11 +126,6 @@ export async function selectProductsForWeek(userId: string, numPosts: number): P
     }
 
     // Monthly gap boost: if below target, boost
-    // Estimate posts this month by looking at totalPosts vs monthly fraction
-    // Simple heuristic: if totalPosts < monthlyTarget (per month average across all time)
-    // We approximate monthly actuals by checking recent posts from priority tracking
-    const monthFraction = daysSinceMonthStart / 30;
-    const expectedByNow = monthlyTarget * monthFraction;
     // We don't have per-month granularity here, so use a simpler check:
     // If lastPostedDate is not in current month, they're behind
     const lastPostedInCurrentMonth =
@@ -188,7 +180,7 @@ export async function selectProductsForWeek(userId: string, numPosts: number): P
   if (selected.length < numPosts && allProducts.length > 0) {
     let idx = 0;
     while (selected.length < numPosts) {
-      const item = scored[idx % scored.length];
+      const item = scored[idx % scored.length]!;
       selected.push({
         productId: item.productId,
         productName: item.productName,

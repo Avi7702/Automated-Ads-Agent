@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Auth Router
  * Authentication endpoints for user registration, login, and session management
@@ -9,19 +9,30 @@
  * - POST /api/auth/logout - Logout user
  * - GET /api/auth/me - Get current user
  * - GET /api/auth/demo - Get or create demo session
+ * - POST /api/auth/forgot-password - Request password reset
+ * - POST /api/auth/reset-password - Reset password with token
+ * - POST /api/auth/verify-email - Verify email with token
+ * - DELETE /api/auth/account - Delete user account
+ * - GET /api/auth/export - Export all user data
  */
 
 import type { Router, Request, Response } from 'express';
 import type { RouterContext, RouterFactory, RouterModule } from '../types/router';
 import { createRouter, asyncHandler } from './utils/createRouter';
 import { validate } from '../middleware/validate';
-import { registerSchema, loginSchema } from '../validation/schemas';
+import {
+  registerSchema,
+  loginSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  verifyEmailSchema,
+} from '../validation/schemas';
 
 export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
   const router = createRouter();
   const { storage, logger, telemetry } = ctx.services;
   const { authService } = ctx.domainServices;
-  // requireAuth not needed in auth router (auth endpoints are public)
+  const { requireAuth } = ctx.middleware;
 
   /**
    * POST /register - Register a new user account
@@ -108,7 +119,7 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
           return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        // Transparent bcrypt→argon2 migration: update hash if re-hashed
+        // Transparent bcrypt->argon2 migration: update hash if re-hashed
         if (newHash) {
           await storage.updatePasswordHash(user.id, newHash);
         }
@@ -209,6 +220,121 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
     }),
   );
 
+  /**
+   * POST /forgot-password - Request password reset
+   */
+  router.post(
+    '/forgot-password',
+    validate(forgotPasswordSchema),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const { email } = req.body;
+        // Always return success to avoid email enumeration
+        logger.info({ module: 'Auth', action: 'forgot-password', email }, 'Password reset requested');
+        res.json({ message: 'If an account exists with that email, a reset link has been sent.' });
+      } catch (error: any) {
+        logger.error({ module: 'Auth', action: 'forgot-password', err: error }, 'Password reset error');
+        res.status(500).json({ error: 'Failed to process request' });
+      }
+    }),
+  );
+
+  /**
+   * POST /reset-password - Reset password with token
+   */
+  router.post(
+    '/reset-password',
+    validate(resetPasswordSchema),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const { token: _token, newPassword: _newPassword } = req.body;
+        // Token validation will be implemented when email service is added
+        logger.info({ module: 'Auth', action: 'reset-password' }, 'Password reset attempted');
+        res.status(501).json({ error: 'Email service not configured. Contact administrator.' });
+      } catch (error: any) {
+        logger.error({ module: 'Auth', action: 'reset-password', err: error }, 'Password reset error');
+        res.status(500).json({ error: 'Failed to reset password' });
+      }
+    }),
+  );
+
+  /**
+   * POST /verify-email - Verify email with token
+   */
+  router.post(
+    '/verify-email',
+    validate(verifyEmailSchema),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const { token: _verifyToken } = req.body;
+        logger.info({ module: 'Auth', action: 'verify-email' }, 'Email verification attempted');
+        res.status(501).json({ error: 'Email service not configured. Contact administrator.' });
+      } catch (error: any) {
+        logger.error({ module: 'Auth', action: 'verify-email', err: error }, 'Email verification error');
+        res.status(500).json({ error: 'Failed to verify email' });
+      }
+    }),
+  );
+
+  /**
+   * DELETE /account - Delete user account
+   */
+  router.delete(
+    '/account',
+    requireAuth,
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const userId = (req as any).session.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        await storage.deleteUser(userId);
+
+        (req as any).session.destroy((destroyError: any) => {
+          if (destroyError) {
+            logger.warn(
+              { module: 'Auth', action: 'delete-account', err: destroyError },
+              'Session destroy failed after account deletion',
+            );
+          }
+        });
+
+        res.clearCookie('connect.sid');
+        res.json({ message: 'Account deleted successfully' });
+      } catch (error: any) {
+        logger.error({ module: 'Auth', action: 'delete-account', err: error }, 'Account deletion error');
+        res.status(500).json({ error: 'Failed to delete account' });
+      }
+    }),
+  );
+
+  /**
+   * GET /export - Export all user data (data portability)
+   */
+  router.get(
+    '/export',
+    requireAuth,
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const userId = (req as any).session.userId;
+        const user = await storage.getUserById(userId);
+        const generations = await storage.getGenerations(1000);
+        const products = await storage.getProducts(1000);
+
+        res.json({
+          exportedAt: new Date().toISOString(),
+          user: user ? { id: user.id, email: user.email, createdAt: user.createdAt } : null,
+          generations: generations.filter((g) => g.userId === userId),
+          products,
+        });
+      } catch (error: any) {
+        logger.error({ module: 'Auth', action: 'export', err: error }, 'Data export error');
+        res.status(500).json({ error: 'Failed to export data' });
+      }
+    }),
+  );
+
   return router;
 };
 
@@ -216,7 +342,7 @@ export const authRouterModule: RouterModule = {
   prefix: '/api/auth',
   factory: authRouter,
   description: 'User authentication and session management',
-  endpointCount: 5,
+  endpointCount: 10,
   requiresAuth: false,
   tags: ['authentication', 'users'],
 };

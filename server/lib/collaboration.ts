@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Real-time Collaboration Service
  *
@@ -65,7 +64,7 @@ const workspacePresence = new Map<string, Map<string, CollabUser>>();
 let colorIndex = 0;
 
 function getNextColor(): string {
-  const color = PRESENCE_COLORS[colorIndex % PRESENCE_COLORS.length];
+  const color = PRESENCE_COLORS[colorIndex % PRESENCE_COLORS.length] ?? '#3B82F6';
   colorIndex++;
   return color;
 }
@@ -80,8 +79,8 @@ export function initCollaboration(httpServer: HttpServer): Server {
     path: '/collab',
     cors: {
       origin:
-        process.env.NODE_ENV === 'production'
-          ? [process.env.APP_URL || 'https://automated-ads-agent-production.up.railway.app']
+        process.env['NODE_ENV'] === 'production'
+          ? [process.env['APP_URL'] || 'https://automated-ads-agent-production.up.railway.app']
           : ['http://localhost:5173', 'http://localhost:3000'],
       credentials: true,
     },
@@ -89,10 +88,12 @@ export function initCollaboration(httpServer: HttpServer): Server {
   });
 
   io.on('connection', (socket: Socket) => {
-    const userId = socket.handshake.auth?.userId || socket.handshake.query?.userId || 'anonymous';
-    const email = socket.handshake.auth?.email || 'unknown';
-    const displayName = socket.handshake.auth?.displayName || email.split('@')[0] || 'Anonymous';
-    const workspaceId = socket.handshake.auth?.workspaceId || 'default';
+    const auth = (socket.handshake.auth ?? {}) as Record<string, unknown>;
+    const query = (socket.handshake.query ?? {}) as Record<string, unknown>;
+    const userId = String(auth['userId'] ?? query['userId'] ?? 'anonymous');
+    const email = String(auth['email'] ?? 'unknown');
+    const displayName = String(auth['displayName'] ?? email.split('@')[0] ?? 'Anonymous');
+    const workspaceId = String(auth['workspaceId'] ?? 'default');
 
     logger.info({ userId, workspaceId, socketId: socket.id }, 'Collaboration: user connected');
 
@@ -112,10 +113,10 @@ export function initCollaboration(httpServer: HttpServer): Server {
     if (!workspacePresence.has(roomName)) {
       workspacePresence.set(roomName, new Map());
     }
-    workspacePresence.get(roomName).set(userId, user);
+    workspacePresence.get(roomName)!.set(userId, user);
 
     // Send current presence to the joining user
-    const currentUsers = Array.from(workspacePresence.get(roomName).values());
+    const currentUsers = Array.from(workspacePresence.get(roomName)!.values());
     socket.emit('presence:current', currentUsers);
 
     // Broadcast join to others

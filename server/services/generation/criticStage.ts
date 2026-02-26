@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Critic Stage — Auto-Quality Evaluation
  *
@@ -13,6 +12,10 @@
 import { logger } from '../../lib/logger';
 import type { GenerationContext } from '../../types/generationPipeline';
 import type { CritiqueResult } from '../../types/generationPipeline';
+import type { GoogleGenAI } from '@google/genai';
+
+/** Gemini client type — matches GoogleGenAI's models.generateContent interface */
+type GeminiClient = GoogleGenAI;
 
 /** Minimum score (0-100) to pass without retry */
 const QUALITY_THRESHOLD = 60;
@@ -26,7 +29,7 @@ const MAX_RETRIES = 2;
  * Sends the generated image + original prompt to a VLM for evaluation.
  * Returns a CritiqueResult with pass/fail, score, and optional revised prompt.
  */
-export async function evaluateGeneration(ctx: GenerationContext, geminiClient: any): Promise<CritiqueResult> {
+export async function evaluateGeneration(ctx: GenerationContext, geminiClient: GeminiClient): Promise<CritiqueResult> {
   if (!ctx.result?.imageBase64) {
     return defaultPass();
   }
@@ -75,7 +78,7 @@ export async function evaluateGeneration(ctx: GenerationContext, geminiClient: a
  */
 export async function runCriticLoop(
   ctx: GenerationContext,
-  geminiClient: any,
+  geminiClient: GeminiClient,
   regenerateFn: (revisedPrompt: string) => Promise<typeof ctx.result>,
 ): Promise<{ retriesUsed: number; finalCritique: CritiqueResult }> {
   let retriesUsed = 0;
@@ -109,7 +112,9 @@ export async function runCriticLoop(
 
     try {
       const newResult = await regenerateFn(critique.revisedPrompt);
-      ctx.result = newResult;
+      if (newResult) {
+        ctx.result = newResult;
+      }
       retriesUsed++;
     } catch (err) {
       logger.warn({ module: 'CriticStage', err }, 'Re-generation failed — keeping current result');
@@ -181,7 +186,7 @@ function parseCritiqueResponse(responseText: string): CritiqueResult {
     // Handle markdown code blocks
     if (jsonStr.startsWith('```')) {
       const match = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (match) jsonStr = match[1].trim();
+      if (match?.[1]) jsonStr = match[1].trim();
     }
 
     const data = JSON.parse(jsonStr);

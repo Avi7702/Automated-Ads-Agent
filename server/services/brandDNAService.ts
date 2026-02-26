@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Brand DNA Service
  *
@@ -18,7 +17,7 @@
 import { logger } from '../lib/logger';
 import { generateContentWithRetry } from '../lib/geminiClient';
 import type { IStorage } from '../storage';
-import type { BrandDNA } from '@shared/schema';
+import type { BrandDNA, BrandProfile, Generation, BrandImage } from '@shared/schema';
 
 const BRAND_DNA_MODEL = 'gemini-3-flash';
 
@@ -82,11 +81,17 @@ export async function analyzeBrandDNA(userId: string, storage: IStorage): Promis
 
   // 6. Upsert to brandDNA table
   const dna = await storage.upsertBrandDNA(userId, {
-    visualSignature: analysisResult.visualSignature ?? extractVisualSignature(brandProfile, allBrandImages),
-    toneAnalysis: analysisResult.toneAnalysis ?? extractToneAnalysis(brandProfile),
-    audienceProfile: analysisResult.audienceProfile ?? null,
-    competitorDiff: analysisResult.competitorDiff ?? null,
-    contentRules: analysisResult.contentRules ?? null,
+    visualSignature: (analysisResult['visualSignature'] ?? extractVisualSignature(brandProfile)) as Record<
+      string,
+      unknown
+    > | null,
+    toneAnalysis: (analysisResult['toneAnalysis'] ?? extractToneAnalysis(brandProfile)) as Record<
+      string,
+      unknown
+    > | null,
+    audienceProfile: (analysisResult['audienceProfile'] ?? null) as Record<string, unknown> | null,
+    competitorDiff: (analysisResult['competitorDiff'] ?? null) as Record<string, unknown> | null,
+    contentRules: (analysisResult['contentRules'] ?? null) as Record<string, unknown> | null,
   });
 
   logger.info({ module: 'BrandDNAService', userId, version: dna.version }, 'Brand DNA analysis completed');
@@ -108,10 +113,10 @@ export async function getBrandDNAContext(userId: string, storage: IStorage): Pro
   const visual = dna.visualSignature as Record<string, unknown> | null;
   if (visual) {
     const parts: string[] = [];
-    if (visual.dominantColors) parts.push(`Dominant Colors: ${formatValue(visual.dominantColors)}`);
-    if (visual.compositionStyle) parts.push(`Composition Style: ${visual.compositionStyle}`);
-    if (visual.lightingPreference) parts.push(`Lighting: ${visual.lightingPreference}`);
-    if (visual.typography) parts.push(`Typography: ${visual.typography}`);
+    if (visual['dominantColors']) parts.push(`Dominant Colors: ${formatValue(visual['dominantColors'])}`);
+    if (visual['compositionStyle']) parts.push(`Composition Style: ${visual['compositionStyle']}`);
+    if (visual['lightingPreference']) parts.push(`Lighting: ${visual['lightingPreference']}`);
+    if (visual['typography']) parts.push(`Typography: ${visual['typography']}`);
     if (parts.length > 0) {
       sections.push(`Visual Signature:\n${parts.map((p) => `  - ${p}`).join('\n')}`);
     }
@@ -121,10 +126,10 @@ export async function getBrandDNAContext(userId: string, storage: IStorage): Pro
   const tone = dna.toneAnalysis as Record<string, unknown> | null;
   if (tone) {
     const parts: string[] = [];
-    if (tone.formality) parts.push(`Formality: ${tone.formality}`);
-    if (tone.humorLevel) parts.push(`Humor: ${tone.humorLevel}`);
-    if (tone.technicalDepth) parts.push(`Technical Depth: ${tone.technicalDepth}`);
-    if (tone.emotionalRegister) parts.push(`Emotional Register: ${tone.emotionalRegister}`);
+    if (tone['formality']) parts.push(`Formality: ${tone['formality']}`);
+    if (tone['humorLevel']) parts.push(`Humor: ${tone['humorLevel']}`);
+    if (tone['technicalDepth']) parts.push(`Technical Depth: ${tone['technicalDepth']}`);
+    if (tone['emotionalRegister']) parts.push(`Emotional Register: ${tone['emotionalRegister']}`);
     if (parts.length > 0) {
       sections.push(`Brand Tone:\n${parts.map((p) => `  - ${p}`).join('\n')}`);
     }
@@ -134,11 +139,11 @@ export async function getBrandDNAContext(userId: string, storage: IStorage): Pro
   const rules = dna.contentRules as Record<string, unknown> | null;
   if (rules) {
     const parts: string[] = [];
-    if (Array.isArray(rules.doList)) {
-      parts.push(`DO: ${rules.doList.join(', ')}`);
+    if (Array.isArray(rules['doList'])) {
+      parts.push(`DO: ${(rules['doList'] as string[]).join(', ')}`);
     }
-    if (Array.isArray(rules.dontList)) {
-      parts.push(`DON'T: ${rules.dontList.join(', ')}`);
+    if (Array.isArray(rules['dontList'])) {
+      parts.push(`DON'T: ${(rules['dontList'] as string[]).join(', ')}`);
     }
     if (parts.length > 0) {
       sections.push(`Content Rules:\n${parts.map((p) => `  - ${p}`).join('\n')}`);
@@ -154,7 +159,11 @@ export async function getBrandDNAContext(userId: string, storage: IStorage): Pro
 // INTERNAL HELPERS
 // ============================================
 
-function buildAnalysisPrompt(brandProfile: any, generations: any[], brandImages: any[]): string {
+function buildAnalysisPrompt(
+  brandProfile: BrandProfile | undefined,
+  generations: Generation[],
+  brandImages: BrandImage[],
+): string {
   const brandContext = brandProfile
     ? `Brand Name: ${brandProfile.brandName || 'Unknown'}
 Industry: ${brandProfile.industry || 'Unknown'}
@@ -221,16 +230,20 @@ ${imageContext}
 Analyze the patterns across all available data. If data is limited, make reasonable inferences based on the industry and brand values. Return ONLY the JSON object.`;
 }
 
-function extractBasicBrandDNA(brandProfile: any, _generations: any[]): Record<string, unknown> {
+function extractBasicBrandDNA(
+  brandProfile: BrandProfile | undefined,
+  _generations: Generation[],
+): Record<string, unknown> {
   if (!brandProfile) return {};
 
+  const targetAudience = brandProfile.targetAudience as Record<string, unknown> | null;
   return {
-    visualSignature: extractVisualSignature(brandProfile, []),
+    visualSignature: extractVisualSignature(brandProfile),
     toneAnalysis: extractToneAnalysis(brandProfile),
-    audienceProfile: brandProfile.targetAudience
+    audienceProfile: targetAudience
       ? {
-          primaryAudience: (brandProfile.targetAudience as any)?.demographics || 'Unknown',
-          engagementDrivers: (brandProfile.targetAudience as any)?.painPoints || [],
+          primaryAudience: (targetAudience['demographics'] as string) || 'Unknown',
+          engagementDrivers: (targetAudience['painPoints'] as string[]) || [],
           contentPreferences: [],
         }
       : null,
@@ -239,7 +252,7 @@ function extractBasicBrandDNA(brandProfile: any, _generations: any[]): Record<st
   };
 }
 
-function extractVisualSignature(brandProfile: any, _brandImages: any[]): Record<string, unknown> | null {
+function extractVisualSignature(brandProfile: BrandProfile | undefined): Record<string, unknown> | null {
   if (!brandProfile) return null;
 
   return {
@@ -250,15 +263,16 @@ function extractVisualSignature(brandProfile: any, _brandImages: any[]): Record<
   };
 }
 
-function extractToneAnalysis(brandProfile: any): Record<string, unknown> | null {
+function extractToneAnalysis(brandProfile: BrandProfile | undefined): Record<string, unknown> | null {
   if (!brandProfile?.voice) return null;
 
-  const voice = brandProfile.voice as any;
+  const voice = brandProfile.voice as Record<string, unknown>;
+  const principles = voice['principles'] as string[] | undefined;
   return {
     formality: 'semi-formal',
     humorLevel: 'subtle',
     technicalDepth: 'intermediate',
-    emotionalRegister: (voice?.principles || []).join(', ') || 'professional',
+    emotionalRegister: (principles ?? []).join(', ') || 'professional',
   };
 }
 
