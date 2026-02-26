@@ -472,9 +472,14 @@ export const settingsRouter: RouterFactory = (ctx: RouterContext): Router => {
     validate(saveN8nConfigSchema),
     asyncHandler(async (req: Request, res: Response) => {
       try {
+        const uid = req.user?.id;
+        if (!uid) {
+          res.status(401).json({ error: 'Not authenticated' });
+          return;
+        }
         const { baseUrl, apiKey } = req.body;
 
-        await storage.saveN8nConfig(req.user!.id, baseUrl, apiKey);
+        await storage.saveN8nConfig(uid, baseUrl, apiKey);
 
         res.json({
           success: true,
@@ -498,7 +503,12 @@ export const settingsRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const config = await storage.getN8nConfig(req.user!.id);
+        const uid = req.user?.id;
+        if (!uid) {
+          res.status(401).json({ error: 'Not authenticated' });
+          return;
+        }
+        const config = await storage.getN8nConfig(uid);
 
         if (!config) {
           return res.json({ configured: false });
@@ -528,7 +538,12 @@ export const settingsRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        await storage.deleteN8nConfig(req.user!.id);
+        const uid = req.user?.id;
+        if (!uid) {
+          res.status(401).json({ error: 'Not authenticated' });
+          return;
+        }
+        await storage.deleteN8nConfig(uid);
 
         res.json({
           success: true,

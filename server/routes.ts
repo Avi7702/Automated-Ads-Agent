@@ -1961,8 +1961,14 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
         });
       }
 
-      // Support both single productId and multiple productIds
-      const ids = productIds || (productId ? [productId] : []);
+      // Normalize productIds into a strict string[]
+      const ids: string[] = Array.isArray(productIds)
+        ? productIds.filter((id: unknown): id is string => typeof id === 'string' && id.length > 0)
+        : typeof productIds === 'string' && productIds.length > 0
+          ? [productIds]
+          : productId && typeof productId === 'string'
+            ? [productId]
+            : [];
 
       // Validate upload descriptions if provided
       const validUploadDescriptions: string[] = Array.isArray(uploadDescriptions)
@@ -2016,13 +2022,13 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
 
         for (const result of successfulResults) {
           if (result.success) {
-            allSuggestions.push(...result.response.suggestions);
-            aggregateStatus.visionComplete =
-              aggregateStatus.visionComplete || result.response.analysisStatus.visionComplete;
-            aggregateStatus.kbQueried = aggregateStatus.kbQueried || result.response.analysisStatus.kbQueried;
-            aggregateStatus.templatesMatched += result.response.analysisStatus.templatesMatched;
-            aggregateStatus.webSearchUsed =
-              aggregateStatus.webSearchUsed || result.response.analysisStatus.webSearchUsed;
+            // Multi-product path is always freestyle mode — response is IdeaBankSuggestResponse
+            const resp = result.response as import('@shared/types/ideaBank').IdeaBankSuggestResponse;
+            allSuggestions.push(...resp.suggestions);
+            aggregateStatus.visionComplete = aggregateStatus.visionComplete || resp.analysisStatus.visionComplete;
+            aggregateStatus.kbQueried = aggregateStatus.kbQueried || resp.analysisStatus.kbQueried;
+            aggregateStatus.templatesMatched += resp.analysisStatus.templatesMatched;
+            aggregateStatus.webSearchUsed = aggregateStatus.webSearchUsed || resp.analysisStatus.webSearchUsed;
           }
         }
 
@@ -2038,8 +2044,9 @@ Provide a helpful, specific answer. If suggesting prompt improvements, give conc
       }
 
       // Single product OR uploads-only flow
+      const firstId = ids[0];
       const result = await ideaBankService.generateSuggestions({
-        productId: ids.length > 0 ? ids[0] : undefined,
+        ...(firstId != null ? { productId: firstId } : {}),
         userId,
         userGoal,
         uploadDescriptions: validUploadDescriptions,

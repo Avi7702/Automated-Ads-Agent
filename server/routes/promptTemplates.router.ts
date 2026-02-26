@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Prompt Templates Router
  * CRUD for user prompt templates
@@ -16,12 +15,14 @@ import { createRouter, asyncHandler } from './utils/createRouter';
 export const promptTemplatesRouter: RouterFactory = (ctx: RouterContext): Router => {
   const router = createRouter();
   const { storage, logger } = ctx.services;
+  const { requireAuth } = ctx.middleware;
 
   /**
    * POST / - Create prompt template
    */
   router.post(
     '/',
+    requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const { title, prompt, category, tags } = req.body;
@@ -37,8 +38,8 @@ export const promptTemplatesRouter: RouterFactory = (ctx: RouterContext): Router
         });
 
         res.json(template);
-      } catch (error: any) {
-        logger.error({ module: 'PromptTemplate', err: error }, 'Error creating template');
+      } catch {
+        logger.error({ module: 'PromptTemplate' }, 'Error creating template');
         res.status(500).json({ error: 'Failed to create prompt template' });
       }
     }),
@@ -49,13 +50,14 @@ export const promptTemplatesRouter: RouterFactory = (ctx: RouterContext): Router
    */
   router.get(
     '/',
+    requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const category = req.query['category'] as string | undefined;
         const templates = await storage.getPromptTemplates(category);
         res.json(templates);
-      } catch (error: any) {
-        logger.error({ module: 'PromptTemplates', err: error }, 'Error fetching templates');
+      } catch {
+        logger.error({ module: 'PromptTemplates' }, 'Error fetching templates');
         res.status(500).json({ error: 'Failed to fetch prompt templates' });
       }
     }),
@@ -66,12 +68,13 @@ export const promptTemplatesRouter: RouterFactory = (ctx: RouterContext): Router
    */
   router.delete(
     '/:id',
+    requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
         await storage.deletePromptTemplate(String(req.params['id']));
         res.json({ success: true });
-      } catch (error: any) {
-        logger.error({ module: 'DeletePromptTemplate', err: error }, 'Error deleting template');
+      } catch {
+        logger.error({ module: 'DeletePromptTemplate' }, 'Error deleting template');
         res.status(500).json({ error: 'Failed to delete prompt template' });
       }
     }),
@@ -85,6 +88,6 @@ export const promptTemplatesRouterModule: RouterModule = {
   factory: promptTemplatesRouter,
   description: 'User prompt template CRUD',
   endpointCount: 3,
-  requiresAuth: false,
+  requiresAuth: true,
   tags: ['templates', 'prompts'],
 };

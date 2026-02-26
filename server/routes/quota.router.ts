@@ -58,8 +58,11 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
         const history = await quotaMonitoring.getUsageHistory({
           brandId,
           windowType: (windowType as 'minute' | 'hour' | 'day') || 'hour',
-          startDate: startDate ? new Date(startDate as string) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-          endDate: endDate ? new Date(endDate as string) : new Date(),
+          startDate:
+            startDate && Number.isFinite(Date.parse(startDate as string))
+              ? new Date(startDate as string)
+              : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+          endDate: endDate && Number.isFinite(Date.parse(endDate as string)) ? new Date(endDate as string) : new Date(),
         });
 
         res.json({ history });
@@ -241,6 +244,7 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
    */
   router.post(
     '/google/sync',
+    ctx.middleware.requireAuth,
     asyncHandler(async (_req: Request, res: Response) => {
       try {
         const service = await getGoogleCloudService();
@@ -265,7 +269,20 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
         });
 
         // Perform the sync
-        const snapshot = await service.triggerManualSync();
+        let snapshot;
+        try {
+          snapshot = await service.triggerManualSync();
+        } catch {
+          // Mark sync entry as failed if triggerManualSync throws
+          await storage.updateSyncHistoryEntry(syncEntry.id, {
+            completedAt: new Date(),
+            durationMs: Date.now() - syncEntry.startedAt.getTime(),
+            status: 'failed',
+            metricsFetched: 0,
+            errorMessage: 'Sync failed unexpectedly',
+          });
+          throw new Error('Google quota sync failed');
+        }
 
         // Update sync history
         await storage.updateSyncHistoryEntry(syncEntry.id, {
@@ -281,8 +298,8 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
           snapshot,
           syncHistoryId: syncEntry.id,
         });
-      } catch (error: any) {
-        logger.error({ module: 'GoogleQuotaManualSync', err: error }, 'Error syncing Google quota');
+      } catch {
+        logger.error({ module: 'GoogleQuotaManualSync' }, 'Error syncing Google quota');
         res.status(500).json({ error: 'Failed to sync Google quota data' });
       }
     }),
@@ -295,11 +312,12 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/google/history',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const limit = parseInt(String(req.query['limit'] ?? '')) || 20;
+        const rawLimit = parseInt(String(req.query['limit'] ?? ''), 10);
+        const limit = Number.isFinite(rawLimit) && rawLimit >= 1 ? Math.min(rawLimit, 100) : 20;
         const history = await storage.getRecentSyncHistory(limit);
         res.json({ history });
-      } catch (error: any) {
-        logger.error({ module: 'GoogleQuotaSyncHistory', err: error }, 'Error fetching sync history');
+      } catch {
+        logger.error({ module: 'GoogleQuotaSyncHistory' }, 'Error fetching sync history');
         res.status(500).json({ error: 'Failed to get sync history' });
       }
     }),
@@ -313,9 +331,12 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const brandIdParam = req.query['brandId'] as string | undefined;
-        const startDate = new Date((req.query['startDate'] as string) || Date.now() - 7 * 24 * 60 * 60 * 1000);
-        const endDate = new Date((req.query['endDate'] as string) || Date.now());
-        const limit = parseInt(String(req.query['limit'] ?? '')) || 100;
+        const rawStart = Date.parse(req.query['startDate'] as string);
+        const rawEnd = Date.parse(req.query['endDate'] as string);
+        const startDate = new Date(Number.isFinite(rawStart) ? rawStart : Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const endDate = new Date(Number.isFinite(rawEnd) ? rawEnd : Date.now());
+        const rawLimit = parseInt(String(req.query['limit'] ?? ''), 10);
+        const limit = Number.isFinite(rawLimit) && rawLimit >= 1 ? Math.min(rawLimit, 100) : 100;
 
         const snapshots = await storage.getGoogleQuotaSnapshotHistory({
           ...(brandIdParam != null && { brandId: brandIdParam }),

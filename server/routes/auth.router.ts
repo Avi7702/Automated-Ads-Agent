@@ -230,10 +230,13 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
       try {
         const { email } = req.body;
         // Always return success to avoid email enumeration
-        logger.info({ module: 'Auth', action: 'forgot-password', email }, 'Password reset requested');
+        logger.info(
+          { module: 'Auth', action: 'forgot-password', hasEmail: Boolean(email) },
+          'Password reset requested',
+        );
         res.json({ message: 'If an account exists with that email, a reset link has been sent.' });
-      } catch (error: any) {
-        logger.error({ module: 'Auth', action: 'forgot-password', err: error }, 'Password reset error');
+      } catch {
+        logger.error({ module: 'Auth', action: 'forgot-password' }, 'Password reset error');
         res.status(500).json({ error: 'Failed to process request' });
       }
     }),
@@ -317,19 +320,25 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req as any).session.userId;
-        const user = await storage.getUserById(userId);
+        const uid = (req as any).session?.userId as string | undefined;
+        if (!uid) {
+          res.status(401).json({ error: 'Not authenticated' });
+          return;
+        }
+        const user = await storage.getUserById(uid);
+        // Single-tenant app: all products belong to the tenant.
+        // Generations are post-filtered by userId until query-level scoping is added.
         const generations = await storage.getGenerations(1000);
         const products = await storage.getProducts(1000);
 
         res.json({
           exportedAt: new Date().toISOString(),
           user: user ? { id: user.id, email: user.email, createdAt: user.createdAt } : null,
-          generations: generations.filter((g) => g.userId === userId),
+          generations: generations.filter((g) => g.userId === uid),
           products,
         });
-      } catch (error: any) {
-        logger.error({ module: 'Auth', action: 'export', err: error }, 'Data export error');
+      } catch {
+        logger.error({ module: 'Auth', action: 'export' }, 'Data export error');
         res.status(500).json({ error: 'Failed to export data' });
       }
     }),

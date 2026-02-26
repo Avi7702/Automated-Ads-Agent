@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Idea Bank Router
  * AI-powered idea generation and template matching
@@ -8,6 +9,7 @@
  */
 
 import type { Router, Request, Response } from 'express';
+import type { IdeaBankSuggestResponse } from '@shared/types/ideaBank';
 import type { RouterContext, RouterFactory, RouterModule } from '../types/router';
 import { createRouter, asyncHandler } from './utils/createRouter';
 
@@ -49,8 +51,14 @@ export const ideaBankRouter: RouterFactory = (ctx: RouterContext): Router => {
           });
         }
 
-        // Support both single productId and multiple productIds
-        const ids = productIds || (productId ? [productId] : []);
+        // Normalize productIds into a strict string[]
+        const ids: string[] = Array.isArray(productIds)
+          ? productIds.filter((id: unknown): id is string => typeof id === 'string' && id.length > 0)
+          : typeof productIds === 'string' && productIds.length > 0
+            ? [productIds]
+            : productId && typeof productId === 'string'
+              ? [productId]
+              : [];
 
         // Validate upload descriptions if provided
         const validUploadDescriptions: string[] = Array.isArray(uploadDescriptions)
@@ -102,13 +110,13 @@ export const ideaBankRouter: RouterFactory = (ctx: RouterContext): Router => {
 
           for (const result of successfulResults) {
             if (result.success) {
-              allSuggestions.push(...result.response.suggestions);
-              aggregateStatus.visionComplete =
-                aggregateStatus.visionComplete || result.response.analysisStatus.visionComplete;
-              aggregateStatus.kbQueried = aggregateStatus.kbQueried || result.response.analysisStatus.kbQueried;
-              aggregateStatus.templatesMatched += result.response.analysisStatus.templatesMatched;
-              aggregateStatus.webSearchUsed =
-                aggregateStatus.webSearchUsed || result.response.analysisStatus.webSearchUsed;
+              // Multi-product path is always freestyle mode — response is IdeaBankSuggestResponse
+              const resp = result.response as IdeaBankSuggestResponse;
+              allSuggestions.push(...resp.suggestions);
+              aggregateStatus.visionComplete = aggregateStatus.visionComplete || resp.analysisStatus.visionComplete;
+              aggregateStatus.kbQueried = aggregateStatus.kbQueried || resp.analysisStatus.kbQueried;
+              aggregateStatus.templatesMatched += resp.analysisStatus.templatesMatched;
+              aggregateStatus.webSearchUsed = aggregateStatus.webSearchUsed || resp.analysisStatus.webSearchUsed;
             }
           }
 
@@ -124,8 +132,9 @@ export const ideaBankRouter: RouterFactory = (ctx: RouterContext): Router => {
         }
 
         // Single product OR uploads-only flow
+        const firstId = ids[0];
         const result = await ideaBank.generateSuggestions({
-          productId: ids.length > 0 ? ids[0] : undefined,
+          ...(firstId != null ? { productId: firstId } : {}),
           userId,
           userGoal,
           uploadDescriptions: validUploadDescriptions,
