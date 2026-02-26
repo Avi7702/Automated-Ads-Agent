@@ -49,8 +49,14 @@ export const ideaBankRouter: RouterFactory = (ctx: RouterContext): Router => {
           });
         }
 
-        // Support both single productId and multiple productIds
-        const ids = productIds || (productId ? [productId] : []);
+        // Normalize productIds into a strict string[]
+        const ids: string[] = Array.isArray(productIds)
+          ? productIds.filter((id: unknown): id is string => typeof id === 'string' && id.length > 0)
+          : typeof productIds === 'string' && productIds.length > 0
+            ? [productIds]
+            : productId && typeof productId === 'string'
+              ? [productId]
+              : [];
 
         // Validate upload descriptions if provided
         const validUploadDescriptions: string[] = Array.isArray(uploadDescriptions)
