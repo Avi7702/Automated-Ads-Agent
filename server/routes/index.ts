@@ -13,8 +13,8 @@
 import type { RouterModule } from '../types/router';
 
 // Infrastructure routers (no auth required)
-import { healthRouterModule } from './health.router';
-import { monitoringRouterModule } from './monitoring.router';
+import { healthRouterModule, analyticsRouterModule } from './health.router';
+import { monitoringRouterModule, webhooksRouterModule } from './monitoring.router';
 
 // Authentication
 import { authRouterModule } from './auth.router';
@@ -43,8 +43,8 @@ import { catalogRouterModule } from './catalog.router';
 // Image analysis
 import { imageRouterModule } from './image.router';
 
-// Installation scenarios
-import { scenariosRouterModule } from './scenarios.router';
+// Installation scenarios and RAG assistant
+import { scenariosRouterModule, installationRAGRouterModule } from './scenarios.router';
 
 // Learned patterns (Learn from Winners)
 import { patternsRouterModule } from './patterns.router';
@@ -100,8 +100,8 @@ import { promptTemplatesRouterModule } from './promptTemplates.router';
 // Ad copy generation
 import { copyRouterModule } from './copy.router';
 
-// Brand profile
-import { brandProfileRouterModule } from './brandProfile.router';
+// Brand profile and user brand voice
+import { brandProfileRouterModule, userBrandVoiceRouterModule } from './brandProfile.router';
 
 // Admin (security-critical - must be last)
 import { adminRouterModule } from './admin.router';
@@ -112,7 +112,9 @@ import { adminRouterModule } from './admin.router';
 export const routerModules: RouterModule[] = [
   // Infrastructure (no auth required)
   healthRouterModule,
+  analyticsRouterModule,
   monitoringRouterModule,
+  webhooksRouterModule,
 
   // Authentication
   authRouterModule,
@@ -148,6 +150,7 @@ export const routerModules: RouterModule[] = [
 
   // Scenarios
   scenariosRouterModule,
+  installationRAGRouterModule,
 
   // Patterns (Learn from Winners)
   patternsRouterModule,
@@ -203,8 +206,9 @@ export const routerModules: RouterModule[] = [
   // Ad copy generation
   copyRouterModule,
 
-  // Brand profile
+  // Brand profile and user voice
   brandProfileRouterModule,
+  userBrandVoiceRouterModule,
 
   // Admin (last - security critical)
   adminRouterModule,
@@ -232,9 +236,9 @@ export function getTotalEndpointCount(): number {
 }
 
 // Re-export individual router modules for direct access
-export { healthRouterModule } from './health.router';
+export { healthRouterModule, analyticsRouterModule } from './health.router';
 export { authRouterModule } from './auth.router';
-export { monitoringRouterModule } from './monitoring.router';
+export { monitoringRouterModule, webhooksRouterModule } from './monitoring.router';
 export { productsRouterModule } from './products.router';
 export { generationsRouterModule, jobsRouterModule, transformRouterModule } from './generations.router';
 export { ideaBankRouterModule } from './ideaBank.router';
@@ -243,7 +247,7 @@ export { templatesRouterModule } from './templates.router';
 export { brandImagesRouterModule } from './brandImages.router';
 export { catalogRouterModule } from './catalog.router';
 export { imageRouterModule } from './image.router';
-export { scenariosRouterModule } from './scenarios.router';
+export { scenariosRouterModule, installationRAGRouterModule } from './scenarios.router';
 export { patternsRouterModule } from './patterns.router';
 export { copywritingRouterModule } from './copywriting.router';
 export { socialRouterModule } from './social.router';
@@ -264,5 +268,5 @@ export { performingTemplatesRouterModule } from './performingTemplates.router';
 export { adTemplatesRouterModule } from './adTemplates.router';
 export { promptTemplatesRouterModule } from './promptTemplates.router';
 export { copyRouterModule } from './copy.router';
-export { brandProfileRouterModule } from './brandProfile.router';
+export { brandProfileRouterModule, userBrandVoiceRouterModule } from './brandProfile.router';
 export { adminRouterModule } from './admin.router';

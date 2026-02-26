@@ -6,6 +6,9 @@
  * - GET /api/brand-profile - Get current user's brand profile
  * - PUT /api/brand-profile - Create or update brand profile
  * - DELETE /api/brand-profile - Delete brand profile
+ *
+ * User Router (also exported):
+ * - PUT /api/user/brand-voice - Update user's brand voice
  */
 
 import type { Router, Request, Response } from 'express';
@@ -108,4 +111,50 @@ export const brandProfileRouterModule: RouterModule = {
   endpointCount: 3,
   requiresAuth: true,
   tags: ['brand', 'profile', 'settings'],
+};
+
+// ----- User brand voice Router -----
+
+export const userBrandVoiceRouter: RouterFactory = (ctx: RouterContext): Router => {
+  const router = createRouter();
+  const { storage, logger } = ctx.services;
+  const { requireAuth } = ctx.middleware;
+
+  /**
+   * PUT /brand-voice - Update user's brand voice
+   */
+  router.put(
+    '/brand-voice',
+    requireAuth,
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const { brandVoice } = req.body;
+        if (!brandVoice || !brandVoice.principles || !Array.isArray(brandVoice.principles)) {
+          return res.status(400).json({ error: 'Invalid brand voice data' });
+        }
+
+        const updatedUser = await storage.updateUserBrandVoice(userId, brandVoice);
+        res.json({ success: true, brandVoice: updatedUser.brandVoice });
+      } catch (err: unknown) {
+        logger.error({ module: 'UpdateBrandVoice', err }, 'Error updating brand voice');
+        res.status(500).json({ error: 'Failed to update brand voice' });
+      }
+    }),
+  );
+
+  return router;
+};
+
+export const userBrandVoiceRouterModule: RouterModule = {
+  prefix: '/api/user',
+  factory: userBrandVoiceRouter,
+  description: 'User brand voice management',
+  endpointCount: 1,
+  requiresAuth: true,
+  tags: ['brand', 'user', 'settings'],
 };

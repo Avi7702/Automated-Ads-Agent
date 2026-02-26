@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sparkles, Loader2, Send, Bot, Lightbulb } from 'lucide-react';
-import type { StudioOrchestrator } from '@/hooks/useStudioOrchestrator';
+import { useStudioState } from '@/hooks/useStudioState';
 
 const QUICK_QUESTIONS = [
   'What makes this image effective?',
@@ -21,18 +21,19 @@ const QUICK_QUESTIONS = [
 ];
 
 interface AskAITabProps {
-  orch: StudioOrchestrator;
+  handleAskAI: () => void;
 }
 
-export const AskAITab = memo(function AskAITab({ orch }: AskAITabProps) {
-  const hasResult = Boolean(orch.generatedImage);
+export const AskAITab = memo(function AskAITab({ handleAskAI }: AskAITabProps) {
+  const { state, setAskAIQuestion } = useStudioState();
+  const hasResult = Boolean(state.generatedImage);
   const responseRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (orch.askAIResponse && responseRef.current) {
+    if (state.askAIResponse && responseRef.current) {
       responseRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
-  }, [orch.askAIResponse]);
+  }, [state.askAIResponse]);
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col h-full p-4">
@@ -53,9 +54,9 @@ export const AskAITab = memo(function AskAITab({ orch }: AskAITabProps) {
               <button
                 key={q}
                 onClick={() => {
-                  orch.setAskAIQuestion(q);
+                  setAskAIQuestion(q);
                   // Auto-send
-                  setTimeout(() => orch.handleAskAI(), 50);
+                  setTimeout(() => handleAskAI(), 50);
                 }}
                 className="text-xs px-2.5 py-1.5 rounded-full border border-border hover:bg-muted/80 hover:border-primary/30 transition-colors"
               >
@@ -67,7 +68,7 @@ export const AskAITab = memo(function AskAITab({ orch }: AskAITabProps) {
 
           {/* Response area */}
           <AnimatePresence>
-            {orch.askAIResponse && (
+            {state.askAIResponse && (
               <motion.div
                 ref={responseRef}
                 initial={{ opacity: 0, y: 8 }}
@@ -79,7 +80,7 @@ export const AskAITab = memo(function AskAITab({ orch }: AskAITabProps) {
                   <Bot className="w-3.5 h-3.5" />
                   AI Response
                 </div>
-                <p className="text-sm whitespace-pre-wrap leading-relaxed">{orch.askAIResponse}</p>
+                <p className="text-sm whitespace-pre-wrap leading-relaxed">{state.askAIResponse}</p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -88,24 +89,24 @@ export const AskAITab = memo(function AskAITab({ orch }: AskAITabProps) {
           <div className="mt-auto pt-2 border-t border-border/50">
             <div className="flex gap-2">
               <Input
-                value={orch.askAIQuestion}
-                onChange={(e) => orch.setAskAIQuestion(e.target.value)}
+                value={state.askAIQuestion}
+                onChange={(e) => setAskAIQuestion(e.target.value)}
                 placeholder="Ask about this generation..."
                 className="text-sm"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    orch.handleAskAI();
+                    handleAskAI();
                   }
                 }}
               />
               <Button
-                onClick={orch.handleAskAI}
-                disabled={!orch.askAIQuestion.trim() || orch.isAskingAI}
+                onClick={handleAskAI}
+                disabled={!state.askAIQuestion.trim() || state.isAskingAI}
                 size="icon"
                 className="shrink-0"
               >
-                {orch.isAskingAI ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                {state.isAskingAI ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               </Button>
             </div>
           </div>

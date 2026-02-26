@@ -9,7 +9,7 @@
  *   executing   -> ExecutionView step list
  *   complete    -> ExecutionView (done state)
  *
- * Receives `orch` prop (StudioOrchestrator) for product selection context.
+ * Uses useStudioState() context hook for product selection context.
  * Does NOT modify Studio.tsx -- that integration is handled elsewhere.
  */
 
@@ -22,32 +22,26 @@ import { SuggestionCards } from './SuggestionCards';
 import { ClarifyingQuestions } from './ClarifyingQuestions';
 import { PlanBriefCard } from './PlanBriefCard';
 import { ExecutionView } from './ExecutionView';
+import { useStudioState } from '@/hooks/useStudioState';
 
-interface AgentModePanelProps {
-  /** The studio orchestrator, provides selectedProducts and other state */
-  orch: {
-    selectedProducts: { id: string; name: string }[];
-    products: { id: string; name: string }[];
-  };
-}
-
-export function AgentModePanel({ orch }: AgentModePanelProps) {
+export function AgentModePanel() {
+  const { state } = useStudioState();
   const agent = useAgentPlan();
   const prevProductIds = useRef<string>('');
 
   // Auto-fetch suggestions when selected products change
   useEffect(() => {
-    const ids = orch.selectedProducts
+    const ids = state.selectedProducts
       .map((p) => p.id)
       .sort()
       .join(',');
     if (ids === prevProductIds.current) return;
     prevProductIds.current = ids;
 
-    if (orch.selectedProducts.length > 0 && agent.stage === 'idle') {
-      agent.fetchSuggestions(orch.selectedProducts.map((p) => p.id));
+    if (state.selectedProducts.length > 0 && agent.stage === 'idle') {
+      agent.fetchSuggestions(state.selectedProducts.map((p) => p.id));
     }
-  }, [orch.selectedProducts, agent]);
+  }, [state.selectedProducts, agent]);
 
   // -- Render based on stage
   return (
@@ -84,13 +78,13 @@ export function AgentModePanel({ orch }: AgentModePanelProps) {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Agent Mode</p>
                 <p className="text-xs text-muted-foreground/70 mt-1">
-                  {orch.selectedProducts.length === 0
+                  {state.selectedProducts.length === 0
                     ? 'Select products from the sidebar to get AI-powered content suggestions'
                     : 'Analyzing your products...'}
                 </p>
               </div>
-              {orch.selectedProducts.length > 0 && (
-                <Button size="sm" onClick={() => agent.fetchSuggestions(orch.selectedProducts.map((p) => p.id))}>
+              {state.selectedProducts.length > 0 && (
+                <Button size="sm" onClick={() => agent.fetchSuggestions(state.selectedProducts.map((p) => p.id))}>
                   Get Suggestions
                 </Button>
               )}
@@ -108,7 +102,7 @@ export function AgentModePanel({ orch }: AgentModePanelProps) {
                 suggestions={agent.suggestions}
                 isLoading={agent.isLoading}
                 onSelect={agent.selectSuggestion}
-                hasProducts={orch.selectedProducts.length > 0}
+                hasProducts={state.selectedProducts.length > 0}
               />
             </motion.div>
           )}
@@ -123,7 +117,7 @@ export function AgentModePanel({ orch }: AgentModePanelProps) {
                 onBack={() => {
                   // Go back to suggestions stage
                   agent.reset();
-                  agent.fetchSuggestions(orch.selectedProducts.map((p) => p.id));
+                  agent.fetchSuggestions(state.selectedProducts.map((p) => p.id));
                 }}
                 onContinue={agent.submitAnswers}
                 isLoading={agent.isLoading}

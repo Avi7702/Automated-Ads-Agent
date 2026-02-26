@@ -151,11 +151,12 @@ vi.mock('@/components/ErrorBoundary', () => ({
   ),
 }));
 
-vi.mock('@/contexts/StudioContext', () => ({
-  StudioProvider: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="mock-studio-provider">{children}</div>
-  ),
-}));
+vi.mock('@/contexts/StudioContext', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/contexts/StudioContext')>();
+  return {
+    ...actual,
+  };
+});
 
 vi.mock('wouter', async () => {
   const actual = await vi.importActual('wouter');

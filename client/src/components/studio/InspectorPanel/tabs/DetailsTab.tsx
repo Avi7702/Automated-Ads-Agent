@@ -17,19 +17,32 @@ import { LinkedInPostPreview } from '@/components/LinkedInPostPreview';
 import { HistoryTimeline } from '@/components/HistoryTimeline';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Download, Loader2, Eye, FolderPlus, Clock, ImageIcon, Sparkles, Check, Copy, Info } from 'lucide-react';
-import type { StudioOrchestrator } from '@/hooks/useStudioOrchestrator';
+import { useStudioState } from '@/hooks/useStudioState';
 
 interface DetailsTabProps {
-  orch: StudioOrchestrator;
+  handleDownloadWithFeedback: () => void;
+  handleGenerateCopy: () => void;
+  handleLoadFromHistory: (data: unknown) => void;
+  authUser: { email?: string } | null;
 }
 
-export const DetailsTab = memo(function DetailsTab({ orch }: DetailsTabProps) {
-  const hasResult = Boolean(orch.generatedImage);
+export const DetailsTab = memo(function DetailsTab({
+  handleDownloadWithFeedback,
+  handleGenerateCopy,
+  handleLoadFromHistory,
+  authUser,
+}: DetailsTabProps) {
+  const {
+    state,
+    setShowSaveToCatalog,
+    setGeneratedCopy,
+  } = useStudioState();
+  const hasResult = Boolean(state.generatedImage);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
 
   const handleCopyPrompt = async () => {
-    if (!orch.prompt) return;
-    await navigator.clipboard.writeText(orch.prompt);
+    if (!state.prompt) return;
+    await navigator.clipboard.writeText(state.prompt);
     setCopiedPrompt(true);
     setTimeout(() => setCopiedPrompt(false), 2000);
   };
@@ -61,39 +74,39 @@ export const DetailsTab = memo(function DetailsTab({ orch }: DetailsTabProps) {
                   {copiedPrompt ? 'Copied' : 'Copy'}
                 </button>
               </div>
-              <p className="text-sm text-foreground/80 line-clamp-3">{orch.prompt || 'No prompt used'}</p>
+              <p className="text-sm text-foreground/80 line-clamp-3">{state.prompt || 'No prompt used'}</p>
             </div>
 
             {/* Metadata badges */}
             <div className="flex flex-wrap gap-2">
               <Badge variant="outline" className="text-xs gap-1">
                 <ImageIcon className="w-3 h-3" />
-                {orch.platform}
+                {state.platform}
               </Badge>
               <Badge variant="outline" className="text-xs gap-1">
-                {orch.aspectRatio}
+                {state.aspectRatio}
               </Badge>
               <Badge variant="outline" className="text-xs gap-1">
-                {orch.resolution}
+                {state.resolution}
               </Badge>
-              {orch.selectedProducts.length > 0 && (
+              {state.selectedProducts.length > 0 && (
                 <Badge variant="outline" className="text-xs gap-1">
-                  {orch.selectedProducts.length} product{orch.selectedProducts.length !== 1 ? 's' : ''}
+                  {state.selectedProducts.length} product{state.selectedProducts.length !== 1 ? 's' : ''}
                 </Badge>
               )}
-              {orch.selectedTemplate && (
+              {state.selectedTemplate && (
                 <Badge variant="secondary" className="text-xs gap-1">
                   <Sparkles className="w-3 h-3" />
-                  {orch.selectedTemplate.name}
+                  {state.selectedTemplate.name}
                 </Badge>
               )}
             </div>
 
             {/* Generation ID */}
-            {orch.generationId && (
+            {state.generationId && (
               <div className="space-y-1">
                 <span className="text-xs text-muted-foreground uppercase tracking-wider">Generation ID</span>
-                <p className="text-xs font-mono text-foreground/60 break-all">{orch.generationId}</p>
+                <p className="text-xs font-mono text-foreground/60 break-all">{state.generationId}</p>
               </div>
             )}
 
@@ -104,25 +117,25 @@ export const DetailsTab = memo(function DetailsTab({ orch }: DetailsTabProps) {
             </div>
 
             {/* Wave 3: Generation context metadata */}
-            {orch.generationMode && orch.generationMode !== 'standard' && (
+            {state.generationMode && state.generationMode !== 'standard' && (
               <div className="space-y-1">
                 <span className="text-xs text-muted-foreground uppercase tracking-wider">Generation Mode</span>
                 <div>
                   <Badge variant="secondary" className="text-xs">
-                    {orch.generationMode === 'exact_insert'
+                    {state.generationMode === 'exact_insert'
                       ? 'Exact Insert'
-                      : orch.generationMode === 'inspiration'
+                      : state.generationMode === 'inspiration'
                         ? 'Inspiration'
                         : 'Standard'}
                   </Badge>
                 </div>
               </div>
             )}
-            {orch.selectedProducts.length > 0 && (
+            {state.selectedProducts.length > 0 && (
               <div className="space-y-1">
                 <span className="text-xs text-muted-foreground uppercase tracking-wider">Products Used</span>
                 <div className="flex flex-wrap gap-1">
-                  {orch.selectedProducts.map((p) => (
+                  {state.selectedProducts.map((p) => (
                     <Badge key={p.id} variant="outline" className="text-[10px] font-mono">
                       {p.name || String(p.id).slice(0, 8)}
                     </Badge>
@@ -130,11 +143,11 @@ export const DetailsTab = memo(function DetailsTab({ orch }: DetailsTabProps) {
                 </div>
               </div>
             )}
-            {orch.selectedTemplateForMode && (
+            {state.selectedTemplateForMode && (
               <div className="space-y-1">
                 <span className="text-xs text-muted-foreground uppercase tracking-wider">Template</span>
                 <p className="text-xs font-mono text-foreground/60 break-all">
-                  {orch.selectedTemplateForMode.name || orch.selectedTemplateForMode.id}
+                  {state.selectedTemplateForMode.name || state.selectedTemplateForMode.id}
                 </p>
               </div>
             )}
@@ -146,10 +159,10 @@ export const DetailsTab = memo(function DetailsTab({ orch }: DetailsTabProps) {
               variant="outline"
               size="sm"
               className="w-full"
-              onClick={orch.handleDownloadWithFeedback}
-              disabled={orch.isDownloading}
+              onClick={handleDownloadWithFeedback}
+              disabled={state.isDownloading}
             >
-              {orch.isDownloading ? (
+              {state.isDownloading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Downloading...
@@ -162,7 +175,7 @@ export const DetailsTab = memo(function DetailsTab({ orch }: DetailsTabProps) {
               )}
             </Button>
 
-            <Button variant="outline" size="sm" className="w-full" onClick={() => orch.setShowSaveToCatalog(true)}>
+            <Button variant="outline" size="sm" className="w-full" onClick={() => setShowSaveToCatalog(true)}>
               <FolderPlus className="w-4 h-4 mr-2" />
               Save to Catalog
             </Button>
@@ -175,22 +188,22 @@ export const DetailsTab = memo(function DetailsTab({ orch }: DetailsTabProps) {
               <span>LinkedIn Preview</span>
             </div>
             <LinkedInPostPreview
-              authorName={orch.authUser?.email?.split('@')[0] || 'Your Company'}
+              authorName={authUser?.email?.split('@')[0] || 'Your Company'}
               authorHeadline="Building Products | Construction Solutions"
-              postText={orch.generatedCopy || null}
-              imageUrl={orch.generatedImage}
-              hashtags={orch.generatedCopyFull?.hashtags || []}
+              postText={state.generatedCopy || null}
+              imageUrl={state.generatedImage}
+              hashtags={state.generatedCopyFull?.hashtags || []}
               isEditable={true}
-              onTextChange={(text) => orch.setGeneratedCopy(text)}
-              onGenerateCopy={orch.handleGenerateCopy}
-              isGeneratingCopy={orch.isGeneratingCopy}
+              onTextChange={(text) => setGeneratedCopy(text)}
+              onGenerateCopy={handleGenerateCopy}
+              isGeneratingCopy={state.isGeneratingCopy}
             />
           </div>
 
           {/* History Timeline (moved from ResultViewEnhanced) */}
           <div className="pt-2 border-t border-border/50">
             <ErrorBoundary>
-              <HistoryTimeline currentGenerationId={orch.generationId} onSelect={orch.handleLoadFromHistory} />
+              <HistoryTimeline currentGenerationId={state.generationId} onSelect={handleLoadFromHistory} />
             </ErrorBoundary>
           </div>
         </>

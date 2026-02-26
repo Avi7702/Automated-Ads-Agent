@@ -25,12 +25,15 @@ const sharedExclude =
         'e2e/**', // Playwright e2e tests
       ];
 
+// Use process.cwd() for git worktree compatibility (__dirname can resolve to main repo)
+const root = process.cwd();
+
 const sharedResolve = {
   alias: {
-    '@shared': path.resolve(__dirname, './shared'),
-    '@server': path.resolve(__dirname, './server'),
-    '@': path.resolve(__dirname, './client/src'),
-    'posthog-js': path.resolve(__dirname, './client/src/__mocks__/posthog-js.ts'),
+    '@shared': path.resolve(root, './shared'),
+    '@server': path.resolve(root, './server'),
+    '@': path.resolve(root, './client/src'),
+    'posthog-js': path.resolve(root, './client/src/__mocks__/posthog-js.ts'),
   },
   dedupe: ['react', 'react-dom'],
 };
@@ -49,7 +52,7 @@ export default defineConfig({
           environment: 'jsdom',
           include: ['client/**/*.test.tsx', 'client/**/*.test.ts'],
           exclude: sharedExclude,
-          setupFiles: ['./vitest.setup.ts'],
+          setupFiles: [path.resolve(root, 'vitest.setup.ts')],
         },
         resolve: sharedResolve,
       },
@@ -61,7 +64,7 @@ export default defineConfig({
           environment: 'node',
           include: ['server/**/*.test.ts'],
           exclude: sharedExclude,
-          setupFiles: ['./vitest.setup.ts'],
+          setupFiles: [path.resolve(root, 'vitest.setup.ts')],
         },
         resolve: sharedResolve,
       },
