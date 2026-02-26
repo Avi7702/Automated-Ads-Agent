@@ -4,10 +4,11 @@ import { logger } from '../lib/logger';
 
 /**
  * Middleware that scans request body fields for prompt injection patterns.
- * Applied to AI-facing endpoints to detect and block adversarial inputs.
+ * Applied to AI-facing endpoints as a detection/logging layer.
  *
- * This does NOT sanitize — it blocks requests with high-confidence injection.
- * The promptSanitizer module handles sanitization at the service layer.
+ * Current behaviour: detect and LOG only — requests are never blocked.
+ * Actual sanitization is performed at the service layer via sanitizeForPrompt()
+ * (e.g. GeminiService.continueConversation, copywritingService, ideaBankService).
  */
 
 // Fields to scan in the request body
@@ -66,16 +67,19 @@ export function promptInjectionGuard(req: Request, _res: Response, next: NextFun
   }
 
   if (detections.length > 0) {
-    logger.warn({
-      module: 'promptInjectionGuard',
-      ip: req.ip,
-      path: req.path,
-      userId: (req as unknown as Record<string, unknown>)['userId'],
-      detections,
-    }, 'Prompt injection attempt detected in request');
+    logger.warn(
+      {
+        module: 'promptInjectionGuard',
+        ip: req.ip,
+        path: req.path,
+        userId: (req as unknown as Record<string, unknown>)['userId'],
+        detections,
+      },
+      'Prompt injection attempt detected in request',
+    );
 
-    // Log but don't block — sanitization happens at service layer.
-    // In strict mode (future), we could block:
+    // Detect + log only. Sanitization is handled by sanitizeForPrompt() at the service layer.
+    // To enable strict blocking, uncomment below:
     // res.status(400).json({ error: 'Request contains disallowed patterns' });
     // return;
   }

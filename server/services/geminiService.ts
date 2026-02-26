@@ -1,4 +1,5 @@
 import { generateContentWithRetry } from '../lib/geminiClient';
+import { sanitizeForPrompt } from '../lib/promptSanitizer';
 import { telemetry } from '../instrumentation';
 
 export interface ConversationMessage {
@@ -156,13 +157,25 @@ export class GeminiService {
     let success = false;
     let errorType: string | undefined;
 
+    // Sanitize the edit prompt before sending to the AI model
+    const sanitizedPrompt = sanitizeForPrompt(editPrompt, {
+      maxLength: 2000,
+      stripCodeBlocks: true,
+      context: 'image_edit',
+    });
+
+    if (sanitizedPrompt.length === 0) {
+      errorType = 'empty_after_sanitize';
+      throw new Error('Edit prompt is empty after sanitization — it may contain disallowed patterns');
+    }
+
     try {
-      // Create new history with the edit prompt
+      // Create new history with the sanitized edit prompt
       const newHistory: ConversationMessage[] = [
         ...history,
         {
           role: 'user',
-          parts: [{ text: editPrompt }],
+          parts: [{ text: sanitizedPrompt }],
         },
       ];
 
@@ -237,7 +250,7 @@ export class GeminiService {
       telemetry.trackGeminiUsage({
         model: this.modelName,
         operation: 'edit',
-        inputTokens: editPrompt.length * 0.25, // Rough estimate
+        inputTokens: sanitizedPrompt.length * 0.25, // Rough estimate
         outputTokens: 0,
         durationMs,
         ...(userId !== undefined && { userId }),
