@@ -6,6 +6,9 @@
  * - GET /api/health/live - Liveness probe (is process running?)
  * - GET /api/health/ready - Readiness probe (can accept traffic?)
  * - GET /api/health - General health status
+ *
+ * Analytics Router (also exported):
+ * - POST /api/analytics/vitals - Web Vitals telemetry
  */
 
 import type { Router } from 'express';
@@ -120,4 +123,41 @@ export const healthRouterModule: RouterModule = {
   endpointCount: 3,
   requiresAuth: false,
   tags: ['infrastructure', 'monitoring'],
+};
+
+// ----- Analytics Router (Web Vitals telemetry) -----
+
+import express from 'express';
+
+export const analyticsRouter: RouterFactory = (ctx: RouterContext): Router => {
+  const router = createRouter();
+  const { logger } = ctx.services;
+
+  /**
+   * POST /vitals - Web Vitals analytics endpoint
+   * Logs metrics via Pino. Body is raw text (JSON stringified metric).
+   */
+  router.post('/vitals', express.text({ type: '*/*', limit: '1kb' }), (req, res) => {
+    try {
+      const metric = JSON.parse(req.body as string);
+      logger.info(
+        { module: 'WebVitals', metric: metric.name, value: metric.value, rating: metric.rating },
+        'Web Vital reported',
+      );
+      res.status(204).end();
+    } catch {
+      res.status(400).end();
+    }
+  });
+
+  return router;
+};
+
+export const analyticsRouterModule: RouterModule = {
+  prefix: '/api/analytics',
+  factory: analyticsRouter,
+  description: 'Web Vitals analytics telemetry',
+  endpointCount: 1,
+  requiresAuth: false,
+  tags: ['infrastructure', 'analytics'],
 };
