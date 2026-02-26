@@ -33,12 +33,16 @@ export const templatesRouter: RouterFactory = (ctx: RouterContext): Router => {
     validate(templatesListQuerySchema, 'query'),
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const validated = (req as unknown as Record<string, unknown>)['validatedQuery'] ?? {};
+        const validated = ((req as unknown as Record<string, unknown>)['validatedQuery'] ?? {}) as {
+          category?: string;
+          isGlobal?: boolean;
+        };
 
-        const templates = await storage.getAdSceneTemplates({
-          category: validated.category,
-          isGlobal: validated.isGlobal,
-        });
+        const filter: { category?: string; isGlobal?: boolean } = {};
+        if (validated.category !== undefined) filter.category = validated.category;
+        if (validated.isGlobal !== undefined) filter.isGlobal = validated.isGlobal;
+
+        const templates = await storage.getAdSceneTemplates(filter);
 
         res.json({ templates, total: templates.length });
       } catch (err: unknown) {
@@ -57,7 +61,7 @@ export const templatesRouter: RouterFactory = (ctx: RouterContext): Router => {
     validate(templatesSearchQuerySchema, 'query'),
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const { q } = (req as unknown as Record<string, unknown>)['validatedQuery'];
+        const { q } = (req as unknown as Record<string, unknown>)['validatedQuery'] as { q: string };
 
         const templates = await storage.searchAdSceneTemplates(q);
         res.json({ templates, total: templates.length });

@@ -54,6 +54,9 @@ export const planningRouter: RouterFactory = (ctx: RouterContext): Router => {
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const userId = req.session.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const { contentCategories, suggestNextCategory } = await import('@shared/contentTemplates');
 
         // Get posts from this week
@@ -102,6 +105,9 @@ export const planningRouter: RouterFactory = (ctx: RouterContext): Router => {
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const userId = req.session.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const { suggestNextCategory, getRandomTemplate } = await import('@shared/contentTemplates');
 
         // Get posts from this week
@@ -156,6 +162,9 @@ export const planningRouter: RouterFactory = (ctx: RouterContext): Router => {
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const userId = req.session.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const { category, subType, platform, notes } = req.body;
 
         // Validate category
@@ -196,12 +205,17 @@ export const planningRouter: RouterFactory = (ctx: RouterContext): Router => {
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const userId = req.session.userId;
-        const validated = (req as unknown as Record<string, unknown>)['validatedQuery'] ?? {};
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
+        const validated = (req as unknown as Record<string, unknown>)['validatedQuery'] as
+          | { startDate?: string; endDate?: string }
+          | undefined;
 
         const posts = await storage.getContentPlannerPostsByUser(
           userId,
-          validated.startDate ? new Date(validated.startDate) : undefined,
-          validated.endDate ? new Date(validated.endDate) : undefined,
+          validated?.startDate ? new Date(validated.startDate) : undefined,
+          validated?.endDate ? new Date(validated.endDate) : undefined,
         );
 
         res.json({ posts });
@@ -221,6 +235,9 @@ export const planningRouter: RouterFactory = (ctx: RouterContext): Router => {
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const userId = req.session.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const id = String(req.params['id']);
 
         // Verify ownership before deleting

@@ -32,6 +32,9 @@ export const settingsRouter: RouterFactory = (ctx: RouterContext): Router => {
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const userId = req.session.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const supportedServices = apiKeyValidation.getSupportedServices();
 
         // Get all user's custom keys
@@ -96,6 +99,9 @@ export const settingsRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'Not authenticated' });
+      }
       const service = String(req.params['service']);
       const ipAddress = (req.ip ?? (req.headers['x-forwarded-for'] as string) ?? '').split(',')[0]?.trim() ?? '';
       const userAgent = req.headers['user-agent'] || '';
@@ -246,7 +252,7 @@ export const settingsRouter: RouterFactory = (ctx: RouterContext): Router => {
           ipAddress,
           userAgent,
           success: false,
-          errorMessage: error.message,
+          errorMessage: err instanceof Error ? err.message : 'Unknown error',
         });
 
         res.status(500).json({
@@ -266,6 +272,9 @@ export const settingsRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'Not authenticated' });
+      }
       const service = String(req.params['service']);
       const ipAddress = (req.ip ?? (req.headers['x-forwarded-for'] as string) ?? '').split(',')[0]?.trim() ?? '';
       const userAgent = req.headers['user-agent'] || '';
@@ -335,7 +344,7 @@ export const settingsRouter: RouterFactory = (ctx: RouterContext): Router => {
           ipAddress,
           userAgent,
           success: false,
-          errorMessage: error.message,
+          errorMessage: err instanceof Error ? err.message : 'Unknown error',
         });
 
         res.status(500).json({
@@ -354,6 +363,9 @@ export const settingsRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ valid: false, error: 'Not authenticated' });
+      }
       const service = String(req.params['service']);
       const ipAddress = (req.ip ?? (req.headers['x-forwarded-for'] as string) ?? '').split(',')[0]?.trim() ?? '';
       const userAgent = req.headers['user-agent'] || '';
@@ -450,7 +462,7 @@ export const settingsRouter: RouterFactory = (ctx: RouterContext): Router => {
           ipAddress,
           userAgent,
           success: false,
-          errorMessage: error.message,
+          errorMessage: err instanceof Error ? err.message : 'Unknown error',
         });
 
         res.status(500).json({

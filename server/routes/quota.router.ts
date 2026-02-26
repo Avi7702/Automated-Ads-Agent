@@ -121,6 +121,9 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const brandId = req.session.userId;
+        if (!brandId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const alerts = await quotaMonitoring.getAlerts(brandId);
         res.json({ alerts });
       } catch (err: unknown) {
@@ -139,6 +142,9 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const brandId = req.session.userId;
+        if (!brandId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const { alertType, thresholdValue, isEnabled } = req.body;
 
         if (!alertType || thresholdValue === undefined) {
