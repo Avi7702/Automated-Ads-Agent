@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Brand Profile Router
  * Brand profile CRUD and user brand voice management
@@ -26,7 +25,10 @@ export const brandProfileRouter: RouterFactory = (ctx: RouterContext): Router =>
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const profile = await storage.getBrandProfileByUserId(userId);
 
         if (!profile) {
@@ -34,8 +36,8 @@ export const brandProfileRouter: RouterFactory = (ctx: RouterContext): Router =>
         }
 
         res.json(profile);
-      } catch (error: any) {
-        logger.error({ module: 'BrandProfileGet', err: error }, 'Error getting brand profile');
+      } catch (err: unknown) {
+        logger.error({ module: 'BrandProfileGet', err }, 'Error getting brand profile');
         res.status(500).json({ error: 'Failed to get brand profile' });
       }
     }),
@@ -49,7 +51,10 @@ export const brandProfileRouter: RouterFactory = (ctx: RouterContext): Router =>
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
 
         const existing = await storage.getBrandProfileByUserId(userId);
 
@@ -80,11 +85,14 @@ export const brandProfileRouter: RouterFactory = (ctx: RouterContext): Router =>
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         await storage.deleteBrandProfile(userId);
         res.json({ success: true });
-      } catch (error: any) {
-        logger.error({ module: 'BrandProfileDelete', err: error }, 'Error deleting brand profile');
+      } catch (err: unknown) {
+        logger.error({ module: 'BrandProfileDelete', err }, 'Error deleting brand profile');
         res.status(500).json({ error: 'Failed to delete brand profile' });
       }
     }),

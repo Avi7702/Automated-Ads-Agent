@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Pricing Router
  * Adaptive pricing estimation based on generation history
@@ -23,7 +22,7 @@ export const pricingRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/estimate',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const brandId = (req as any).session?.userId || 'anonymous';
+        const brandId = req.session?.userId || 'anonymous';
 
         const resolution = pricingEstimator.normalizeResolution(String(req.query['resolution'] ?? '')) || '2K';
         const operation = (req.query['operation'] === 'edit' ? 'edit' : 'generate') as 'generate' | 'edit';
@@ -66,8 +65,8 @@ export const pricingRouter: RouterFactory = (ctx: RouterContext): Router => {
           lastUpdatedAt: estimate.lastUpdatedAt,
           usedFallback: estimate.usedFallback,
         });
-      } catch (error: any) {
-        logger.error({ module: 'PricingEstimate', err: error }, 'Failed to estimate price');
+      } catch (err: unknown) {
+        logger.error({ module: 'PricingEstimate', err }, 'Failed to estimate price');
         res.status(500).json({ error: 'Failed to estimate price' });
       }
     }),

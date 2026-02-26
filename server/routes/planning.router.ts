@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 /**
  * Planning Router
  * Content planner endpoints for post scheduling and balance tracking
@@ -38,8 +37,8 @@ export const planningRouter: RouterFactory = (ctx: RouterContext): Router => {
           categories: contentCategories,
           templates: getAllTemplates(),
         });
-      } catch (error: any) {
-        logger.error({ err: error }, 'Failed to get content planner templates');
+      } catch (err: unknown) {
+        logger.error({ err }, 'Failed to get content planner templates');
         res.status(500).json({ error: 'Failed to get templates' });
       }
     }),
@@ -53,7 +52,10 @@ export const planningRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = req.session.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const { contentCategories, suggestNextCategory } = await import('@shared/contentTemplates');
 
         // Get posts from this week
@@ -62,7 +64,7 @@ export const planningRouter: RouterFactory = (ctx: RouterContext): Router => {
         // Format for UI
         const balance: Record<string, { current: number; target: number; percentage: number }> = {};
         for (const category of contentCategories) {
-          const postData = weeklyPosts.find((p: any) => p.category === category.id);
+          const postData = weeklyPosts.find((p: { category: string; count: number }) => p.category === category.id);
           const current = postData?.count || 0;
           balance[category.id] = {
             current,
@@ -72,7 +74,9 @@ export const planningRouter: RouterFactory = (ctx: RouterContext): Router => {
         }
 
         // Get suggested next category
-        const postsForSuggestion = weeklyPosts.map((p: any) => ({ category: p.category }));
+        const postsForSuggestion = weeklyPosts.map((p: { category: string; count: number }) => ({
+          category: p.category,
+        }));
         const suggested = suggestNextCategory(postsForSuggestion);
 
         res.json({
@@ -82,10 +86,10 @@ export const planningRouter: RouterFactory = (ctx: RouterContext): Router => {
             categoryName: suggested.name,
             reason: `You've posted ${balance[suggested.id]?.current || 0} of ${suggested.weeklyTarget} ${suggested.name.toLowerCase()} posts this week.`,
           },
-          totalPosts: weeklyPosts.reduce((sum: number, p: any) => sum + p.count, 0),
+          totalPosts: weeklyPosts.reduce((sum: number, p: { category: string; count: number }) => sum + p.count, 0),
         });
-      } catch (error: any) {
-        logger.error({ err: error }, 'Failed to get content planner balance');
+      } catch (err: unknown) {
+        logger.error({ err }, 'Failed to get content planner balance');
         res.status(500).json({ error: 'Failed to get balance' });
       }
     }),
@@ -99,12 +103,17 @@ export const planningRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = req.session.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const { suggestNextCategory, getRandomTemplate } = await import('@shared/contentTemplates');
 
         // Get posts from this week
         const weeklyPosts = await storage.getWeeklyBalance(userId);
-        const postsForSuggestion = weeklyPosts.map((p: any) => ({ category: p.category }));
+        const postsForSuggestion = weeklyPosts.map((p: { category: string; count: number }) => ({
+          category: p.category,
+        }));
 
         // Get suggested category
         const suggested = suggestNextCategory(postsForSuggestion);
@@ -113,7 +122,8 @@ export const planningRouter: RouterFactory = (ctx: RouterContext): Router => {
         const template = getRandomTemplate(suggested.id);
 
         // Get current count for this category
-        const currentCount = weeklyPosts.find((p: any) => p.category === suggested.id)?.count || 0;
+        const currentCount =
+          weeklyPosts.find((p: { category: string; count: number }) => p.category === suggested.id)?.count || 0;
 
         res.json({
           category: {
@@ -135,8 +145,8 @@ export const planningRouter: RouterFactory = (ctx: RouterContext): Router => {
             : null,
           reason: `You've posted ${currentCount} of ${suggested.weeklyTarget} ${suggested.name.toLowerCase()} posts this week. This category needs attention.`,
         });
-      } catch (error: any) {
-        logger.error({ err: error }, 'Failed to get content planner suggestion');
+      } catch (err: unknown) {
+        logger.error({ err }, 'Failed to get content planner suggestion');
         res.status(500).json({ error: 'Failed to get suggestion' });
       }
     }),
@@ -150,12 +160,15 @@ export const planningRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = req.session.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const { category, subType, platform, notes } = req.body;
 
         // Validate category
         const { contentCategories } = await import('@shared/contentTemplates');
-        const validCategory = contentCategories.find((c: any) => c.id === category);
+        const validCategory = contentCategories.find((c: { id: string }) => c.id === category);
         if (!validCategory) {
           return res.status(400).json({ error: 'Invalid category' });
         }
@@ -174,8 +187,8 @@ export const planningRouter: RouterFactory = (ctx: RouterContext): Router => {
           message: 'Post recorded',
           post,
         });
-      } catch (error: any) {
-        logger.error({ err: error }, 'Failed to create content planner post');
+      } catch (err: unknown) {
+        logger.error({ err }, 'Failed to create content planner post');
         res.status(500).json({ error: 'Failed to record post' });
       }
     }),
@@ -190,18 +203,23 @@ export const planningRouter: RouterFactory = (ctx: RouterContext): Router => {
     validateMiddleware(planningPostsQuerySchema, 'query'),
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
-        const validated = (req as any).validatedQuery ?? {};
+        const userId = req.session.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
+        const validated = (req as unknown as Record<string, unknown>)['validatedQuery'] as
+          | { startDate?: string; endDate?: string }
+          | undefined;
 
         const posts = await storage.getContentPlannerPostsByUser(
           userId,
-          validated.startDate ? new Date(validated.startDate) : undefined,
-          validated.endDate ? new Date(validated.endDate) : undefined,
+          validated?.startDate ? new Date(validated.startDate) : undefined,
+          validated?.endDate ? new Date(validated.endDate) : undefined,
         );
 
         res.json({ posts });
-      } catch (error: any) {
-        logger.error({ err: error }, 'Failed to get content planner posts');
+      } catch (err: unknown) {
+        logger.error({ err }, 'Failed to get content planner posts');
         res.status(500).json({ error: 'Failed to get posts' });
       }
     }),
@@ -215,7 +233,10 @@ export const planningRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = req.session.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const id = String(req.params['id']);
 
         // Verify ownership before deleting
@@ -229,8 +250,8 @@ export const planningRouter: RouterFactory = (ctx: RouterContext): Router => {
 
         await storage.deleteContentPlannerPost(id);
         res.json({ message: 'Post deleted' });
-      } catch (error: any) {
-        logger.error({ err: error }, 'Failed to delete content planner post');
+      } catch (err: unknown) {
+        logger.error({ err }, 'Failed to delete content planner post');
         res.status(500).json({ error: 'Failed to delete post' });
       }
     }),
@@ -277,8 +298,8 @@ export const planningRouter: RouterFactory = (ctx: RouterContext): Router => {
             generatedAt: new Date().toISOString(),
           },
         });
-      } catch (error: any) {
-        logger.error({ err: error }, 'Failed to generate carousel outline');
+      } catch (err: unknown) {
+        logger.error({ err }, 'Failed to generate carousel outline');
         res.status(500).json({ error: 'Failed to generate carousel outline' });
       }
     }),
@@ -312,8 +333,8 @@ export const planningRouter: RouterFactory = (ctx: RouterContext): Router => {
         });
 
         res.json(result);
-      } catch (error: any) {
-        logger.error({ err: error }, 'Failed to generate complete post');
+      } catch (err: unknown) {
+        logger.error({ err }, 'Failed to generate complete post');
         res.status(500).json({
           success: false,
           copyError: 'Failed to generate post',

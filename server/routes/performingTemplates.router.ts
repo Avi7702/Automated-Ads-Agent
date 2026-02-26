@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Performing Ad Templates Router
  * CRUD and search for performing ad templates with Cloudinary preview uploads
@@ -17,6 +16,7 @@
  */
 
 import type { Router, Request, Response } from 'express';
+import type { UploadApiResponse } from 'cloudinary';
 import type { RouterContext, RouterFactory, RouterModule } from '../types/router';
 import { createRouter, asyncHandler } from './utils/createRouter';
 
@@ -35,7 +35,10 @@ export const performingTemplatesRouter: RouterFactory = (ctx: RouterContext): Ro
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         let previewImageUrl: string | undefined;
         let previewPublicId: string | undefined;
 
@@ -48,7 +51,7 @@ export const performingTemplatesRouter: RouterFactory = (ctx: RouterContext): Ro
             api_secret: process.env['CLOUDINARY_API_SECRET'] ?? '',
           });
 
-          const result = await new Promise<any>((resolve, reject) => {
+          const result = await new Promise<UploadApiResponse>((resolve, reject) => {
             const uploadStream = cloudinary.uploader.upload_stream(
               {
                 folder: 'performing-ad-templates',
@@ -56,7 +59,8 @@ export const performingTemplatesRouter: RouterFactory = (ctx: RouterContext): Ro
               },
               (error, uploadResult) => {
                 if (error) reject(error);
-                else resolve(uploadResult);
+                else if (uploadResult) resolve(uploadResult);
+                else reject(new Error('Upload returned no result'));
               },
             );
             uploadStream.end(req.file!.buffer);
@@ -105,8 +109,8 @@ export const performingTemplatesRouter: RouterFactory = (ctx: RouterContext): Ro
 
         const template = await storage.createPerformingAdTemplate(templateData);
         res.json(template);
-      } catch (error: any) {
-        logger.error({ module: 'PerformingTemplates', err: error }, 'Create error');
+      } catch (err: unknown) {
+        logger.error({ module: 'PerformingTemplates', err }, 'Create error');
         res.status(500).json({ error: 'Failed to create performing ad template' });
       }
     }),
@@ -120,11 +124,14 @@ export const performingTemplatesRouter: RouterFactory = (ctx: RouterContext): Ro
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const templates = await storage.getPerformingAdTemplates(userId);
         res.json(templates);
-      } catch (error: any) {
-        logger.error({ module: 'PerformingTemplates', err: error }, 'List error');
+      } catch (err: unknown) {
+        logger.error({ module: 'PerformingTemplates', err }, 'List error');
         res.status(500).json({ error: 'Failed to fetch performing ad templates' });
       }
     }),
@@ -138,11 +145,14 @@ export const performingTemplatesRouter: RouterFactory = (ctx: RouterContext): Ro
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const templates = await storage.getFeaturedPerformingAdTemplates(userId);
         res.json(templates);
-      } catch (error: any) {
-        logger.error({ module: 'PerformingTemplates', err: error }, 'Get featured error');
+      } catch (err: unknown) {
+        logger.error({ module: 'PerformingTemplates', err }, 'Get featured error');
         res.status(500).json({ error: 'Failed to fetch featured templates' });
       }
     }),
@@ -156,12 +166,15 @@ export const performingTemplatesRouter: RouterFactory = (ctx: RouterContext): Ro
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const limit = parseInt(String(req.query['limit'] ?? '')) || 10;
         const templates = await storage.getTopPerformingAdTemplates(userId, limit);
         res.json(templates);
-      } catch (error: any) {
-        logger.error({ module: 'PerformingTemplates', err: error }, 'Get top error');
+      } catch (err: unknown) {
+        logger.error({ module: 'PerformingTemplates', err }, 'Get top error');
         res.status(500).json({ error: 'Failed to fetch top templates' });
       }
     }),
@@ -175,12 +188,15 @@ export const performingTemplatesRouter: RouterFactory = (ctx: RouterContext): Ro
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const filters = req.body;
         const templates = await storage.searchPerformingAdTemplates(userId, filters);
         res.json(templates);
-      } catch (error: any) {
-        logger.error({ module: 'PerformingTemplates', err: error }, 'Search error');
+      } catch (err: unknown) {
+        logger.error({ module: 'PerformingTemplates', err }, 'Search error');
         res.status(500).json({ error: 'Failed to search templates' });
       }
     }),
@@ -194,11 +210,14 @@ export const performingTemplatesRouter: RouterFactory = (ctx: RouterContext): Ro
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const templates = await storage.getPerformingAdTemplatesByCategory(userId, String(req.params['category']));
         res.json(templates);
-      } catch (error: any) {
-        logger.error({ module: 'PerformingTemplates', err: error }, 'Get by category error');
+      } catch (err: unknown) {
+        logger.error({ module: 'PerformingTemplates', err }, 'Get by category error');
         res.status(500).json({ error: 'Failed to fetch templates by category' });
       }
     }),
@@ -212,11 +231,14 @@ export const performingTemplatesRouter: RouterFactory = (ctx: RouterContext): Ro
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const templates = await storage.getPerformingAdTemplatesByPlatform(userId, String(req.params['platform']));
         res.json(templates);
-      } catch (error: any) {
-        logger.error({ module: 'PerformingTemplates', err: error }, 'Get by platform error');
+      } catch (err: unknown) {
+        logger.error({ module: 'PerformingTemplates', err }, 'Get by platform error');
         res.status(500).json({ error: 'Failed to fetch templates by platform' });
       }
     }),
@@ -235,8 +257,8 @@ export const performingTemplatesRouter: RouterFactory = (ctx: RouterContext): Ro
           return res.status(404).json({ error: 'Template not found' });
         }
         res.json(template);
-      } catch (error: any) {
-        logger.error({ module: 'PerformingTemplates', err: error }, 'Get error');
+      } catch (err: unknown) {
+        logger.error({ module: 'PerformingTemplates', err }, 'Get error');
         res.status(500).json({ error: 'Failed to fetch performing ad template' });
       }
     }),
@@ -252,8 +274,8 @@ export const performingTemplatesRouter: RouterFactory = (ctx: RouterContext): Ro
       try {
         const template = await storage.updatePerformingAdTemplate(String(req.params['id']), req.body);
         res.json(template);
-      } catch (error: any) {
-        logger.error({ module: 'PerformingTemplates', err: error }, 'Update error');
+      } catch (err: unknown) {
+        logger.error({ module: 'PerformingTemplates', err }, 'Update error');
         res.status(500).json({ error: 'Failed to update performing ad template' });
       }
     }),
@@ -287,8 +309,8 @@ export const performingTemplatesRouter: RouterFactory = (ctx: RouterContext): Ro
 
         await storage.deletePerformingAdTemplate(String(req.params['id']));
         res.json({ success: true });
-      } catch (error: any) {
-        logger.error({ module: 'PerformingTemplates', err: error }, 'Delete error');
+      } catch (err: unknown) {
+        logger.error({ module: 'PerformingTemplates', err }, 'Delete error');
         res.status(500).json({ error: 'Failed to delete performing ad template' });
       }
     }),

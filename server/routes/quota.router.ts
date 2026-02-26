@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Quota Router
  * Quota monitoring, alerts, and Google Cloud sync endpoints
@@ -35,11 +34,11 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/status',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const brandId = (req.session as any)?.userId || 'anonymous';
+        const brandId = req.session?.userId || 'anonymous';
         const status = await quotaMonitoring.getQuotaStatus(brandId);
         res.json(status);
-      } catch (error: any) {
-        logger.error({ module: 'QuotaStatus', err: error }, 'Error fetching quota status');
+      } catch (err: unknown) {
+        logger.error({ module: 'QuotaStatus', err }, 'Error fetching quota status');
         res.status(500).json({ error: 'Failed to get quota status' });
       }
     }),
@@ -52,7 +51,7 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/history',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const brandId = (req.session as any)?.userId || 'anonymous';
+        const brandId = req.session?.userId || 'anonymous';
         const { windowType, startDate, endDate } = req.query;
 
         const history = await quotaMonitoring.getUsageHistory({
@@ -66,8 +65,8 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
         });
 
         res.json({ history });
-      } catch (error: any) {
-        logger.error({ module: 'QuotaHistory', err: error }, 'Error fetching quota history');
+      } catch (err: unknown) {
+        logger.error({ module: 'QuotaHistory', err }, 'Error fetching quota history');
         res.status(500).json({ error: 'Failed to get quota history' });
       }
     }),
@@ -80,7 +79,7 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/breakdown',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const brandId = (req.session as any)?.userId || 'anonymous';
+        const brandId = req.session?.userId || 'anonymous';
         const { period } = req.query;
 
         const breakdown = await quotaMonitoring.getUsageBreakdown({
@@ -89,8 +88,8 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
         });
 
         res.json(breakdown);
-      } catch (error: any) {
-        logger.error({ module: 'QuotaBreakdown', err: error }, 'Error fetching quota breakdown');
+      } catch (err: unknown) {
+        logger.error({ module: 'QuotaBreakdown', err }, 'Error fetching quota breakdown');
         res.status(500).json({ error: 'Failed to get quota breakdown' });
       }
     }),
@@ -103,11 +102,11 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/rate-limit-status',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const brandId = (req.session as any)?.userId || 'anonymous';
+        const brandId = req.session?.userId || 'anonymous';
         const status = await quotaMonitoring.getRateLimitStatus(brandId);
         res.json(status);
-      } catch (error: any) {
-        logger.error({ module: 'RateLimitStatus', err: error }, 'Error fetching rate limit status');
+      } catch (err: unknown) {
+        logger.error({ module: 'RateLimitStatus', err }, 'Error fetching rate limit status');
         res.status(500).json({ error: 'Failed to get rate limit status' });
       }
     }),
@@ -121,11 +120,14 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const brandId = (req.session as any).userId;
+        const brandId = req.session.userId;
+        if (!brandId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const alerts = await quotaMonitoring.getAlerts(brandId);
         res.json({ alerts });
-      } catch (error: any) {
-        logger.error({ module: 'QuotaAlertsGet', err: error }, 'Error getting quota alerts');
+      } catch (err: unknown) {
+        logger.error({ module: 'QuotaAlertsGet', err }, 'Error getting quota alerts');
         res.status(500).json({ error: 'Failed to get quota alerts' });
       }
     }),
@@ -139,7 +141,10 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const brandId = (req.session as any).userId;
+        const brandId = req.session.userId;
+        if (!brandId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const { alertType, thresholdValue, isEnabled } = req.body;
 
         if (!alertType || thresholdValue === undefined) {
@@ -154,8 +159,8 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
         });
 
         res.json(alert);
-      } catch (error: any) {
-        logger.error({ module: 'QuotaAlertsUpdate', err: error }, 'Error updating quota alerts');
+      } catch (err: unknown) {
+        logger.error({ module: 'QuotaAlertsUpdate', err }, 'Error updating quota alerts');
         res.status(500).json({ error: 'Failed to update quota alert' });
       }
     }),
@@ -168,11 +173,11 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/check-alerts',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const brandId = (req.session as any)?.userId || 'anonymous';
+        const brandId = req.session?.userId || 'anonymous';
         const triggered = await quotaMonitoring.checkAlerts(brandId);
         res.json({ triggered });
-      } catch (error: any) {
-        logger.error({ module: 'CheckAlerts', err: error }, 'Error checking alerts');
+      } catch (err: unknown) {
+        logger.error({ module: 'CheckAlerts', err }, 'Error checking alerts');
         res.status(500).json({ error: 'Failed to check alerts' });
       }
     }),
@@ -204,8 +209,8 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
               }
             : null,
         });
-      } catch (error: any) {
-        logger.error({ module: 'GoogleQuotaStatus', err: error }, 'Error fetching Google quota status');
+      } catch (err: unknown) {
+        logger.error({ module: 'GoogleQuotaStatus', err }, 'Error fetching Google quota status');
         res.status(500).json({ error: 'Failed to get Google quota status' });
       }
     }),
@@ -232,8 +237,8 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
         }
 
         res.json(snapshot);
-      } catch (error: any) {
-        logger.error({ module: 'GoogleQuotaSnapshot', err: error }, 'Error fetching Google quota snapshot');
+      } catch (err: unknown) {
+        logger.error({ module: 'GoogleQuotaSnapshot', err }, 'Error fetching Google quota snapshot');
         res.status(500).json({ error: 'Failed to get Google quota snapshot' });
       }
     }),
@@ -346,8 +351,8 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
         });
 
         res.json({ snapshots });
-      } catch (error: any) {
-        logger.error({ module: 'GoogleQuotaSnapshotsHistory', err: error }, 'Error fetching snapshots history');
+      } catch (err: unknown) {
+        logger.error({ module: 'GoogleQuotaSnapshotsHistory', err }, 'Error fetching snapshots history');
         res.status(500).json({ error: 'Failed to get snapshot history' });
       }
     }),

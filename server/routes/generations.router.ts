@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Generations Router
  * Generation CRUD, job management, and SSE streaming
@@ -20,6 +19,7 @@ import { createRouter, asyncHandler } from './utils/createRouter';
 import { JobType, JobProgress, VIDEO_JOB_OPTIONS } from '../jobs/types';
 import type { EditJobData, VideoGenerateJobData } from '../jobs/types';
 import { getGlobalGeminiClient } from '../lib/geminiClient';
+import type { Part } from '@google/genai';
 import { promptInjectionGuard } from '../middleware/promptInjectionGuard';
 
 export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => {
@@ -41,8 +41,8 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
         const limit = Number.parseInt(typeof limitValue === 'string' ? limitValue : '', 10) || 50;
         const allGenerations = await storage.getGenerations(limit);
         res.json(toGenerationDTOArray(allGenerations));
-      } catch (error: any) {
-        logger.error({ module: 'Generations', err: error }, 'Error fetching generations');
+      } catch (err: unknown) {
+        logger.error({ module: 'Generations', err }, 'Error fetching generations');
         res.status(500).json({ error: 'Failed to fetch generations' });
       }
     }),
@@ -66,8 +66,8 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
           return res.status(404).json({ error: 'Generation not found' });
         }
         res.json(toGenerationDTO(generation));
-      } catch (error: any) {
-        logger.error({ module: 'Generation', err: error }, 'Error fetching generation');
+      } catch (err: unknown) {
+        logger.error({ module: 'Generation', err }, 'Error fetching generation');
         res.status(500).json({ error: 'Failed to fetch generation' });
       }
     }),
@@ -99,8 +99,8 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
           history: history,
           totalEdits: history.length - 1, // Subtract 1 because the original is included
         });
-      } catch (error: any) {
-        logger.error({ module: 'GenerationHistory', err: error }, 'Error fetching generation history');
+      } catch (err: unknown) {
+        logger.error({ module: 'GenerationHistory', err }, 'Error fetching generation history');
         res.status(500).json({ error: 'Failed to fetch generation history' });
       }
     }),
@@ -134,8 +134,8 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
         await storage.deleteGeneration(generationId);
 
         res.json({ success: true });
-      } catch (error: any) {
-        logger.error({ module: 'DeleteGeneration', err: error }, 'Error deleting generation');
+      } catch (err: unknown) {
+        logger.error({ module: 'DeleteGeneration', err }, 'Error deleting generation');
         res.status(500).json({ error: 'Failed to delete generation' });
       }
     }),
@@ -150,7 +150,7 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
     requireAuth,
     promptInjectionGuard,
     asyncHandler(async (req: Request, res: Response) => {
-      const userId = (req as any).session?.userId;
+      const userId = req.session?.userId;
 
       try {
         const id = req.params['id'];
@@ -229,14 +229,14 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
           message: 'Edit job started. Poll /api/jobs/:jobId for status.',
           parentId: parentGeneration.id,
         });
-      } catch (error: any) {
-        logger.error({ module: 'Edit', err: error }, 'Edit enqueue error');
+      } catch (err: unknown) {
+        logger.error({ module: 'Edit', err }, 'Edit enqueue error');
 
         telemetry.trackError({
           endpoint: '/api/generations/:id/edit',
-          errorType: error.name || 'unknown',
+          errorType: err instanceof Error ? err.name : 'unknown',
           statusCode: 500,
-          userId,
+          ...(userId != null ? { userId } : {}),
         });
 
         return res.status(500).json({
@@ -316,7 +316,7 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
               const base64 = buffer.toString('base64');
               originalImages.push({ data: base64, mimeType: getMimeType(imagePath) });
             }
-          } catch (err: any) {
+          } catch (err: unknown) {
             logger.warn({ module: 'Analyze', imagePath, err }, 'Failed to load original image');
           }
         }
@@ -339,13 +339,13 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
               const base64 = buffer.toString('base64');
               generatedImage = { data: base64, mimeType: getMimeType(genPath) };
             }
-          } catch (err: any) {
+          } catch (err: unknown) {
             logger.warn({ module: 'Analyze', genPath, err }, 'Failed to load generated image');
           }
         }
 
         // Build multimodal prompt
-        const parts: any[] = [
+        const parts: Part[] = [
           {
             text: `You are an AI assistant analyzing an image transformation.
 
@@ -398,8 +398,8 @@ Please analyze the transformation and answer the user's question.`,
           generationId: id,
           question,
         });
-      } catch (error: any) {
-        logger.error({ module: 'Analyze', err: error }, 'Analyze error');
+      } catch (err: unknown) {
+        logger.error({ module: 'Analyze', err }, 'Analyze error');
         return res.status(500).json({
           success: false,
           error: 'Failed to analyze image',
@@ -416,7 +416,7 @@ Please analyze the transformation and answer the user's question.`,
     '/video',
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
-      const userId = (req as any).session?.userId;
+      const userId = req.session?.userId;
 
       try {
         const { prompt, duration, aspectRatio, videoResolution, sourceImageUrl } = req.body;
@@ -488,8 +488,8 @@ Please analyze the transformation and answer the user's question.`,
           mediaType: 'video',
           message: 'Video generation started. Poll /api/jobs/:jobId for status. This typically takes 2-10 minutes.',
         });
-      } catch (error: any) {
-        logger.error({ module: 'VideoGeneration', err: error }, 'Video generation enqueue error');
+      } catch (err: unknown) {
+        logger.error({ module: 'VideoGeneration', err }, 'Video generation enqueue error');
         return res.status(500).json({ error: 'Failed to start video generation' });
       }
     }),
@@ -566,8 +566,8 @@ export const jobsRouter: RouterFactory = (ctx: RouterContext): Router => {
               }
             : null,
         });
-      } catch (error: any) {
-        logger.error({ module: 'JobStatus', err: error }, 'Error getting job status');
+      } catch (err: unknown) {
+        logger.error({ module: 'JobStatus', err }, 'Error getting job status');
         return res.status(500).json({
           success: false,
           error: 'Failed to get job status',
@@ -640,7 +640,7 @@ export const jobsRouter: RouterFactory = (ctx: RouterContext): Router => {
         }
       };
 
-      const completedListener = ({ jobId: eventJobId, returnvalue }: { jobId: string; returnvalue: any }) => {
+      const completedListener = ({ jobId: eventJobId, returnvalue }: { jobId: string; returnvalue: unknown }) => {
         if (eventJobId === jobId) {
           res.write(
             `data: ${JSON.stringify({
@@ -725,7 +725,7 @@ export const transformRouter: RouterFactory = (ctx: RouterContext): Router => {
     promptInjectionGuard,
     asyncHandler(async (req: Request, res: Response) => {
       const startTime = Date.now();
-      const userId = (req as any).user?.id;
+      const userId = req.user?.id;
       let success = false;
       let errorType: string | undefined;
       let totalImageCount = 0;
@@ -944,11 +944,14 @@ export const transformRouter: RouterFactory = (ctx: RouterContext): Router => {
           templateId: pipelineResult.templateId || null,
           stagesCompleted: pipelineResult.stagesCompleted,
         });
-      } catch (error: any) {
-        logger.error({ module: 'Transform', err: error }, 'Transform error');
-        errorType = errorType || error.name || 'unknown';
+      } catch (err: unknown) {
+        logger.error({ module: 'Transform', err }, 'Transform error');
+        const errName = err instanceof Error ? err.name : 'unknown';
+        const errMessage = err instanceof Error ? err.message : String(err);
+        errorType = errorType || errName;
 
-        if (error.name === 'PreGenGateError') {
+        if (err instanceof Error && err.name === 'PreGenGateError') {
+          const gateErr = err as Error & { score?: number; suggestions?: string[]; breakdown?: unknown };
           telemetry.trackError({
             endpoint: '/api/transform',
             errorType: 'pre_gen_gate_blocked',
@@ -958,10 +961,10 @@ export const transformRouter: RouterFactory = (ctx: RouterContext): Router => {
 
           return res.status(400).json({
             error: 'Generation request does not meet quality threshold',
-            details: error.message,
-            score: error.score,
-            suggestions: error.suggestions,
-            breakdown: error.breakdown,
+            details: errMessage,
+            score: gateErr.score,
+            suggestions: gateErr.suggestions,
+            breakdown: gateErr.breakdown,
           });
         }
 
@@ -974,7 +977,7 @@ export const transformRouter: RouterFactory = (ctx: RouterContext): Router => {
 
         res.status(500).json({
           error: 'Failed to transform image',
-          details: error.message,
+          details: errMessage,
         });
       } finally {
         const durationMs = Date.now() - startTime;
