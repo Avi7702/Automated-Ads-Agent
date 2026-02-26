@@ -1,6 +1,6 @@
 /**
  * Brand Images Router
- * Brand image management endpoints
+ * Brand image management and AI-powered recommendation endpoints
  *
  * Endpoints:
  * - POST /api/brand-images - Upload brand image
@@ -9,6 +9,9 @@
  * - POST /api/brand-images/for-products - Get images for products
  * - PUT /api/brand-images/:id - Update brand image
  * - DELETE /api/brand-images/:id - Delete brand image
+ * - POST /api/brand-images/recommend - AI-powered image recommendations
+ * - POST /api/brand-images/match-product/:productId - Match images to a product
+ * - POST /api/brand-images/suggest-category - Suggest image categories
  */
 
 import type { Router, Request, Response } from 'express';
@@ -228,14 +231,109 @@ export const brandImagesRouter: RouterFactory = (ctx: RouterContext): Router => 
     }),
   );
 
+  // ----- Brand Image Recommendation RAG -----
+
+  /**
+   * POST /recommend - AI-powered image recommendations
+   */
+  router.post(
+    '/recommend',
+    requireAuth,
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
+        const { productIds, useCase, platform, mood, maxResults, aspectRatio, categoryFilter } = req.body;
+
+        if (!useCase) {
+          return res.status(400).json({ error: 'useCase is required' });
+        }
+
+        const recommendations = await ctx.domainServices.brandImageRAG.recommendImages({
+          productIds,
+          useCase,
+          platform,
+          mood,
+          userId,
+          maxResults: maxResults ?? 10,
+          aspectRatio,
+          categoryFilter,
+        });
+
+        res.json(recommendations);
+      } catch (err: unknown) {
+        logger.error({ module: 'BrandImageRAG', err }, 'Error recommending images');
+        res.status(500).json({ error: 'Failed to recommend images' });
+      }
+    }),
+  );
+
+  /**
+   * POST /match-product/:productId - Match images to a specific product
+   */
+  router.post(
+    '/match-product/:productId',
+    requireAuth,
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
+        const productId = String(req.params['productId']);
+        const { maxResults, categoryFilter } = req.body;
+
+        const matches = await ctx.domainServices.brandImageRAG.matchImagesForProduct(productId, userId, {
+          maxResults: maxResults ?? 10,
+          categoryFilter,
+        });
+
+        res.json(matches);
+      } catch (err: unknown) {
+        logger.error({ module: 'BrandImageRAG', err }, 'Error matching images');
+        res.status(500).json({ error: 'Failed to match images for product' });
+      }
+    }),
+  );
+
+  /**
+   * POST /suggest-category - Suggest image categories based on use case
+   */
+  router.post(
+    '/suggest-category',
+    requireAuth,
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const { useCase, platform, mood, maxSuggestions } = req.body;
+
+        if (!useCase) {
+          return res.status(400).json({ error: 'useCase is required' });
+        }
+
+        const suggestions = ctx.domainServices.brandImageRAG.suggestImageCategory(useCase, {
+          platform,
+          mood,
+          maxSuggestions,
+        });
+
+        res.json(suggestions);
+      } catch (err: unknown) {
+        logger.error({ module: 'BrandImageRAG', err }, 'Error suggesting category');
+        res.status(500).json({ error: 'Failed to suggest image category' });
+      }
+    }),
+  );
+
   return router;
 };
 
 export const brandImagesRouterModule: RouterModule = {
   prefix: '/api/brand-images',
   factory: brandImagesRouter,
-  description: 'Brand image management',
-  endpointCount: 6,
+  description: 'Brand image management and AI recommendations',
+  endpointCount: 9,
   requiresAuth: true,
-  tags: ['brand', 'images', 'uploads'],
+  tags: ['brand', 'images', 'uploads', 'rag'],
 };

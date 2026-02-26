@@ -1,6 +1,6 @@
 /**
  * Monitoring Router
- * System monitoring and health aggregation endpoints
+ * System monitoring, health aggregation, and performance webhook endpoints
  *
  * Endpoints:
  * - GET /api/monitoring/health - System health check
@@ -8,6 +8,9 @@
  * - GET /api/monitoring/errors - Error tracking
  * - GET /api/monitoring/system - Full system health aggregation
  * - GET /api/monitoring/endpoints - API endpoints summary
+ *
+ * Webhooks Router (also exported):
+ * - POST /api/webhooks/performance - n8n performance data webhook
  */
 
 import type { Router, Request, Response } from 'express';
@@ -188,4 +191,75 @@ export const monitoringRouterModule: RouterModule = {
   endpointCount: 5,
   requiresAuth: true,
   tags: ['infrastructure', 'monitoring'],
+};
+
+// ----- Webhooks Router (performance data from n8n) -----
+
+import { performanceWebhookSchema } from '../validation/schemas';
+
+export const webhooksRouter: RouterFactory = (ctx: RouterContext): Router => {
+  const router = createRouter();
+  const { storage, logger } = ctx.services;
+  const { validateN8nWebhook } = ctx.middleware;
+
+  /**
+   * POST /performance - Webhook for n8n to POST social media engagement data
+   * Requires webhook signature validation (same secret as n8n callbacks).
+   */
+  router.post(
+    '/performance',
+    validateN8nWebhook,
+    validate(performanceWebhookSchema),
+    asyncHandler(async (req: Request, res: Response) => {
+      try {
+        const { generationId, platform, impressions, engagementRate, clicks, conversions } = req.body;
+
+        logger.info({ module: 'PerformanceWebhook', generationId, platform }, 'Performance data received');
+
+        // Verify generation exists
+        const generation = await storage.getGenerationById(generationId);
+        if (!generation) {
+          return res.status(404).json({
+            success: false,
+            error: 'Generation not found',
+          });
+        }
+
+        // Save performance data
+        const performanceRecord = await storage.saveGenerationPerformance({
+          generationId,
+          platform,
+          impressions: impressions ?? 0,
+          engagementRate: engagementRate ?? 0,
+          clicks: clicks ?? 0,
+          conversions: conversions ?? 0,
+          fetchedAt: new Date(),
+        });
+
+        res.json({
+          success: true,
+          data: { id: performanceRecord.id },
+          message: 'Performance data saved',
+        });
+      } catch (err: unknown) {
+        logger.error({ module: 'PerformanceWebhook', err }, 'Failed to save performance data');
+
+        res.status(500).json({
+          success: false,
+          error: 'Failed to save performance data',
+        });
+      }
+    }),
+  );
+
+  return router;
+};
+
+export const webhooksRouterModule: RouterModule = {
+  prefix: '/api/webhooks',
+  factory: webhooksRouter,
+  description: 'Performance data webhooks from n8n',
+  endpointCount: 1,
+  requiresAuth: false, // Uses webhook signature validation instead
+  tags: ['webhooks', 'performance', 'n8n'],
 };
