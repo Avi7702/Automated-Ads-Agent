@@ -328,9 +328,12 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const brandIdParam = req.query['brandId'] as string | undefined;
-        const startDate = new Date((req.query['startDate'] as string) || Date.now() - 7 * 24 * 60 * 60 * 1000);
-        const endDate = new Date((req.query['endDate'] as string) || Date.now());
-        const limit = parseInt(String(req.query['limit'] ?? '')) || 100;
+        const rawStart = Date.parse(req.query['startDate'] as string);
+        const rawEnd = Date.parse(req.query['endDate'] as string);
+        const startDate = new Date(Number.isFinite(rawStart) ? rawStart : Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const endDate = new Date(Number.isFinite(rawEnd) ? rawEnd : Date.now());
+        const rawLimit = parseInt(String(req.query['limit'] ?? ''), 10);
+        const limit = Number.isFinite(rawLimit) && rawLimit >= 1 ? Math.min(rawLimit, 100) : 100;
 
         const snapshots = await storage.getGoogleQuotaSnapshotHistory({
           ...(brandIdParam != null && { brandId: brandIdParam }),
