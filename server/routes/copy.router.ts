@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Copy Router
  * Ad copy generation and CRUD for copy variations
@@ -45,7 +44,7 @@ export const copyRouter: RouterFactory = (ctx: RouterContext): Router => {
         if (!brandVoice) {
           const user = await storage.getUserById(userId);
           if (user?.brandVoice) {
-            brandVoice = user.brandVoice as any;
+            brandVoice = user.brandVoice as unknown as typeof brandVoice;
           }
         }
 
@@ -90,8 +89,8 @@ export const copyRouter: RouterFactory = (ctx: RouterContext): Router => {
 
         // Extract successful saves and log any failures
         const savedCopies = saveResults
-          .filter((result): result is PromiseFulfilledResult<any> => result.status === 'fulfilled')
-          .map((result) => result.value);
+          .filter((result) => result.status === 'fulfilled')
+          .map((result) => (result as PromiseFulfilledResult<Awaited<ReturnType<typeof storage.saveAdCopy>>>).value);
 
         const failedCount = saveResults.filter((r) => r.status === 'rejected').length;
         if (failedCount > 0) {
@@ -110,12 +109,16 @@ export const copyRouter: RouterFactory = (ctx: RouterContext): Router => {
           copies: savedCopies,
           recommended: 0, // First variation is recommended
         });
-      } catch (error: any) {
-        logger.error({ module: 'GenerateCopy', err: error }, 'Error generating copy');
-        if (error.name === 'ZodError') {
-          return res.status(400).json({ error: 'Validation failed', details: error.issues });
+      } catch (err: unknown) {
+        logger.error({ module: 'GenerateCopy', err }, 'Error generating copy');
+        if (err instanceof Error && err.name === 'ZodError') {
+          return res
+            .status(400)
+            .json({ error: 'Validation failed', details: (err as unknown as { issues: unknown }).issues });
         }
-        res.status(500).json({ error: 'Failed to generate copy', details: error.message });
+        res
+          .status(500)
+          .json({ error: 'Failed to generate copy', details: err instanceof Error ? err.message : String(err) });
       }
     }),
   );
@@ -129,8 +132,8 @@ export const copyRouter: RouterFactory = (ctx: RouterContext): Router => {
       try {
         const copies = await storage.getAdCopyByGenerationId(String(req.params['generationId']));
         res.json({ copies });
-      } catch (error: any) {
-        logger.error({ module: 'GetCopyByGeneration', err: error }, 'Error fetching copy');
+      } catch (err: unknown) {
+        logger.error({ module: 'GetCopyByGeneration', err }, 'Error fetching copy');
         res.status(500).json({ error: 'Failed to fetch copy' });
       }
     }),
@@ -148,8 +151,8 @@ export const copyRouter: RouterFactory = (ctx: RouterContext): Router => {
           return res.status(404).json({ error: 'Copy not found' });
         }
         res.json({ copy });
-      } catch (error: any) {
-        logger.error({ module: 'GetCopy', err: error }, 'Error fetching copy');
+      } catch (err: unknown) {
+        logger.error({ module: 'GetCopy', err }, 'Error fetching copy');
         res.status(500).json({ error: 'Failed to fetch copy' });
       }
     }),
@@ -164,8 +167,8 @@ export const copyRouter: RouterFactory = (ctx: RouterContext): Router => {
       try {
         await storage.deleteAdCopy(String(req.params['id']));
         res.json({ success: true });
-      } catch (error: any) {
-        logger.error({ module: 'DeleteCopy', err: error }, 'Error deleting copy');
+      } catch (err: unknown) {
+        logger.error({ module: 'DeleteCopy', err }, 'Error deleting copy');
         res.status(500).json({ error: 'Failed to delete copy' });
       }
     }),

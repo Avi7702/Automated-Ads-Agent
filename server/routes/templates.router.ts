@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 /**
  * Templates Router
  * Ad scene template management endpoints
@@ -33,16 +32,20 @@ export const templatesRouter: RouterFactory = (ctx: RouterContext): Router => {
     validate(templatesListQuerySchema, 'query'),
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const validated = (req as any).validatedQuery ?? {};
+        const validated = ((req as unknown as Record<string, unknown>)['validatedQuery'] ?? {}) as {
+          category?: string;
+          isGlobal?: boolean;
+        };
 
-        const templates = await storage.getAdSceneTemplates({
-          category: validated.category,
-          isGlobal: validated.isGlobal,
-        });
+        const filter: { category?: string; isGlobal?: boolean } = {};
+        if (validated.category !== undefined) filter.category = validated.category;
+        if (validated.isGlobal !== undefined) filter.isGlobal = validated.isGlobal;
+
+        const templates = await storage.getAdSceneTemplates(filter);
 
         res.json({ templates, total: templates.length });
-      } catch (error: any) {
-        logger.error({ module: 'TemplatesList', err: error }, 'Error listing templates');
+      } catch (err: unknown) {
+        logger.error({ module: 'TemplatesList', err }, 'Error listing templates');
         res.status(500).json({ error: 'Failed to list templates' });
       }
     }),
@@ -57,12 +60,12 @@ export const templatesRouter: RouterFactory = (ctx: RouterContext): Router => {
     validate(templatesSearchQuerySchema, 'query'),
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const { q } = (req as any).validatedQuery;
+        const { q } = (req as unknown as Record<string, unknown>)['validatedQuery'] as { q: string };
 
         const templates = await storage.searchAdSceneTemplates(q);
         res.json({ templates, total: templates.length });
-      } catch (error: any) {
-        logger.error({ module: 'TemplatesSearch', err: error }, 'Error searching templates');
+      } catch (err: unknown) {
+        logger.error({ module: 'TemplatesSearch', err }, 'Error searching templates');
         res.status(500).json({ error: 'Failed to search templates' });
       }
     }),
@@ -83,8 +86,8 @@ export const templatesRouter: RouterFactory = (ctx: RouterContext): Router => {
         }
 
         res.json(template);
-      } catch (error: any) {
-        logger.error({ module: 'TemplateGet', err: error }, 'Error getting template');
+      } catch (err: unknown) {
+        logger.error({ module: 'TemplateGet', err }, 'Error getting template');
         res.status(500).json({ error: 'Failed to get template' });
       }
     }),
@@ -100,7 +103,7 @@ export const templatesRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireRole('admin'),
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = req.session.userId;
 
         const templateData = {
           ...req.body,
@@ -110,8 +113,8 @@ export const templatesRouter: RouterFactory = (ctx: RouterContext): Router => {
 
         const template = await storage.saveAdSceneTemplate(templateData);
         res.status(201).json(template);
-      } catch (error: any) {
-        logger.error({ module: 'TemplateCreate', err: error }, 'Error creating template');
+      } catch (err: unknown) {
+        logger.error({ module: 'TemplateCreate', err }, 'Error creating template');
         res.status(500).json({ error: 'Failed to create template' });
       }
     }),
@@ -126,7 +129,7 @@ export const templatesRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = req.session.userId;
         const userRole = req.user?.role;
         const template = await storage.getAdSceneTemplateById(String(req.params['id']));
 
@@ -141,8 +144,8 @@ export const templatesRouter: RouterFactory = (ctx: RouterContext): Router => {
 
         const updated = await storage.updateAdSceneTemplate(String(req.params['id']), req.body);
         res.json(updated);
-      } catch (error: any) {
-        logger.error({ module: 'TemplateUpdate', err: error }, 'Error updating template');
+      } catch (err: unknown) {
+        logger.error({ module: 'TemplateUpdate', err }, 'Error updating template');
         res.status(500).json({ error: 'Failed to update template' });
       }
     }),
@@ -157,7 +160,7 @@ export const templatesRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = req.session.userId;
         const userRole = req.user?.role;
         const template = await storage.getAdSceneTemplateById(String(req.params['id']));
 
@@ -172,8 +175,8 @@ export const templatesRouter: RouterFactory = (ctx: RouterContext): Router => {
 
         await storage.deleteAdSceneTemplate(String(req.params['id']));
         res.json({ success: true });
-      } catch (error: any) {
-        logger.error({ module: 'TemplateDelete', err: error }, 'Error deleting template');
+      } catch (err: unknown) {
+        logger.error({ module: 'TemplateDelete', err }, 'Error deleting template');
         res.status(500).json({ error: 'Failed to delete template' });
       }
     }),

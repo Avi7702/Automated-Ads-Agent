@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Auth Router
  * Authentication endpoints for user registration, login, and session management
@@ -52,7 +51,7 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
         const hashedPassword = await authService.hashPassword(password);
         const user = await storage.createUser(email, hashedPassword);
 
-        (req as any).session.userId = user.id;
+        req.session.userId = user.id;
 
         telemetry.trackAuth({
           action: 'register',
@@ -61,13 +60,13 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
         });
 
         res.json({ id: user.id, email: user.email });
-      } catch (error: any) {
-        logger.error({ module: 'Auth', action: 'register', err: error }, 'Registration error');
+      } catch (err: unknown) {
+        logger.error({ module: 'Auth', action: 'register', err }, 'Registration error');
 
         telemetry.trackAuth({
           action: 'register',
           success: false,
-          reason: error.message,
+          reason: err instanceof Error ? err.message : String(err),
         });
 
         res.status(500).json({ error: 'Registration failed' });
@@ -125,7 +124,7 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
         }
 
         await authService.clearFailedLogins(email);
-        (req as any).session.userId = user.id;
+        req.session.userId = user.id;
 
         telemetry.trackAuth({
           action: 'login',
@@ -134,13 +133,13 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
         });
 
         res.json({ id: user.id, email: user.email });
-      } catch (error: any) {
-        logger.error({ module: 'Auth', action: 'login', err: error }, 'Login error');
+      } catch (err: unknown) {
+        logger.error({ module: 'Auth', action: 'login', err }, 'Login error');
 
         telemetry.trackAuth({
           action: 'login',
           success: false,
-          reason: error.message,
+          reason: err instanceof Error ? err.message : String(err),
         });
 
         res.status(500).json({ error: 'Login failed' });
@@ -152,7 +151,7 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
    * POST /logout - Logout current user
    */
   router.post('/logout', (req: Request, res: Response) => {
-    (req as any).session.destroy((err: any) => {
+    req.session.destroy((err: Error | null) => {
       if (err) {
         return res.status(500).json({ error: 'Logout failed' });
       }
@@ -168,7 +167,7 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/me',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req as any).session?.userId;
+        const userId = req.session?.userId;
 
         // Not authenticated - return 200 with authenticated: false (no console error)
         if (!userId) {
@@ -182,8 +181,8 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
         }
 
         res.json({ authenticated: true, id: user.id, email: user.email });
-      } catch (error: any) {
-        logger.error({ module: 'Auth', action: 'me', err: error }, 'Get user error');
+      } catch (err: unknown) {
+        logger.error({ module: 'Auth', action: 'me', err }, 'Get user error');
         res.status(500).json({ error: 'Failed to get user' });
       }
     }),
@@ -211,10 +210,10 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
           user = await storage.createUser(demoEmail, hashedPassword);
         }
 
-        (req as any).session.userId = user.id;
+        req.session.userId = user.id;
         res.json({ id: user.id, email: user.email, isDemo: true });
-      } catch (error: any) {
-        logger.error({ module: 'Auth', action: 'demo', err: error }, 'Demo login error');
+      } catch (err: unknown) {
+        logger.error({ module: 'Auth', action: 'demo', err }, 'Demo login error');
         res.status(500).json({ error: 'Demo login failed' });
       }
     }),
@@ -254,8 +253,8 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
         // Token validation will be implemented when email service is added
         logger.info({ module: 'Auth', action: 'reset-password' }, 'Password reset attempted');
         res.status(501).json({ error: 'Email service not configured. Contact administrator.' });
-      } catch (error: any) {
-        logger.error({ module: 'Auth', action: 'reset-password', err: error }, 'Password reset error');
+      } catch (err: unknown) {
+        logger.error({ module: 'Auth', action: 'reset-password', err }, 'Password reset error');
         res.status(500).json({ error: 'Failed to reset password' });
       }
     }),
@@ -272,8 +271,8 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
         const { token: _verifyToken } = req.body;
         logger.info({ module: 'Auth', action: 'verify-email' }, 'Email verification attempted');
         res.status(501).json({ error: 'Email service not configured. Contact administrator.' });
-      } catch (error: any) {
-        logger.error({ module: 'Auth', action: 'verify-email', err: error }, 'Email verification error');
+      } catch (err: unknown) {
+        logger.error({ module: 'Auth', action: 'verify-email', err }, 'Email verification error');
         res.status(500).json({ error: 'Failed to verify email' });
       }
     }),
@@ -287,14 +286,14 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req as any).session.userId;
+        const userId = req.session.userId;
         if (!userId) {
           return res.status(401).json({ error: 'Unauthorized' });
         }
 
         await storage.deleteUser(userId);
 
-        (req as any).session.destroy((destroyError: any) => {
+        req.session.destroy((destroyError: Error | null) => {
           if (destroyError) {
             logger.warn(
               { module: 'Auth', action: 'delete-account', err: destroyError },
@@ -305,8 +304,8 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
 
         res.clearCookie('connect.sid');
         res.json({ message: 'Account deleted successfully' });
-      } catch (error: any) {
-        logger.error({ module: 'Auth', action: 'delete-account', err: error }, 'Account deletion error');
+      } catch (err: unknown) {
+        logger.error({ module: 'Auth', action: 'delete-account', err }, 'Account deletion error');
         res.status(500).json({ error: 'Failed to delete account' });
       }
     }),
@@ -320,7 +319,7 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const uid = (req as any).session?.userId as string | undefined;
+        const uid = req.session?.userId as string | undefined;
         if (!uid) {
           res.status(401).json({ error: 'Not authenticated' });
           return;
