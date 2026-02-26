@@ -11,8 +11,8 @@ import { logger } from './logger';
 const ROLE_OVERRIDE_PATTERNS = [
   /\b(system|assistant|human|user)\s*:/gi,
   /\[INST\]|\[\/INST\]/gi,
-  /<\|.*?\|>/g,                            // Special tokens like <|endoftext|>
-  /<<\s*SYS\s*>>|<<\s*\/SYS\s*>>/gi,     // Llama-style system markers
+  /<\|.*?\|>/g, // Special tokens like <|endoftext|>
+  /<<\s*SYS\s*>>|<<\s*\/SYS\s*>>/gi, // Llama-style system markers
 ];
 
 // Patterns that attempt to override instructions
@@ -39,7 +39,7 @@ const EXTRACTION_PATTERNS = [
 
 // Markdown/code injection patterns
 const MARKDOWN_INJECTION_PATTERNS = [
-  /```[\s\S]*?```/g,  // Code blocks (could contain instructions)
+  /```[\s\S]*?```/g, // Code blocks (could contain instructions)
 ];
 
 interface SanitizeOptions {
@@ -57,15 +57,11 @@ interface SanitizeOptions {
  * Sanitize user input before interpolating into an LLM prompt.
  *
  * This does NOT block the request — it strips dangerous patterns
- * and logs detections. The promptInjectionGuard middleware handles blocking.
+ * and logs detections. The promptInjectionGuard middleware provides
+ * a separate detect-and-log layer at the request level.
  */
 export function sanitizeForPrompt(input: string, options: SanitizeOptions = {}): string {
-  const {
-    maxLength = 2000,
-    stripCodeBlocks = true,
-    stripNewlines = false,
-    context = 'unknown',
-  } = options;
+  const { maxLength = 2000, stripCodeBlocks = true, stripNewlines = false, context = 'unknown' } = options;
 
   if (!input || typeof input !== 'string') return '';
 
@@ -124,12 +120,15 @@ export function sanitizeForPrompt(input: string, options: SanitizeOptions = {}):
 
   // Log detections
   if (detections.length > 0) {
-    logger.warn({
-      module: 'promptSanitizer',
-      context,
-      detections,
-      inputLength: input.length,
-    }, 'Prompt injection patterns detected and sanitized');
+    logger.warn(
+      {
+        module: 'promptSanitizer',
+        context,
+        detections,
+        inputLength: input.length,
+      },
+      'Prompt injection patterns detected and sanitized',
+    );
   }
 
   return sanitized;
