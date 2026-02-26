@@ -79,7 +79,7 @@ import { startPostingJobScheduler } from './jobs/postingJob';
 import { startTokenRefreshScheduler } from './jobs/tokenRefreshJob';
 import { handleN8nCallback } from './services/n8nPostingService';
 import { generationQueue, generationQueueEvents } from './lib/queue';
-import { JobType, JobProgress } from './jobs/types';
+import { JobProgress } from './jobs/types';
 import { visionAnalysisService } from './services/visionAnalysisService';
 import { productKnowledgeService } from './services/productKnowledgeService';
 
@@ -669,98 +669,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       logger.error({ module: 'DeleteGeneration', err: error }, 'Error deleting generation');
       res.status(500).json({ error: 'Failed to delete generation' });
-    }
-  });
-
-  // Edit generation - Async version using BullMQ job queue
-  // Returns immediately with jobId, client polls /api/jobs/:jobId for status
-  app.post('/api/generations/:id/edit', promptInjectionGuard, async (req, res) => {
-    const userId = (req as any).session?.userId;
-
-    try {
-      const id = String(req.params['id']);
-      const { editPrompt } = req.body;
-
-      // Validate input
-      if (!editPrompt || editPrompt.trim().length === 0) {
-        return res.status(400).json({
-          success: false,
-          error: 'Edit prompt is required',
-        });
-      }
-
-      // Load the parent generation to validate it exists and supports editing
-      const parentGeneration = await storage.getGenerationById(id);
-
-      if (!parentGeneration) {
-        return res.status(404).json({
-          success: false,
-          error: 'Generation not found',
-        });
-      }
-
-      // Check if this generation supports editing
-      if (!parentGeneration.conversationHistory) {
-        return res.status(400).json({
-          success: false,
-          error: 'This generation does not support editing. It was created before the edit feature was available.',
-        });
-      }
-
-      // Create a new generation record for the edit (status: pending)
-      const newGeneration = await storage.saveGeneration({
-        userId: userId || undefined,
-        prompt: parentGeneration.prompt,
-        editPrompt: editPrompt.trim(),
-        generatedImagePath: parentGeneration.generatedImagePath, // Placeholder, will be updated by worker
-        conversationHistory: parentGeneration.conversationHistory,
-        parentGenerationId: parentGeneration.id,
-        originalImagePaths: parentGeneration.originalImagePaths,
-        resolution: parentGeneration.resolution || '2K',
-        status: 'pending',
-      });
-
-      logger.info(
-        { module: 'Edit', generationId: newGeneration.id, parentId: id },
-        'Created pending generation for async edit',
-      );
-
-      // Enqueue job for background processing
-      const editJobData: import('./jobs/types').EditJobData = {
-        jobType: JobType.EDIT,
-        userId: userId || 'anonymous',
-        generationId: newGeneration.id,
-        editPrompt: editPrompt.trim(),
-        originalImageUrl: parentGeneration.generatedImagePath,
-        createdAt: new Date().toISOString(),
-      };
-      const job = await (generationQueue as import('bullmq').Queue).add('edit-generation', editJobData);
-
-      logger.info({ module: 'Edit', jobId: job.id, generationId: newGeneration.id }, 'Edit job enqueued');
-
-      // Return immediately with job info - client should poll for status
-      return res.json({
-        success: true,
-        generationId: newGeneration.id,
-        jobId: job.id,
-        status: 'pending',
-        message: 'Edit job started. Poll /api/jobs/:jobId for status.',
-        parentId: parentGeneration.id,
-      });
-    } catch (error: any) {
-      logger.error({ module: 'Edit', err: error }, 'Edit enqueue error');
-
-      telemetry.trackError({
-        endpoint: '/api/generations/:id/edit',
-        errorType: error.name || 'unknown',
-        statusCode: 500,
-        userId,
-      });
-
-      return res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to start edit job',
-      });
     }
   });
 
