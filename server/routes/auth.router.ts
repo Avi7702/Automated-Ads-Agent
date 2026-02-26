@@ -320,8 +320,7 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req as Record<string, unknown>)['session'] as { userId: string } | undefined;
-        const uid = userId?.userId;
+        const uid = (req as any).session?.userId as string | undefined;
         if (!uid) {
           res.status(401).json({ error: 'Not authenticated' });
           return;

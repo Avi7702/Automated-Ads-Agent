@@ -65,8 +65,8 @@ export const brandProfileRouter: RouterFactory = (ctx: RouterContext): Router =>
           });
           res.status(201).json(created);
         }
-      } catch {
-        logger.error({ module: 'BrandProfileUpdate' }, 'Error updating brand profile');
+      } catch (err: unknown) {
+        logger.error({ module: 'BrandProfileUpdate', err }, 'Error updating brand profile');
         res.status(500).json({ error: 'Failed to update brand profile' });
       }
     }),
