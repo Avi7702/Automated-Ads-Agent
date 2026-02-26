@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 import { MOTION, useReducedMotion, motionSafe } from '@/lib/motion';
 
 import { Header } from '@/components/layout/Header';
-import { StudioProvider } from '@/contexts/StudioContext';
+import { StudioProvider, useStudioContext } from '@/contexts/StudioContext';
 import { ComposerView, ResultViewEnhanced, GeneratingView } from '@/components/studio/MainCanvas';
 import { InspectorPanel } from '@/components/studio/InspectorPanel';
 import { IdeaBankBar } from '@/components/studio/IdeaBankBar';
@@ -143,7 +143,263 @@ const MODE_OPTIONS = [
 ];
 
 export default function Studio() {
+  return (
+    <StudioProvider>
+      <StudioContent />
+    </StudioProvider>
+  );
+}
+
+/**
+ * Syncs orchestrator state into StudioContext so that child components
+ * reading via useStudioState() see the same values the orchestrator manages.
+ */
+function useOrchestratorSync(orch: ReturnType<typeof useStudioOrchestrator>) {
+  const { dispatch } = useStudioContext();
+
+  // Sync selectedProducts
+  useEffect(() => {
+    dispatch({ type: 'SET_PRODUCTS', products: orch.selectedProducts });
+  }, [orch.selectedProducts, dispatch]);
+
+  // Sync prompt
+  useEffect(() => {
+    dispatch({ type: 'SET_PROMPT', prompt: orch.prompt });
+  }, [orch.prompt, dispatch]);
+
+  // Sync platform
+  useEffect(() => {
+    dispatch({ type: 'SET_PLATFORM', platform: orch.platform });
+  }, [orch.platform, dispatch]);
+
+  // Sync aspectRatio
+  useEffect(() => {
+    dispatch({ type: 'SET_ASPECT_RATIO', aspectRatio: orch.aspectRatio });
+  }, [orch.aspectRatio, dispatch]);
+
+  // Sync resolution
+  useEffect(() => {
+    dispatch({ type: 'SET_RESOLUTION', resolution: orch.resolution });
+  }, [orch.resolution, dispatch]);
+
+  // Sync generationState
+  useEffect(() => {
+    dispatch({ type: 'SET_GENERATION_STATE', state: orch.state });
+  }, [orch.state, dispatch]);
+
+  // Sync generatedImage + generationId (SET_GENERATED_IMAGE also sets state to 'result')
+  useEffect(() => {
+    if (orch.generatedImage && orch.generationId) {
+      dispatch({ type: 'SET_GENERATED_IMAGE', image: orch.generatedImage, id: orch.generationId });
+    }
+  }, [orch.generatedImage, orch.generationId, dispatch]);
+
+  // Sync tempUploads
+  useEffect(() => {
+    dispatch({ type: 'SET_UPLOADS', uploads: orch.tempUploads });
+  }, [orch.tempUploads, dispatch]);
+
+  // Sync selectedTemplate
+  useEffect(() => {
+    if (orch.selectedTemplate) {
+      dispatch({ type: 'SELECT_TEMPLATE', template: orch.selectedTemplate });
+    } else {
+      dispatch({ type: 'CLEAR_TEMPLATE' });
+    }
+  }, [orch.selectedTemplate, dispatch]);
+
+  // Sync selectedSuggestion
+  useEffect(() => {
+    dispatch({ type: 'SET_SUGGESTION', suggestion: orch.selectedSuggestion });
+  }, [orch.selectedSuggestion, dispatch]);
+
+  // Sync collapsedSections
+  useEffect(() => {
+    dispatch({ type: 'SET_COLLAPSED_SECTIONS', sections: orch.collapsedSections });
+  }, [orch.collapsedSections, dispatch]);
+
+  // Sync IdeaBank/Generation modes
+  useEffect(() => {
+    dispatch({ type: 'SET_IDEABANK_MODE', mode: orch.ideaBankMode });
+  }, [orch.ideaBankMode, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_GENERATION_MODE', mode: orch.generationMode });
+  }, [orch.generationMode, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_RECIPE', recipe: orch.generationRecipe });
+  }, [orch.generationRecipe, dispatch]);
+
+  // Sync UI fields
+  useEffect(() => {
+    dispatch({ type: 'SET_SHOW_CONTEXT_BAR', visible: orch.showContextBar });
+  }, [orch.showContextBar, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_SHOW_STICKY_GENERATE', visible: orch.showStickyGenerate });
+  }, [orch.showStickyGenerate, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_QUICK_START_MODE', enabled: orch.quickStartMode });
+  }, [orch.quickStartMode, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_QUICK_START_PROMPT', prompt: orch.quickStartPrompt });
+  }, [orch.quickStartPrompt, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_PRICE_ESTIMATE', estimate: orch.priceEstimate });
+  }, [orch.priceEstimate, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_EDIT_PROMPT', prompt: orch.editPrompt });
+  }, [orch.editPrompt, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_IS_EDITING', editing: orch.isEditing });
+  }, [orch.isEditing, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_GENERATED_COPY', copy: orch.generatedCopy });
+  }, [orch.generatedCopy, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_IS_GENERATING_COPY', generating: orch.isGeneratingCopy });
+  }, [orch.isGeneratingCopy, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_GENERATED_COPY_FULL', copyResult: orch.generatedCopyFull });
+  }, [orch.generatedCopyFull, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_ASK_AI_QUESTION', question: orch.askAIQuestion });
+  }, [orch.askAIQuestion, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_ASK_AI_RESPONSE', response: orch.askAIResponse });
+  }, [orch.askAIResponse, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_IS_ASKING_AI', asking: orch.isAskingAI });
+  }, [orch.isAskingAI, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_SEARCH_QUERY', query: orch.searchQuery });
+  }, [orch.searchQuery, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_CATEGORY_FILTER', filter: orch.categoryFilter });
+  }, [orch.categoryFilter, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_HISTORY_PANEL_OPEN', open: orch.historyPanelOpen });
+  }, [orch.historyPanelOpen, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_MEDIA_MODE', mode: orch.mediaMode });
+  }, [orch.mediaMode, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_VIDEO_DURATION', duration: Number(orch.videoDuration) });
+  }, [orch.videoDuration, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_IMAGE_SCALE', scale: orch.imageScale });
+  }, [orch.imageScale, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_IMAGE_POSITION', position: orch.imagePosition });
+  }, [orch.imagePosition, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_ACTIVE_ACTION_BUTTON', button: orch.activeActionButton });
+  }, [orch.activeActionButton, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_SHOW_SAVE_TO_CATALOG', visible: orch.showSaveToCatalog });
+  }, [orch.showSaveToCatalog, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_SHOW_CANVAS_EDITOR', visible: orch.showCanvasEditor });
+  }, [orch.showCanvasEditor, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_SHOW_KEYBOARD_SHORTCUTS', visible: orch.showKeyboardShortcuts });
+  }, [orch.showKeyboardShortcuts, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_JUST_COPIED', copied: orch.justCopied });
+  }, [orch.justCopied, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_IS_DOWNLOADING', downloading: orch.isDownloading });
+  }, [orch.isDownloading, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_TEMPLATE_CATEGORY', category: orch.templateCategory });
+  }, [orch.templateCategory, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_SHOW_TEMPLATE_INSPIRATION', visible: orch.showTemplateInspiration });
+  }, [orch.showTemplateInspiration, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_SELECTED_PERFORMING_TEMPLATE', template: orch.selectedPerformingTemplate });
+  }, [orch.selectedPerformingTemplate, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_TEMPLATE_FOR_MODE', template: orch.selectedTemplateForMode });
+  }, [orch.selectedTemplateForMode, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_PLAN_CONTEXT', context: orch.planContext });
+  }, [orch.planContext, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_CP_TEMPLATE', template: orch.cpTemplate });
+  }, [orch.cpTemplate, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_SHOW_CAROUSEL_BUILDER', visible: orch.showCarouselBuilder });
+  }, [orch.showCarouselBuilder, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_CAROUSEL_TOPIC', topic: orch.carouselTopic });
+  }, [orch.carouselTopic, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_SHOW_BEFORE_AFTER_BUILDER', visible: orch.showBeforeAfterBuilder });
+  }, [orch.showBeforeAfterBuilder, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_BEFORE_AFTER_TOPIC', topic: orch.beforeAfterTopic });
+  }, [orch.beforeAfterTopic, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_SHOW_TEXT_ONLY_MODE', visible: orch.showTextOnlyMode });
+  }, [orch.showTextOnlyMode, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_TEXT_ONLY_TOPIC', topic: orch.textOnlyTopic });
+  }, [orch.textOnlyTopic, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_VIDEO_JOB_ID', jobId: orch.videoJobId });
+  }, [orch.videoJobId, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_GENERATED_MEDIA_TYPE', mediaType: orch.generatedMediaType });
+  }, [orch.generatedMediaType, dispatch]);
+
+  useEffect(() => {
+    dispatch({ type: 'SET_CURRENT_SECTION', section: orch.currentSection });
+  }, [orch.currentSection, dispatch]);
+}
+
+function StudioContent() {
   const orch = useStudioOrchestrator();
+  useOrchestratorSync(orch);
   const reduced = useReducedMotion();
 
   const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>(() => {
@@ -356,239 +612,232 @@ export default function Studio() {
   );
 
   return (
-    <StudioProvider>
-      <div className="min-h-screen bg-background text-foreground relative">
-        <div className="fixed inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-gradient-to-br from-primary/10 via-purple-500/8 to-transparent blur-[120px] rounded-full animate-float" />
-          <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-gradient-to-tl from-blue-500/10 via-cyan-500/8 to-transparent blur-[120px] rounded-full animate-float-delayed" />
-        </div>
+    <div className="min-h-screen bg-background text-foreground relative">
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-gradient-to-br from-primary/10 via-purple-500/8 to-transparent blur-[120px] rounded-full animate-float" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-gradient-to-tl from-blue-500/10 via-cyan-500/8 to-transparent blur-[120px] rounded-full animate-float-delayed" />
+      </div>
 
-        <Header currentPage="studio" />
+      <Header currentPage="studio" />
 
-        <AnimatePresence>
-          <ContextBar
-            selectedProducts={orch.selectedProducts}
-            selectedTemplate={orch.selectedTemplate}
-            platform={orch.platform}
-            visible={orch.showContextBar}
-          />
-        </AnimatePresence>
+      <AnimatePresence>
+        <ContextBar
+          selectedProducts={orch.selectedProducts}
+          selectedTemplate={orch.selectedTemplate}
+          platform={orch.platform}
+          visible={orch.showContextBar}
+        />
+      </AnimatePresence>
 
-        <main
-          className={cn(
-            'container mx-auto px-6 pt-24 pb-24 lg:pb-12 relative z-10',
-            orch.historyPanelOpen ? 'max-w-[1600px]' : 'max-w-7xl',
-          )}
+      <main
+        className={cn(
+          'container mx-auto px-6 pt-24 pb-24 lg:pb-12 relative z-10',
+          orch.historyPanelOpen ? 'max-w-[1600px]' : 'max-w-7xl',
+        )}
+      >
+        <motion.div
+          ref={orch.heroRef}
+          initial="hidden"
+          animate="visible"
+          variants={motionSafe(MOTION.presets.staggerChildren, reduced)}
+          className="text-center space-y-4 py-12 hero-glow"
         >
-          <motion.div
-            ref={orch.heroRef}
-            initial="hidden"
-            animate="visible"
-            variants={motionSafe(MOTION.presets.staggerChildren, reduced)}
-            className="text-center space-y-4 py-12 hero-glow"
+          <motion.h1
+            variants={motionSafe(MOTION.presets.fadeUp, reduced)}
+            className="font-display text-4xl md:text-5xl font-bold tracking-tight bg-gradient-to-b from-zinc-900 to-zinc-900/60 dark:from-white dark:to-white/60 bg-clip-text text-transparent"
           >
-            <motion.h1
-              variants={motionSafe(MOTION.presets.fadeUp, reduced)}
-              className="font-display text-4xl md:text-5xl font-bold tracking-tight bg-gradient-to-b from-zinc-900 to-zinc-900/60 dark:from-white dark:to-white/60 bg-clip-text text-transparent"
-            >
-              {workspaceHeadline}
-            </motion.h1>
-            <motion.p
-              variants={motionSafe(MOTION.presets.fadeUp, reduced)}
-              className="text-lg text-muted-foreground max-w-2xl mx-auto"
-            >
-              {workspaceSubheading}
-            </motion.p>
+            {workspaceHeadline}
+          </motion.h1>
+          <motion.p
+            variants={motionSafe(MOTION.presets.fadeUp, reduced)}
+            className="text-lg text-muted-foreground max-w-2xl mx-auto"
+          >
+            {workspaceSubheading}
+          </motion.p>
 
-            <motion.div variants={motionSafe(MOTION.presets.fadeUp, reduced)} className="flex justify-center pt-1">
-              <div className="inline-flex gap-3">
-                {MODE_OPTIONS.map(({ mode, label, icon: Icon }) => (
-                  <motion.button
-                    key={mode}
-                    className={cn('mode-card flex items-center gap-2 text-sm font-medium')}
-                    data-active={workspaceMode === mode}
-                    onClick={() => setWorkspaceMode(mode)}
-                    {...(!reduced ? { whileHover: { scale: 1.03 }, whileTap: { scale: 0.97 } } : {})}
-                    transition={MOTION.transitions.fast}
-                  >
-                    <Icon
-                      className={cn('w-4 h-4', workspaceMode === mode ? 'text-primary' : 'text-muted-foreground')}
-                    />
-                    <span className={workspaceMode === mode ? 'text-primary' : 'text-muted-foreground'}>{label}</span>
-                  </motion.button>
-                ))}
-              </div>
-            </motion.div>
-
-            <motion.div
-              variants={motionSafe(MOTION.presets.fadeUp, reduced)}
-              className="flex justify-center gap-3 pt-2"
-            >
-              <Button variant="outline" size="sm" onClick={orch.handleHistoryToggle} className="gap-2">
-                <History className="w-4 h-4" />
-                {orch.historyPanelOpen ? 'Hide History' : 'History'}
-              </Button>
-            </motion.div>
+          <motion.div variants={motionSafe(MOTION.presets.fadeUp, reduced)} className="flex justify-center pt-1">
+            <div className="inline-flex gap-3">
+              {MODE_OPTIONS.map(({ mode, label, icon: Icon }) => (
+                <motion.button
+                  key={mode}
+                  className={cn('mode-card flex items-center gap-2 text-sm font-medium')}
+                  data-active={workspaceMode === mode}
+                  onClick={() => setWorkspaceMode(mode)}
+                  {...(!reduced ? { whileHover: { scale: 1.03 }, whileTap: { scale: 0.97 } } : {})}
+                  transition={MOTION.transitions.fast}
+                >
+                  <Icon className={cn('w-4 h-4', workspaceMode === mode ? 'text-primary' : 'text-muted-foreground')} />
+                  <span className={workspaceMode === mode ? 'text-primary' : 'text-muted-foreground'}>{label}</span>
+                </motion.button>
+              ))}
+            </div>
           </motion.div>
 
-          {workspaceMode === 'agent' && (
-            <div className="mx-auto max-w-5xl grid gap-8 xl:grid-cols-[1fr_380px]">
-              <div className="min-w-0 order-2 xl:order-1">
-                <AgentModePanel />
-              </div>
-              <div className="min-w-0 order-1 xl:order-2">
-                <div className="xl:sticky xl:top-24">
-                  <AgentChatPanel
-                    products={orch.selectedProducts}
-                    title="Ad Assistant"
-                    forceExpanded
-                    showCollapseToggle={false}
-                    bodyMaxHeightClassName="max-h-[60vh] xl:max-h-[calc(100vh-320px)]"
-                    ideaBankContext={ideaBankContext}
-                    ideaBankBridgeState={ideaBankBridgeState}
-                    externalMessage={agentExternalMessage}
-                    onExternalMessageConsumed={handleExternalMessageConsumed}
-                  />
-                </div>
+          <motion.div variants={motionSafe(MOTION.presets.fadeUp, reduced)} className="flex justify-center gap-3 pt-2">
+            <Button variant="outline" size="sm" onClick={orch.handleHistoryToggle} className="gap-2">
+              <History className="w-4 h-4" />
+              {orch.historyPanelOpen ? 'Hide History' : 'History'}
+            </Button>
+          </motion.div>
+        </motion.div>
+
+        {workspaceMode === 'agent' && (
+          <div className="mx-auto max-w-5xl grid gap-8 xl:grid-cols-[1fr_380px]">
+            <div className="min-w-0 order-2 xl:order-1">
+              <AgentModePanel />
+            </div>
+            <div className="min-w-0 order-1 xl:order-2">
+              <div className="xl:sticky xl:top-24">
+                <AgentChatPanel
+                  products={orch.selectedProducts}
+                  title="Ad Assistant"
+                  forceExpanded
+                  showCollapseToggle={false}
+                  bodyMaxHeightClassName="max-h-[60vh] xl:max-h-[calc(100vh-320px)]"
+                  ideaBankContext={ideaBankContext}
+                  ideaBankBridgeState={ideaBankBridgeState}
+                  externalMessage={agentExternalMessage}
+                  onExternalMessageConsumed={handleExternalMessageConsumed}
+                />
               </div>
             </div>
-          )}
-
-          {workspaceMode === 'studio' && (
-            <>
-              <AgentChatPanel
-                products={orch.selectedProducts}
-                title="Studio Assistant"
-                ideaBankContext={ideaBankContext}
-                ideaBankBridgeState={ideaBankBridgeState}
-                externalMessage={agentExternalMessage}
-                onExternalMessageConsumed={handleExternalMessageConsumed}
-              />
-              {renderStudioCanvas()}
-            </>
-          )}
-
-          {workspaceMode === 'split' && (
-            <div className="grid gap-8 xl:grid-cols-[minmax(320px,420px)_1fr]">
-              <div className="min-w-0">
-                <div className="xl:sticky xl:top-24">
-                  <AgentChatPanel
-                    products={orch.selectedProducts}
-                    title="Ad Assistant"
-                    forceExpanded
-                    showCollapseToggle={false}
-                    bodyMaxHeightClassName="max-h-[calc(100vh-280px)]"
-                    ideaBankContext={ideaBankContext}
-                    ideaBankBridgeState={ideaBankBridgeState}
-                    externalMessage={agentExternalMessage}
-                    onExternalMessageConsumed={handleExternalMessageConsumed}
-                  />
-                </div>
-              </div>
-              <div className="min-w-0">{renderStudioCanvas()}</div>
-            </div>
-          )}
-        </main>
-
-        {orch.generatedImage && (
-          <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-md border-t max-h-[60vh] overflow-y-auto">
-            <InspectorPanel
-              onApplyEdit={orch.handleApplyEdit}
-              handleGenerateCopy={orch.handleGenerateCopy}
-              handleAskAI={orch.handleAskAI}
-              handleDownloadWithFeedback={orch.handleDownloadWithFeedback}
-              handleLoadFromHistory={orch.handleLoadFromHistory}
-              authUser={orch.authUser}
-            />
           </div>
         )}
 
-        {orch.generatedImage && (
-          <ErrorBoundary>
-            <SaveToCatalogDialog
-              isOpen={orch.showSaveToCatalog}
-              onClose={() => orch.setShowSaveToCatalog(false)}
-              imageUrl={orch.generatedImage}
-              defaultName={`Generated - ${new Date().toLocaleDateString()}`}
+        {workspaceMode === 'studio' && (
+          <>
+            <AgentChatPanel
+              products={orch.selectedProducts}
+              title="Studio Assistant"
+              ideaBankContext={ideaBankContext}
+              ideaBankBridgeState={ideaBankBridgeState}
+              externalMessage={agentExternalMessage}
+              onExternalMessageConsumed={handleExternalMessageConsumed}
             />
-          </ErrorBoundary>
+            {renderStudioCanvas()}
+          </>
         )}
 
-        <Dialog open={orch.showTemplateInspiration} onOpenChange={orch.setShowTemplateInspiration}>
-          <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5" /> Template Inspiration
-              </DialogTitle>
-              <DialogDescription>Browse high-performing ad references for creative direction</DialogDescription>
-            </DialogHeader>
-            <div className="flex-1 overflow-y-auto">
-              {orch.isLoadingFeatured ? (
-                <div className="flex items-center justify-center py-20">
-                  <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                </div>
-              ) : orch.featuredAdTemplates.length === 0 ? (
-                <div className="text-center py-20 text-muted-foreground">
-                  <p>No featured templates yet.</p>
-                  <Link href="/templates">
-                    <Button variant="link" className="mt-2">
-                      Browse template library
-                    </Button>
-                  </Link>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-1">
-                  {orch.featuredAdTemplates.map((template) => (
-                    <button
-                      key={template.id}
-                      onClick={() => orch.handleSelectPerformingTemplate(template)}
-                      className="rounded-xl border border-border bg-card overflow-hidden hover:border-primary/50 transition-colors text-left card-hover-lift"
-                    >
-                      <div className="aspect-[4/3] overflow-hidden bg-muted relative">
-                        {template.previewImageUrl ? (
-                          <img
-                            src={template.previewImageUrl}
-                            alt={template.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Layout className="w-10 h-10 text-muted-foreground/30" />
-                          </div>
-                        )}
-                        {template.isFeatured && (
-                          <Badge className="absolute top-2 left-2 bg-yellow-500/90 text-yellow-950 text-xs">
-                            <Star className="w-3 h-3 mr-1 fill-current" /> Featured
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="p-3 space-y-1">
-                        <h4 className="font-medium text-sm line-clamp-1">{template.name}</h4>
-                        <div className="flex flex-wrap gap-1">
-                          {template.mood && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10">{template.mood}</span>
-                          )}
-                          {template.style && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10">{template.style}</span>
-                          )}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
+        {workspaceMode === 'split' && (
+          <div className="grid gap-8 xl:grid-cols-[minmax(320px,420px)_1fr]">
+            <div className="min-w-0">
+              <div className="xl:sticky xl:top-24">
+                <AgentChatPanel
+                  products={orch.selectedProducts}
+                  title="Ad Assistant"
+                  forceExpanded
+                  showCollapseToggle={false}
+                  bodyMaxHeightClassName="max-h-[calc(100vh-280px)]"
+                  ideaBankContext={ideaBankContext}
+                  ideaBankBridgeState={ideaBankBridgeState}
+                  externalMessage={agentExternalMessage}
+                  onExternalMessageConsumed={handleExternalMessageConsumed}
+                />
+              </div>
             </div>
-          </DialogContent>
-        </Dialog>
+            <div className="min-w-0">{renderStudioCanvas()}</div>
+          </div>
+        )}
+      </main>
 
-        <KeyboardShortcutsPanel
-          visible={orch.showKeyboardShortcuts}
-          shortcuts={orch.shortcuts}
-          onClose={() => orch.setShowKeyboardShortcuts(false)}
-          onToggle={() => orch.setShowKeyboardShortcuts(!orch.showKeyboardShortcuts)}
-          haptic={orch.haptic}
-        />
-      </div>
-    </StudioProvider>
+      {orch.generatedImage && (
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-md border-t max-h-[60vh] overflow-y-auto">
+          <InspectorPanel
+            onApplyEdit={orch.handleApplyEdit}
+            handleGenerateCopy={orch.handleGenerateCopy}
+            handleAskAI={orch.handleAskAI}
+            handleDownloadWithFeedback={orch.handleDownloadWithFeedback}
+            handleLoadFromHistory={orch.handleLoadFromHistory}
+            authUser={orch.authUser}
+          />
+        </div>
+      )}
+
+      {orch.generatedImage && (
+        <ErrorBoundary>
+          <SaveToCatalogDialog
+            isOpen={orch.showSaveToCatalog}
+            onClose={() => orch.setShowSaveToCatalog(false)}
+            imageUrl={orch.generatedImage}
+            defaultName={`Generated - ${new Date().toLocaleDateString()}`}
+          />
+        </ErrorBoundary>
+      )}
+
+      <Dialog open={orch.showTemplateInspiration} onOpenChange={orch.setShowTemplateInspiration}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" /> Template Inspiration
+            </DialogTitle>
+            <DialogDescription>Browse high-performing ad references for creative direction</DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto">
+            {orch.isLoadingFeatured ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : orch.featuredAdTemplates.length === 0 ? (
+              <div className="text-center py-20 text-muted-foreground">
+                <p>No featured templates yet.</p>
+                <Link href="/templates">
+                  <Button variant="link" className="mt-2">
+                    Browse template library
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-1">
+                {orch.featuredAdTemplates.map((template) => (
+                  <button
+                    key={template.id}
+                    onClick={() => orch.handleSelectPerformingTemplate(template)}
+                    className="rounded-xl border border-border bg-card overflow-hidden hover:border-primary/50 transition-colors text-left card-hover-lift"
+                  >
+                    <div className="aspect-[4/3] overflow-hidden bg-muted relative">
+                      {template.previewImageUrl ? (
+                        <img
+                          src={template.previewImageUrl}
+                          alt={template.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Layout className="w-10 h-10 text-muted-foreground/30" />
+                        </div>
+                      )}
+                      {template.isFeatured && (
+                        <Badge className="absolute top-2 left-2 bg-yellow-500/90 text-yellow-950 text-xs">
+                          <Star className="w-3 h-3 mr-1 fill-current" /> Featured
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="p-3 space-y-1">
+                      <h4 className="font-medium text-sm line-clamp-1">{template.name}</h4>
+                      <div className="flex flex-wrap gap-1">
+                        {template.mood && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10">{template.mood}</span>
+                        )}
+                        {template.style && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10">{template.style}</span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <KeyboardShortcutsPanel
+        visible={orch.showKeyboardShortcuts}
+        shortcuts={orch.shortcuts}
+        onClose={() => orch.setShowKeyboardShortcuts(false)}
+        onToggle={() => orch.setShowKeyboardShortcuts(!orch.showKeyboardShortcuts)}
+        haptic={orch.haptic}
+      />
+    </div>
   );
 }

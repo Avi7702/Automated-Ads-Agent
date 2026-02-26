@@ -317,10 +317,14 @@ describe('Studio Component - Layout & Structure', () => {
     });
 
     it('renders the StudioProvider context wrapper', async () => {
+      // With the real StudioProvider, verify it wraps the tree by checking
+      // that a context-dependent child (ComposerView) renders successfully.
       render(<Studio />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        expect(screen.getByTestId('mock-studio-provider')).toBeInTheDocument();
+        // The "Your Products" section comes from ComposerView which uses
+        // useStudioState() — if StudioProvider is missing, this would crash.
+        expect(screen.getByText('Your Products')).toBeInTheDocument();
       });
     });
   });
