@@ -58,8 +58,11 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
         const history = await quotaMonitoring.getUsageHistory({
           brandId,
           windowType: (windowType as 'minute' | 'hour' | 'day') || 'hour',
-          startDate: startDate ? new Date(startDate as string) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-          endDate: endDate ? new Date(endDate as string) : new Date(),
+          startDate:
+            startDate && Number.isFinite(Date.parse(startDate as string))
+              ? new Date(startDate as string)
+              : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+          endDate: endDate && Number.isFinite(Date.parse(endDate as string)) ? new Date(endDate as string) : new Date(),
         });
 
         res.json({ history });
