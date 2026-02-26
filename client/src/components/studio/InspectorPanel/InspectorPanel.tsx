@@ -8,6 +8,7 @@
  */
 
 import { memo, useState } from "react";
+import type { GenerationDTO } from "@shared/types/api";
 import { cn } from "@/lib/utils";
 import { Pencil, MessageCircle, Sparkles, Info } from "lucide-react";
 import { EditTab } from "./tabs/EditTab";
@@ -29,7 +30,7 @@ interface InspectorPanelProps {
   handleGenerateCopy: () => void;
   handleAskAI: () => void;
   handleDownloadWithFeedback: () => void;
-  handleLoadFromHistory: (data: unknown) => void;
+  handleLoadFromHistory: (generation: GenerationDTO) => void;
   authUser: { email?: string } | null;
   className?: string;
 }

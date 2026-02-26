@@ -82,7 +82,7 @@ interface ComposerViewProps {
   toggleProductSelection: (product: Product) => void;
   filteredProducts: Product[];
   categories: string[];
-  generateButtonRef: React.RefObject<HTMLDivElement>;
+  generateButtonRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export const ComposerView = memo(function ComposerView({

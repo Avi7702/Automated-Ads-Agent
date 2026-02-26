@@ -23,7 +23,7 @@ interface ResultViewEnhancedProps {
   handleCopyText: () => void;
   handleCanvasEditComplete: (newImageUrl: string) => void;
   haptic: (intensity: 'light' | 'medium' | 'heavy') => void;
-  zoomContainerRef: React.RefObject<HTMLDivElement>;
+  zoomContainerRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export const ResultViewEnhanced = memo(function ResultViewEnhanced({
