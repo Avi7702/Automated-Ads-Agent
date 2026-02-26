@@ -1,8 +1,16 @@
 import { useCallback, useMemo } from 'react';
-import { useStudioContext, SelectedSuggestion } from '@/contexts/StudioContext';
-import type { Product, AdSceneTemplate } from '@shared/schema';
+import {
+  useStudioContext,
+  type SelectedSuggestion,
+  type CollapsedSections,
+  type PriceEstimate,
+  type PlanContext,
+  type CopyResult,
+} from '@/contexts/StudioContext';
+import type { Product, AdSceneTemplate, PerformingAdTemplate } from '@shared/schema';
 import type { GenerationRecipe, GenerationMode, IdeaBankMode } from '@shared/types/ideaBank';
 import type { AnalyzedUpload } from '@/types/analyzedUpload';
+import type { ContentTemplate } from '@shared/contentTemplates';
 
 /**
  * useStudioState - Primary hook for accessing Studio state and actions
@@ -10,7 +18,7 @@ import type { AnalyzedUpload } from '@/types/analyzedUpload';
  * Provides:
  * - Direct state access
  * - Derived state (computed values)
- * - Type-safe action dispatchers
+ * - Type-safe action dispatchers for ALL 56 state fields
  */
 export function useStudioState() {
   const { state, dispatch } = useStudioContext();
@@ -42,7 +50,7 @@ export function useStudioState() {
   }, [state.selectedProducts, confirmedUploads]);
 
   // ============================================
-  // ACTION DISPATCHERS
+  // ORIGINAL ACTION DISPATCHERS (16 fields)
   // ============================================
 
   // Generation Actions
@@ -219,6 +227,317 @@ export function useStudioState() {
     [dispatch],
   );
 
+  // ============================================
+  // NEW ACTION DISPATCHERS (S2-11: 40 fields)
+  // ============================================
+
+  // UI: Section State
+  const setCollapsedSections = useCallback(
+    (sections: CollapsedSections) => {
+      dispatch({ type: 'SET_COLLAPSED_SECTIONS', sections });
+    },
+    [dispatch],
+  );
+
+  const toggleSection = useCallback(
+    (section: keyof CollapsedSections) => {
+      dispatch({ type: 'TOGGLE_SECTION', section });
+    },
+    [dispatch],
+  );
+
+  const setCurrentSection = useCallback(
+    (section: string) => {
+      dispatch({ type: 'SET_CURRENT_SECTION', section });
+    },
+    [dispatch],
+  );
+
+  const setShowContextBar = useCallback(
+    (visible: boolean) => {
+      dispatch({ type: 'SET_SHOW_CONTEXT_BAR', visible });
+    },
+    [dispatch],
+  );
+
+  const setShowStickyGenerate = useCallback(
+    (visible: boolean) => {
+      dispatch({ type: 'SET_SHOW_STICKY_GENERATE', visible });
+    },
+    [dispatch],
+  );
+
+  // UI: Quick Start
+  const setQuickStartMode = useCallback(
+    (enabled: boolean) => {
+      dispatch({ type: 'SET_QUICK_START_MODE', enabled });
+    },
+    [dispatch],
+  );
+
+  const setQuickStartPrompt = useCallback(
+    (prompt: string) => {
+      dispatch({ type: 'SET_QUICK_START_PROMPT', prompt });
+    },
+    [dispatch],
+  );
+
+  // UI: Price Estimate
+  const setPriceEstimate = useCallback(
+    (estimate: PriceEstimate | null) => {
+      dispatch({ type: 'SET_PRICE_ESTIMATE', estimate });
+    },
+    [dispatch],
+  );
+
+  // UI: Action Buttons
+  const setActiveActionButton = useCallback(
+    (button: 'edit' | 'copy' | 'preview' | 'save' | null) => {
+      dispatch({ type: 'SET_ACTIVE_ACTION_BUTTON', button });
+    },
+    [dispatch],
+  );
+
+  // UI: Dialogs
+  const setShowSaveToCatalog = useCallback(
+    (visible: boolean) => {
+      dispatch({ type: 'SET_SHOW_SAVE_TO_CATALOG', visible });
+    },
+    [dispatch],
+  );
+
+  const setShowCanvasEditor = useCallback(
+    (visible: boolean) => {
+      dispatch({ type: 'SET_SHOW_CANVAS_EDITOR', visible });
+    },
+    [dispatch],
+  );
+
+  const setShowKeyboardShortcuts = useCallback(
+    (visible: boolean) => {
+      dispatch({ type: 'SET_SHOW_KEYBOARD_SHORTCUTS', visible });
+    },
+    [dispatch],
+  );
+
+  // UI: Zoom / Pan
+  const setImageScale = useCallback(
+    (scale: number) => {
+      dispatch({ type: 'SET_IMAGE_SCALE', scale });
+    },
+    [dispatch],
+  );
+
+  const setImagePosition = useCallback(
+    (position: { x: number; y: number }) => {
+      dispatch({ type: 'SET_IMAGE_POSITION', position });
+    },
+    [dispatch],
+  );
+
+  // UI: Media Mode
+  const setMediaMode = useCallback(
+    (mode: 'image' | 'video') => {
+      dispatch({ type: 'SET_MEDIA_MODE', mode });
+    },
+    [dispatch],
+  );
+
+  const setVideoDuration = useCallback(
+    (duration: number) => {
+      dispatch({ type: 'SET_VIDEO_DURATION', duration });
+    },
+    [dispatch],
+  );
+
+  // Generation: Edit / Ask AI
+  const setEditPrompt = useCallback(
+    (prompt: string) => {
+      dispatch({ type: 'SET_EDIT_PROMPT', prompt });
+    },
+    [dispatch],
+  );
+
+  const setIsEditing = useCallback(
+    (editing: boolean) => {
+      dispatch({ type: 'SET_IS_EDITING', editing });
+    },
+    [dispatch],
+  );
+
+  const setAskAIQuestion = useCallback(
+    (question: string) => {
+      dispatch({ type: 'SET_ASK_AI_QUESTION', question });
+    },
+    [dispatch],
+  );
+
+  const setAskAIResponse = useCallback(
+    (response: string | null) => {
+      dispatch({ type: 'SET_ASK_AI_RESPONSE', response });
+    },
+    [dispatch],
+  );
+
+  const setIsAskingAI = useCallback(
+    (asking: boolean) => {
+      dispatch({ type: 'SET_IS_ASKING_AI', asking });
+    },
+    [dispatch],
+  );
+
+  // Generation: Copy Extended
+  const setIsGeneratingCopy = useCallback(
+    (generating: boolean) => {
+      dispatch({ type: 'SET_IS_GENERATING_COPY', generating });
+    },
+    [dispatch],
+  );
+
+  const setGeneratedCopyFull = useCallback(
+    (copyResult: CopyResult | null) => {
+      dispatch({ type: 'SET_GENERATED_COPY_FULL', copyResult });
+    },
+    [dispatch],
+  );
+
+  // Generation: Video
+  const setVideoJobId = useCallback(
+    (jobId: string | null) => {
+      dispatch({ type: 'SET_VIDEO_JOB_ID', jobId });
+    },
+    [dispatch],
+  );
+
+  const setGeneratedMediaType = useCallback(
+    (mediaType: 'image' | 'video') => {
+      dispatch({ type: 'SET_GENERATED_MEDIA_TYPE', mediaType });
+    },
+    [dispatch],
+  );
+
+  // Generation: UX Feedback
+  const setJustCopied = useCallback(
+    (copied: boolean) => {
+      dispatch({ type: 'SET_JUST_COPIED', copied });
+    },
+    [dispatch],
+  );
+
+  const setIsDownloading = useCallback(
+    (downloading: boolean) => {
+      dispatch({ type: 'SET_IS_DOWNLOADING', downloading });
+    },
+    [dispatch],
+  );
+
+  // Products: Filtering
+  const setTemplateCategory = useCallback(
+    (category: string) => {
+      dispatch({ type: 'SET_TEMPLATE_CATEGORY', category });
+    },
+    [dispatch],
+  );
+
+  const setSearchQuery = useCallback(
+    (query: string) => {
+      dispatch({ type: 'SET_SEARCH_QUERY', query });
+    },
+    [dispatch],
+  );
+
+  const setCategoryFilter = useCallback(
+    (filter: string) => {
+      dispatch({ type: 'SET_CATEGORY_FILTER', filter });
+    },
+    [dispatch],
+  );
+
+  // Products: Template Inspiration
+  const setShowTemplateInspiration = useCallback(
+    (visible: boolean) => {
+      dispatch({ type: 'SET_SHOW_TEMPLATE_INSPIRATION', visible });
+    },
+    [dispatch],
+  );
+
+  const setSelectedPerformingTemplate = useCallback(
+    (template: PerformingAdTemplate | null) => {
+      dispatch({ type: 'SET_SELECTED_PERFORMING_TEMPLATE', template });
+    },
+    [dispatch],
+  );
+
+  // Deep Link: Plan Context
+  const setPlanContext = useCallback(
+    (context: PlanContext | null) => {
+      dispatch({ type: 'SET_PLAN_CONTEXT', context });
+    },
+    [dispatch],
+  );
+
+  const clearPlanContext = useCallback(() => {
+    dispatch({ type: 'CLEAR_PLAN_CONTEXT' });
+  }, [dispatch]);
+
+  const setCpTemplate = useCallback(
+    (template: ContentTemplate | null) => {
+      dispatch({ type: 'SET_CP_TEMPLATE', template });
+    },
+    [dispatch],
+  );
+
+  // Deep Link: Content Builders
+  const setShowCarouselBuilder = useCallback(
+    (visible: boolean) => {
+      dispatch({ type: 'SET_SHOW_CAROUSEL_BUILDER', visible });
+    },
+    [dispatch],
+  );
+
+  const setCarouselTopic = useCallback(
+    (topic: string) => {
+      dispatch({ type: 'SET_CAROUSEL_TOPIC', topic });
+    },
+    [dispatch],
+  );
+
+  const setShowBeforeAfterBuilder = useCallback(
+    (visible: boolean) => {
+      dispatch({ type: 'SET_SHOW_BEFORE_AFTER_BUILDER', visible });
+    },
+    [dispatch],
+  );
+
+  const setBeforeAfterTopic = useCallback(
+    (topic: string) => {
+      dispatch({ type: 'SET_BEFORE_AFTER_TOPIC', topic });
+    },
+    [dispatch],
+  );
+
+  const setShowTextOnlyMode = useCallback(
+    (visible: boolean) => {
+      dispatch({ type: 'SET_SHOW_TEXT_ONLY_MODE', visible });
+    },
+    [dispatch],
+  );
+
+  const setTextOnlyTopic = useCallback(
+    (topic: string) => {
+      dispatch({ type: 'SET_TEXT_ONLY_TOPIC', topic });
+    },
+    [dispatch],
+  );
+
+  // History
+  const setHistoryPanelOpen = useCallback(
+    (open: boolean) => {
+      dispatch({ type: 'SET_HISTORY_PANEL_OPEN', open });
+    },
+    [dispatch],
+  );
+
   return {
     // State
     state,
@@ -235,6 +554,8 @@ export function useStudioState() {
     isIdle,
     confirmedUploads,
     allImageUrls,
+
+    // ── Original Action Dispatchers ────────────────────────
 
     // Generation Actions
     setGenerating,
@@ -279,5 +600,81 @@ export function useStudioState() {
     // Utility Actions
     reset,
     loadFromHistory,
+
+    // ── New S2-11 Action Dispatchers ───────────────────────
+
+    // UI: Section State
+    setCollapsedSections,
+    toggleSection,
+    setCurrentSection,
+    setShowContextBar,
+    setShowStickyGenerate,
+
+    // UI: Quick Start
+    setQuickStartMode,
+    setQuickStartPrompt,
+
+    // UI: Price Estimate
+    setPriceEstimate,
+
+    // UI: Action Buttons
+    setActiveActionButton,
+
+    // UI: Dialogs
+    setShowSaveToCatalog,
+    setShowCanvasEditor,
+    setShowKeyboardShortcuts,
+
+    // UI: Zoom / Pan
+    setImageScale,
+    setImagePosition,
+
+    // UI: Media Mode
+    setMediaMode,
+    setVideoDuration,
+
+    // Generation: Edit / Ask AI
+    setEditPrompt,
+    setIsEditing,
+    setAskAIQuestion,
+    setAskAIResponse,
+    setIsAskingAI,
+
+    // Generation: Copy Extended
+    setIsGeneratingCopy,
+    setGeneratedCopyFull,
+
+    // Generation: Video
+    setVideoJobId,
+    setGeneratedMediaType,
+
+    // Generation: UX Feedback
+    setJustCopied,
+    setIsDownloading,
+
+    // Products: Filtering
+    setTemplateCategory,
+    setSearchQuery,
+    setCategoryFilter,
+
+    // Products: Template Inspiration
+    setShowTemplateInspiration,
+    setSelectedPerformingTemplate,
+
+    // Deep Link: Plan Context
+    setPlanContext,
+    clearPlanContext,
+    setCpTemplate,
+
+    // Deep Link: Content Builders
+    setShowCarouselBuilder,
+    setCarouselTopic,
+    setShowBeforeAfterBuilder,
+    setBeforeAfterTopic,
+    setShowTextOnlyMode,
+    setTextOnlyTopic,
+
+    // History
+    setHistoryPanelOpen,
   };
 }
