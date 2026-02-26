@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Pre-Generation Quality Gate
  *
@@ -295,7 +294,7 @@ function parseLLMResponse(responseText: string): PreGenGateResult {
   // Handle markdown code blocks
   if (jsonStr.startsWith('```')) {
     const match = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (match) jsonStr = match[1].trim();
+    if (match?.[1]) jsonStr = match[1].trim();
   }
 
   const data = JSON.parse(jsonStr);

@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
-// @ts-nocheck
 /**
  * Agent Orchestrator Service
  *
@@ -45,7 +43,7 @@ const PLATFORM_LIMITS: Record<string, number> = {
 
 export async function generateSuggestions(
   storage: IStorage,
-  userId: string,
+  _userId: string,
   productIds: string[],
   limit: number,
 ): Promise<AgentSuggestion[]> {
@@ -68,7 +66,7 @@ export async function generateSuggestions(
 
   const relSummary =
     relationships.length > 0
-      ? `\nProduct relationships:\n${relationships.map((r) => `  ${r.productIdA} <-> ${r.productIdB} (${r.relationshipType})`).join('\n')}`
+      ? `\nProduct relationships:\n${relationships.map((r) => `  ${r.sourceProductId} <-> ${r.targetProductId} (${r.relationshipType})`).join('\n')}`
       : '';
 
   const prompt = `You are an advertising strategist. Given these products, generate ${limit} content suggestions.
@@ -117,19 +115,19 @@ Return exactly ${limit} items. JSON only, no markdown fences.`;
 
     const productMap = new Map(products.map((p) => [Number(p.id), p]));
 
-    return parsed.slice(0, limit).map((item: any) => ({
+    return parsed.slice(0, limit).map((item: Record<string, unknown>) => ({
       id: randomUUID(),
-      type: item.type || 'single_post',
-      title: String(item.title || 'Untitled'),
-      description: String(item.description || ''),
-      products: (item.productIds || [])
-        .map((pid: number) => productMap.get(pid))
-        .filter(Boolean)
-        .map((p: any) => ({ id: Number(p.id), name: p.name })),
-      platform: String(item.platform || 'instagram'),
-      confidence: Math.max(0, Math.min(100, Number(item.confidence) || 50)),
-      reasoning: String(item.reasoning || ''),
-      tags: Array.isArray(item.tags) ? item.tags.map(String) : [],
+      type: (item['type'] as AgentSuggestion['type']) || 'single_post',
+      title: String(item['title'] || 'Untitled'),
+      description: String(item['description'] || ''),
+      products: (Array.isArray(item['productIds']) ? item['productIds'] : [])
+        .map((pid: unknown) => productMap.get(Number(pid)))
+        .filter((p): p is NonNullable<typeof p> => p != null)
+        .map((p) => ({ id: Number(p.id), name: p.name })),
+      platform: String(item['platform'] || 'instagram'),
+      confidence: Math.max(0, Math.min(100, Number(item['confidence']) || 50)),
+      reasoning: String(item['reasoning'] || ''),
+      tags: Array.isArray(item['tags']) ? (item['tags'] as unknown[]).map(String) : [],
     }));
   } catch (err) {
     logger.error({ module: 'AgentOrchestrator', err }, 'LLM suggestion generation failed, using fallback');
@@ -200,7 +198,6 @@ Limit posts to 12 maximum. JSON only, no markdown fences.`;
       const fallback = buildFallbackPlanData(suggestionId);
       const dbPlan = await storage.createAgentPlan({
         userId,
-        suggestionId,
         ...fallback,
         status: 'draft',
         revisionCount: 0,
@@ -211,18 +208,21 @@ Limit posts to 12 maximum. JSON only, no markdown fences.`;
     // Stage 3 scoring inline
     const score = scorePlan(parsed);
 
-    const contentMix = Array.isArray(parsed.contentMix)
-      ? parsed.contentMix.map((m: any) => ({ type: String(m.type), count: Number(m.count) || 1 }))
+    const contentMix = Array.isArray(parsed['contentMix'])
+      ? (parsed['contentMix'] as Record<string, unknown>[]).map((m) => ({
+          type: String(m['type']),
+          count: Number(m['count']) || 1,
+        }))
       : [{ type: 'image', count: 3 }];
 
-    const posts = Array.isArray(parsed.posts)
-      ? parsed.posts.slice(0, 12).map((p: any, i: number) => ({
+    const posts = Array.isArray(parsed['posts'])
+      ? (parsed['posts'] as Record<string, unknown>[]).slice(0, 12).map((p, i) => ({
           index: i,
-          productIds: Array.isArray(p.productIds) ? p.productIds.map(Number) : [],
-          prompt: String(p.prompt || ''),
-          platform: String(p.platform || parsed.platform || 'instagram'),
-          contentType: p.contentType || 'image',
-          hookAngle: String(p.hookAngle || ''),
+          productIds: Array.isArray(p['productIds']) ? (p['productIds'] as unknown[]).map(Number) : [],
+          prompt: String(p['prompt'] || ''),
+          platform: String(p['platform'] || parsed['platform'] || 'instagram'),
+          contentType: (p['contentType'] as string) || 'image',
+          hookAngle: String(p['hookAngle'] || ''),
         }))
       : [];
 
@@ -230,13 +230,13 @@ Limit posts to 12 maximum. JSON only, no markdown fences.`;
     const dbPlan = await storage.createAgentPlan({
       userId,
       suggestionId,
-      objective: String(parsed.objective || 'Brand awareness'),
-      cadence: String(parsed.cadence || '3 posts/week'),
-      platform: String(parsed.platform || 'instagram'),
+      objective: String(parsed['objective'] || 'Brand awareness'),
+      cadence: String(parsed['cadence'] || '3 posts/week'),
+      platform: String(parsed['platform'] || 'instagram'),
       contentMix,
       approvalScore: score.total,
       scoreBreakdown: score.breakdown,
-      estimatedCost: estimateCost(parsed.posts),
+      estimatedCost: estimateCost(parsed['posts']),
       posts,
       status: 'draft',
       revisionCount: 0,
@@ -244,23 +244,28 @@ Limit posts to 12 maximum. JSON only, no markdown fences.`;
 
     const plan = dbPlanToBrief(dbPlan);
 
-    const questions: ClarifyingQuestion[] | undefined = Array.isArray(parsed.questions)
-      ? parsed.questions.map((q: any) => ({
-          id: q.id || randomUUID(),
-          question: String(q.question),
-          type: q.type || 'text',
-          options: Array.isArray(q.options) ? q.options.map(String) : undefined,
-          required: Boolean(q.required),
-        }))
-      : undefined;
+    let questions: ClarifyingQuestion[] | undefined;
+    if (Array.isArray(parsed['questions'])) {
+      questions = (parsed['questions'] as Record<string, unknown>[]).map((q) => {
+        const cq: ClarifyingQuestion = {
+          id: String(q['id'] || randomUUID()),
+          question: String(q['question']),
+          type: (q['type'] as ClarifyingQuestion['type']) || 'text',
+          required: Boolean(q['required']),
+        };
+        if (Array.isArray(q['options'])) {
+          cq.options = (q['options'] as unknown[]).map(String);
+        }
+        return cq;
+      });
+    }
 
-    return { plan, questions };
+    return questions ? { plan, questions } : { plan };
   } catch (err) {
     logger.error({ module: 'AgentOrchestrator', err }, 'LLM plan preview failed, using fallback');
     const fallback = buildFallbackPlanData(suggestionId);
     const dbPlan = await storage.createAgentPlan({
       userId,
-      suggestionId,
       ...fallback,
       status: 'draft',
       revisionCount: 0,
@@ -398,25 +403,28 @@ Shape:
     const score = scorePlan(parsed);
 
     const updatedPlan = await storage.updateAgentPlan(planId, {
-      objective: String(parsed.objective || existing.objective),
-      cadence: String(parsed.cadence || existing.cadence),
-      platform: String(parsed.platform || existing.platform),
-      contentMix: Array.isArray(parsed.contentMix)
-        ? parsed.contentMix.map((m: any) => ({ type: String(m.type), count: Number(m.count) || 1 }))
-        : existingDb.contentMix,
+      objective: String(parsed['objective'] || existing.objective),
+      cadence: String(parsed['cadence'] || existing.cadence),
+      platform: String(parsed['platform'] || existing.platform),
+      contentMix: (Array.isArray(parsed['contentMix'])
+        ? (parsed['contentMix'] as Record<string, unknown>[]).map((m) => ({
+            type: String(m['type']),
+            count: Number(m['count']) || 1,
+          }))
+        : existingDb.contentMix) as { type: string; count: number }[],
       approvalScore: score.total,
       scoreBreakdown: score.breakdown,
-      estimatedCost: estimateCost(parsed.posts || existing.posts),
-      posts: Array.isArray(parsed.posts)
-        ? parsed.posts.slice(0, 12).map((p: any, i: number) => ({
+      estimatedCost: estimateCost(parsed['posts'] || existing.posts),
+      posts: Array.isArray(parsed['posts'])
+        ? (parsed['posts'] as Record<string, unknown>[]).slice(0, 12).map((p, i) => ({
             index: i,
-            productIds: Array.isArray(p.productIds) ? p.productIds.map(Number) : [],
-            prompt: String(p.prompt || ''),
-            platform: String(p.platform || parsed.platform || existing.platform),
-            contentType: p.contentType || 'image',
-            hookAngle: String(p.hookAngle || ''),
+            productIds: Array.isArray(p['productIds']) ? (p['productIds'] as unknown[]).map(Number) : [],
+            prompt: String(p['prompt'] || ''),
+            platform: String(p['platform'] || parsed['platform'] || existing.platform),
+            contentType: (p['contentType'] as string) || 'image',
+            hookAngle: String(p['hookAngle'] || ''),
           }))
-        : existingDb.posts,
+        : (existingDb.posts as Record<string, unknown>[]),
       revisionCount: (existingDb.revisionCount ?? 0) + 1,
     });
 
@@ -468,26 +476,31 @@ export async function getExecution(
 // Stage 3 — Approval Optimizer (scoring)
 // ---------------------------------------------------------------------------
 
-function scorePlan(parsed: any): { total: number; breakdown: { criterion: string; score: number; max: number }[] } {
+function scorePlan(parsed: Record<string, unknown>): {
+  total: number;
+  breakdown: { criterion: string; score: number; max: number }[];
+} {
   const breakdown: { criterion: string; score: number; max: number }[] = [];
 
   // Brand alignment: check if objective and hooks are present
-  const objectiveScore = parsed.objective && parsed.objective.length > 10 ? 25 : 10;
+  const objective = parsed['objective'] as string | undefined;
+  const objectiveScore = objective && objective.length > 10 ? 25 : 10;
   breakdown.push({ criterion: 'Brand Alignment', score: objectiveScore, max: 25 });
 
   // Platform fit: check if platform is valid and posts use correct platform
-  const posts = Array.isArray(parsed.posts) ? parsed.posts : [];
+  const posts = Array.isArray(parsed['posts']) ? (parsed['posts'] as Record<string, unknown>[]) : [];
   const validPlatforms = new Set(['instagram', 'linkedin', 'twitter', 'facebook', 'tiktok']);
-  const platformFitScore = validPlatforms.has(parsed.platform) ? 25 : 10;
+  const platformFitScore = validPlatforms.has(parsed['platform'] as string) ? 25 : 10;
   breakdown.push({ criterion: 'Platform Fit', score: platformFitScore, max: 25 });
 
   // Content diversity: multiple content types?
-  const types = new Set(posts.map((p: any) => p.contentType));
+  const types = new Set(posts.map((p) => p['contentType']));
   const diversityScore = Math.min(25, types.size * 10);
   breakdown.push({ criterion: 'Content Diversity', score: diversityScore, max: 25 });
 
   // Timing/cadence: check if cadence is specified
-  const cadenceScore = parsed.cadence && parsed.cadence.length > 5 ? 25 : 10;
+  const cadence = parsed['cadence'] as string | undefined;
+  const cadenceScore = cadence && cadence.length > 5 ? 25 : 10;
   breakdown.push({ criterion: 'Timing & Cadence', score: cadenceScore, max: 25 });
 
   const total = breakdown.reduce((sum, b) => sum + b.score, 0);
@@ -501,30 +514,32 @@ function scorePlan(parsed: any): { total: number; breakdown: { criterion: string
 /**
  * Map a DB AgentPlan record to the PlanBrief API shape.
  */
-function dbPlanToBrief(dbPlan: any): PlanBrief {
+function dbPlanToBrief(dbPlan: Record<string, unknown>): PlanBrief {
+  const createdAt = dbPlan['createdAt'];
   return {
-    id: dbPlan.id,
-    userId: dbPlan.userId,
-    status: dbPlan.status,
-    objective: dbPlan.objective,
-    cadence: dbPlan.cadence,
-    platform: dbPlan.platform,
-    contentMix: dbPlan.contentMix as { type: string; count: number }[],
-    approvalScore: dbPlan.approvalScore,
-    scoreBreakdown: dbPlan.scoreBreakdown as { criterion: string; score: number; max: number }[],
-    estimatedCost: dbPlan.estimatedCost as { credits: number; currency: string },
-    posts: dbPlan.posts as PlanPost[],
-    createdAt: dbPlan.createdAt instanceof Date ? dbPlan.createdAt.toISOString() : String(dbPlan.createdAt),
+    id: String(dbPlan['id']),
+    userId: String(dbPlan['userId']),
+    status: String(dbPlan['status']),
+    objective: String(dbPlan['objective']),
+    cadence: String(dbPlan['cadence']),
+    platform: String(dbPlan['platform']),
+    contentMix: dbPlan['contentMix'] as { type: string; count: number }[],
+    approvalScore: Number(dbPlan['approvalScore']),
+    scoreBreakdown: dbPlan['scoreBreakdown'] as { criterion: string; score: number; max: number }[],
+    estimatedCost: dbPlan['estimatedCost'] as { credits: number; currency: string },
+    posts: dbPlan['posts'] as PlanPost[],
+    createdAt: createdAt instanceof Date ? createdAt.toISOString() : String(createdAt),
   };
 }
 
-function estimateCost(posts: any): { credits: number; currency: string } {
-  const postCount = Array.isArray(posts) ? posts.length : 0;
+function estimateCost(posts: unknown): { credits: number; currency: string } {
+  const postArray = Array.isArray(posts) ? (posts as Record<string, unknown>[]) : [];
+  const postCount = postArray.length;
   // Rough estimate: 1 credit per image, 3 per carousel, 5 per video
   let credits = 0;
-  if (Array.isArray(posts)) {
-    for (const post of posts) {
-      switch (post.contentType) {
+  if (postArray.length > 0) {
+    for (const post of postArray) {
+      switch (post['contentType']) {
         case 'carousel':
           credits += 3;
           break;
@@ -586,7 +601,10 @@ function buildFallbackPlanData(suggestionId: string) {
   };
 }
 
-function buildFallbackSuggestions(products: any[], limit: number): AgentSuggestion[] {
+function buildFallbackSuggestions(
+  products: Array<{ id: string | number; name: string }>,
+  limit: number,
+): AgentSuggestion[] {
   const templates = [
     {
       type: 'single_post' as const,
@@ -626,7 +644,7 @@ function buildFallbackSuggestions(products: any[], limit: number): AgentSuggesti
     },
   ];
 
-  return templates.slice(0, limit).map((t, i) => ({
+  return templates.slice(0, limit).map((t) => ({
     id: randomUUID(),
     type: t.type,
     title: t.title,
@@ -643,7 +661,7 @@ async function runExecutionSteps(
   storage: IStorage,
   executionId: string,
   planId: string,
-  userId: string,
+  _userId: string,
 ): Promise<void> {
   const execution = await storage.getAgentExecutionById(executionId);
   if (!execution) return;
@@ -677,7 +695,7 @@ async function runExecutionSteps(
   }
 }
 
-function parseJsonArray(text: string): any[] | null {
+function parseJsonArray(text: string): Record<string, unknown>[] | null {
   try {
     // Strip markdown fences if present
     const cleaned = text
@@ -701,7 +719,7 @@ function parseJsonArray(text: string): any[] | null {
   }
 }
 
-function parseJsonObject(text: string): any | null {
+function parseJsonObject(text: string): Record<string, unknown> | null {
   try {
     const cleaned = text
       .replace(/^```(?:json)?\s*\n?/i, '')

@@ -1,5 +1,3 @@
-// @ts-nocheck
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 /**
  * Weekly Planner Router — WS-C1
  *
@@ -13,12 +11,13 @@
 import type { Router, Request, Response } from 'express';
 import type { RouterContext, RouterFactory, RouterModule } from '../types/router';
 import { createRouter, asyncHandler, handleRouteError } from './utils/createRouter';
-import {
-  generateWeeklyPlan,
-  getWeeklyPlan,
-  updatePlanPostStatus,
-  regeneratePlan,
-} from '../services/weeklyPlannerService';
+import { generateWeeklyPlan, updatePlanPostStatus, regeneratePlan } from '../services/weeklyPlannerService';
+
+/** Safely extract a route param as string */
+function param(req: Request, key: string): string {
+  const val = req.params[key];
+  return Array.isArray(val) ? (val[0] ?? '') : (val ?? '');
+}
 
 export const weeklyPlannerRouter: RouterFactory = (ctx: RouterContext): Router => {
   const router = createRouter();
@@ -36,7 +35,7 @@ export const weeklyPlannerRouter: RouterFactory = (ctx: RouterContext): Router =
     '/weekly/current',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req as any).user?.id;
+        const userId = req.user?.id;
         if (!userId) {
           return res.status(401).json({ error: 'Unauthorized' });
         }
@@ -58,7 +57,7 @@ export const weeklyPlannerRouter: RouterFactory = (ctx: RouterContext): Router =
     '/weekly',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req as any).user?.id;
+        const userId = req.user?.id;
         if (!userId) {
           return res.status(401).json({ error: 'Unauthorized' });
         }
@@ -91,13 +90,13 @@ export const weeklyPlannerRouter: RouterFactory = (ctx: RouterContext): Router =
     '/weekly/:planId/posts/:index',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req as any).user?.id;
+        const userId = req.user?.id;
         if (!userId) {
           return res.status(401).json({ error: 'Unauthorized' });
         }
 
-        const { planId, index } = req.params;
-        const postIndex = parseInt(index, 10);
+        const planId = param(req, 'planId');
+        const postIndex = parseInt(param(req, 'index'), 10);
 
         if (isNaN(postIndex) || postIndex < 0) {
           return res.status(400).json({ error: 'Invalid post index' });
@@ -112,10 +111,11 @@ export const weeklyPlannerRouter: RouterFactory = (ctx: RouterContext): Router =
           });
         }
 
-        await updatePlanPostStatus(planId, postIndex, status, {
-          generationId,
-          scheduledPostId,
-        });
+        const linkIds: { generationId?: string; scheduledPostId?: string } = {};
+        if (generationId) linkIds.generationId = generationId;
+        if (scheduledPostId) linkIds.scheduledPostId = scheduledPostId;
+
+        await updatePlanPostStatus(planId, postIndex, status, linkIds);
 
         logger.info({ planId, postIndex, status }, 'Weekly plan post status updated');
         res.json({ message: 'Post status updated', planId, postIndex, status });
@@ -132,12 +132,12 @@ export const weeklyPlannerRouter: RouterFactory = (ctx: RouterContext): Router =
     '/weekly/:planId/regenerate',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req as any).user?.id;
+        const userId = req.user?.id;
         if (!userId) {
           return res.status(401).json({ error: 'Unauthorized' });
         }
 
-        const { planId } = req.params;
+        const planId = param(req, 'planId');
 
         const plan = await regeneratePlan(planId);
 

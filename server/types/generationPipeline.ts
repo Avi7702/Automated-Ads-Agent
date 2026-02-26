@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Generation Pipeline Types
  *
@@ -7,8 +6,6 @@
  */
 
 import type { GenerationRecipe } from '@shared/types/ideaBank';
-import type { StyleAnalysisResult, StyleElements } from '../services/styleAnalysisService';
-import type { VisionAnalysisResult } from '../services/visionAnalysisService';
 
 // ============================================
 // INPUT TYPES
@@ -134,9 +131,9 @@ export interface GenerationContext {
   result?: {
     imageBase64: string;
     mimeType: string;
-    conversationHistory: any[];
+    conversationHistory: unknown[];
     usageMetadata?: Record<string, unknown>;
-    modelResponse?: any;
+    modelResponse?: unknown;
   };
 }
 

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Gemini Video Generation Service
  *
@@ -16,7 +15,7 @@ import { getGlobalGeminiClient } from '../lib/geminiClient';
 import { logger } from '../lib/logger';
 import { telemetry } from '../instrumentation';
 
-const VIDEO_MODEL = process.env.VEO_MODEL || 'veo-2.0-generate-001';
+const VIDEO_MODEL = process.env['VEO_MODEL'] || 'veo-2.0-generate-001';
 
 const POLL_INTERVAL_MS = 10_000; // 10 seconds between polls
 const MAX_POLL_ATTEMPTS = 60; // 10 minutes max (60 * 10s)
@@ -74,7 +73,7 @@ export async function generateVideo(
 
     // Image-to-video: attach source image
     if (options.sourceImageBase64) {
-      generateParams.image = {
+      generateParams['image'] = {
         imageBytes: options.sourceImageBase64,
         mimeType: options.sourceImageMimeType || 'image/png',
       };
@@ -84,7 +83,9 @@ export async function generateVideo(
     logger.info({ model: VIDEO_MODEL, prompt: prompt.substring(0, 100) }, 'Starting Veo video generation');
 
     // Start generation — returns a long-running operation
-    let operation = await client.models.generateVideos(generateParams);
+    let operation = await client.models.generateVideos(
+      generateParams as unknown as Parameters<typeof client.models.generateVideos>[0],
+    );
 
     onProgress?.(10, 'Video generation queued, waiting for processing...');
 
@@ -109,7 +110,8 @@ export async function generateVideo(
 
     // Extract video from the result
     if (operation.error) {
-      throw new Error(`Video generation failed: ${operation.error.message || JSON.stringify(operation.error)}`);
+      const errObj = operation.error as Record<string, unknown>;
+      throw new Error(`Video generation failed: ${errObj['message'] ?? JSON.stringify(operation.error)}`);
     }
 
     const generatedVideos = operation.response?.generatedVideos;
@@ -118,6 +120,9 @@ export async function generateVideo(
     }
 
     const videoResult = generatedVideos[0];
+    if (!videoResult) {
+      throw new Error('No video result returned');
+    }
     const video = videoResult.video;
 
     if (!video) {
@@ -164,13 +169,13 @@ export async function generateVideo(
     const durationMs = Date.now() - startTime;
     telemetry.trackGeminiUsage({
       model: VIDEO_MODEL,
-      operation: 'video_generate',
+      operation: 'generate',
       inputTokens: prompt.length * 0.25,
       outputTokens: 0,
       durationMs,
-      userId,
       success,
-      errorType,
+      ...(userId ? { userId } : {}),
+      ...(errorType ? { errorType } : {}),
     });
   }
 }

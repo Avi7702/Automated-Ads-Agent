@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Custom Model Training Service
  *
@@ -79,8 +78,16 @@ export async function createTuningJob(
     output: ex.output,
   }));
 
-  // Create the tuning job
-  const result = await client.tunedModels.create({
+  // Create the tuning job — use type assertion since the tunedModels
+  // API parameters may not be fully typed in the @google/genai SDK
+  const tunedModelsApi = (
+    client as unknown as {
+      tunedModels: {
+        create(params: Record<string, unknown>): Promise<Record<string, unknown>>;
+      };
+    }
+  ).tunedModels;
+  const result = await tunedModelsApi.create({
     displayName,
     baseModel: DEFAULT_BASE_MODEL,
     trainingData: {
@@ -95,8 +102,9 @@ export async function createTuningJob(
     },
   });
 
-  const jobName = result.name || '';
-  const tunedModelName = result.metadata?.tunedModel || '';
+  const jobName = String(result['name'] ?? '');
+  const metadata = result['metadata'] as Record<string, unknown> | undefined;
+  const tunedModelName = String(metadata?.['tunedModel'] ?? '');
 
   logger.info({ jobName, tunedModelName, displayName }, 'Tuning job created successfully');
 
@@ -109,28 +117,42 @@ export async function createTuningJob(
 export async function getTuningJobStatus(jobName: string): Promise<TuningJobStatus> {
   const client = getGlobalGeminiClient();
 
-  const operation = await client.operations.get({ name: jobName });
+  // The operations API parameter structure varies across SDK versions
+  const operationsApi = (
+    client as unknown as {
+      operations: {
+        get(params: Record<string, unknown>): Promise<Record<string, unknown>>;
+      };
+    }
+  ).operations;
+  const operation = await operationsApi.get({ name: jobName });
 
-  const metadata = operation.metadata;
-  const snapshots = metadata?.snapshots || [];
+  const metadata = operation['metadata'] as Record<string, unknown> | undefined;
+  const snapshots = (metadata?.['snapshots'] as Array<Record<string, unknown>> | undefined) ?? [];
+  const error = operation['error'] as Record<string, unknown> | undefined;
+
+  const tunedModelVal = metadata?.['tunedModel'];
+  const errorMsg = error?.['message'];
+  const createTimeVal = metadata?.['createTime'];
+  const updateTimeVal = metadata?.['updateTime'];
 
   return {
     name: jobName,
-    state: operation.done ? 'ACTIVE' : 'CREATING',
-    tunedModel: metadata?.tunedModel,
+    state: operation['done'] ? 'ACTIVE' : 'CREATING',
+    ...(typeof tunedModelVal === 'string' ? { tunedModel: tunedModelVal } : {}),
     metadata: {
-      totalSteps: metadata?.totalSteps,
-      completedSteps: metadata?.completedSteps,
-      completedPercent: metadata?.completedPercent,
+      ...(typeof metadata?.['totalSteps'] === 'number' ? { totalSteps: metadata['totalSteps'] } : {}),
+      ...(typeof metadata?.['completedSteps'] === 'number' ? { completedSteps: metadata['completedSteps'] } : {}),
+      ...(typeof metadata?.['completedPercent'] === 'number' ? { completedPercent: metadata['completedPercent'] } : {}),
       snapshots: snapshots.map((s) => ({
-        step: s.step,
-        meanLoss: s.meanLoss,
-        computeTime: s.computeTime,
+        step: s['step'] as number,
+        meanLoss: s['meanLoss'] as number,
+        computeTime: s['computeTime'] as string,
       })),
     },
-    error: operation.error?.message,
-    createTime: metadata?.createTime,
-    updateTime: metadata?.updateTime,
+    ...(typeof errorMsg === 'string' ? { error: errorMsg } : {}),
+    ...(typeof createTimeVal === 'string' ? { createTime: createTimeVal } : {}),
+    ...(typeof updateTimeVal === 'string' ? { updateTime: updateTimeVal } : {}),
   };
 }
 
@@ -148,7 +170,20 @@ export async function listTunedModels(): Promise<
 > {
   const client = getGlobalGeminiClient();
 
-  const result = await client.tunedModels.list();
+  const tunedModelsApi = (
+    client as unknown as {
+      tunedModels: {
+        list(): AsyncIterable<{
+          name?: string;
+          displayName?: string;
+          state?: string;
+          baseModel?: string;
+          createTime?: string;
+        }>;
+      };
+    }
+  ).tunedModels;
+  const result = await tunedModelsApi.list();
   const models = [];
 
   for await (const model of result) {
@@ -169,7 +204,14 @@ export async function listTunedModels(): Promise<
  */
 export async function deleteTunedModel(modelName: string): Promise<void> {
   const client = getGlobalGeminiClient();
-  await client.tunedModels.delete({ name: modelName });
+  const tunedModelsApi = (
+    client as unknown as {
+      tunedModels: {
+        delete(params: { name: string }): Promise<void>;
+      };
+    }
+  ).tunedModels;
+  await tunedModelsApi.delete({ name: modelName });
   logger.info({ modelName }, 'Tuned model deleted');
 }
 
