@@ -98,7 +98,7 @@ function createMockResponse(framework: string = 'AIDA', variationNum: number = 1
                 headline: `Test Headline V${variationNum}`,
                 hook: `Test Hook for Your Product V${variationNum}`,
                 bodyText: `This is test body text that describes the product benefits. Variation ${variationNum}.`,
-                primaryText: `Primary text for TikTok V${variationNum}`,
+                // LLM produces bodyText (not primaryText) — platform limits enforced via getResponseSchema
                 cta: 'Shop Now',
                 caption: `Check out our amazing product! V${variationNum} #test #product`,
                 hashtags: ['#test', '#product', '#quality', '#deal'],
@@ -249,7 +249,7 @@ describe('Copywriting Service', () => {
       };
       const variations = await copywritingService.generateCopy(request);
       expect(variations[0].headline.length).toBeLessThanOrEqual(40);
-      expect(variations[0].primaryText.length).toBeLessThanOrEqual(150);
+      expect(variations[0].bodyText.length).toBeLessThanOrEqual(150);
     });
   });
 

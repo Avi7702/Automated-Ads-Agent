@@ -30,7 +30,6 @@ export const generatedCopySchema = z.object({
   headline: z.string().default(''),
   hook: z.string().default(''),
   bodyText: z.string().default(''),
-  primaryText: z.string().default(''),
   caption: z.string().default(''),
   cta: z.string().optional(),
   hashtags: z.array(z.string()).optional(),
