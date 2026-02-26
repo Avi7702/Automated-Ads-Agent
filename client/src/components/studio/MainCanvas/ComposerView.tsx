@@ -23,8 +23,9 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Sparkles, ChevronDown, ChevronUp, Check, X, Search, Package, Mic, MicOff, Bot, Loader2 } from 'lucide-react';
 import { useRipple } from '@/hooks/useRipple';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
-import type { StudioOrchestrator } from '@/hooks/useStudioOrchestrator';
+import { useStudioState } from '@/hooks/useStudioState';
 import type { IdeaBankContextSnapshot } from '@/components/ideabank/types';
+import type { Product } from '@shared/schema';
 
 function Section({
   id,
@@ -71,43 +72,78 @@ function Section({
 }
 
 interface ComposerViewProps {
-  orch: StudioOrchestrator;
   ideaBankContext?: IdeaBankContextSnapshot | null;
   ideaBankBridgeState?: 'idle' | 'waiting' | 'ready' | 'error' | 'sent';
   onIdeaBankContextChange?: (context: IdeaBankContextSnapshot) => void;
   onSendIdeasToAgent?: () => void;
+  handlePromptChange: (value: string) => void;
+  handleSelectSuggestion: (prompt: string, id: string, reasoning?: string) => void;
+  handleGenerate: () => void;
+  toggleProductSelection: (product: Product) => void;
+  filteredProducts: Product[];
+  categories: string[];
+  generateButtonRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export const ComposerView = memo(function ComposerView({
-  orch,
   ideaBankContext = null,
   ideaBankBridgeState = 'idle',
   onIdeaBankContextChange,
   onSendIdeasToAgent,
+  handlePromptChange,
+  handleSelectSuggestion,
+  handleGenerate,
+  toggleProductSelection,
+  filteredProducts,
+  categories,
+  generateButtonRef,
 }: ComposerViewProps) {
+  const {
+    state,
+    setIdeaBankMode,
+    setTemplateForMode,
+    setPrompt,
+    clearPlanContext,
+    toggleSection,
+    setProducts,
+    setSearchQuery,
+    setCategoryFilter,
+    setSuggestion,
+    setCarouselTopic,
+    setShowCarouselBuilder,
+    setBeforeAfterTopic,
+    setShowBeforeAfterBuilder,
+    setTextOnlyTopic,
+    setShowTextOnlyMode,
+    setPlatform,
+    setAspectRatio,
+    setResolution,
+    setRecipe,
+    canGenerate,
+  } = useStudioState();
   const { createRipple } = useRipple();
 
   useEffect(() => {
-    if (orch.ideaBankMode !== 'freestyle') {
-      orch.setIdeaBankMode('freestyle');
+    if (state.ideaBankMode !== 'freestyle') {
+      setIdeaBankMode('freestyle');
     }
 
-    if (orch.selectedTemplateForMode) {
-      orch.setSelectedTemplateForMode(null);
+    if (state.selectedTemplateForMode) {
+      setTemplateForMode(null);
     }
-  }, [orch.ideaBankMode, orch.selectedTemplateForMode, orch.setIdeaBankMode, orch.setSelectedTemplateForMode]);
+  }, [state.ideaBankMode, state.selectedTemplateForMode, setIdeaBankMode, setTemplateForMode]);
 
   const mainPromptVoice = useVoiceInput({
     onTranscript: (text, isFinal) => {
       if (isFinal) {
-        orch.handlePromptChange(orch.prompt ? orch.prompt + ' ' + text : text);
+        handlePromptChange(state.prompt ? state.prompt + ' ' + text : text);
       }
     },
   });
 
   return (
     <div className="space-y-6">
-      {orch.planContext && (
+      {state.planContext && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -116,11 +152,11 @@ export const ComposerView = memo(function ComposerView({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                Creating from Weekly Plan - {orch.planContext.dayOfWeek} {orch.planContext.category.replace(/_/g, ' ')}
+                Creating from Weekly Plan - {state.planContext.dayOfWeek} {state.planContext.category.replace(/_/g, ' ')}
               </p>
-              <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 line-clamp-2">{orch.planContext.briefing}</p>
+              <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 line-clamp-2">{state.planContext.briefing}</p>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => orch.clearPlanContext()}>
+            <Button variant="ghost" size="sm" onClick={() => clearPlanContext()}>
               <X className="w-4 h-4" />
             </Button>
           </div>
@@ -131,21 +167,21 @@ export const ComposerView = memo(function ComposerView({
         id="products"
         title="Your Products"
         icon={Package}
-        isOpen={!orch.collapsedSections.products}
-        onToggle={() => orch.toggleSection('products')}
-        badge={orch.selectedProducts.length > 0 ? `${orch.selectedProducts.length} selected` : undefined}
+        isOpen={!state.collapsedSections.products}
+        onToggle={() => toggleSection('products')}
+        badge={state.selectedProducts.length > 0 ? `${state.selectedProducts.length} selected` : undefined}
       >
         <div className="space-y-4">
-          {orch.selectedProducts.length > 0 && (
+          {state.selectedProducts.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {orch.selectedProducts.map((p) => (
+              {state.selectedProducts.map((p) => (
                 <div
                   key={p.id}
                   className="w-16 h-16 relative group rounded-lg overflow-hidden border border-primary/30"
                 >
                   <img src={getProductImageUrl(p.cloudinaryUrl)} alt={p.name} className="w-full h-full object-cover" />
                   <button
-                    onClick={() => orch.toggleProductSelection(p)}
+                    onClick={() => toggleProductSelection(p)}
                     className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
                   >
                     <X className="w-4 h-4 text-white" />
@@ -153,7 +189,7 @@ export const ComposerView = memo(function ComposerView({
                 </div>
               ))}
               <button
-                onClick={() => orch.setSelectedProducts([])}
+                onClick={() => setProducts([])}
                 className="text-xs text-muted-foreground hover:text-foreground px-2"
               >
                 Clear all
@@ -166,17 +202,17 @@ export const ComposerView = memo(function ComposerView({
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder="Search products..."
-                value={orch.searchQuery}
-                onChange={(e) => orch.setSearchQuery(e.target.value)}
+                value={state.searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
               />
             </div>
-            <Select value={orch.categoryFilter} onValueChange={orch.setCategoryFilter}>
+            <Select value={state.categoryFilter} onValueChange={setCategoryFilter}>
               <SelectTrigger className="w-40">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {orch.categories.map((cat) => (
+                {categories.map((cat) => (
                   <SelectItem key={cat} value={cat}>
                     {cat === 'all' ? 'All Categories' : cat}
                   </SelectItem>
@@ -187,15 +223,15 @@ export const ComposerView = memo(function ComposerView({
 
           <div className="max-h-[300px] overflow-y-auto">
             <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-              {orch.filteredProducts.map((product) => {
-                const isSelected = orch.selectedProducts.some((p) => p.id === product.id);
+              {filteredProducts.map((product) => {
+                const isSelected = state.selectedProducts.some((p) => p.id === product.id);
 
                 return (
                   <button
                     key={product.id}
                     onClick={(e) => {
                       createRipple(e);
-                      orch.toggleProductSelection(product);
+                      toggleProductSelection(product);
                     }}
                     className={cn(
                       'relative rounded-xl overflow-hidden border-2 aspect-square transition-all',
@@ -238,7 +274,7 @@ export const ComposerView = memo(function ComposerView({
         </h2>
 
         <AnimatePresence>
-          {orch.selectedSuggestion && (
+          {state.selectedSuggestion && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -252,60 +288,60 @@ export const ComposerView = memo(function ComposerView({
                 </div>
                 <button
                   onClick={() => {
-                    orch.setSelectedSuggestion(null);
-                    orch.setPrompt('');
+                    setSuggestion(null);
+                    setPrompt('');
                   }}
                   className="text-muted-foreground hover:text-foreground"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
-              {orch.selectedSuggestion.reasoning && (
-                <p className="text-xs text-muted-foreground mt-2">{orch.selectedSuggestion.reasoning}</p>
+              {state.selectedSuggestion.reasoning && (
+                <p className="text-xs text-muted-foreground mt-2">{state.selectedSuggestion.reasoning}</p>
               )}
             </motion.div>
           )}
         </AnimatePresence>
 
-        {orch.cpTemplate && !orch.showCarouselBuilder && !orch.showBeforeAfterBuilder && !orch.showTextOnlyMode && (
+        {state.cpTemplate && !state.showCarouselBuilder && !state.showBeforeAfterBuilder && !state.showTextOnlyMode && (
           <ContentPlannerGuidance
-            template={orch.cpTemplate}
+            template={state.cpTemplate}
             onStartCarousel={(topic) => {
-              orch.setCarouselTopic(topic);
-              orch.setShowCarouselBuilder(true);
+              setCarouselTopic(topic);
+              setShowCarouselBuilder(true);
             }}
             onStartBeforeAfter={(topic) => {
-              orch.setBeforeAfterTopic(topic);
-              orch.setShowBeforeAfterBuilder(true);
+              setBeforeAfterTopic(topic);
+              setShowBeforeAfterBuilder(true);
             }}
             onStartTextOnly={(topic) => {
-              orch.setTextOnlyTopic(topic);
-              orch.setShowTextOnlyMode(true);
+              setTextOnlyTopic(topic);
+              setShowTextOnlyMode(true);
             }}
           />
         )}
 
-        {orch.showCarouselBuilder && orch.cpTemplate && (
+        {state.showCarouselBuilder && state.cpTemplate && (
           <CarouselBuilder
-            topic={orch.carouselTopic}
-            template={orch.cpTemplate}
-            onClose={() => orch.setShowCarouselBuilder(false)}
+            topic={state.carouselTopic}
+            template={state.cpTemplate}
+            onClose={() => setShowCarouselBuilder(false)}
           />
         )}
 
-        {orch.showBeforeAfterBuilder && orch.cpTemplate && (
+        {state.showBeforeAfterBuilder && state.cpTemplate && (
           <BeforeAfterBuilder
-            topic={orch.beforeAfterTopic}
-            template={orch.cpTemplate}
-            onClose={() => orch.setShowBeforeAfterBuilder(false)}
+            topic={state.beforeAfterTopic}
+            template={state.cpTemplate}
+            onClose={() => setShowBeforeAfterBuilder(false)}
           />
         )}
 
-        {orch.showTextOnlyMode && orch.cpTemplate && (
+        {state.showTextOnlyMode && state.cpTemplate && (
           <TextOnlyMode
-            topic={orch.textOnlyTopic}
-            template={orch.cpTemplate}
-            onClose={() => orch.setShowTextOnlyMode(false)}
+            topic={state.textOnlyTopic}
+            template={state.cpTemplate}
+            onClose={() => setShowTextOnlyMode(false)}
           />
         )}
 
@@ -313,13 +349,13 @@ export const ComposerView = memo(function ComposerView({
           <div className="relative">
             <Textarea
               id="prompt-textarea"
-              value={orch.prompt}
-              onChange={(e) => orch.handlePromptChange(e.target.value)}
+              value={state.prompt}
+              onChange={(e) => handlePromptChange(e.target.value)}
               placeholder="Describe your ideal ad creative... What mood? What style? What should the image convey?"
               rows={5}
               className={cn(
                 'resize-none text-base pr-12',
-                orch.selectedSuggestion && 'border-primary/50 ring-2 ring-primary/20',
+                state.selectedSuggestion && 'border-primary/50 ring-2 ring-primary/20',
                 mainPromptVoice.isListening && 'border-red-500/50 ring-2 ring-red-500/20',
               )}
             />
@@ -342,8 +378,8 @@ export const ComposerView = memo(function ComposerView({
             {mainPromptVoice.isListening && (
               <span className="text-xs text-red-500 animate-pulse">Listening... speak your prompt</span>
             )}
-            {orch.prompt && !mainPromptVoice.isListening && (
-              <span className="text-xs text-muted-foreground">{orch.prompt.length} characters</span>
+            {state.prompt && !mainPromptVoice.isListening && (
+              <span className="text-xs text-muted-foreground">{state.prompt.length} characters</span>
             )}
             <span />
           </div>
@@ -351,19 +387,19 @@ export const ComposerView = memo(function ComposerView({
 
         <ErrorBoundary>
           <IdeaBankPanel
-            selectedProducts={orch.selectedProducts}
-            tempUploads={orch.tempUploads}
-            onSelectPrompt={orch.handleSelectSuggestion}
+            selectedProducts={state.selectedProducts}
+            tempUploads={state.tempUploads}
+            onSelectPrompt={handleSelectSuggestion}
             onContextChange={onIdeaBankContextChange}
-            onRecipeAvailable={(recipe) => orch.setGenerationRecipe(recipe)}
-            onSetPlatform={orch.setPlatform}
-            onSetAspectRatio={orch.setAspectRatio}
+            onRecipeAvailable={(recipe) => setRecipe(recipe)}
+            onSetPlatform={setPlatform}
+            onSetAspectRatio={setAspectRatio}
             onQuickGenerate={(promptText) => {
-              orch.setPrompt(promptText);
-              setTimeout(orch.handleGenerate, 100);
+              setPrompt(promptText);
+              setTimeout(handleGenerate, 100);
             }}
-            selectedPromptId={orch.selectedSuggestion?.id}
-            isGenerating={orch.state === 'generating'}
+            selectedPromptId={state.selectedSuggestion?.id}
+            isGenerating={state.generationState === 'generating'}
             mode="freestyle"
           />
         </ErrorBoundary>
@@ -420,7 +456,7 @@ export const ComposerView = memo(function ComposerView({
         <div className="flex flex-col sm:flex-row flex-wrap gap-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Platform:</span>
-            <Select value={orch.platform} onValueChange={orch.setPlatform}>
+            <Select value={state.platform} onValueChange={setPlatform}>
               <SelectTrigger className="w-36">
                 <SelectValue />
               </SelectTrigger>
@@ -435,7 +471,7 @@ export const ComposerView = memo(function ComposerView({
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Size:</span>
-            <Select value={orch.aspectRatio} onValueChange={orch.setAspectRatio}>
+            <Select value={state.aspectRatio} onValueChange={setAspectRatio}>
               <SelectTrigger className="w-36">
                 <SelectValue />
               </SelectTrigger>
@@ -450,7 +486,7 @@ export const ComposerView = memo(function ComposerView({
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Quality:</span>
-            <Select value={orch.resolution} onValueChange={orch.setResolution}>
+            <Select value={state.resolution} onValueChange={setResolution}>
               <SelectTrigger className="w-24">
                 <SelectValue />
               </SelectTrigger>
@@ -466,7 +502,7 @@ export const ComposerView = memo(function ComposerView({
         </div>
       </motion.section>
 
-      {orch.priceEstimate && (
+      {state.priceEstimate && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -478,28 +514,28 @@ export const ComposerView = memo(function ComposerView({
               <p className="text-sm font-medium">
                 Estimated cost:{' '}
                 <span className="text-green-600 dark:text-green-400">
-                  ${orch.priceEstimate.estimatedCost.toFixed(3)}
+                  ${state.priceEstimate.estimatedCost.toFixed(3)}
                 </span>
               </p>
               <p className="text-xs text-muted-foreground">
-                {orch.priceEstimate.usedFallback
+                {state.priceEstimate.usedFallback
                   ? 'Based on default rates'
-                  : `Based on ${orch.priceEstimate.sampleCount} similar generations`}
+                  : `Based on ${state.priceEstimate.sampleCount} similar generations`}
               </p>
             </div>
           </div>
         </motion.div>
       )}
 
-      <motion.div ref={orch.generateButtonRef} id="generate" className="py-4">
-        <Button size="lg" onClick={orch.handleGenerate} disabled={!orch.canGenerate} className="w-full h-16 text-lg">
+      <motion.div ref={generateButtonRef} id="generate" className="py-4">
+        <Button size="lg" onClick={handleGenerate} disabled={!canGenerate} className="w-full h-16 text-lg">
           <Sparkles className="w-5 h-5 mr-2" />
           Generate Image
         </Button>
         <p className="text-center text-sm text-muted-foreground mt-3">
-          {orch.selectedProducts.length + orch.tempUploads.length} image
-          {orch.selectedProducts.length + orch.tempUploads.length !== 1 ? 's' : ''} - {orch.platform} -{' '}
-          {orch.resolution}
+          {state.selectedProducts.length + state.tempUploads.length} image
+          {state.selectedProducts.length + state.tempUploads.length !== 1 ? 's' : ''} - {state.platform} -{' '}
+          {state.resolution}
         </p>
       </motion.div>
     </div>
