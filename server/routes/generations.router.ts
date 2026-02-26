@@ -712,9 +712,6 @@ export const jobsRouterModule: RouterModule = {
  * Mounted at /api prefix to preserve /api/transform path
  */
 export const transformRouter: RouterFactory = (ctx: RouterContext): Router => {
-  const { promptInjectionGuard } = require('../middleware/promptInjectionGuard') as {
-    promptInjectionGuard: import('express').RequestHandler;
-  };
   const router = createRouter();
   const { storage, logger, telemetry } = ctx.services;
   const { requireAuth } = ctx.middleware;
