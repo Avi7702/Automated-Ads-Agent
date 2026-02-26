@@ -151,24 +151,12 @@ vi.mock('@/components/ErrorBoundary', () => ({
   ),
 }));
 
-vi.mock('@/contexts/StudioContext', () => ({
-  StudioProvider: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="mock-studio-provider">{children}</div>
-  ),
-  useStudioContext: () => ({
-    state: {
-      prompt: '', selectedProducts: [], tempUploads: [], generationState: 'idle',
-      selectedTemplateId: null, generatedImage: null, generationId: null,
-      editInstructions: '', ideaBankMode: 'standard', collapsedSections: {},
-      generatedMediaType: 'image', imageScale: 1, historyPanelOpen: false,
-      showSaveToCatalog: false, selectedStyleReferences: [], platform: 'instagram',
-      aspectRatio: '1:1', quality: 'standard', creativity: 0.7, adCopy: null,
-      contentTemplate: null, agentChatHistory: [], planContext: null,
-      priceEstimate: null, selectedSuggestion: null, copyResults: [],
-    },
-    dispatch: vi.fn(),
-  }),
-}));
+vi.mock('@/contexts/StudioContext', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/contexts/StudioContext')>();
+  return {
+    ...actual,
+  };
+});
 
 vi.mock('wouter', async () => {
   const actual = await vi.importActual('wouter');
