@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * StrategySection — Content Strategy configuration for Settings page
  *
@@ -89,7 +88,7 @@ export function StrategySection() {
   // Data hooks
   const { data: bizData, isLoading: loadingBiz } = useBusinessIntelligence();
   const { data: priorities = [], isLoading: loadingPriorities } = useProductPriorities();
-  const { data: products = [], isLoading: loadingProducts } = useQuery({
+  const { data: products = [], isLoading: loadingProducts } = useQuery<Array<{ id: string; name: string }>>({
     queryKey: ['products'],
     queryFn: async () => {
       const res = await fetch('/api/products', { credentials: 'include' });
@@ -160,10 +159,10 @@ export function StrategySection() {
       // Redistribute the difference proportionally among other categories
       let remaining = -diff;
       for (let i = 0; i < otherCategories.length; i++) {
-        const key = otherCategories[i];
-        const ratio = (prev[key] || 0) / otherTotal;
+        const key = otherCategories[i] as string;
+        const ratio = (prev[key] ?? 0) / otherTotal;
         const adjustment = i === otherCategories.length - 1 ? remaining : Math.round(ratio * -diff);
-        updated[key] = Math.max(0, Math.min(100, (prev[key] || 0) + adjustment));
+        updated[key] = Math.max(0, Math.min(100, (prev[key] ?? 0) + adjustment));
         remaining -= adjustment;
       }
 
@@ -301,7 +300,7 @@ export function StrategySection() {
                 min={0}
                 max={100}
                 step={5}
-                onValueChange={([val]) => handleCategoryChange(key, val)}
+                onValueChange={([val]) => handleCategoryChange(key, val ?? 0)}
               />
             </div>
           ))}
@@ -400,7 +399,7 @@ export function StrategySection() {
                             min={1}
                             max={10}
                             step={1}
-                            onValueChange={([val]) => handleWeightChange(product.id, val)}
+                            onValueChange={([val]) => handleWeightChange(product.id, val ?? 1)}
                             className="flex-1"
                           />
                           <span className="font-mono text-xs text-muted-foreground w-4 text-right">{weight}</span>

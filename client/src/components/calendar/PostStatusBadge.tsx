@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * PostStatusBadge -- Color-coded status indicator with micro-icons.
  *

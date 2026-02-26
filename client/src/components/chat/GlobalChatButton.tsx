@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * GlobalChatButton -- Floating action button (FAB) that opens the ChatSlideOver.
  *

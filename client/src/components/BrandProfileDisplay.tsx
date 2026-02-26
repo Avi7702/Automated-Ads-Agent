@@ -1,6 +1,5 @@
-// @ts-nocheck
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Building2,
   Briefcase,
@@ -22,7 +21,33 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { BrandProfileForm } from "@/components/BrandProfileForm";
-import type { BrandProfile, BrandVoice, TargetAudience } from "@shared/types/ideaBank";
+import type { BrandProfile } from "@shared/types/ideaBank";
+
+/**
+ * Extended types — the API may return extra fields (summary, personas,
+ * industryTerminology, platformGuidelines) that the base shared types
+ * don't declare. We extend locally to keep the shared contract minimal.
+ */
+interface ExtendedBrandVoice {
+  summary?: string;
+  principles: string[];
+  wordsToUse?: string[];
+  wordsToAvoid?: string[];
+}
+
+interface ExtendedTargetAudience {
+  demographics?: string;
+  psychographics?: string;
+  painPoints?: string[];
+  personas?: string[];
+}
+
+interface ExtendedBrandProfile extends BrandProfile {
+  voice: ExtendedBrandVoice | null;
+  targetAudience: ExtendedTargetAudience | null;
+  industryTerminology?: Record<string, unknown>;
+  platformGuidelines?: Record<string, unknown>;
+}
 
 interface BrandProfileDisplayProps {
   className?: string;
@@ -84,23 +109,6 @@ function BadgeList({
   );
 }
 
-// Text display for single values
-function TextDisplay({
-  value,
-  emptyMessage,
-}: {
-  value: string | null | undefined;
-  emptyMessage?: string;
-}) {
-  if (!value) {
-    return emptyMessage ? (
-      <span className="text-sm text-muted-foreground italic">{emptyMessage}</span>
-    ) : null;
-  }
-
-  return <p className="text-sm text-foreground/80">{value}</p>;
-}
-
 // Key-value pair display for objects
 function ObjectDisplay({
   data,
@@ -138,7 +146,7 @@ function ObjectDisplay({
 export function BrandProfileDisplay({ className }: BrandProfileDisplayProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [profile, setProfile] = useState<BrandProfile | null>(null);
+  const [profile, setProfile] = useState<ExtendedBrandProfile | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
   useEffect(() => {
@@ -164,7 +172,7 @@ export function BrandProfileDisplay({ className }: BrandProfileDisplayProps) {
         throw new Error("Failed to load brand profile");
       }
 
-      const data: BrandProfile = await response.json();
+      const data: ExtendedBrandProfile = await response.json();
       setProfile(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error occurred");

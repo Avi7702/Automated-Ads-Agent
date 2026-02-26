@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect } from 'react';
 import { Building2, Heart, Palette, MessageSquare, Users, Tag, Loader2, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,25 @@ import { Textarea } from '@/components/ui/textarea';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { toast } from 'sonner';
-import type { BrandProfile, BrandVoice, TargetAudience } from '@shared/types/ideaBank';
+import type { BrandProfile } from '@shared/types/ideaBank';
+
+/**
+ * Extended types for the form — the form supports extra fields
+ * (summary, personas) that the base shared types don't include.
+ */
+interface ExtendedBrandVoice {
+  summary?: string;
+  principles: string[];
+  wordsToUse?: string[];
+  wordsToAvoid?: string[];
+}
+
+interface ExtendedTargetAudience {
+  demographics?: string;
+  psychographics?: string;
+  painPoints?: string[];
+  personas?: string[];
+}
 
 interface BrandProfileFormProps {
   isOpen: boolean;
@@ -132,8 +149,8 @@ export function BrandProfileForm({ isOpen, onClose, existingProfile, onSave }: B
   useEffect(() => {
     if (isOpen) {
       if (existingProfile) {
-        const voice = existingProfile.voice as BrandVoice | null;
-        const audience = existingProfile.targetAudience as TargetAudience | null;
+        const voice = existingProfile.voice as ExtendedBrandVoice | null;
+        const audience = existingProfile.targetAudience as ExtendedTargetAudience | null;
 
         setFormData({
           brandName: existingProfile.brandName || '',
@@ -250,12 +267,12 @@ export function BrandProfileForm({ isOpen, onClose, existingProfile, onSave }: B
       // Build the request body, only including non-empty values
       const body: Record<string, unknown> = {};
 
-      if (formData.brandName.trim()) body.brandName = formData.brandName.trim();
-      if (formData.industry.trim()) body.industry = formData.industry.trim();
-      if (formData.brandValues.length > 0) body.brandValues = formData.brandValues;
-      if (formData.preferredStyles.length > 0) body.preferredStyles = formData.preferredStyles;
-      if (formData.colorPreferences.length > 0) body.colorPreferences = formData.colorPreferences;
-      if (formData.kbTags.length > 0) body.kbTags = formData.kbTags;
+      if (formData.brandName.trim()) body['brandName'] = formData.brandName.trim();
+      if (formData.industry.trim()) body['industry'] = formData.industry.trim();
+      if (formData.brandValues.length > 0) body['brandValues'] = formData.brandValues;
+      if (formData.preferredStyles.length > 0) body['preferredStyles'] = formData.preferredStyles;
+      if (formData.colorPreferences.length > 0) body['colorPreferences'] = formData.colorPreferences;
+      if (formData.kbTags.length > 0) body['kbTags'] = formData.kbTags;
 
       // Voice object - only if has content
       const hasVoice =
@@ -265,7 +282,7 @@ export function BrandProfileForm({ isOpen, onClose, existingProfile, onSave }: B
         formData.voice.wordsToAvoid.length > 0;
 
       if (hasVoice) {
-        body.voice = {
+        body['voice'] = {
           ...(formData.voice.summary.trim() && { summary: formData.voice.summary.trim() }),
           ...(formData.voice.principles.length > 0 && { principles: formData.voice.principles }),
           ...(formData.voice.wordsToUse.length > 0 && { wordsToUse: formData.voice.wordsToUse }),
@@ -281,7 +298,7 @@ export function BrandProfileForm({ isOpen, onClose, existingProfile, onSave }: B
         formData.targetAudience.personas.length > 0;
 
       if (hasAudience) {
-        body.targetAudience = {
+        body['targetAudience'] = {
           ...(formData.targetAudience.demographics.trim() && {
             demographics: formData.targetAudience.demographics.trim(),
           }),

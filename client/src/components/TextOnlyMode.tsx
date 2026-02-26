@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * TextOnlyMode Component
  *
@@ -17,13 +16,13 @@
  * part of any post - the hook that determines if users click "See more".
  */
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
@@ -43,11 +42,9 @@ import {
   FileText,
   Sparkles,
   X,
-  AlertCircle,
   CheckCircle2,
   Copy,
   RefreshCw,
-  Lightbulb,
   TrendingUp,
   MessageCircle,
   Eye,
@@ -127,7 +124,6 @@ const HOOK_FORMULAS = [
 ];
 
 export function TextOnlyMode({
-  templateId,
   topic,
   platform,
   onClose,
@@ -168,7 +164,7 @@ export function TextOnlyMode({
     if (first150.includes("?")) hookQuality += 10;
 
     // Penalize if first line is too long (should be punchy)
-    const firstLine = first150.split("\n")[0];
+    const firstLine = first150.split("\n")[0] ?? "";
     if (firstLine.length > 80) hookQuality -= 10;
 
     // Ensure score is in bounds
@@ -219,7 +215,7 @@ CRITICAL REQUIREMENTS FOR 2026:
     onSuccess: (data) => {
       if (data.variations && data.variations.length > 0) {
         const newVariations: CopyVariation[] = data.variations.map(
-          (v: any, i: number) => {
+          (v: { copy?: string }, i: number) => {
             const text = v.copy || "";
             const first150 = text.slice(0, 150);
 

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,7 +62,7 @@ async function fetchSyncHistory(): Promise<{ history: SyncHistoryEntry[] }> {
   return res.json();
 }
 
-async function triggerManualSync(): Promise<{ success: boolean; snapshot: any }> {
+async function triggerManualSync(): Promise<{ success: boolean; snapshot: unknown }> {
   const res = await fetch('/api/quota/google/sync', { method: 'POST' });
   if (!res.ok) throw new Error('Failed to trigger sync');
   return res.json();

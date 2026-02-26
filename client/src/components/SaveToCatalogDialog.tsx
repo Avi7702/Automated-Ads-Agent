@@ -1,10 +1,6 @@
-// Note: @ts-nocheck is needed because the Select UI component uses @ts-nocheck
-// and its types don't propagate correctly
-// @ts-nocheck
 import { useState } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {

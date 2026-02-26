@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * DayPostsSheet — Premium slide-over panel showing all posts for a selected day
  *

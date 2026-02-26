@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * BusinessOnboarding — Multi-step wizard for first-time business setup
  *
