@@ -313,9 +313,7 @@ async function saveProductToDatabase(
 ) {
   try {
     // Check if product exists by SKU or name
-    const existing = await db.query.products.findFirst({
-      where: eq(products.sku, product.sku || ''),
-    });
+    const [existing] = await db.select().from(products).where(eq(products.sku, product.sku || '')).limit(1);
 
     // Use Cloudinary URL if available, otherwise use source image URL
     const imageUrl = cloudinaryData?.url || product.imageUrls[0] || '';
