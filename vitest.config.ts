@@ -8,15 +8,7 @@ const hasDatabase = process.env.DATABASE_URL !== undefined;
 // Tests that require database or full app context
 const integrationTests = [
   '**/*.integration.test.ts',
-  '**/copywriting.test.ts', // Requires database
-  '**/auth.test.ts', // Requires database
-  '**/edit.test.ts', // Requires database
-  '**/history.test.ts', // Requires database
-  '**/transform.test.ts', // Requires database
-  '**/imageStorage.test.ts', // Mock issues with drizzle-orm
-  '**/productKnowledge.test.ts', // Requires database
-  '**/ragEndpoints.test.ts', // Requires database
-  '**/patternExtraction.test.ts', // Requires database (via patternExtractionService)
+  '**/auth.test.ts', // Dead test: routes not registered, CSRF blocks POSTs, uses non-existent storage methods
 ];
 
 const sharedExclude =

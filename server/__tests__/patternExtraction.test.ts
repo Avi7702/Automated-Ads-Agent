@@ -8,7 +8,18 @@
  * - Cleanup job
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+// Mock database and storage to prevent DATABASE_URL requirement in CI
+vi.mock('../db', () => ({
+  db: {},
+  pool: { end: vi.fn() },
+}));
+
+vi.mock('../storage', () => ({
+  storage: {},
+}));
+
 import {
   uploadPatternSchema,
   updatePatternSchema,
@@ -16,10 +27,7 @@ import {
   ratePatternSchema,
   listPatternsQuerySchema,
 } from '../validation/schemas';
-import {
-  sanitizeExtractedPattern,
-  type ExtractedPatternData,
-} from '../services/patternPrivacyFilter';
+import { sanitizeExtractedPattern, type ExtractedPatternData } from '../services/patternPrivacyFilter';
 import { formatPatternsForPrompt } from '../services/patternExtractionService';
 import type { LearnedAdPattern } from '../../shared/schema';
 
@@ -362,7 +370,12 @@ describe('Pattern Prompt Formatting', () => {
         category: 'product_showcase',
         platform: 'instagram',
         industry: null,
-        layoutPattern: { structure: 'hero-top', visualHierarchy: [], whitespaceUsage: 'balanced', focalPointPosition: 'center' },
+        layoutPattern: {
+          structure: 'hero-top',
+          visualHierarchy: [],
+          whitespaceUsage: 'balanced',
+          focalPointPosition: 'center',
+        },
         colorPsychology: null,
         hookPatterns: null,
         visualElements: null,
@@ -382,7 +395,12 @@ describe('Pattern Prompt Formatting', () => {
         category: 'testimonial',
         platform: 'linkedin',
         industry: null,
-        layoutPattern: { structure: 'split-50-50', visualHierarchy: [], whitespaceUsage: 'generous', focalPointPosition: 'left-third' },
+        layoutPattern: {
+          structure: 'split-50-50',
+          visualHierarchy: [],
+          whitespaceUsage: 'generous',
+          focalPointPosition: 'left-third',
+        },
         colorPsychology: null,
         hookPatterns: null,
         visualElements: null,
