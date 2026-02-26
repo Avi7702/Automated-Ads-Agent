@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * Image Router
  * Image analysis endpoints (standalone, not product-specific)
@@ -27,7 +27,7 @@ export const imageRouter: RouterFactory = (ctx: RouterContext): Router => {
     uploadSingle('image'),
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any)?.userId || 'system-user';
+        const userId = req.session?.userId || 'system-user';
         const file = req.file;
 
         if (!file) {
@@ -53,8 +53,8 @@ export const imageRouter: RouterFactory = (ctx: RouterContext): Router => {
           description: result.analysis.description,
           confidence: result.analysis.confidence,
         });
-      } catch (error: any) {
-        logger.error({ module: 'AnalyzeImage', err: error }, 'Error analyzing image');
+      } catch (err: unknown) {
+        logger.error({ module: 'AnalyzeImage', err }, 'Error analyzing image');
         res.status(500).json({ error: 'Failed to analyze image' });
       }
     }),

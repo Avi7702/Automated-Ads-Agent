@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Ad Templates Router (Ad Scene Templates)
  * CRUD for ad scene templates with category filtering
@@ -37,8 +36,8 @@ export const adTemplatesRouter: RouterFactory = (ctx: RouterContext): Router => 
           { id: 'outdoor', label: 'Outdoor', description: 'Outdoor construction contexts' },
         ];
         res.json(categories);
-      } catch (error: any) {
-        logger.error({ module: 'GetTemplateCategories', err: error }, 'Error fetching categories');
+      } catch (err: unknown) {
+        logger.error({ module: 'GetTemplateCategories', err }, 'Error fetching categories');
         res.status(500).json({ error: 'Failed to fetch categories' });
       }
     }),
@@ -77,8 +76,8 @@ export const adTemplatesRouter: RouterFactory = (ctx: RouterContext): Router => 
         }
 
         res.json(templates);
-      } catch (error: any) {
-        logger.error({ module: 'GetAdTemplates', err: error }, 'Error fetching ad templates');
+      } catch (err: unknown) {
+        logger.error({ module: 'GetAdTemplates', err }, 'Error fetching ad templates');
         res.status(500).json({ error: 'Failed to fetch ad templates' });
       }
     }),
@@ -96,8 +95,8 @@ export const adTemplatesRouter: RouterFactory = (ctx: RouterContext): Router => 
           return res.status(404).json({ error: 'Template not found' });
         }
         res.json(template);
-      } catch (error: any) {
-        logger.error({ module: 'GetAdTemplate', err: error }, 'Error fetching ad template');
+      } catch (err: unknown) {
+        logger.error({ module: 'GetAdTemplate', err }, 'Error fetching ad template');
         res.status(500).json({ error: 'Failed to fetch ad template' });
       }
     }),
@@ -115,18 +114,18 @@ export const adTemplatesRouter: RouterFactory = (ctx: RouterContext): Router => 
         const validatedData = insertAdSceneTemplateSchema.parse(req.body);
 
         // Set createdBy to current user
-        const userId = (req as any).session?.userId;
+        const userId = req.session?.userId;
         const template = await storage.saveAdSceneTemplate({
           ...validatedData,
           createdBy: userId,
         });
 
         res.status(201).json(template);
-      } catch (error: any) {
-        if (error.name === 'ZodError') {
-          return res.status(400).json({ error: 'Invalid template data', details: error.issues });
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === 'ZodError') {
+          return res.status(400).json({ error: 'Invalid template data', details: (err as { issues: unknown }).issues });
         }
-        logger.error({ module: 'CreateAdTemplate', err: error }, 'Error creating ad template');
+        logger.error({ module: 'CreateAdTemplate', err }, 'Error creating ad template');
         res.status(500).json({ error: 'Failed to create ad template' });
       }
     }),
@@ -154,11 +153,11 @@ export const adTemplatesRouter: RouterFactory = (ctx: RouterContext): Router => 
         const cleanData = Object.fromEntries(Object.entries(validatedData).filter(([, v]) => v !== undefined));
         const template = await storage.updateAdSceneTemplate(String(req.params['id']), cleanData);
         res.json(template);
-      } catch (error: any) {
-        if (error.name === 'ZodError') {
-          return res.status(400).json({ error: 'Invalid template data', details: error.issues });
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === 'ZodError') {
+          return res.status(400).json({ error: 'Invalid template data', details: (err as { issues: unknown }).issues });
         }
-        logger.error({ module: 'UpdateAdTemplate', err: error }, 'Error updating ad template');
+        logger.error({ module: 'UpdateAdTemplate', err }, 'Error updating ad template');
         res.status(500).json({ error: 'Failed to update ad template' });
       }
     }),
@@ -179,8 +178,8 @@ export const adTemplatesRouter: RouterFactory = (ctx: RouterContext): Router => 
 
         await storage.deleteAdSceneTemplate(String(req.params['id']));
         res.json({ success: true });
-      } catch (error: any) {
-        logger.error({ module: 'DeleteAdTemplate', err: error }, 'Error deleting ad template');
+      } catch (err: unknown) {
+        logger.error({ module: 'DeleteAdTemplate', err }, 'Error deleting ad template');
         res.status(500).json({ error: 'Failed to delete ad template' });
       }
     }),

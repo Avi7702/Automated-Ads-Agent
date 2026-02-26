@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Approval Queue Router
  * Human-in-the-loop approval workflow for AI-generated content
@@ -36,7 +35,7 @@ export const approvalQueueRouter: RouterFactory = (ctx: RouterContext): Router =
     validate(approvalQueueQuerySchema, 'query'),
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const validated = (req as any).validatedQuery ?? {};
+        const validated = (req as unknown as Record<string, unknown>)['validatedQuery'] ?? {};
 
         const items = await approvalQueueService.getQueueForUser(req.user!.id, {
           ...(validated.status ? { status: validated.status } : {}),
@@ -75,7 +74,7 @@ export const approvalQueueRouter: RouterFactory = (ctx: RouterContext): Router =
         });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        const errorCode = (error as any)?.code;
+        const errorCode = (error as NodeJS.ErrnoException)?.code;
         logger.error({ module: 'ApprovalQueue', err: error, errorMessage, errorCode }, 'Failed to fetch queue items');
         res.status(500).json({
           success: false,

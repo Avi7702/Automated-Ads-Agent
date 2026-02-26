@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Idea Bank Router
  * AI-powered idea generation and template matching
@@ -30,7 +29,7 @@ export const ideaBankRouter: RouterFactory = (ctx: RouterContext): Router => {
       try {
         // Use authenticated user ID, otherwise scope anonymous requests by session/IP
         // so one shared "system-user" key doesn't trigger global rate-limit collisions.
-        const sessionUserId = (req.session as any)?.userId as string | undefined;
+        const sessionUserId = req.session?.userId as string | undefined;
         const anonBase = String(req.sessionID || req.ip || 'unknown').replace(/[^a-zA-Z0-9_-]/g, '_');
         const userId = sessionUserId || `anon-${anonBase}`;
         const {
@@ -62,7 +61,9 @@ export const ideaBankRouter: RouterFactory = (ctx: RouterContext): Router => {
 
         // Validate upload descriptions if provided
         const validUploadDescriptions: string[] = Array.isArray(uploadDescriptions)
-          ? uploadDescriptions.filter((d: any) => typeof d === 'string' && d.trim().length > 0).slice(0, 6)
+          ? uploadDescriptions
+              .filter((d: unknown): d is string => typeof d === 'string' && d.trim().length > 0)
+              .slice(0, 6)
           : [];
 
         // Require at least products or upload descriptions
@@ -99,7 +100,7 @@ export const ideaBankRouter: RouterFactory = (ctx: RouterContext): Router => {
           }
 
           // Merge suggestions and aggregate analysis status
-          const allSuggestions: any[] = [];
+          const allSuggestions: IdeaBankSuggestResponse['suggestions'] = [];
           const aggregateStatus = {
             visionComplete: false,
             kbQueried: false,
@@ -180,8 +181,8 @@ export const ideaBankRouter: RouterFactory = (ctx: RouterContext): Router => {
         }
 
         res.json(response);
-      } catch (error: any) {
-        logger.error({ module: 'IdeaBankSuggest', err: error }, 'Error suggesting ideas');
+      } catch (err: unknown) {
+        logger.error({ module: 'IdeaBankSuggest', err }, 'Error suggesting ideas');
 
         // Return structured error with retry signal
         res.status(500).json({
@@ -202,7 +203,7 @@ export const ideaBankRouter: RouterFactory = (ctx: RouterContext): Router => {
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const productId = String(req.params['productId']);
-        const userId = (req.session as any).userId;
+        const userId = req.session.userId;
 
         const result = await ideaBank.getMatchedTemplates(productId, userId);
 
@@ -214,8 +215,8 @@ export const ideaBankRouter: RouterFactory = (ctx: RouterContext): Router => {
           templates: result.templates,
           productAnalysis: result.analysis,
         });
-      } catch (error: any) {
-        logger.error({ module: 'IdeaBankTemplates', err: error }, 'Error fetching templates');
+      } catch (err: unknown) {
+        logger.error({ module: 'IdeaBankTemplates', err }, 'Error fetching templates');
         res.status(500).json({ error: 'Failed to get matched templates' });
       }
     }),

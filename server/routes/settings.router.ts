@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Settings Router
  * API key management and N8N configuration vault
@@ -32,7 +31,7 @@ export const settingsRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req as any).session.userId;
+        const userId = req.session.userId;
         const supportedServices = apiKeyValidation.getSupportedServices();
 
         // Get all user's custom keys
@@ -82,8 +81,8 @@ export const settingsRouter: RouterFactory = (ctx: RouterContext): Router => {
         });
 
         res.json({ keys });
-      } catch (error: any) {
-        logger.error({ module: 'APIKeys', err: error }, 'Error listing keys');
+      } catch (err: unknown) {
+        logger.error({ module: 'APIKeys', err }, 'Error listing keys');
         res.status(500).json({ error: 'Failed to retrieve API key configurations' });
       }
     }),
@@ -96,7 +95,7 @@ export const settingsRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/api-keys/:service',
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
-      const userId = (req as any).session.userId;
+      const userId = req.session.userId;
       const service = String(req.params['service']);
       const ipAddress = (req.ip ?? (req.headers['x-forwarded-for'] as string) ?? '').split(',')[0]?.trim() ?? '';
       const userAgent = req.headers['user-agent'] || '';
@@ -186,8 +185,8 @@ export const settingsRouter: RouterFactory = (ctx: RouterContext): Router => {
               ? JSON.stringify({ cloudName: cloudName!.trim(), apiKey: trimmedKey, apiSecret: apiSecret!.trim() })
               : trimmedKey;
           encryptedData = encryption.encryptApiKey(keyToEncrypt);
-        } catch (error: any) {
-          logger.error({ module: 'APIKeys', err: error }, 'Encryption failed');
+        } catch (err: unknown) {
+          logger.error({ module: 'APIKeys', err }, 'Encryption failed');
           return res.status(500).json({
             success: false,
             error: 'Encryption failed',
@@ -236,8 +235,8 @@ export const settingsRouter: RouterFactory = (ctx: RouterContext): Router => {
           keyPreview,
           message: `${serviceName} API key saved successfully`,
         });
-      } catch (error: any) {
-        logger.error({ module: 'APIKeys', err: error }, 'Error saving key');
+      } catch (err: unknown) {
+        logger.error({ module: 'APIKeys', err }, 'Error saving key');
 
         // Log error
         await storage.logApiKeyAction({
@@ -266,7 +265,7 @@ export const settingsRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/api-keys/:service',
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
-      const userId = (req as any).session.userId;
+      const userId = req.session.userId;
       const service = String(req.params['service']);
       const ipAddress = (req.ip ?? (req.headers['x-forwarded-for'] as string) ?? '').split(',')[0]?.trim() ?? '';
       const userAgent = req.headers['user-agent'] || '';
@@ -326,8 +325,8 @@ export const settingsRouter: RouterFactory = (ctx: RouterContext): Router => {
             : `${serviceName} API key removed.`,
           fallbackAvailable: hasEnvFallback,
         });
-      } catch (error: any) {
-        logger.error({ module: 'APIKeys', err: error }, 'Error deleting key');
+      } catch (err: unknown) {
+        logger.error({ module: 'APIKeys', err }, 'Error deleting key');
 
         await storage.logApiKeyAction({
           userId,
@@ -354,7 +353,7 @@ export const settingsRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/api-keys/:service/validate',
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
-      const userId = (req as any).session.userId;
+      const userId = req.session.userId;
       const service = String(req.params['service']);
       const ipAddress = (req.ip ?? (req.headers['x-forwarded-for'] as string) ?? '').split(',')[0]?.trim() ?? '';
       const userAgent = req.headers['user-agent'] || '';
@@ -441,8 +440,8 @@ export const settingsRouter: RouterFactory = (ctx: RouterContext): Router => {
             source: resolved.source,
           });
         }
-      } catch (error: any) {
-        logger.error({ module: 'APIKeys', err: error }, 'Error validating key');
+      } catch (err: unknown) {
+        logger.error({ module: 'APIKeys', err }, 'Error validating key');
 
         await storage.logApiKeyAction({
           userId,

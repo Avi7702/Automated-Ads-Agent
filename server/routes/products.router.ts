@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Products Router
  * Product management including CRUD, Cloudinary uploads, analysis, and enrichment

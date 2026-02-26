@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * Intelligence Router (WS-C5)
  * Product intelligence layer — priorities, business intelligence, and selection
@@ -31,12 +31,12 @@ export const intelligenceRouter: RouterFactory = (ctx: RouterContext): Router =>
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = req.session.userId;
         const { productIntelligenceService } = await import('../services/productIntelligenceService');
         const priorities = await productIntelligenceService.getProductPriorities(userId);
         res.json({ priorities });
-      } catch (error: any) {
-        logger.error({ module: 'Intelligence', err: error }, 'Failed to get priorities');
+      } catch (err: unknown) {
+        logger.error({ module: 'Intelligence', err }, 'Failed to get priorities');
         res.status(500).json({ error: 'Failed to get product priorities' });
       }
     }),
@@ -50,7 +50,7 @@ export const intelligenceRouter: RouterFactory = (ctx: RouterContext): Router =>
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = req.session.userId;
         const productId = req.params['productId'] as string;
         const { revenueTier, revenueWeight, competitiveAngle, keySellingPoints, monthlyTarget, seasonalRelevance } =
           req.body;
@@ -66,8 +66,8 @@ export const intelligenceRouter: RouterFactory = (ctx: RouterContext): Router =>
         });
 
         res.json({ priority });
-      } catch (error: any) {
-        logger.error({ module: 'Intelligence', err: error }, 'Failed to set priority');
+      } catch (err: unknown) {
+        logger.error({ module: 'Intelligence', err }, 'Failed to set priority');
         res.status(500).json({ error: 'Failed to set product priority' });
       }
     }),
@@ -81,7 +81,7 @@ export const intelligenceRouter: RouterFactory = (ctx: RouterContext): Router =>
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = req.session.userId;
         const { priorities } = req.body;
 
         if (!Array.isArray(priorities) || priorities.length === 0) {
@@ -105,8 +105,8 @@ export const intelligenceRouter: RouterFactory = (ctx: RouterContext): Router =>
         await productIntelligenceService.bulkSetPriorities(userId, priorities);
 
         res.json({ message: 'Priorities updated', count: priorities.length });
-      } catch (error: any) {
-        logger.error({ module: 'Intelligence', err: error }, 'Failed to bulk set priorities');
+      } catch (err: unknown) {
+        logger.error({ module: 'Intelligence', err }, 'Failed to bulk set priorities');
         res.status(500).json({ error: 'Failed to bulk set priorities' });
       }
     }),
@@ -120,12 +120,12 @@ export const intelligenceRouter: RouterFactory = (ctx: RouterContext): Router =>
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = req.session.userId;
         const { productIntelligenceService } = await import('../services/productIntelligenceService');
         const bi = await productIntelligenceService.getBusinessIntelligence(userId);
         res.json({ businessIntelligence: bi });
-      } catch (error: any) {
-        logger.error({ module: 'Intelligence', err: error }, 'Failed to get business intelligence');
+      } catch (err: unknown) {
+        logger.error({ module: 'Intelligence', err }, 'Failed to get business intelligence');
         res.status(500).json({ error: 'Failed to get business intelligence' });
       }
     }),
@@ -139,7 +139,7 @@ export const intelligenceRouter: RouterFactory = (ctx: RouterContext): Router =>
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = req.session.userId;
         const {
           industry,
           niche,
@@ -168,8 +168,8 @@ export const intelligenceRouter: RouterFactory = (ctx: RouterContext): Router =>
         });
 
         res.json({ businessIntelligence: bi });
-      } catch (error: any) {
-        logger.error({ module: 'Intelligence', err: error }, 'Failed to save business intelligence');
+      } catch (err: unknown) {
+        logger.error({ module: 'Intelligence', err }, 'Failed to save business intelligence');
         res.status(500).json({ error: 'Failed to save business intelligence' });
       }
     }),
@@ -182,7 +182,7 @@ export const intelligenceRouter: RouterFactory = (ctx: RouterContext): Router =>
     '/onboarding-status',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any)?.userId as string | undefined;
+        const userId = req.session?.userId as string | undefined;
 
         // Public-safe fallback: avoid noisy 401s for logged-out sessions.
         if (!userId) {
@@ -200,8 +200,8 @@ export const intelligenceRouter: RouterFactory = (ctx: RouterContext): Router =>
           hasBusinessData: complete,
           hasPriorities: complete,
         });
-      } catch (error: any) {
-        logger.error({ module: 'Intelligence', err: error }, 'Failed to check onboarding status');
+      } catch (err: unknown) {
+        logger.error({ module: 'Intelligence', err }, 'Failed to check onboarding status');
         res.status(500).json({ error: 'Failed to check onboarding status' });
       }
     }),
@@ -215,12 +215,12 @@ export const intelligenceRouter: RouterFactory = (ctx: RouterContext): Router =>
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = req.session.userId;
         const { productIntelligenceService } = await import('../services/productIntelligenceService');
         const stats = await productIntelligenceService.getProductPostingStats(userId);
         res.json({ stats });
-      } catch (error: any) {
-        logger.error({ module: 'Intelligence', err: error }, 'Failed to get posting stats');
+      } catch (err: unknown) {
+        logger.error({ module: 'Intelligence', err }, 'Failed to get posting stats');
         res.status(500).json({ error: 'Failed to get posting stats' });
       }
     }),
@@ -234,7 +234,7 @@ export const intelligenceRouter: RouterFactory = (ctx: RouterContext): Router =>
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = req.session.userId;
         const { numPosts } = req.body;
 
         if (!numPosts || typeof numPosts !== 'number' || numPosts < 1 || numPosts > 30) {
@@ -244,8 +244,8 @@ export const intelligenceRouter: RouterFactory = (ctx: RouterContext): Router =>
         const { productIntelligenceService } = await import('../services/productIntelligenceService');
         const selections = await productIntelligenceService.selectProductsForWeek(userId, numPosts);
         res.json({ selections });
-      } catch (error: any) {
-        logger.error({ module: 'Intelligence', err: error }, 'Failed to select products');
+      } catch (err: unknown) {
+        logger.error({ module: 'Intelligence', err }, 'Failed to select products');
         res.status(500).json({ error: 'Failed to select products for weekly plan' });
       }
     }),

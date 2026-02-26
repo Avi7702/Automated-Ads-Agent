@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * Copywriting Router
  * Standalone copywriting generation endpoint
@@ -60,10 +60,10 @@ export const copywritingRouter: RouterFactory = (ctx: RouterContext): Router => 
           // Provide defaults for fields that copywritingService expects
           productBenefits: [],
           uniqueValueProp: productDescription,
-        } as any);
+        } as Parameters<typeof copywritingService.generateCopy>[0]);
 
         // Transform to simplified response format
-        const responseVariations = generatedVariations.map((v: any) => ({
+        const responseVariations = generatedVariations.map((v) => ({
           copy: v.caption || v.bodyText || '',
           headline: v.headline,
           hook: v.hook,
@@ -76,8 +76,8 @@ export const copywritingRouter: RouterFactory = (ctx: RouterContext): Router => 
           success: true,
           variations: responseVariations,
         });
-      } catch (error: any) {
-        logger.error({ module: 'StandaloneCopy', err: error }, 'Error generating standalone copy');
+      } catch (err: unknown) {
+        logger.error({ module: 'StandaloneCopy', err }, 'Error generating standalone copy');
         res.status(500).json({
           error: 'Failed to generate copy',
         });

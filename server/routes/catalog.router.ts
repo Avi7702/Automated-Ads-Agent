@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * Catalog Router (File Search)
  * RAG file search and reference file management
@@ -36,8 +36,8 @@ export const catalogRouter: RouterFactory = (ctx: RouterContext): Router => {
         const { initializeFileSearchStore } = await import('../services/fileSearchService');
         const store = await initializeFileSearchStore();
         res.json({ success: true, store: { name: store.name, displayName: store.config?.displayName } });
-      } catch (error: any) {
-        logger.error({ module: 'InitializeFileSearch', err: error }, 'Error initializing file search');
+      } catch (err: unknown) {
+        logger.error({ module: 'InitializeFileSearch', err }, 'Error initializing file search');
         res.status(500).json({ error: 'Failed to initialize File Search Store' });
       }
     }),
@@ -80,8 +80,8 @@ export const catalogRouter: RouterFactory = (ctx: RouterContext): Router => {
         });
 
         res.json({ success: true, file: result });
-      } catch (error: any) {
-        logger.error({ module: 'UploadReferenceFile', err: error }, 'Error uploading reference file');
+      } catch (err: unknown) {
+        logger.error({ module: 'UploadReferenceFile', err }, 'Error uploading reference file');
         res.status(500).json({ error: 'Failed to upload file' });
       }
     }),
@@ -115,8 +115,8 @@ export const catalogRouter: RouterFactory = (ctx: RouterContext): Router => {
         });
 
         res.json({ success: true, files: results, count: results.length });
-      } catch (error: any) {
-        logger.error({ module: 'UploadDirectory', err: error }, 'Error uploading directory');
+      } catch (err: unknown) {
+        logger.error({ module: 'UploadDirectory', err }, 'Error uploading directory');
         res.status(500).json({ error: 'Failed to upload directory' });
       }
     }),
@@ -131,13 +131,13 @@ export const catalogRouter: RouterFactory = (ctx: RouterContext): Router => {
     validate(catalogFilesQuerySchema, 'query'),
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const validated = (req as any).validatedQuery ?? {};
+        const validated = (req as unknown as Record<string, unknown>)['validatedQuery'] ?? {};
         const { listReferenceFiles } = await import('../services/fileSearchService');
 
         const files = await listReferenceFiles(validated.category);
         res.json({ success: true, files, count: files.length });
-      } catch (error: any) {
-        logger.error({ module: 'ListReferenceFiles', err: error }, 'Error listing reference files');
+      } catch (err: unknown) {
+        logger.error({ module: 'ListReferenceFiles', err }, 'Error listing reference files');
         res.status(500).json({ error: 'Failed to list files' });
       }
     }),
@@ -156,8 +156,8 @@ export const catalogRouter: RouterFactory = (ctx: RouterContext): Router => {
 
         await deleteReferenceFile(fileId);
         res.json({ success: true });
-      } catch (error: any) {
-        logger.error({ module: 'DeleteReferenceFile', err: error }, 'Error deleting reference file');
+      } catch (err: unknown) {
+        logger.error({ module: 'DeleteReferenceFile', err }, 'Error deleting reference file');
         res.status(500).json({ error: 'Failed to delete file' });
       }
     }),
@@ -174,8 +174,8 @@ export const catalogRouter: RouterFactory = (ctx: RouterContext): Router => {
         const { seedFileSearchStore } = await import('../services/fileSearchService');
         const result = await seedFileSearchStore();
         res.json(result);
-      } catch (error: any) {
-        logger.error({ module: 'SeedFileSearch', err: error }, 'Error seeding file search');
+      } catch (err: unknown) {
+        logger.error({ module: 'SeedFileSearch', err }, 'Error seeding file search');
         res.status(500).json({ error: 'Failed to seed File Search Store' });
       }
     }),
