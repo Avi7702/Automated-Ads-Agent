@@ -30,6 +30,7 @@ export const generatedCopySchema = z.object({
   headline: z.string().default(''),
   hook: z.string().default(''),
   bodyText: z.string().default(''),
+  primaryText: z.string().default(''),
   caption: z.string().default(''),
   cta: z.string().optional(),
   hashtags: z.array(z.string()).optional(),
@@ -117,23 +118,31 @@ export const privacyScanResultSchema = z.object({
 // ─── Relationship Discovery ─────────────────────────────────────────
 
 export const relationshipDiscoverySchema = z.object({
-  relationships: z.array(z.object({
-    type: z.string(),
-    sourceId: z.string().optional(),
-    targetId: z.string().optional(),
-    confidence: z.number().min(0).max(1).default(0),
-    reasoning: z.string().default(''),
-  })).default([]),
+  relationships: z
+    .array(
+      z.object({
+        type: z.string(),
+        sourceId: z.string().optional(),
+        targetId: z.string().optional(),
+        confidence: z.number().min(0).max(1).default(0),
+        reasoning: z.string().default(''),
+      }),
+    )
+    .default([]),
 });
 
 // ─── Installation Scenario RAG ──────────────────────────────────────
 
 export const installationMatchSchema = z.object({
-  matches: z.array(z.object({
-    scenarioId: z.string().optional(),
-    relevance: z.number().min(0).max(1).default(0),
-    reasoning: z.string().default(''),
-  })).default([]),
+  matches: z
+    .array(
+      z.object({
+        scenarioId: z.string().optional(),
+        relevance: z.number().min(0).max(1).default(0),
+        reasoning: z.string().default(''),
+      }),
+    )
+    .default([]),
 });
 
 // ─── Product Enrichment ─────────────────────────────────────────────
@@ -142,12 +151,13 @@ export const productEnrichmentSchema = z.record(z.string(), z.unknown());
 
 // ─── Source Discovery ───────────────────────────────────────────────
 
-export const sourceDiscoverySchema = z.array(z.object({
-  url: z.string(),
-  type: z.string().default('unknown'),
-  confidence: z.number().min(0).max(1).default(0),
-}));
-
+export const sourceDiscoverySchema = z.array(
+  z.object({
+    url: z.string(),
+    type: z.string().default('unknown'),
+    confidence: z.number().min(0).max(1).default(0),
+  }),
+);
 
 // ─── Safe Parse Helper ──────────────────────────────────────────────
 
@@ -156,11 +166,7 @@ export const sourceDiscoverySchema = z.array(z.object({
  * Extracts JSON from the text, parses it, and validates against the schema.
  * Returns the validated data or throws a descriptive error.
  */
-export function safeParseLLMResponse<T extends z.ZodType>(
-  text: string,
-  schema: T,
-  context: string,
-): z.infer<T> {
+export function safeParseLLMResponse<T extends z.ZodType>(text: string, schema: T, context: string): z.infer<T> {
   // Extract JSON from text (may be wrapped in markdown code blocks)
   let jsonContent = text;
 
@@ -193,8 +199,10 @@ export function safeParseLLMResponse<T extends z.ZodType>(
     try {
       raw = JSON.parse(fixed);
     } catch {
-      logger.error({ module: 'llmValidation', context, textSnippet: text.slice(0, 200) },
-        'Failed to parse LLM JSON response');
+      logger.error(
+        { module: 'llmValidation', context, textSnippet: text.slice(0, 200) },
+        'Failed to parse LLM JSON response',
+      );
       throw new Error(`Failed to parse LLM response JSON in ${context}`);
     }
   }
@@ -202,18 +210,23 @@ export function safeParseLLMResponse<T extends z.ZodType>(
   // Validate with Zod
   const result = schema.safeParse(raw);
   if (!result.success) {
-    logger.warn({
-      module: 'llmValidation',
-      context,
-      errors: result.error.issues.map(i => `${i.path.join('.')}: ${i.message}`),
-    }, 'LLM response failed Zod validation, using defaults where possible');
+    logger.warn(
+      {
+        module: 'llmValidation',
+        context,
+        errors: result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`),
+      },
+      'LLM response failed Zod validation, using defaults where possible',
+    );
 
     // Try again with passthrough to get partial data
     // If the schema has defaults, this might still produce usable output
     try {
       return schema.parse(raw);
     } catch {
-      throw new Error(`LLM response validation failed in ${context}: ${result.error.issues.map(i => i.message).join(', ')}`);
+      throw new Error(
+        `LLM response validation failed in ${context}: ${result.error.issues.map((i) => i.message).join(', ')}`,
+      );
     }
   }
 

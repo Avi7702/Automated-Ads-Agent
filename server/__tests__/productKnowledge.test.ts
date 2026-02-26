@@ -178,22 +178,12 @@ vi.mock('../storage', () => ({
   },
 }));
 
-import { z } from 'zod';
-
 // Import schemas (will be created)
 import {
-  products,
-  installationScenarios,
-  productRelationships,
-  brandImages,
   insertProductSchema,
   insertInstallationScenarioSchema,
   insertProductRelationshipSchema,
   insertBrandImageSchema,
-  type Product,
-  type InstallationScenario,
-  type ProductRelationship,
-  type BrandImage,
 } from '../../shared/schema';
 
 import { storage } from '../storage';

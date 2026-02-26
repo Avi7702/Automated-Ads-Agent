@@ -124,9 +124,11 @@ function createMockResponse(framework: string = 'AIDA', variationNum: number = 1
 vi.mock('../lib/gemini', () => ({
   genAI: {
     models: {
-      generateContent: vi.fn().mockImplementation((opts: any) => {
+      generateContent: vi.fn().mockImplementation((opts: Record<string, unknown>) => {
         callCount++;
-        const promptText = opts.contents?.[0]?.parts?.[0]?.text || '';
+        const contents = opts['contents'] as Array<Record<string, unknown>> | undefined;
+        const parts = contents?.[0]?.['parts'] as Array<Record<string, unknown>> | undefined;
+        const promptText = (parts?.[0]?.['text'] as string) || '';
         let framework = 'AIDA';
         if (promptText.includes('PAS')) framework = 'PAS';
         else if (promptText.includes('BAB')) framework = 'BAB';
@@ -138,11 +140,11 @@ vi.mock('../lib/gemini', () => ({
 }));
 
 // Get mock for assertions
-const mockGenerateContent = vi.mocked((await import('../lib/gemini')).genAI.models.generateContent);
+const _mockGenerateContent = vi.mocked((await import('../lib/gemini')).genAI.models.generateContent);
 
 describe('Copywriting Service', () => {
   let testGenerationId: string;
-  let testUserId: string;
+  let _testUserId: string;
 
   beforeEach(() => {
     callCount = 0;
@@ -153,7 +155,7 @@ describe('Copywriting Service', () => {
     const testEmail = `copytest-${Date.now()}@test.com`;
     const testPasswordHash = 'hashedpassword123';
     const testUser = await storage.createUser(testEmail, testPasswordHash);
-    testUserId = testUser.id;
+    _testUserId = testUser.id;
 
     const testGeneration = await storage.saveGeneration({
       prompt: 'Test product image',
