@@ -296,7 +296,7 @@ describe('GeminiService', () => {
       // Input with role-override patterns gets them replaced, not removed
       const injectionOnly = 'system: assistant:';
 
-      const result = await geminiService.continueConversation(validHistory, injectionOnly);
+      await geminiService.continueConversation(validHistory, injectionOnly);
 
       const callArgs = mockGenerateContent.mock.calls[0][0];
       const lastUserMessage = callArgs.contents[callArgs.contents.length - 1];
