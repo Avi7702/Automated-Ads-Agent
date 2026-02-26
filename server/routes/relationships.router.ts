@@ -30,7 +30,10 @@ export const productRelationshipsRouter: RouterFactory = (ctx: RouterContext): R
     validate(insertProductRelationship),
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const { sourceProductId, targetProductId } = req.body;
 
         // Prevent self-relationships
@@ -43,9 +46,9 @@ export const productRelationshipsRouter: RouterFactory = (ctx: RouterContext): R
           userId,
         });
         res.status(201).json(relationship);
-      } catch (error: any) {
-        logger.error({ module: 'ProductRelationships', err: error }, 'Create error');
-        if (error.code === '23505') {
+      } catch (err: unknown) {
+        logger.error({ module: 'ProductRelationships', err }, 'Create error');
+        if (err instanceof Error && 'code' in err && (err as Record<string, unknown>)['code'] === '23505') {
           // Unique constraint violation
           return res.status(409).json({ error: 'This relationship already exists' });
         }
@@ -64,8 +67,8 @@ export const productRelationshipsRouter: RouterFactory = (ctx: RouterContext): R
       try {
         await storage.deleteProductRelationship(String(req.params['id']));
         res.json({ success: true });
-      } catch (error: any) {
-        logger.error({ module: 'ProductRelationships', err: error }, 'Delete error');
+      } catch (err: unknown) {
+        logger.error({ module: 'ProductRelationships', err }, 'Delete error');
         res.status(500).json({ error: 'Failed to delete product relationship' });
       }
     }),
@@ -85,8 +88,8 @@ export const productRelationshipsRouter: RouterFactory = (ctx: RouterContext): R
         }
         const relationships = await storage.getProductRelationships(productIds);
         res.json(relationships);
-      } catch (error: any) {
-        logger.error({ module: 'ProductRelationships', err: error }, 'Bulk get error');
+      } catch (err: unknown) {
+        logger.error({ module: 'ProductRelationships', err }, 'Bulk get error');
         res.status(500).json({ error: 'Failed to get product relationships' });
       }
     }),
@@ -117,8 +120,8 @@ export const relationshipsRAGRouter: RouterFactory = (ctx: RouterContext): Route
         const { analyzeRelationshipType } = await import('../services/relationshipDiscoveryRAG');
         const analysis = await analyzeRelationshipType(sourceProductId, targetProductId);
         res.json(analysis);
-      } catch (error: any) {
-        logger.error({ module: 'RelationshipRAG', err: error }, 'Error analyzing relationship');
+      } catch (err: unknown) {
+        logger.error({ module: 'RelationshipRAG', err }, 'Error analyzing relationship');
         res.status(500).json({ error: 'Failed to analyze relationship' });
       }
     }),
@@ -132,7 +135,10 @@ export const relationshipsRAGRouter: RouterFactory = (ctx: RouterContext): Route
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const { productIds } = req.body;
 
         if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
@@ -142,8 +148,8 @@ export const relationshipsRAGRouter: RouterFactory = (ctx: RouterContext): Route
         const { batchSuggestRelationships } = await import('../services/relationshipDiscoveryRAG');
         const suggestions = await batchSuggestRelationships(productIds, userId);
         res.json(suggestions);
-      } catch (error: any) {
-        logger.error({ module: 'RelationshipRAG', err: error }, 'Error batch suggesting');
+      } catch (err: unknown) {
+        logger.error({ module: 'RelationshipRAG', err }, 'Error batch suggesting');
         res.status(500).json({ error: 'Failed to batch suggest relationships' });
       }
     }),
@@ -157,7 +163,10 @@ export const relationshipsRAGRouter: RouterFactory = (ctx: RouterContext): Route
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const { productId, minScore, maxToCreate, dryRun } = req.body;
 
         if (!productId) {
@@ -172,8 +181,8 @@ export const relationshipsRAGRouter: RouterFactory = (ctx: RouterContext): Route
         });
 
         res.json(result);
-      } catch (error: any) {
-        logger.error({ module: 'RelationshipRAG', err: error }, 'Error auto-creating relationships');
+      } catch (err: unknown) {
+        logger.error({ module: 'RelationshipRAG', err }, 'Error auto-creating relationships');
         res.status(500).json({ error: 'Failed to auto-create relationships' });
       }
     }),

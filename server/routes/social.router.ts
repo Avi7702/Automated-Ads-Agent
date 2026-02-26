@@ -34,7 +34,7 @@ export const socialRouter: RouterFactory = (ctx: RouterContext): Router => {
         const connections = await storage.getSocialConnections(req.user!.id);
 
         // Sanitize: Remove sensitive OAuth token data
-        const safeConnections = connections.map((conn: any) => ({
+        const safeConnections = connections.map((conn) => ({
           id: conn.id,
           userId: conn.userId,
           platform: conn.platform,

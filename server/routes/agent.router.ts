@@ -85,7 +85,7 @@ export const agentRouter: RouterFactory = (ctx: RouterContext): Router => {
     requireAuth,
     agentLimiter,
     asyncHandler(async (req: Request, res: Response) => {
-      const userId = (req as any).session?.userId;
+      const userId = req.session?.userId;
       if (!userId) {
         return res.status(401).json({ error: 'Not authenticated' });
       }
@@ -154,7 +154,7 @@ export const agentRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/session/:sessionId',
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
-      const userId = (req as any).session?.userId;
+      const userId = req.session?.userId;
       if (!userId) {
         return res.status(401).json({ error: 'Not authenticated' });
       }

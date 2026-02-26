@@ -41,7 +41,10 @@ export const calendarRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/posts',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req as any).user?.id;
+        const userId = req.user?.id;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const { start, end } = req.query;
 
         if (!start || !end) {
@@ -71,7 +74,10 @@ export const calendarRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/counts',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req as any).user?.id;
+        const userId = req.user?.id;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const year = parseInt(String(req.query['year']), 10);
         const month = parseInt(String(req.query['month']), 10);
 
@@ -94,7 +100,10 @@ export const calendarRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/posts/:id',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req as any).user?.id;
+        const userId = req.user?.id;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const post = await getScheduledPostById(String(req.params['id']), userId);
 
         if (!post) {
@@ -116,7 +125,10 @@ export const calendarRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/schedule',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req as any).user?.id;
+        const userId = req.user?.id;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const {
           connectionId,
           caption,
@@ -171,7 +183,10 @@ export const calendarRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/posts/:id/reschedule',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req as any).user?.id;
+        const userId = req.user?.id;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const { scheduledFor } = req.body;
 
         if (!scheduledFor) {
@@ -206,7 +221,10 @@ export const calendarRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/posts/:id/retry',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req as any).user?.id;
+        const userId = req.user?.id;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const postId = String(req.params['id']);
         const { scheduledFor } = req.body;
 
@@ -243,7 +261,10 @@ export const calendarRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/posts/:id/cancel',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req as any).user?.id;
+        const userId = req.user?.id;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const post = await cancelScheduledPost(String(req.params['id']), userId);
 
         if (!post) {

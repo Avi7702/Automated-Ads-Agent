@@ -16,6 +16,18 @@ import { createRouter, asyncHandler } from './utils/createRouter';
 import { validate } from '../middleware/validate';
 import { monitoringErrorsQuerySchema } from '../validation/schemas';
 
+interface PerfMetric {
+  endpoint: string;
+  method: string;
+  requests: number;
+  errors: number;
+  errorRate: number;
+  avgLatency: number;
+  minLatency: number;
+  maxLatency: number;
+  lastReset: Date;
+}
+
 export const monitoringRouter: RouterFactory = (ctx: RouterContext): Router => {
   const router = createRouter();
   const { logger } = ctx.services;
@@ -32,8 +44,8 @@ export const monitoringRouter: RouterFactory = (ctx: RouterContext): Router => {
         const { getSystemHealth } = await import('../services/systemHealthService');
         const health = await getSystemHealth();
         res.json(health);
-      } catch (error: any) {
-        logger.error({ module: 'monitoring', error }, 'Failed to fetch system health');
+      } catch (err: unknown) {
+        logger.error({ module: 'monitoring', err }, 'Failed to fetch system health');
         res.status(500).json({ error: 'Failed to fetch system health' });
       }
     }),
@@ -50,8 +62,8 @@ export const monitoringRouter: RouterFactory = (ctx: RouterContext): Router => {
         const { getPerformanceMetrics } = await import('../middleware/performanceMetrics');
         const metrics = getPerformanceMetrics();
         res.json(metrics);
-      } catch (error: any) {
-        logger.error({ module: 'monitoring', error }, 'Failed to fetch performance metrics');
+      } catch (err: unknown) {
+        logger.error({ module: 'monitoring', err }, 'Failed to fetch performance metrics');
         res.status(500).json({ error: 'Failed to fetch performance metrics' });
       }
     }),
@@ -66,15 +78,17 @@ export const monitoringRouter: RouterFactory = (ctx: RouterContext): Router => {
     validate(monitoringErrorsQuerySchema, 'query'),
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const validated = (req as any).validatedQuery ?? {};
+        const validated = ((req as unknown as Record<string, unknown>)['validatedQuery'] ?? {}) as {
+          limit?: number;
+        };
         const limit = validated.limit ?? 50;
         const { getRecentErrors, getErrorStats } = await import('../services/errorTrackingService');
         const errors = getRecentErrors(limit);
         const stats = getErrorStats();
 
         res.json({ errors, stats });
-      } catch (error: any) {
-        logger.error({ module: 'monitoring', error }, 'Failed to fetch errors');
+      } catch (err: unknown) {
+        logger.error({ module: 'monitoring', err }, 'Failed to fetch errors');
         res.status(500).json({ error: 'Failed to fetch errors' });
       }
     }),
@@ -93,22 +107,20 @@ export const monitoringRouter: RouterFactory = (ctx: RouterContext): Router => {
         const { getErrorStats } = await import('../services/errorTrackingService');
 
         const health = await getSystemHealth();
-        const perfMetrics = getPerformanceMetrics();
+        const perfMetrics = getPerformanceMetrics() as PerfMetric[];
         const errorStats = getErrorStats();
 
         // Aggregate performance metrics
-        const totalRequests = perfMetrics.reduce((sum: number, m: any) => sum + m.requests, 0);
-        const totalErrors = perfMetrics.reduce((sum: number, m: any) => sum + m.errors, 0);
+        const totalRequests = perfMetrics.reduce((sum, m) => sum + m.requests, 0);
+        const totalErrors = perfMetrics.reduce((sum, m) => sum + m.errors, 0);
         const avgResponseTime =
-          perfMetrics.length > 0
-            ? perfMetrics.reduce((sum: number, m: any) => sum + m.avgLatency, 0) / perfMetrics.length
-            : 0;
+          perfMetrics.length > 0 ? perfMetrics.reduce((sum, m) => sum + m.avgLatency, 0) / perfMetrics.length : 0;
 
         // Top 5 endpoints by request count
         const topEndpoints = perfMetrics
-          .sort((a: any, b: any) => b.requests - a.requests)
+          .sort((a, b) => b.requests - a.requests)
           .slice(0, 5)
-          .map((m: any) => ({
+          .map((m) => ({
             endpoint: m.endpoint,
             method: m.method,
             requests: m.requests,
@@ -130,8 +142,8 @@ export const monitoringRouter: RouterFactory = (ctx: RouterContext): Router => {
             recent: errorStats.last5min,
           },
         });
-      } catch (error: any) {
-        logger.error({ module: 'monitoring', error }, 'Failed to fetch system health');
+      } catch (err: unknown) {
+        logger.error({ module: 'monitoring', err }, 'Failed to fetch system health');
         res.status(500).json({ error: 'Failed to fetch system health' });
       }
     }),
@@ -146,10 +158,10 @@ export const monitoringRouter: RouterFactory = (ctx: RouterContext): Router => {
     asyncHandler(async (_req: Request, res: Response) => {
       try {
         const { getPerformanceMetrics } = await import('../middleware/performanceMetrics');
-        const metrics = getPerformanceMetrics();
+        const metrics = getPerformanceMetrics() as PerfMetric[];
 
         // Aggregate by endpoint pattern (group similar paths)
-        const summary = metrics.map((m: any) => ({
+        const summary = metrics.map((m) => ({
           endpoint: m.endpoint,
           method: m.method,
           requests: m.requests,
@@ -159,8 +171,8 @@ export const monitoringRouter: RouterFactory = (ctx: RouterContext): Router => {
         }));
 
         res.json(summary);
-      } catch (error: any) {
-        logger.error({ module: 'monitoring', error }, 'Failed to fetch endpoint summary');
+      } catch (err: unknown) {
+        logger.error({ module: 'monitoring', err }, 'Failed to fetch endpoint summary');
         res.status(500).json({ error: 'Failed to fetch endpoint summary' });
       }
     }),

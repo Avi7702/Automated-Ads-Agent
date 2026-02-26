@@ -25,6 +25,10 @@ import { validate } from '../middleware/validate';
 import { adminDlqQuerySchema } from '../validation/schemas';
 import { requireRole } from '../middleware/requireRole';
 
+function extractErrorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : 'Unknown error';
+}
+
 export const adminRouter: RouterFactory = (ctx: RouterContext): Router => {
   const router = createRouter();
   const { logger } = ctx.services;
@@ -45,9 +49,9 @@ export const adminRouter: RouterFactory = (ctx: RouterContext): Router => {
         const { seedBrandProfile } = await import('../seeds/seedBrandProfile');
         await seedBrandProfile();
         res.json({ success: true, message: 'Brand Profile seeded successfully' });
-      } catch (error: any) {
-        logger.error({ module: 'Admin', err: error }, 'Seed failed');
-        res.status(500).json({ error: 'Seed failed', details: error.message });
+      } catch (err: unknown) {
+        logger.error({ module: 'Admin', err }, 'Seed failed');
+        res.status(500).json({ error: 'Seed failed', details: extractErrorMessage(err) });
       }
     }),
   );
@@ -64,9 +68,9 @@ export const adminRouter: RouterFactory = (ctx: RouterContext): Router => {
         const { sampleOnly, cloudinaryOnly, cloudinaryFolder } = req.body || {};
         const results = await seedProducts({ sampleOnly, cloudinaryOnly, cloudinaryFolder });
         res.json({ success: true, message: 'Products seeded successfully', results });
-      } catch (error: any) {
-        logger.error({ module: 'Admin', err: error }, 'Product seed failed');
-        res.status(500).json({ error: 'Seed failed', details: error.message });
+      } catch (err: unknown) {
+        logger.error({ module: 'Admin', err }, 'Product seed failed');
+        res.status(500).json({ error: 'Seed failed', details: extractErrorMessage(err) });
       }
     }),
   );
@@ -82,9 +86,9 @@ export const adminRouter: RouterFactory = (ctx: RouterContext): Router => {
         const { seedInstallationScenarios } = await import('../seeds/seedInstallationScenarios');
         const results = await seedInstallationScenarios();
         res.json({ success: true, message: 'Installation scenarios seeded successfully', results });
-      } catch (error: any) {
-        logger.error({ module: 'Admin', err: error }, 'Installation scenarios seed failed');
-        res.status(500).json({ error: 'Seed failed', details: error.message });
+      } catch (err: unknown) {
+        logger.error({ module: 'Admin', err }, 'Installation scenarios seed failed');
+        res.status(500).json({ error: 'Seed failed', details: extractErrorMessage(err) });
       }
     }),
   );
@@ -100,9 +104,9 @@ export const adminRouter: RouterFactory = (ctx: RouterContext): Router => {
         const { seedProductRelationships } = await import('../seeds/seedRelationships');
         const results = await seedProductRelationships();
         res.json({ success: true, message: 'Product relationships seeded successfully', results });
-      } catch (error: any) {
-        logger.error({ module: 'Admin', err: error }, 'Relationships seed failed');
-        res.status(500).json({ error: 'Seed failed', details: error.message });
+      } catch (err: unknown) {
+        logger.error({ module: 'Admin', err }, 'Relationships seed failed');
+        res.status(500).json({ error: 'Seed failed', details: extractErrorMessage(err) });
       }
     }),
   );
@@ -119,9 +123,9 @@ export const adminRouter: RouterFactory = (ctx: RouterContext): Router => {
         const { sampleOnly, cloudinaryOnly, cloudinaryFolder } = req.body || {};
         const results = await seedBrandImages({ sampleOnly, cloudinaryOnly, cloudinaryFolder });
         res.json({ success: true, message: 'Brand images seeded successfully', results });
-      } catch (error: any) {
-        logger.error({ module: 'Admin', err: error }, 'Brand images seed failed');
-        res.status(500).json({ error: 'Seed failed', details: error.message });
+      } catch (err: unknown) {
+        logger.error({ module: 'Admin', err }, 'Brand images seed failed');
+        res.status(500).json({ error: 'Seed failed', details: extractErrorMessage(err) });
       }
     }),
   );
@@ -137,9 +141,9 @@ export const adminRouter: RouterFactory = (ctx: RouterContext): Router => {
         const { seedPerformingTemplates } = await import('../seeds/seedTemplates');
         const results = await seedPerformingTemplates();
         res.json({ success: true, message: 'Performing templates seeded successfully', results });
-      } catch (error: any) {
-        logger.error({ module: 'Admin', err: error }, 'Templates seed failed');
-        res.status(500).json({ error: 'Seed failed', details: error.message });
+      } catch (err: unknown) {
+        logger.error({ module: 'Admin', err }, 'Templates seed failed');
+        res.status(500).json({ error: 'Seed failed', details: extractErrorMessage(err) });
       }
     }),
   );
@@ -156,9 +160,9 @@ export const adminRouter: RouterFactory = (ctx: RouterContext): Router => {
         const options = req.body || {};
         const results = await runAllSeeds(options);
         res.json({ success: true, message: 'All seeds completed', results });
-      } catch (error: any) {
-        logger.error({ module: 'Admin', err: error }, 'Seed all failed');
-        res.status(500).json({ error: 'Seed failed', details: error.message });
+      } catch (err: unknown) {
+        logger.error({ module: 'Admin', err }, 'Seed all failed');
+        res.status(500).json({ error: 'Seed failed', details: extractErrorMessage(err) });
       }
     }),
   );
@@ -176,7 +180,10 @@ export const adminRouter: RouterFactory = (ctx: RouterContext): Router => {
     validate(adminDlqQuerySchema, 'query'),
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const validated = (req as any).validatedQuery ?? {};
+        const validated = ((req as unknown as Record<string, unknown>)['validatedQuery'] ?? {}) as {
+          start?: number;
+          limit?: number;
+        };
         const start = validated.start ?? 0;
         const limit = validated.limit ?? 20;
         const end = start + limit - 1;
@@ -194,9 +201,9 @@ export const adminRouter: RouterFactory = (ctx: RouterContext): Router => {
             hasMore: start + limit < result.total,
           },
         });
-      } catch (error: any) {
-        logger.error({ module: 'Admin', err: error }, 'Failed to list DLQ jobs');
-        res.status(500).json({ error: 'Failed to list dead letter queue jobs', details: error.message });
+      } catch (err: unknown) {
+        logger.error({ module: 'Admin', err }, 'Failed to list DLQ jobs');
+        res.status(500).json({ error: 'Failed to list dead letter queue jobs', details: extractErrorMessage(err) });
       }
     }),
   );
@@ -228,9 +235,9 @@ export const adminRouter: RouterFactory = (ctx: RouterContext): Router => {
           message: 'Job re-queued successfully',
           newJobId: result.newJobId,
         });
-      } catch (error: any) {
-        logger.error({ module: 'Admin', err: error }, 'Failed to retry DLQ job');
-        res.status(500).json({ error: 'Failed to retry dead letter queue job', details: error.message });
+      } catch (err: unknown) {
+        logger.error({ module: 'Admin', err }, 'Failed to retry DLQ job');
+        res.status(500).json({ error: 'Failed to retry dead letter queue job', details: extractErrorMessage(err) });
       }
     }),
   );
@@ -249,9 +256,9 @@ export const adminRouter: RouterFactory = (ctx: RouterContext): Router => {
         const { getAvailableCategories } = await import('../services/ndsWebsiteScraper');
         const categories = getAvailableCategories();
         res.json({ success: true, categories });
-      } catch (error: any) {
-        logger.error({ module: 'Scraper', err: error }, 'Failed to get categories');
-        res.status(500).json({ error: 'Failed to get categories', details: error.message });
+      } catch (err: unknown) {
+        logger.error({ module: 'Scraper', err }, 'Failed to get categories');
+        res.status(500).json({ error: 'Failed to get categories', details: extractErrorMessage(err) });
       }
     }),
   );
@@ -268,9 +275,9 @@ export const adminRouter: RouterFactory = (ctx: RouterContext): Router => {
         const { categories, dryRun, limit } = req.body || {};
         const results = await scrapeNDSWebsite({ categories, dryRun, limit });
         res.json({ success: true, message: 'Scraping completed', results });
-      } catch (error: any) {
-        logger.error({ module: 'Scraper', err: error }, 'Full scrape failed');
-        res.status(500).json({ error: 'Scraping failed', details: error.message });
+      } catch (err: unknown) {
+        logger.error({ module: 'Scraper', err }, 'Full scrape failed');
+        res.status(500).json({ error: 'Scraping failed', details: extractErrorMessage(err) });
       }
     }),
   );
@@ -287,9 +294,9 @@ export const adminRouter: RouterFactory = (ctx: RouterContext): Router => {
         const { scrapeSingleCategory } = await import('../services/ndsWebsiteScraper');
         const results = await scrapeSingleCategory(category);
         res.json({ success: true, message: `Category ${category} scraped`, results });
-      } catch (error: any) {
-        logger.error({ module: 'Scraper', err: error }, 'Category scrape failed');
-        res.status(500).json({ error: 'Scraping failed', details: error.message });
+      } catch (err: unknown) {
+        logger.error({ module: 'Scraper', err }, 'Category scrape failed');
+        res.status(500).json({ error: 'Scraping failed', details: extractErrorMessage(err) });
       }
     }),
   );
@@ -309,8 +316,8 @@ export const adminRouter: RouterFactory = (ctx: RouterContext): Router => {
         const { db } = await import('../db');
         const all = await db.select().from(expTable);
         res.json({ success: true, experiments: all });
-      } catch (error: any) {
-        res.status(500).json({ error: 'Failed to list experiments', details: error.message });
+      } catch (err: unknown) {
+        res.status(500).json({ error: 'Failed to list experiments', details: extractErrorMessage(err) });
       }
     }),
   );
@@ -325,8 +332,8 @@ export const adminRouter: RouterFactory = (ctx: RouterContext): Router => {
         const { createExperiment } = await import('../services/experimentService');
         const experiment = await createExperiment(req.body);
         res.status(201).json({ success: true, experiment });
-      } catch (error: any) {
-        res.status(500).json({ error: 'Failed to create experiment', details: error.message });
+      } catch (err: unknown) {
+        res.status(500).json({ error: 'Failed to create experiment', details: extractErrorMessage(err) });
       }
     }),
   );
@@ -347,8 +354,8 @@ export const adminRouter: RouterFactory = (ctx: RouterContext): Router => {
         const { updateExperimentStatus } = await import('../services/experimentService');
         await updateExperimentStatus(id, status);
         res.json({ success: true, message: `Experiment ${id} status updated to ${status}` });
-      } catch (error: any) {
-        res.status(500).json({ error: 'Failed to update experiment', details: error.message });
+      } catch (err: unknown) {
+        res.status(500).json({ error: 'Failed to update experiment', details: extractErrorMessage(err) });
       }
     }),
   );
@@ -367,8 +374,8 @@ export const adminRouter: RouterFactory = (ctx: RouterContext): Router => {
           return;
         }
         res.json({ success: true, ...results });
-      } catch (error: any) {
-        res.status(500).json({ error: 'Failed to get results', details: error.message });
+      } catch (err: unknown) {
+        res.status(500).json({ error: 'Failed to get results', details: extractErrorMessage(err) });
       }
     }),
   );
@@ -387,9 +394,9 @@ export const adminRouter: RouterFactory = (ctx: RouterContext): Router => {
         const { listPrompts } = await import('../lib/promptRegistry');
         const prompts = listPrompts();
         res.json({ success: true, count: prompts.length, prompts });
-      } catch (error: any) {
-        logger.error({ module: 'Admin', err: error }, 'Failed to list prompts');
-        res.status(500).json({ error: 'Failed to list prompts', details: error.message });
+      } catch (err: unknown) {
+        logger.error({ module: 'Admin', err }, 'Failed to list prompts');
+        res.status(500).json({ error: 'Failed to list prompts', details: extractErrorMessage(err) });
       }
     }),
   );
