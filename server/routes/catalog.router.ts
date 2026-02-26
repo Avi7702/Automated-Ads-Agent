@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * Catalog Router (File Search)
  * RAG file search and reference file management

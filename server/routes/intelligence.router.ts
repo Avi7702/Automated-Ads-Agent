@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * Intelligence Router (WS-C5)
  * Product intelligence layer — priorities, business intelligence, and selection

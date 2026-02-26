@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * Copywriting Router
  * Standalone copywriting generation endpoint

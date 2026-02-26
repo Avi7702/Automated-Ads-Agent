@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * Planning Router
  * Content planner endpoints for post scheduling and balance tracking

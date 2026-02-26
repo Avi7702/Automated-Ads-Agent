@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * Image Router
  * Image analysis endpoints (standalone, not product-specific)
