@@ -53,18 +53,20 @@ export const brandProfileRouter: RouterFactory = (ctx: RouterContext): Router =>
 
         const existing = await storage.getBrandProfileByUserId(userId);
 
+        const { userId: _ignored, ...body } = req.body;
+
         if (existing) {
-          const updated = await storage.updateBrandProfile(userId, req.body);
+          const updated = await storage.updateBrandProfile(userId, body);
           res.json(updated);
         } else {
           const created = await storage.saveBrandProfile({
+            ...body,
             userId,
-            ...req.body,
           });
           res.status(201).json(created);
         }
-      } catch (error: any) {
-        logger.error({ module: 'BrandProfileUpdate', err: error }, 'Error updating brand profile');
+      } catch {
+        logger.error({ module: 'BrandProfileUpdate' }, 'Error updating brand profile');
         res.status(500).json({ error: 'Failed to update brand profile' });
       }
     }),
