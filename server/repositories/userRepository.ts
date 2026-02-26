@@ -26,7 +26,7 @@ export async function deleteUser(id: string): Promise<void> {
   await db.delete(users).where(eq(users.id, id));
 }
 
-export async function updateUserBrandVoice(userId: string, brandVoice: any): Promise<User> {
+export async function updateUserBrandVoice(userId: string, brandVoice: Record<string, unknown>): Promise<User> {
   const [user] = await db.update(users).set({ brandVoice }).where(eq(users.id, userId)).returning();
   if (!user) {
     throw new Error(`User not found: ${userId}`);
