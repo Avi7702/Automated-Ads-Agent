@@ -14,14 +14,15 @@ import { Button } from "@/components/ui/button";
 import { Sparkles, ChevronLeft, ChevronRight, RefreshCw, Loader2 } from "lucide-react";
 import { useIdeaBankFetch } from "@/components/ideabank/useIdeaBankFetch";
 import { SuggestionChip } from "./SuggestionChip";
-import type { StudioOrchestrator } from "@/hooks/useStudioOrchestrator";
+import { useStudioState } from "@/hooks/useStudioState";
 
 interface IdeaBankBarProps {
-  orch: StudioOrchestrator;
+  handleSelectSuggestion: (prompt: string, id: string, reasoning?: string) => void;
   className?: string;
 }
 
-function IdeaBankBarComponent({ orch, className }: IdeaBankBarProps) {
+function IdeaBankBarComponent({ handleSelectSuggestion, className }: IdeaBankBarProps) {
+  const { state } = useStudioState();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -32,11 +33,10 @@ function IdeaBankBarComponent({ orch, className }: IdeaBankBarProps) {
     response,
     fetchSuggestions,
   } = useIdeaBankFetch({
-    selectedProducts: orch.selectedProducts,
-    tempUploads: orch.tempUploads,
-    mode: orch.ideaBankMode,
-    templateId: orch.selectedTemplate?.id?.toString(),
-    onRecipeAvailable: orch.setGenerationRecipe,
+    selectedProducts: state.selectedProducts,
+    tempUploads: state.tempUploads,
+    mode: state.ideaBankMode,
+    templateId: state.selectedTemplate?.id?.toString(),
   });
 
   const suggestions = response?.suggestions || [];
@@ -56,11 +56,11 @@ function IdeaBankBarComponent({ orch, className }: IdeaBankBarProps) {
   }, [updateScrollState]);
 
   const handleUse = useCallback((prompt: string, id: string, reasoning?: string) => {
-    orch.handleSelectSuggestion?.(prompt, id, reasoning);
-  }, [orch]);
+    handleSelectSuggestion?.(prompt, id, reasoning);
+  }, [handleSelectSuggestion]);
 
   // Don't render if no products selected
-  if (orch.selectedProducts.length === 0 && (!orch.tempUploads || orch.tempUploads.length === 0)) {
+  if (state.selectedProducts.length === 0 && (!state.tempUploads || state.tempUploads.length === 0)) {
     return null;
   }
 
@@ -133,12 +133,12 @@ function IdeaBankBarComponent({ orch, className }: IdeaBankBarProps) {
             confidence={suggestion.confidence}
             mode={suggestion.mode}
             reasoning={suggestion.reasoning}
-            isSelected={orch.selectedSuggestion?.id === suggestion.id}
+            isSelected={state.selectedSuggestion?.id === suggestion.id}
             onUse={handleUse}
           />
         ))}
 
-        {!loading && !error && suggestions.length === 0 && orch.selectedProducts.length > 0 && (
+        {!loading && !error && suggestions.length === 0 && state.selectedProducts.length > 0 && (
           <button
             onClick={fetchSuggestions}
             className="shrink-0 flex items-center gap-2 px-3 py-2 rounded-full border border-dashed border-border text-xs text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors"

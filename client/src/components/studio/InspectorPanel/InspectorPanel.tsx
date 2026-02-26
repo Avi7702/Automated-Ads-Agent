@@ -3,7 +3,7 @@
  * InspectorPanel — 4-tab right panel for the Studio workspace
  *
  * Tabs: Edit | Copy | Ask AI | Details
- * Each tab is a standalone component receiving the orchestrator state.
+ * Each tab is a standalone component using useStudioState() context hook.
  * Designed to sit inside StudioLayout's right panel slot.
  */
 
@@ -14,7 +14,6 @@ import { EditTab } from "./tabs/EditTab";
 import { CopyTab } from "./tabs/CopyTab";
 import { AskAITab } from "./tabs/AskAITab";
 import { DetailsTab } from "./tabs/DetailsTab";
-import type { StudioOrchestrator } from "@/hooks/useStudioOrchestrator";
 
 type InspectorTab = "edit" | "copy" | "ask-ai" | "details";
 
@@ -26,12 +25,22 @@ const TABS: { id: InspectorTab; label: string; icon: typeof Pencil }[] = [
 ];
 
 interface InspectorPanelProps {
-  orch: StudioOrchestrator;
+  onApplyEdit: () => void;
+  handleGenerateCopy: () => void;
+  handleAskAI: () => void;
+  handleDownloadWithFeedback: () => void;
+  handleLoadFromHistory: (data: unknown) => void;
+  authUser: { email?: string } | null;
   className?: string;
 }
 
 export const InspectorPanel = memo(function InspectorPanel({
-  orch,
+  onApplyEdit,
+  handleGenerateCopy,
+  handleAskAI,
+  handleDownloadWithFeedback,
+  handleLoadFromHistory,
+  authUser,
   className,
 }: InspectorPanelProps) {
   const [activeTab, setActiveTab] = useState<InspectorTab>("edit");
@@ -66,10 +75,17 @@ export const InspectorPanel = memo(function InspectorPanel({
 
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto" role="tabpanel" id={`inspector-panel-${activeTab}`}>
-        {activeTab === "edit" && <EditTab orch={orch} />}
-        {activeTab === "copy" && <CopyTab orch={orch} />}
-        {activeTab === "ask-ai" && <AskAITab orch={orch} />}
-        {activeTab === "details" && <DetailsTab orch={orch} />}
+        {activeTab === "edit" && <EditTab onApplyEdit={onApplyEdit} />}
+        {activeTab === "copy" && <CopyTab handleGenerateCopy={handleGenerateCopy} />}
+        {activeTab === "ask-ai" && <AskAITab handleAskAI={handleAskAI} />}
+        {activeTab === "details" && (
+          <DetailsTab
+            handleDownloadWithFeedback={handleDownloadWithFeedback}
+            handleGenerateCopy={handleGenerateCopy}
+            handleLoadFromHistory={handleLoadFromHistory}
+            authUser={authUser}
+          />
+        )}
       </div>
     </div>
   );

@@ -286,11 +286,17 @@ export default function Studio() {
             {orch.state === 'idle' && (
               <ComposerView
                 key="composer"
-                orch={orch}
                 ideaBankContext={ideaBankContext}
                 ideaBankBridgeState={ideaBankBridgeState}
                 onIdeaBankContextChange={handleIdeaBankContextChange}
                 onSendIdeasToAgent={handleSendIdeasToAgent}
+                handlePromptChange={orch.handlePromptChange}
+                handleSelectSuggestion={orch.handleSelectSuggestion}
+                handleGenerate={orch.handleGenerate}
+                toggleProductSelection={orch.toggleProductSelection}
+                filteredProducts={orch.filteredProducts}
+                categories={orch.categories}
+                generateButtonRef={orch.generateButtonRef}
               />
             )}
             {orch.state === 'generating' && (
@@ -300,13 +306,30 @@ export default function Studio() {
                 mediaType={orch.generatedMediaType}
               />
             )}
-            {orch.state === 'result' && <ResultViewEnhanced key="result" orch={orch} />}
+            {orch.state === 'result' && (
+              <ResultViewEnhanced
+                key="result"
+                handleReset={orch.handleReset}
+                handleDownloadWithFeedback={orch.handleDownloadWithFeedback}
+                handleCopyText={orch.handleCopyText}
+                handleCanvasEditComplete={orch.handleCanvasEditComplete}
+                haptic={orch.haptic}
+                zoomContainerRef={orch.zoomContainerRef}
+              />
+            )}
           </AnimatePresence>
         </div>
 
         <div className="hidden lg:block min-w-0">
           <div className="sticky top-24 max-h-[calc(100vh-120px)] rounded-2xl border border-border bg-card/30 overflow-hidden card-hover-lift">
-            <InspectorPanel orch={orch} />
+            <InspectorPanel
+              onApplyEdit={orch.handleApplyEdit}
+              handleGenerateCopy={orch.handleGenerateCopy}
+              handleAskAI={orch.handleAskAI}
+              handleDownloadWithFeedback={orch.handleDownloadWithFeedback}
+              handleLoadFromHistory={orch.handleLoadFromHistory}
+              authUser={orch.authUser}
+            />
           </div>
         </div>
 
@@ -327,7 +350,7 @@ export default function Studio() {
       </div>
 
       <div className="mt-8 hidden lg:block">
-        <IdeaBankBar orch={orch} />
+        <IdeaBankBar handleSelectSuggestion={orch.handleSelectSuggestion} />
       </div>
     </>
   );
@@ -411,7 +434,7 @@ export default function Studio() {
           {workspaceMode === 'agent' && (
             <div className="mx-auto max-w-5xl grid gap-8 xl:grid-cols-[1fr_380px]">
               <div className="min-w-0 order-2 xl:order-1">
-                <AgentModePanel orch={orch} />
+                <AgentModePanel />
               </div>
               <div className="min-w-0 order-1 xl:order-2">
                 <div className="xl:sticky xl:top-24">
@@ -469,7 +492,14 @@ export default function Studio() {
 
         {orch.generatedImage && (
           <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-md border-t max-h-[60vh] overflow-y-auto">
-            <InspectorPanel orch={orch} />
+            <InspectorPanel
+              onApplyEdit={orch.handleApplyEdit}
+              handleGenerateCopy={orch.handleGenerateCopy}
+              handleAskAI={orch.handleAskAI}
+              handleDownloadWithFeedback={orch.handleDownloadWithFeedback}
+              handleLoadFromHistory={orch.handleLoadFromHistory}
+              authUser={orch.authUser}
+            />
           </div>
         )}
 

@@ -21,20 +21,21 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import type { StudioOrchestrator } from "@/hooks/useStudioOrchestrator";
+import { useStudioState } from "@/hooks/useStudioState";
 
 interface CopyTabProps {
-  orch: StudioOrchestrator;
+  handleGenerateCopy: () => void;
 }
 
-export const CopyTab = memo(function CopyTab({ orch }: CopyTabProps) {
-  const hasResult = Boolean(orch.generatedImage);
+export const CopyTab = memo(function CopyTab({ handleGenerateCopy }: CopyTabProps) {
+  const { state, setGeneratedCopy } = useStudioState();
+  const hasResult = Boolean(state.generatedImage);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const handleCopyToClipboard = async () => {
-    if (!orch.generatedCopy) return;
-    await navigator.clipboard.writeText(orch.generatedCopy);
+    if (!state.generatedCopy) return;
+    await navigator.clipboard.writeText(state.generatedCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -58,18 +59,18 @@ export const CopyTab = memo(function CopyTab({ orch }: CopyTabProps) {
         <>
           {/* Quick copy generation */}
           <Button
-            onClick={orch.handleGenerateCopy}
-            disabled={orch.isGeneratingCopy}
+            onClick={handleGenerateCopy}
+            disabled={state.isGeneratingCopy}
             variant="outline"
             className="w-full"
             size="sm"
           >
-            {orch.isGeneratingCopy ? (
+            {state.isGeneratingCopy ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Generating copy...
               </>
-            ) : orch.generatedCopy ? (
+            ) : state.generatedCopy ? (
               <>
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Regenerate Quick Copy
@@ -83,11 +84,11 @@ export const CopyTab = memo(function CopyTab({ orch }: CopyTabProps) {
           </Button>
 
           {/* Inline editable copy */}
-          {orch.generatedCopy && (
+          {state.generatedCopy && (
             <div className="space-y-2">
               <Textarea
-                value={orch.generatedCopy}
-                onChange={(e) => orch.setGeneratedCopy(e.target.value)}
+                value={state.generatedCopy}
+                onChange={(e) => setGeneratedCopy(e.target.value)}
                 rows={4}
                 className="resize-none text-sm"
               />
@@ -113,7 +114,7 @@ export const CopyTab = memo(function CopyTab({ orch }: CopyTabProps) {
           )}
 
           {/* Advanced: full CopywritingPanel */}
-          {orch.generationId && (
+          {state.generationId && (
             <div className="border-t border-border/50 pt-3">
               <button
                 onClick={() => setShowAdvanced(!showAdvanced)}
@@ -134,8 +135,8 @@ export const CopyTab = memo(function CopyTab({ orch }: CopyTabProps) {
                   className="pt-3 overflow-hidden"
                 >
                   <CopywritingPanel
-                    generationId={orch.generationId}
-                    prompt={orch.prompt}
+                    generationId={state.generationId}
+                    prompt={state.prompt}
                   />
                 </motion.div>
               )}
