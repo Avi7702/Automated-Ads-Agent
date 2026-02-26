@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * OnboardingGate — Shows BusinessOnboarding overlay for authenticated users
  * who haven't completed onboarding yet.

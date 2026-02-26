@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * CalendarView -- Premium monthly content calendar.
  *
@@ -82,7 +81,7 @@ function MiniPostCard({ post }: { post: ScheduledPost }) {
         <img src={post.imageUrl} alt="" className="w-5 h-5 rounded-sm object-cover shrink-0" />
       ) : (
         <span
-          className={cn('w-1 h-4 rounded-full shrink-0', STATUS_BAR_COLORS[post.status] ?? STATUS_BAR_COLORS.draft)}
+          className={cn('w-1 h-4 rounded-full shrink-0', STATUS_BAR_COLORS[post.status] ?? STATUS_BAR_COLORS['draft'])}
         />
       )}
       {/* Caption snippet */}
@@ -106,7 +105,7 @@ function StatusDots({ posts }: { posts: ScheduledPost[] }) {
   return (
     <div className="flex md:hidden items-center justify-center gap-0.5 mt-0.5">
       {statuses.slice(0, 3).map((s, i) => (
-        <span key={i} className={cn('w-1.5 h-1.5 rounded-full', STATUS_BAR_COLORS[s] ?? STATUS_BAR_COLORS.draft)} />
+        <span key={i} className={cn('w-1.5 h-1.5 rounded-full', STATUS_BAR_COLORS[s] ?? STATUS_BAR_COLORS['draft'])} />
       ))}
       {posts.length > 3 && <span className="text-[8px] text-muted-foreground leading-none">+{posts.length - 3}</span>}
     </div>

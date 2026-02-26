@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * SchedulePostDialog — Premium form dialog to schedule a new post
  *
@@ -234,12 +233,12 @@ export function SchedulePostDialog({ open, onOpenChange, defaultDate, prefill }:
       await schedulePost.mutateAsync({
         connectionId,
         caption: caption.trim(),
-        hashtags: hashtagList.length > 0 ? hashtagList : undefined,
-        imageUrl: imageUrl || undefined,
-        imagePublicId: imagePublicId || undefined,
+        ...(hashtagList.length > 0 && { hashtags: hashtagList }),
+        ...(imageUrl && { imageUrl }),
+        ...(imagePublicId && { imagePublicId }),
         scheduledFor,
         timezone,
-        generationId: prefill?.generationId,
+        ...(prefill?.generationId && { generationId: prefill.generationId }),
       });
 
       toast.success('Post scheduled', {
