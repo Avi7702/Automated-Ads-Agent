@@ -25,7 +25,10 @@ export const brandProfileRouter: RouterFactory = (ctx: RouterContext): Router =>
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = req.session.userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const profile = await storage.getBrandProfileByUserId(userId);
 
         if (!profile) {
@@ -48,7 +51,10 @@ export const brandProfileRouter: RouterFactory = (ctx: RouterContext): Router =>
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = req.session.userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
 
         const existing = await storage.getBrandProfileByUserId(userId);
 
@@ -79,7 +85,10 @@ export const brandProfileRouter: RouterFactory = (ctx: RouterContext): Router =>
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = req.session.userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         await storage.deleteBrandProfile(userId);
         res.json({ success: true });
       } catch (err: unknown) {

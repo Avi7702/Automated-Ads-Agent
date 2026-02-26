@@ -35,14 +35,28 @@ export const approvalQueueRouter: RouterFactory = (ctx: RouterContext): Router =
     validate(approvalQueueQuerySchema, 'query'),
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const validated = (req as unknown as Record<string, unknown>)['validatedQuery'] ?? {};
+        const validated = ((req as unknown as Record<string, unknown>)['validatedQuery'] ?? {}) as {
+          status?: string;
+          priority?: string;
+          dateFrom?: string;
+          dateTo?: string;
+        };
 
-        const items = await approvalQueueService.getQueueForUser(req.user!.id, {
-          ...(validated.status ? { status: validated.status } : {}),
-          ...(validated.priority ? { priority: validated.priority } : {}),
-          ...(validated.dateFrom ? { dateFrom: new Date(validated.dateFrom) } : {}),
-          ...(validated.dateTo ? { dateTo: new Date(validated.dateTo) } : {}),
-        });
+        const filters: Parameters<typeof approvalQueueService.getQueueForUser>[1] = {};
+        if (validated.status) {
+          filters.status = validated.status as NonNullable<typeof filters.status>;
+        }
+        if (validated.priority) {
+          filters.priority = validated.priority as NonNullable<typeof filters.priority>;
+        }
+        if (validated.dateFrom) {
+          filters.dateFrom = new Date(validated.dateFrom);
+        }
+        if (validated.dateTo) {
+          filters.dateTo = new Date(validated.dateTo);
+        }
+
+        const items = await approvalQueueService.getQueueForUser(req.user!.id, filters);
 
         // Calculate stats
         const stats = {

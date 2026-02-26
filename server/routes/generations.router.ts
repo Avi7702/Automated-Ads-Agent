@@ -236,7 +236,7 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
           endpoint: '/api/generations/:id/edit',
           errorType: err instanceof Error ? err.name : 'unknown',
           statusCode: 500,
-          userId,
+          ...(userId != null ? { userId } : {}),
         });
 
         return res.status(500).json({

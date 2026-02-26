@@ -35,7 +35,10 @@ export const performingTemplatesRouter: RouterFactory = (ctx: RouterContext): Ro
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = req.session.userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         let previewImageUrl: string | undefined;
         let previewPublicId: string | undefined;
 
@@ -56,7 +59,8 @@ export const performingTemplatesRouter: RouterFactory = (ctx: RouterContext): Ro
               },
               (error, uploadResult) => {
                 if (error) reject(error);
-                else resolve(uploadResult);
+                else if (uploadResult) resolve(uploadResult);
+                else reject(new Error('Upload returned no result'));
               },
             );
             uploadStream.end(req.file!.buffer);
@@ -120,7 +124,10 @@ export const performingTemplatesRouter: RouterFactory = (ctx: RouterContext): Ro
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = req.session.userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const templates = await storage.getPerformingAdTemplates(userId);
         res.json(templates);
       } catch (err: unknown) {
@@ -138,7 +145,10 @@ export const performingTemplatesRouter: RouterFactory = (ctx: RouterContext): Ro
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = req.session.userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const templates = await storage.getFeaturedPerformingAdTemplates(userId);
         res.json(templates);
       } catch (err: unknown) {
@@ -156,7 +166,10 @@ export const performingTemplatesRouter: RouterFactory = (ctx: RouterContext): Ro
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = req.session.userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const limit = parseInt(String(req.query['limit'] ?? '')) || 10;
         const templates = await storage.getTopPerformingAdTemplates(userId, limit);
         res.json(templates);
@@ -175,7 +188,10 @@ export const performingTemplatesRouter: RouterFactory = (ctx: RouterContext): Ro
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = req.session.userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const filters = req.body;
         const templates = await storage.searchPerformingAdTemplates(userId, filters);
         res.json(templates);
@@ -194,7 +210,10 @@ export const performingTemplatesRouter: RouterFactory = (ctx: RouterContext): Ro
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = req.session.userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const templates = await storage.getPerformingAdTemplatesByCategory(userId, String(req.params['category']));
         res.json(templates);
       } catch (err: unknown) {
@@ -212,7 +231,10 @@ export const performingTemplatesRouter: RouterFactory = (ctx: RouterContext): Ro
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = req.session.userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const templates = await storage.getPerformingAdTemplatesByPlatform(userId, String(req.params['platform']));
         res.json(templates);
       } catch (err: unknown) {

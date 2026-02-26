@@ -44,7 +44,7 @@ export const copyRouter: RouterFactory = (ctx: RouterContext): Router => {
         if (!brandVoice) {
           const user = await storage.getUserById(userId);
           if (user?.brandVoice) {
-            brandVoice = user.brandVoice as typeof brandVoice;
+            brandVoice = user.brandVoice as unknown as typeof brandVoice;
           }
         }
 
@@ -89,8 +89,8 @@ export const copyRouter: RouterFactory = (ctx: RouterContext): Router => {
 
         // Extract successful saves and log any failures
         const savedCopies = saveResults
-          .filter((result): result is PromiseFulfilledResult<unknown> => result.status === 'fulfilled')
-          .map((result) => result.value);
+          .filter((result) => result.status === 'fulfilled')
+          .map((result) => (result as PromiseFulfilledResult<Awaited<ReturnType<typeof storage.saveAdCopy>>>).value);
 
         const failedCount = saveResults.filter((r) => r.status === 'rejected').length;
         if (failedCount > 0) {
@@ -112,7 +112,9 @@ export const copyRouter: RouterFactory = (ctx: RouterContext): Router => {
       } catch (err: unknown) {
         logger.error({ module: 'GenerateCopy', err }, 'Error generating copy');
         if (err instanceof Error && err.name === 'ZodError') {
-          return res.status(400).json({ error: 'Validation failed', details: (err as { issues: unknown }).issues });
+          return res
+            .status(400)
+            .json({ error: 'Validation failed', details: (err as unknown as { issues: unknown }).issues });
         }
         res
           .status(500)

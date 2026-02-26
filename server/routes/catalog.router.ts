@@ -131,10 +131,14 @@ export const catalogRouter: RouterFactory = (ctx: RouterContext): Router => {
     validate(catalogFilesQuerySchema, 'query'),
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const validated = (req as unknown as Record<string, unknown>)['validatedQuery'] ?? {};
+        const validated = ((req as unknown as Record<string, unknown>)['validatedQuery'] ?? {}) as {
+          category?: string;
+        };
         const { listReferenceFiles } = await import('../services/fileSearchService');
+        type FileCategory = import('../services/fileSearchService').FileCategory;
 
-        const files = await listReferenceFiles(validated.category);
+        const categoryValue = validated.category as FileCategory | undefined;
+        const files = await listReferenceFiles(categoryValue);
         res.json({ success: true, files, count: files.length });
       } catch (err: unknown) {
         logger.error({ module: 'ListReferenceFiles', err }, 'Error listing reference files');

@@ -31,7 +31,10 @@ export const intelligenceRouter: RouterFactory = (ctx: RouterContext): Router =>
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = req.session.userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const { productIntelligenceService } = await import('../services/productIntelligenceService');
         const priorities = await productIntelligenceService.getProductPriorities(userId);
         res.json({ priorities });
@@ -50,7 +53,10 @@ export const intelligenceRouter: RouterFactory = (ctx: RouterContext): Router =>
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = req.session.userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const productId = req.params['productId'] as string;
         const { revenueTier, revenueWeight, competitiveAngle, keySellingPoints, monthlyTarget, seasonalRelevance } =
           req.body;
@@ -81,7 +87,10 @@ export const intelligenceRouter: RouterFactory = (ctx: RouterContext): Router =>
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = req.session.userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const { priorities } = req.body;
 
         if (!Array.isArray(priorities) || priorities.length === 0) {
@@ -120,7 +129,10 @@ export const intelligenceRouter: RouterFactory = (ctx: RouterContext): Router =>
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = req.session.userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const { productIntelligenceService } = await import('../services/productIntelligenceService');
         const bi = await productIntelligenceService.getBusinessIntelligence(userId);
         res.json({ businessIntelligence: bi });
@@ -139,7 +151,10 @@ export const intelligenceRouter: RouterFactory = (ctx: RouterContext): Router =>
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = req.session.userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const {
           industry,
           niche,
@@ -215,7 +230,10 @@ export const intelligenceRouter: RouterFactory = (ctx: RouterContext): Router =>
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = req.session.userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const { productIntelligenceService } = await import('../services/productIntelligenceService');
         const stats = await productIntelligenceService.getProductPostingStats(userId);
         res.json({ stats });
@@ -234,7 +252,10 @@ export const intelligenceRouter: RouterFactory = (ctx: RouterContext): Router =>
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = req.session.userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const { numPosts } = req.body;
 
         if (!numPosts || typeof numPosts !== 'number' || numPosts < 1 || numPosts > 30) {

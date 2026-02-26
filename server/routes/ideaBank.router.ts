@@ -203,7 +203,10 @@ export const ideaBankRouter: RouterFactory = (ctx: RouterContext): Router => {
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const productId = String(req.params['productId']);
-        const userId = req.session.userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
 
         const result = await ideaBank.getMatchedTemplates(productId, userId);
 

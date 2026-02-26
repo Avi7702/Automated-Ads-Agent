@@ -60,7 +60,7 @@ export const copywritingRouter: RouterFactory = (ctx: RouterContext): Router => 
           // Provide defaults for fields that copywritingService expects
           productBenefits: [],
           uniqueValueProp: productDescription,
-        } as Parameters<typeof copywritingService.generateCopy>[0]);
+        } as unknown as Parameters<typeof copywritingService.generateCopy>[0]);
 
         // Transform to simplified response format
         const responseVariations = generatedVariations.map((v) => ({

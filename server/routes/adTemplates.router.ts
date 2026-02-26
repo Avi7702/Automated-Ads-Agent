@@ -123,7 +123,9 @@ export const adTemplatesRouter: RouterFactory = (ctx: RouterContext): Router => 
         res.status(201).json(template);
       } catch (err: unknown) {
         if (err instanceof Error && err.name === 'ZodError') {
-          return res.status(400).json({ error: 'Invalid template data', details: (err as { issues: unknown }).issues });
+          return res
+            .status(400)
+            .json({ error: 'Invalid template data', details: (err as unknown as { issues: unknown }).issues });
         }
         logger.error({ module: 'CreateAdTemplate', err }, 'Error creating ad template');
         res.status(500).json({ error: 'Failed to create ad template' });
@@ -155,7 +157,9 @@ export const adTemplatesRouter: RouterFactory = (ctx: RouterContext): Router => 
         res.json(template);
       } catch (err: unknown) {
         if (err instanceof Error && err.name === 'ZodError') {
-          return res.status(400).json({ error: 'Invalid template data', details: (err as { issues: unknown }).issues });
+          return res
+            .status(400)
+            .json({ error: 'Invalid template data', details: (err as unknown as { issues: unknown }).issues });
         }
         logger.error({ module: 'UpdateAdTemplate', err }, 'Error updating ad template');
         res.status(500).json({ error: 'Failed to update ad template' });
