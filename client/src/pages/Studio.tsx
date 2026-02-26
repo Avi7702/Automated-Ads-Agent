@@ -416,7 +416,7 @@ export default function Studio() {
               <div className="min-w-0 order-1 xl:order-2">
                 <div className="xl:sticky xl:top-24">
                   <AgentChatPanel
-                    orch={orch}
+                    products={orch.selectedProducts}
                     title="Ad Assistant"
                     forceExpanded
                     showCollapseToggle={false}
@@ -434,7 +434,7 @@ export default function Studio() {
           {workspaceMode === 'studio' && (
             <>
               <AgentChatPanel
-                orch={orch}
+                products={orch.selectedProducts}
                 title="Studio Assistant"
                 ideaBankContext={ideaBankContext}
                 ideaBankBridgeState={ideaBankBridgeState}
@@ -450,7 +450,7 @@ export default function Studio() {
               <div className="min-w-0">
                 <div className="xl:sticky xl:top-24">
                   <AgentChatPanel
-                    orch={orch}
+                    products={orch.selectedProducts}
                     title="Ad Assistant"
                     forceExpanded
                     showCollapseToggle={false}

@@ -1,42 +1,32 @@
 // @ts-nocheck
-/**
- * EditTab — Refine/edit the current generation
- *
- * Preset quick-edits + freeform prompt + apply button.
- * Extracted from ResultViewEnhanced inline edit section.
- */
-
-import { memo } from "react";
-import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, Loader2, Pencil } from "lucide-react";
-import type { StudioOrchestrator } from "@/hooks/useStudioOrchestrator";
+import { memo } from 'react';
+import { motion } from 'framer-motion';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Sparkles, Loader2, Pencil } from 'lucide-react';
+import { useStudioState } from '@/hooks/useStudioState';
 
 const EDIT_PRESETS = [
-  "Warmer lighting",
-  "Cooler tones",
-  "More contrast",
-  "Softer look",
-  "Brighter background",
-  "More vibrant colors",
-  "Add subtle shadows",
-  "Professional lighting",
+  'Warmer lighting',
+  'Cooler tones',
+  'More contrast',
+  'Softer look',
+  'Brighter background',
+  'More vibrant colors',
+  'Add subtle shadows',
+  'Professional lighting',
 ];
 
 interface EditTabProps {
-  orch: StudioOrchestrator;
+  onApplyEdit: () => void;
 }
 
-export const EditTab = memo(function EditTab({ orch }: EditTabProps) {
-  const hasResult = Boolean(orch.generatedImage);
+export const EditTab = memo(function EditTab({ onApplyEdit }: EditTabProps) {
+  const { state, setEditPrompt } = useStudioState();
+  const hasResult = Boolean(state.generatedImage);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-4 p-4"
-    >
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 p-4">
       <div className="flex items-center gap-2 text-sm font-medium">
         <Pencil className="w-4 h-4 text-primary" />
         Refine Image
@@ -49,19 +39,18 @@ export const EditTab = memo(function EditTab({ orch }: EditTabProps) {
       ) : (
         <>
           <Textarea
-            value={orch.editPrompt}
-            onChange={(e) => orch.setEditPrompt(e.target.value)}
-            placeholder="Describe what changes you'd like..."
+            value={state.editPrompt}
+            onChange={(e) => setEditPrompt(e.target.value)}
+            placeholder="Describe what changes you would like..."
             rows={3}
             className="resize-none text-sm"
           />
 
-          {/* Preset chips */}
           <div className="flex flex-wrap gap-1.5">
             {EDIT_PRESETS.map((preset) => (
               <button
                 key={preset}
-                onClick={() => orch.setEditPrompt(preset)}
+                onClick={() => setEditPrompt(preset)}
                 className="text-xs px-2.5 py-1.5 rounded-full border border-border hover:bg-muted/80 hover:border-primary/30 transition-colors"
               >
                 {preset}
@@ -70,12 +59,12 @@ export const EditTab = memo(function EditTab({ orch }: EditTabProps) {
           </div>
 
           <Button
-            onClick={orch.handleApplyEdit}
-            disabled={!orch.editPrompt.trim() || orch.isEditing}
+            onClick={onApplyEdit}
+            disabled={!state.editPrompt.trim() || state.isEditing}
             className="w-full"
             size="sm"
           >
-            {orch.isEditing ? (
+            {state.isEditing ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Applying...

@@ -6,6 +6,9 @@
  * - Uploading reference images
  * - Optional external message injection (Idea Bank -> Agent)
  * - Passing hidden workspace context with each chat turn
+ *
+ * S2-12: Converted from orch prop to useStudioState + individual props.
+ * Receives `products` (full catalog from query) and optional `onSetState` handler.
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
@@ -16,7 +19,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { ChatMessage } from './ChatMessage';
 import { useAgentChat, type AgentChatMessageContext } from './useAgentChat';
-import type { StudioOrchestrator } from '@/hooks/useStudioOrchestrator';
+import { useStudioState } from '@/hooks/useStudioState';
 import type { AnalyzedUpload, ImageAnalysisResponse } from '@/types/analyzedUpload';
 import type { IdeaBankContextSnapshot } from '@/components/ideabank/types';
 import type { CopyResult, Product } from '@/hooks/studio/types';
@@ -43,7 +46,8 @@ type SpeechRecognitionWindow = Window & {
 };
 
 interface AgentChatPanelProps {
-  orch: StudioOrchestrator;
+  products: Product[];
+  onSetState?: (state: string) => void;
   title?: string;
   className?: string;
   bodyMaxHeightClassName?: string;
@@ -86,7 +90,8 @@ function extractProductIds(items: unknown[]): string[] {
 }
 
 export function AgentChatPanel({
-  orch,
+  products,
+  onSetState,
   title = 'Studio Assistant',
   className,
   bodyMaxHeightClassName = 'max-h-[350px]',
@@ -97,6 +102,19 @@ export function AgentChatPanel({
   externalMessage = null,
   onExternalMessageConsumed,
 }: AgentChatPanelProps) {
+  const {
+    state,
+    setProducts: setSelectedProducts,
+    setPrompt,
+    setPlatform,
+    setAspectRatio,
+    setResolution,
+    setResult,
+    setGeneratedCopyFull,
+    setGeneratedCopy,
+    setUploads,
+  } = useStudioState();
+
   const maxImageInputs = 6;
   const isCollapseEnabled = showCollapseToggle ?? !forceExpanded;
 
@@ -119,7 +137,7 @@ export function AgentChatPanel({
   const recognitionRef = useRef<{ stop: () => void } | null>(null);
   const consumedExternalMessageRef = useRef<string | null>(null);
 
-  const remainingUploadSlots = Math.max(0, maxImageInputs - orch.selectedProducts.length - orch.tempUploads.length);
+  const remainingUploadSlots = Math.max(0, maxImageInputs - state.selectedProducts.length - state.tempUploads.length);
 
   const analyzeUpload = useCallback(async (upload: AnalyzedUpload): Promise<AnalyzedUpload> => {
     try {
@@ -191,12 +209,18 @@ export function AgentChatPanel({
       }));
 
       setIsUploading(true);
-      orch.setTempUploads((prev) => [...prev, ...newUploads]);
+      // Add new uploads to existing ones
+      const updatedUploads = [...state.tempUploads, ...newUploads];
+      setUploads(updatedUploads);
       try {
         const analyzedUploads = await Promise.all(newUploads.map((upload) => analyzeUpload(upload)));
         const analyzedById = new Map(analyzedUploads.map((upload) => [upload.id, upload]));
 
-        orch.setTempUploads((prev) => prev.map((upload) => analyzedById.get(upload.id) ?? upload));
+        // Replace analyzed uploads in the full list
+        const finalUploads = [...state.tempUploads, ...newUploads].map(
+          (upload) => analyzedById.get(upload.id) ?? upload,
+        );
+        setUploads(finalUploads);
 
         toast.success('Images uploaded', {
           description: `${filesToAdd.length} image(s) added to your generation context.`,
@@ -209,7 +233,7 @@ export function AgentChatPanel({
         setIsUploading(false);
       }
     },
-    [analyzeUpload, isUploading, maxImageInputs, orch, remainingUploadSlots],
+    [analyzeUpload, isUploading, maxImageInputs, remainingUploadSlots, state.tempUploads, setUploads],
   );
 
   const handleUploadInputChange = useCallback(
@@ -229,11 +253,11 @@ export function AgentChatPanel({
           case 'select_products': {
             const incoming = Array.isArray(payload['products']) ? payload['products'] : [];
             const selectedIds = extractProductIds(incoming);
-            if (selectedIds.length > 0 && orch.setSelectedProducts) {
-              const selectedProducts: Product[] = orch.products.filter((product) =>
+            if (selectedIds.length > 0) {
+              const selectedProducts: Product[] = products.filter((product) =>
                 selectedIds.includes(String(product.id)),
               );
-              orch.setSelectedProducts(selectedProducts);
+              setSelectedProducts(selectedProducts);
               toast.success('Products selected', {
                 description: `${selectedProducts.length} product(s) selected by the assistant.`,
               });
@@ -242,8 +266,8 @@ export function AgentChatPanel({
           }
           case 'set_prompt': {
             const prompt = payload['prompt'];
-            if (typeof prompt === 'string' && prompt.trim().length > 0 && orch.setPrompt) {
-              orch.setPrompt(prompt);
+            if (typeof prompt === 'string' && prompt.trim().length > 0) {
+              setPrompt(prompt);
               toast.success('Prompt updated', {
                 description: 'The assistant set your generation prompt.',
               });
@@ -252,8 +276,8 @@ export function AgentChatPanel({
           }
           case 'set_platform': {
             const platform = payload['platform'];
-            if (typeof platform === 'string' && platform.trim().length > 0 && orch.setPlatform) {
-              orch.setPlatform(platform);
+            if (typeof platform === 'string' && platform.trim().length > 0) {
+              setPlatform(platform);
               toast.success('Platform set', {
                 description: `Target platform: ${platform}`,
               });
@@ -262,23 +286,23 @@ export function AgentChatPanel({
           }
           case 'set_aspect_ratio': {
             const aspectRatio = payload['aspectRatio'];
-            if (typeof aspectRatio === 'string' && aspectRatio.trim().length > 0 && orch.setAspectRatio) {
-              orch.setAspectRatio(aspectRatio);
+            if (typeof aspectRatio === 'string' && aspectRatio.trim().length > 0) {
+              setAspectRatio(aspectRatio);
             }
             break;
           }
           case 'set_resolution': {
             const resolution = payload['resolution'];
-            if (typeof resolution === 'string' && isResolution(resolution) && orch.setResolution) {
-              orch.setResolution(resolution);
+            if (typeof resolution === 'string' && isResolution(resolution)) {
+              setResolution(resolution);
             }
             break;
           }
           case 'generation_complete': {
             const imageUrl = payload['imageUrl'];
-            if (typeof imageUrl === 'string' && imageUrl.trim().length > 0 && orch.setGeneratedImage) {
-              orch.setGeneratedImage(imageUrl);
-              if (orch.setState) orch.setState('result');
+            if (typeof imageUrl === 'string' && imageUrl.trim().length > 0) {
+              setResult(imageUrl, '');
+              if (onSetState) onSetState('result');
               toast.success('Image generated!', {
                 description: 'Check the result in the canvas.',
               });
@@ -289,9 +313,9 @@ export function AgentChatPanel({
             const copies = Array.isArray(payload['copies']) ? payload['copies'] : [];
             if (copies.length > 0) {
               const firstCopy = copies[0];
-              if (orch.setGeneratedCopyFull && isCopyResult(firstCopy)) {
-                orch.setGeneratedCopyFull(firstCopy);
-              } else if (orch.setGeneratedCopy) {
+              if (isCopyResult(firstCopy)) {
+                setGeneratedCopyFull(firstCopy);
+              } else {
                 const caption =
                   firstCopy && typeof firstCopy === 'object'
                     ? (firstCopy as { caption?: unknown })['caption']
@@ -300,9 +324,7 @@ export function AgentChatPanel({
                   firstCopy && typeof firstCopy === 'object'
                     ? (firstCopy as { bodyText?: unknown })['bodyText']
                     : undefined;
-                orch.setGeneratedCopy(
-                  typeof caption === 'string' ? caption : typeof bodyText === 'string' ? bodyText : '',
-                );
+                setGeneratedCopy(typeof caption === 'string' ? caption : typeof bodyText === 'string' ? bodyText : '');
               }
               toast.success('Ad copy generated', {
                 description: `${copies.length} variation(s) ready in the Inspector.`,
@@ -315,7 +337,18 @@ export function AgentChatPanel({
         // UI action dispatch should never crash the chat panel
       }
     },
-    [orch],
+    [
+      products,
+      setSelectedProducts,
+      setPrompt,
+      setPlatform,
+      setAspectRatio,
+      setResolution,
+      setResult,
+      setGeneratedCopyFull,
+      setGeneratedCopy,
+      onSetState,
+    ],
   );
 
   const { messages, isStreaming, error, sendMessage, stopStreaming, clearMessages } = useAgentChat({
@@ -323,12 +356,12 @@ export function AgentChatPanel({
   });
 
   const buildMessageContext = useCallback((): AgentChatMessageContext => {
-    const selectedProducts = orch.selectedProducts
+    const selectedProducts = state.selectedProducts
       .map((product) => product.name)
       .filter((name): name is string => typeof name === 'string' && name.trim().length > 0)
       .slice(0, 6);
 
-    const uploadedReferences = orch.tempUploads
+    const uploadedReferences = state.tempUploads
       .filter((upload) => upload.selected !== false)
       .map((upload) => upload.description || upload.file?.name || 'Uploaded image')
       .filter((label): label is string => typeof label === 'string' && label.trim().length > 0)
@@ -349,7 +382,7 @@ export function AgentChatPanel({
         topIdeas,
       },
     };
-  }, [ideaBankContext, orch.selectedProducts, orch.tempUploads]);
+  }, [ideaBankContext, state.selectedProducts, state.tempUploads]);
 
   useEffect(() => {
     if (!isCollapseEnabled || forceExpanded) return;
@@ -510,10 +543,10 @@ export function AgentChatPanel({
                   </div>
                 )}
 
-                {orch.tempUploads.length > 0 && (
+                {state.tempUploads.length > 0 && (
                   <div className="text-sm rounded-xl border border-border bg-muted/40 px-4 py-3 text-muted-foreground">
-                    {orch.tempUploads.length} uploaded reference image
-                    {orch.tempUploads.length !== 1 ? 's' : ''} ready for generation.
+                    {state.tempUploads.length} uploaded reference image
+                    {state.tempUploads.length !== 1 ? 's' : ''} ready for generation.
                   </div>
                 )}
 
