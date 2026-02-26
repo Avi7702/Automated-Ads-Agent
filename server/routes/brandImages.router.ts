@@ -13,6 +13,7 @@
 
 import type { Router, Request, Response } from 'express';
 import type { RouterContext, RouterFactory, RouterModule } from '../types/router';
+import type { UploadApiResponse } from 'cloudinary';
 import { createRouter, asyncHandler } from './utils/createRouter';
 
 export const brandImagesRouter: RouterFactory = (ctx: RouterContext): Router => {
@@ -30,7 +31,10 @@ export const brandImagesRouter: RouterFactory = (ctx: RouterContext): Router => 
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const file = req.file;
 
         if (!file) {
@@ -45,7 +49,7 @@ export const brandImagesRouter: RouterFactory = (ctx: RouterContext): Router => 
           api_secret: process.env['CLOUDINARY_API_SECRET'] ?? '',
         });
 
-        const uploadResult = await new Promise<any>((resolve, reject) => {
+        const uploadResult = await new Promise<UploadApiResponse>((resolve, reject) => {
           cloudinary.uploader
             .upload_stream(
               {
@@ -54,7 +58,8 @@ export const brandImagesRouter: RouterFactory = (ctx: RouterContext): Router => 
               },
               (error, result) => {
                 if (error) reject(error);
-                else resolve(result);
+                else if (result) resolve(result);
+                else reject(new Error('Upload returned no result'));
               },
             )
             .end(file.buffer);
@@ -64,9 +69,9 @@ export const brandImagesRouter: RouterFactory = (ctx: RouterContext): Router => 
         // Valid categories: historical_ad, product_hero, installation, detail, lifestyle, comparison
         const validCategories = ['historical_ad', 'product_hero', 'installation', 'detail', 'lifestyle', 'comparison'];
         const category = validCategories.includes(req.body.category) ? req.body.category : 'product_hero';
-        const tags = req.body.tags ? JSON.parse(req.body.tags) : [];
-        const productIds = req.body.productIds ? JSON.parse(req.body.productIds) : [];
-        const suggestedUse = req.body.suggestedUse ? JSON.parse(req.body.suggestedUse) : [];
+        const tags = req.body.tags ? (JSON.parse(req.body.tags) as string[]) : [];
+        const productIds = req.body.productIds ? (JSON.parse(req.body.productIds) as string[]) : [];
+        const suggestedUse = req.body.suggestedUse ? (JSON.parse(req.body.suggestedUse) as string[]) : [];
 
         // Create database record
         const brandImage = await storage.createBrandImage({
@@ -83,8 +88,8 @@ export const brandImagesRouter: RouterFactory = (ctx: RouterContext): Router => 
         });
 
         res.status(201).json(brandImage);
-      } catch (error: any) {
-        logger.error({ module: 'BrandImages', err: error }, 'Upload error');
+      } catch (err: unknown) {
+        logger.error({ module: 'BrandImages', err }, 'Upload error');
         res.status(500).json({ error: 'Failed to upload brand image' });
       }
     }),
@@ -98,13 +103,16 @@ export const brandImagesRouter: RouterFactory = (ctx: RouterContext): Router => 
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const images = await (
           storage as unknown as { getBrandImagesByUser(userId: string): Promise<unknown[]> }
         ).getBrandImagesByUser(userId);
         res.json(images);
-      } catch (error: any) {
-        logger.error({ module: 'BrandImages', err: error }, 'List error');
+      } catch (err: unknown) {
+        logger.error({ module: 'BrandImages', err }, 'List error');
         res.status(500).json({ error: 'Failed to get brand images' });
       }
     }),
@@ -118,11 +126,14 @@ export const brandImagesRouter: RouterFactory = (ctx: RouterContext): Router => 
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const images = await storage.getBrandImagesByCategory(userId, String(req.params['category']));
         res.json(images);
-      } catch (error: any) {
-        logger.error({ module: 'BrandImages', err: error }, 'Category query error');
+      } catch (err: unknown) {
+        logger.error({ module: 'BrandImages', err }, 'Category query error');
         res.status(500).json({ error: 'Failed to get brand images by category' });
       }
     }),
@@ -136,15 +147,18 @@ export const brandImagesRouter: RouterFactory = (ctx: RouterContext): Router => 
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const userId = (req.session as any).userId;
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         const { productIds } = req.body;
         if (!productIds || !Array.isArray(productIds)) {
           return res.status(400).json({ error: 'productIds array is required' });
         }
         const images = await storage.getBrandImagesForProducts(productIds, userId);
         res.json(images);
-      } catch (error: any) {
-        logger.error({ module: 'BrandImages', err: error }, 'Products query error');
+      } catch (err: unknown) {
+        logger.error({ module: 'BrandImages', err }, 'Products query error');
         res.status(500).json({ error: 'Failed to get brand images for products' });
       }
     }),
@@ -160,8 +174,8 @@ export const brandImagesRouter: RouterFactory = (ctx: RouterContext): Router => 
       try {
         const image = await storage.updateBrandImage(String(req.params['id']), req.body);
         res.json(image);
-      } catch (error: any) {
-        logger.error({ module: 'BrandImages', err: error }, 'Update error');
+      } catch (err: unknown) {
+        logger.error({ module: 'BrandImages', err }, 'Update error');
         res.status(500).json({ error: 'Failed to update brand image' });
       }
     }),
@@ -175,13 +189,17 @@ export const brandImagesRouter: RouterFactory = (ctx: RouterContext): Router => 
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Not authenticated' });
+        }
         // Get the image to delete from Cloudinary
         const imageId = String(req.params['id']);
         const images = await (
           storage as unknown as {
             getBrandImagesByUser(userId: string): Promise<Array<{ id: string; cloudinaryPublicId: string }>>;
           }
-        ).getBrandImagesByUser((req.session as any).userId);
+        ).getBrandImagesByUser(userId);
         const imageToDelete = images.find((img) => img.id === imageId);
 
         if (imageToDelete) {
@@ -195,7 +213,7 @@ export const brandImagesRouter: RouterFactory = (ctx: RouterContext): Router => 
 
           try {
             await cloudinary.uploader.destroy(imageToDelete.cloudinaryPublicId);
-          } catch (cloudinaryError) {
+          } catch (cloudinaryError: unknown) {
             logger.warn({ module: 'BrandImages', err: cloudinaryError }, 'Cloudinary delete warning');
             // Continue with database deletion even if Cloudinary fails
           }
@@ -203,8 +221,8 @@ export const brandImagesRouter: RouterFactory = (ctx: RouterContext): Router => 
 
         await storage.deleteBrandImage(imageId);
         res.json({ success: true });
-      } catch (error: any) {
-        logger.error({ module: 'BrandImages', err: error }, 'Delete error');
+      } catch (err: unknown) {
+        logger.error({ module: 'BrandImages', err }, 'Delete error');
         res.status(500).json({ error: 'Failed to delete brand image' });
       }
     }),
