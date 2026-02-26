@@ -215,7 +215,7 @@ CRITICAL REQUIREMENTS FOR 2026:
     onSuccess: (data) => {
       if (data.variations && data.variations.length > 0) {
         const newVariations: CopyVariation[] = data.variations.map(
-          (v: any, i: number) => {
+          (v: { copy?: string }, i: number) => {
             const text = v.copy || "";
             const first150 = text.slice(0, 150);
 

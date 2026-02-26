@@ -310,9 +310,11 @@ export default function CalendarView() {
   const { data: dayCounts = [] } = useCalendarCounts(year, month);
 
   // All days that appear in the grid (6 weeks max, always fills 7-col rows)
+  const gridStartTime = gridStart.getTime();
+  const gridEndTime = gridEnd.getTime();
   const gridDays = useMemo(
-    () => eachDayOfInterval({ start: gridStart, end: gridEnd }),
-    [gridStart.getTime(), gridEnd.getTime()],
+    () => eachDayOfInterval({ start: new Date(gridStartTime), end: new Date(gridEndTime) }),
+    [gridStartTime, gridEndTime],
   );
 
   // Map posts by YYYY-MM-DD for quick lookup
