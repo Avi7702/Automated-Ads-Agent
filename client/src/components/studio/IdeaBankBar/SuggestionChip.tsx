@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * SuggestionChip — Compact horizontal chip for idea bank suggestions
  *

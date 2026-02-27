@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * StyleReferenceSelector — Select style references for generation consistency
  *

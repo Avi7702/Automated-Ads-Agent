@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * ComposerView - Studio idle state center panel
  *
@@ -41,7 +40,7 @@ function Section({
   icon?: React.ElementType;
   isOpen: boolean;
   onToggle: () => void;
-  badge?: string;
+  badge?: string | undefined;
   children: React.ReactNode;
 }) {
   return (
@@ -77,7 +76,7 @@ interface ComposerViewProps {
   onIdeaBankContextChange?: (context: IdeaBankContextSnapshot) => void;
   onSendIdeasToAgent?: () => void;
   handlePromptChange: (value: string) => void;
-  handleSelectSuggestion: (prompt: string, id: string, reasoning?: string) => void;
+  handleSelectSuggestion: (prompt: string, id?: string, reasoning?: string) => void;
   handleGenerate: () => void;
   toggleProductSelection: (product: Product) => void;
   filteredProducts: Product[];
@@ -109,11 +108,8 @@ export const ComposerView = memo(function ComposerView({
     setSearchQuery,
     setCategoryFilter,
     setSuggestion,
-    setCarouselTopic,
     setShowCarouselBuilder,
-    setBeforeAfterTopic,
     setShowBeforeAfterBuilder,
-    setTextOnlyTopic,
     setShowTextOnlyMode,
     setPlatform,
     setAspectRatio,
@@ -306,41 +302,36 @@ export const ComposerView = memo(function ComposerView({
         {state.cpTemplate && !state.showCarouselBuilder && !state.showBeforeAfterBuilder && !state.showTextOnlyMode && (
           <ContentPlannerGuidance
             template={state.cpTemplate}
-            onStartCarousel={(topic) => {
-              setCarouselTopic(topic);
-              setShowCarouselBuilder(true);
-            }}
-            onStartBeforeAfter={(topic) => {
-              setBeforeAfterTopic(topic);
-              setShowBeforeAfterBuilder(true);
-            }}
-            onStartTextOnly={(topic) => {
-              setTextOnlyTopic(topic);
-              setShowTextOnlyMode(true);
-            }}
+            platform={state.platform}
+            onDismiss={() => clearPlanContext()}
+            onSelectHook={(hook: string) => handlePromptChange(hook)}
+            onGenerateCopy={(copy: string) => setPrompt(copy)}
           />
         )}
 
         {state.showCarouselBuilder && state.cpTemplate && (
           <CarouselBuilder
+            templateId={state.cpTemplate.id}
             topic={state.carouselTopic}
-            template={state.cpTemplate}
+            platform={state.platform}
             onClose={() => setShowCarouselBuilder(false)}
           />
         )}
 
         {state.showBeforeAfterBuilder && state.cpTemplate && (
           <BeforeAfterBuilder
+            templateId={state.cpTemplate.id}
             topic={state.beforeAfterTopic}
-            template={state.cpTemplate}
+            platform={state.platform}
             onClose={() => setShowBeforeAfterBuilder(false)}
           />
         )}
 
         {state.showTextOnlyMode && state.cpTemplate && (
           <TextOnlyMode
+            templateId={state.cpTemplate.id}
             topic={state.textOnlyTopic}
-            template={state.cpTemplate}
+            platform={state.platform}
             onClose={() => setShowTextOnlyMode(false)}
           />
         )}

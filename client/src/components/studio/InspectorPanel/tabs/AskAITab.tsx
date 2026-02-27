@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * AskAITab — Chat with AI about the current generation
  *

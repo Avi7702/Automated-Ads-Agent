@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * IdeaBankBar — Horizontal scrollable suggestion chips for the Studio bottom bar
  *

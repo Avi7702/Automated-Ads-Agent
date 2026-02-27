@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { motion } from 'framer-motion';
 import { Loader2, X, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';

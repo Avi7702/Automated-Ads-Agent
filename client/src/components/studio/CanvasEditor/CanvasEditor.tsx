@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * CanvasEditor — AI-native image editor
  *
@@ -42,7 +41,7 @@ interface CanvasEditorProps {
   /** URL of the image to edit */
   imageUrl: string;
   /** Generation ID for conversation history continuation */
-  generationId?: string;
+  generationId?: string | undefined;
   /** Callback when edit is complete */
   onEditComplete: (newImageUrl: string) => void;
   /** Callback to close the editor */
@@ -51,7 +50,6 @@ interface CanvasEditorProps {
 
 export const CanvasEditor = memo(function CanvasEditor({
   imageUrl,
-  generationId: _generationId,
   onEditComplete,
   onClose,
 }: CanvasEditorProps) {
@@ -62,14 +60,12 @@ export const CanvasEditor = memo(function CanvasEditor({
 
   // SAM2 state
   const [sam2Status, setSam2Status] = useState<string>('idle');
-  const [_sam2Progress, setSam2Progress] = useState(0);
   const [clickPoints, setClickPoints] = useState<ClickPoint[]>([]);
   const [currentMask, setCurrentMask] = useState<SAM2Result | null>(null);
   const [isEncoding, setIsEncoding] = useState(false);
 
   // Brush state
   const [brushSize, setBrushSize] = useState(20);
-  const [_brushMaskData, _setBrushMaskData] = useState<ImageData | null>(null);
   const isBrushing = useRef(false);
 
   // Canvas refs
@@ -118,12 +114,11 @@ export const CanvasEditor = memo(function CanvasEditor({
   // ── Initialize SAM2 ──────────────────────────────
   useEffect(() => {
     setSam2Status('loading');
-    initSAM2((stage, pct) => {
+    initSAM2((stage) => {
       setSam2Status(stage);
-      setSam2Progress(pct);
     })
       .then(() => setSam2Status('ready'))
-      .catch((err) => setSam2Status(`error: ${err.message}`));
+      .catch((err: unknown) => setSam2Status(`error: ${err instanceof Error ? err.message : String(err)}`));
   }, []);
 
   // ── Encode image when SAM2 is ready ──────────────
@@ -259,7 +254,8 @@ export const CanvasEditor = memo(function CanvasEditor({
       const compositeCanvas = document.createElement('canvas');
       compositeCanvas.width = imgSize.w;
       compositeCanvas.height = imgSize.h;
-      const compositeCtx = compositeCanvas.getContext('2d')!;
+      const compositeCtx = compositeCanvas.getContext('2d');
+      if (!compositeCtx) return;
 
       // Draw original image
       if (imageRef.current) {
@@ -335,6 +331,7 @@ export const CanvasEditor = memo(function CanvasEditor({
   const handleUndo = useCallback(() => {
     if (history.length <= 1) return;
     const prev = history[history.length - 2];
+    if (!prev) return;
     setHistory((h) => h.slice(0, -1));
 
     const img = new Image();
@@ -354,7 +351,7 @@ export const CanvasEditor = memo(function CanvasEditor({
 
   // ── Accept & close ───────────────────────────────
   const handleAccept = useCallback(() => {
-    const latest = history[history.length - 1];
+    const latest = history.at(-1);
     if (latest) onEditComplete(latest);
   }, [history, onEditComplete]);
 

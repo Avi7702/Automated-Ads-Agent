@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * InspectorPanel — 4-tab right panel for the Studio workspace
  *

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * ResultViewEnhanced — Studio result state center panel (simplified)
  *
@@ -209,7 +208,7 @@ export const ResultViewEnhanced = memo(function ResultViewEnhanced({
         {state.showCanvasEditor && state.generatedImage && (
           <CanvasEditor
             imageUrl={state.generatedImage}
-            generationId={state.generationId}
+            generationId={state.generationId ?? undefined}
             onEditComplete={handleCanvasEditComplete}
             onClose={() => setShowCanvasEditor(false)}
           />
