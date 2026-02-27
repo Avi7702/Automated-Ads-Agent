@@ -26,6 +26,7 @@ describe('Auth Router — /api/auth', () => {
         updatePasswordHash: vi.fn().mockResolvedValue(undefined),
         deleteUser: vi.fn().mockResolvedValue(undefined),
         getGenerations: vi.fn().mockResolvedValue([]),
+        getGenerationsByUserId: vi.fn().mockResolvedValue([]),
         getProducts: vi.fn().mockResolvedValue([]),
       },
     };

@@ -87,6 +87,22 @@ describe('Performance Optimizations - Repository Layer', () => {
     });
   });
 
+  describe('generationRepository.getGenerationsByUserId', () => {
+    it('should use database-level filtering with userId', async () => {
+      const userId = 'user-123';
+      const limit = 10;
+      const offset = 5;
+
+      const { getGenerationsByUserId } = await import('../repositories/generationRepository');
+      await getGenerationsByUserId(userId, limit, offset);
+
+      expect(db.select).toHaveBeenCalled();
+      expect(mockSelectChain.where).toHaveBeenCalled();
+      expect(mockSelectChain.limit).toHaveBeenCalledWith(limit);
+      expect(mockSelectChain.offset).toHaveBeenCalledWith(offset);
+    });
+  });
+
   describe('templateRepository.searchPerformingAdTemplates', () => {
     it('should build dynamic where clause for all filters', async () => {
       const userId = 'user-123';

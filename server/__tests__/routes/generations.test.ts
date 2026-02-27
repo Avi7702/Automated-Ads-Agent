@@ -15,6 +15,9 @@ describe('Generations Router — /api/generations', () => {
         getGenerations: vi.fn().mockResolvedValue([
           { id: 'gen-1', prompt: 'test', generatedImagePath: '/img.png', originalImagePaths: [] },
         ]),
+        getGenerationsByUserId: vi.fn().mockResolvedValue([
+          { id: 'gen-1', prompt: 'test', generatedImagePath: '/img.png', originalImagePaths: [] },
+        ]),
         getGenerationById: vi.fn().mockResolvedValue({
           id: 'gen-1',
           prompt: 'test prompt',
@@ -55,10 +58,10 @@ describe('Generations Router — /api/generations', () => {
       expect(Array.isArray(res.body)).toBe(true);
     });
 
-    it('passes limit query param to storage', async () => {
+    it('passes limit and offset query params to storage', async () => {
       cookie = await loginAs(app);
-      await request(app).get('/api/generations?limit=10').set('Cookie', cookie);
-      expect(overrides.storage!.getGenerations).toHaveBeenCalledWith(10);
+      await request(app).get('/api/generations?limit=10&offset=20').set('Cookie', cookie);
+      expect(overrides.storage!.getGenerationsByUserId).toHaveBeenCalledWith(expect.any(String), 10, 20);
     });
   });
 
