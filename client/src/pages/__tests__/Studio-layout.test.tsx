@@ -1,5 +1,4 @@
-// @ts-nocheck
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // @vitest-environment jsdom
 /**
  * Studio Component Tests - Layout & Structure
@@ -16,10 +15,10 @@
  */
 import React from 'react';
 import { vi, describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { mockProducts, singleDrainageProduct } from '@/fixtures';
+import { mockProducts } from '@/fixtures';
 
 vi.setConfig({ testTimeout: 15000, hookTimeout: 20000 });
 
@@ -33,23 +32,23 @@ vi.mock('@/components/layout/Header', () => ({
 }));
 
 vi.mock('@/components/IdeaBankPanel', () => ({
-  IdeaBankPanel: (props: any) => <div data-testid="mock-idea-bank-panel">Mock Idea Bank Panel</div>,
+  IdeaBankPanel: (_props: any) => <div data-testid="mock-idea-bank-panel">Mock Idea Bank Panel</div>,
 }));
 
 vi.mock('@/components/LinkedInPostPreview', () => ({
-  LinkedInPostPreview: (props: any) => <div data-testid="mock-linkedin-preview">Mock LinkedIn Preview</div>,
+  LinkedInPostPreview: (_props: any) => <div data-testid="mock-linkedin-preview">Mock LinkedIn Preview</div>,
 }));
 
 vi.mock('@/components/TemplateLibrary', () => ({
-  TemplateLibrary: (props: any) => <div data-testid="mock-template-library">Mock Template Library</div>,
+  TemplateLibrary: (_props: any) => <div data-testid="mock-template-library">Mock Template Library</div>,
 }));
 
 vi.mock('@/components/UploadZone', () => ({
-  UploadZone: (props: any) => <div data-testid="mock-upload-zone">Mock Upload Zone</div>,
+  UploadZone: (_props: any) => <div data-testid="mock-upload-zone">Mock Upload Zone</div>,
 }));
 
 vi.mock('@/components/HistoryTimeline', () => ({
-  HistoryTimeline: (props: any) => <div data-testid="mock-history-timeline">Mock History Timeline</div>,
+  HistoryTimeline: (_props: any) => <div data-testid="mock-history-timeline">Mock History Timeline</div>,
 }));
 
 vi.mock('@/components/studio/HistoryPanel', () => ({
@@ -61,15 +60,15 @@ vi.mock('@/components/studio/HistoryPanel', () => ({
 }));
 
 vi.mock('@/components/studio/InspectorPanel', () => ({
-  InspectorPanel: (props: any) => <div data-testid="mock-inspector-panel">Mock Inspector Panel</div>,
+  InspectorPanel: (_props: any) => <div data-testid="mock-inspector-panel">Mock Inspector Panel</div>,
 }));
 
 vi.mock('@/components/studio/IdeaBankBar', () => ({
-  IdeaBankBar: (props: any) => <div data-testid="mock-idea-bank-bar">Mock Idea Bank Bar</div>,
+  IdeaBankBar: (_props: any) => <div data-testid="mock-idea-bank-bar">Mock Idea Bank Bar</div>,
 }));
 
 vi.mock('@/components/studio/AgentChat', () => ({
-  AgentChatPanel: (props: any) => <div data-testid="mock-agent-chat">Mock Agent Chat</div>,
+  AgentChatPanel: (_props: any) => <div data-testid="mock-agent-chat">Mock Agent Chat</div>,
 }));
 
 vi.mock('@/components/SaveToCatalogDialog', () => ({
@@ -81,19 +80,19 @@ vi.mock('@/components/SaveToCatalogDialog', () => ({
 }));
 
 vi.mock('@/components/ContentPlannerGuidance', () => ({
-  ContentPlannerGuidance: (props: any) => <div data-testid="mock-content-planner">Mock Content Planner</div>,
+  ContentPlannerGuidance: (_props: any) => <div data-testid="mock-content-planner">Mock Content Planner</div>,
 }));
 
 vi.mock('@/components/CarouselBuilder', () => ({
-  CarouselBuilder: (props: any) => <div data-testid="mock-carousel-builder">Mock Carousel Builder</div>,
+  CarouselBuilder: (_props: any) => <div data-testid="mock-carousel-builder">Mock Carousel Builder</div>,
 }));
 
 vi.mock('@/components/BeforeAfterBuilder', () => ({
-  BeforeAfterBuilder: (props: any) => <div data-testid="mock-before-after-builder">Mock Before After Builder</div>,
+  BeforeAfterBuilder: (_props: any) => <div data-testid="mock-before-after-builder">Mock Before After Builder</div>,
 }));
 
 vi.mock('@/components/TextOnlyMode', () => ({
-  TextOnlyMode: (props: any) => <div data-testid="mock-text-only-mode">Mock Text Only Mode</div>,
+  TextOnlyMode: (_props: any) => <div data-testid="mock-text-only-mode">Mock Text Only Mode</div>,
 }));
 
 vi.mock('@/components/ErrorBoundary', () => ({
@@ -215,7 +214,7 @@ function createWrapper() {
 }
 
 // Dynamic import to reset module state
-let Studio: () => JSX.Element;
+let Studio: () => React.JSX.Element;
 
 describe('Studio Component - Layout & Structure', () => {
   beforeAll(async () => {
