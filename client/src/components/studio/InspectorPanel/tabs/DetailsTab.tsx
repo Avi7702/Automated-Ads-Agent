@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * DetailsTab — Metadata, download, preview, and history for the current generation
  *
@@ -18,11 +17,12 @@ import { HistoryTimeline } from '@/components/HistoryTimeline';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Download, Loader2, Eye, FolderPlus, Clock, ImageIcon, Sparkles, Check, Copy, Info } from 'lucide-react';
 import { useStudioState } from '@/hooks/useStudioState';
+import type { GenerationDTO } from '@shared/types/api';
 
 interface DetailsTabProps {
   handleDownloadWithFeedback: () => void;
   handleGenerateCopy: () => void;
-  handleLoadFromHistory: (data: unknown) => void;
+  handleLoadFromHistory: (generation: GenerationDTO) => void;
   authUser: { email?: string } | null;
 }
 
@@ -97,7 +97,7 @@ export const DetailsTab = memo(function DetailsTab({
               {state.selectedTemplate && (
                 <Badge variant="secondary" className="text-xs gap-1">
                   <Sparkles className="w-3 h-3" />
-                  {state.selectedTemplate.name}
+                  {state.selectedTemplate.title}
                 </Badge>
               )}
             </div>
@@ -147,7 +147,7 @@ export const DetailsTab = memo(function DetailsTab({
               <div className="space-y-1">
                 <span className="text-xs text-muted-foreground uppercase tracking-wider">Template</span>
                 <p className="text-xs font-mono text-foreground/60 break-all">
-                  {state.selectedTemplateForMode.name || state.selectedTemplateForMode.id}
+                  {state.selectedTemplateForMode.title || state.selectedTemplateForMode.id}
                 </p>
               </div>
             )}
@@ -188,7 +188,7 @@ export const DetailsTab = memo(function DetailsTab({
               <span>LinkedIn Preview</span>
             </div>
             <LinkedInPostPreview
-              authorName={authUser?.email?.split('@')[0] || 'Your Company'}
+              authorName={authUser?.email?.split('@')[0] ?? 'Your Company'}
               authorHeadline="Building Products | Construction Solutions"
               postText={state.generatedCopy || null}
               imageUrl={state.generatedImage}

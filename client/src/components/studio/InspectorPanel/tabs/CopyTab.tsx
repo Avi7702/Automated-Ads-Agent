@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * CopyTab — Generate and manage ad copy for the current generation
  *
