@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Tests for useIsMobile hook
  * - Returns boolean based on window.innerWidth

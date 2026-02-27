@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Tests for usePanelCollapse hook
  * - Initial state (defaults + localStorage restore)

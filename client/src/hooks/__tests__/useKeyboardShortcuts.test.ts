@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Tests for useKeyboardShortcuts hook
  * - Registers and fires callbacks on matching key events

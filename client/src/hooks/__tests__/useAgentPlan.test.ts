@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Tests for useAgentPlan hook
  * - State transitions through the agent plan flow
