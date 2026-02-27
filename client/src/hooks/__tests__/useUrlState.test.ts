@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Tests for useUrlState hook and its convenience hooks
  * - getParam, hasParam, getParamAll

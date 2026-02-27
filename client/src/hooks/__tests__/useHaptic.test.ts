@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Tests for useHaptic hook
  * - Calls navigator.vibrate with correct patterns
