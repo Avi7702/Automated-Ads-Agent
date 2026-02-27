@@ -325,15 +325,15 @@ export const authRouter: RouterFactory = (ctx: RouterContext): Router => {
           return;
         }
         const user = await storage.getUserById(uid);
-        // Single-tenant app: all products belong to the tenant.
-        // Generations are post-filtered by userId until query-level scoping is added.
-        const generations = await storage.getGenerations(1000);
+        // Optimized: Fetch only the current user's generations from the database
+        // This replaces inefficient in-memory filtering of 1000+ generations
+        const generations = await storage.getGenerationsByUserId(uid, 1000);
         const products = await storage.getProducts(1000);
 
         res.json({
           exportedAt: new Date().toISOString(),
           user: user ? { id: user.id, email: user.email, createdAt: user.createdAt } : null,
-          generations: generations.filter((g) => g.userId === uid),
+          generations,
           products,
         });
       } catch {
