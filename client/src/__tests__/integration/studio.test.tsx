@@ -1,5 +1,4 @@
-// @ts-nocheck
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // @vitest-environment jsdom
 /**
  * Studio Page Integration Tests
@@ -13,13 +12,12 @@
  * @file client/src/__tests__/integration/studio.test.tsx
  */
 import React from 'react';
-import { vi, describe, it, expect, beforeAll, beforeEach, afterEach, afterAll } from 'vitest';
+import { vi, describe, it, expect, beforeAll, afterEach, afterAll } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { server, http, HttpResponse } from '@/mocks/server';
-import { mockProducts, mockGenerations, singleCompletedGeneration, createMockGeneration } from '@/fixtures';
+import { mockGenerations, singleCompletedGeneration, createMockGeneration } from '@/fixtures';
 
 // ============================================
 // MOCK SETUP
@@ -175,15 +173,15 @@ vi.mock('@/components/studio/HistoryPanel', () => ({
 }));
 
 vi.mock('@/components/studio/InspectorPanel', () => ({
-  InspectorPanel: (props: any) => <div data-testid="mock-inspector-panel">Mock Inspector Panel</div>,
+  InspectorPanel: (_props: any) => <div data-testid="mock-inspector-panel">Mock Inspector Panel</div>,
 }));
 
 vi.mock('@/components/studio/IdeaBankBar', () => ({
-  IdeaBankBar: (props: any) => <div data-testid="mock-idea-bank-bar">Mock Idea Bank Bar</div>,
+  IdeaBankBar: (_props: any) => <div data-testid="mock-idea-bank-bar">Mock Idea Bank Bar</div>,
 }));
 
 vi.mock('@/components/studio/AgentChat', () => ({
-  AgentChatPanel: (props: any) => <div data-testid="mock-agent-chat">Mock Agent Chat</div>,
+  AgentChatPanel: (_props: any) => <div data-testid="mock-agent-chat">Mock Agent Chat</div>,
 }));
 
 vi.mock('@/components/SaveToCatalogDialog', () => ({
@@ -344,7 +342,7 @@ function createWrapper() {
 }
 
 // Studio component reference - loaded dynamically
-let Studio: () => JSX.Element;
+let Studio: () => React.JSX.Element;
 
 /**
  * Helper: select one product from the composer grid to satisfy canGenerate.
@@ -361,7 +359,9 @@ async function selectProductToEnableGenerate() {
   ) as HTMLImageElement[];
   expect(productImages.length).toBeGreaterThan(0);
 
-  const productButton = productImages[0].closest('button');
+  const firstImg = productImages[0];
+  if (!firstImg) throw new Error('No product images found');
+  const productButton = firstImg.closest('button');
   expect(productButton).not.toBeNull();
   fireEvent.click(productButton as HTMLButtonElement);
 }
@@ -517,11 +517,8 @@ describe('Studio Page Integration Tests', () => {
     });
 
     it('handles generation API call with correct parameters', async () => {
-      let capturedRequest: Request | null = null;
-
       server.use(
-        http.post('/api/transform', async ({ request }) => {
-          capturedRequest = request.clone();
+        http.post('/api/transform', async () => {
           return HttpResponse.json({
             imageUrl: 'https://example.com/generated.jpg',
             generationId: 'gen-test-001',
@@ -596,13 +593,11 @@ describe('Studio Page Integration Tests', () => {
         http.get('/api/generations/:id', ({ params }) => {
           return HttpResponse.json({
             ...singleCompletedGeneration,
-            id: params.id,
+            id: params['id'],
             imagePath: '/uploads/generations/completed-output.jpg',
           });
         }),
-        http.post('/api/generations/:id/edit', async ({ request }) => {
-          const body = await request.formData();
-          const editPrompt = body.get('editPrompt');
+        http.post('/api/generations/:id/edit', async () => {
           return HttpResponse.json({
             success: true,
             generationId: 'gen-edited-001',
@@ -632,12 +627,8 @@ describe('Studio Page Integration Tests', () => {
     });
 
     it('handles edit submission with new prompt', async () => {
-      let editRequestCaptured = false;
-
       server.use(
-        http.post('/api/generations/:id/edit', async ({ request }) => {
-          editRequestCaptured = true;
-          const body = await request.formData();
+        http.post('/api/generations/:id/edit', async () => {
           return HttpResponse.json({
             success: true,
             generationId: 'gen-edited-002',
@@ -693,14 +684,11 @@ describe('Studio Page Integration Tests', () => {
     });
 
     it('fetches generation details when selecting from history', async () => {
-      let fetchedGenerationId: string | null = null;
-
       server.use(
         http.get('/api/generations/:id', ({ params }) => {
-          fetchedGenerationId = params.id as string;
           return HttpResponse.json({
             ...singleCompletedGeneration,
-            id: params.id,
+            id: params['id'],
           });
         }),
       );

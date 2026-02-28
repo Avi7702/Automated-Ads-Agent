@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * SAM2 Browser Inference — Segment Anything Model 2 via ONNX Runtime WebGPU
  *
@@ -83,8 +82,8 @@ export async function initSAM2(onProgress?: (stage: string, pct: number) => void
       executionProviders: [ep],
     });
     onProgress?.('Models ready', 100);
-  } catch (err: any) {
-    loadError = err.message || 'Failed to load SAM2 models';
+  } catch (err: unknown) {
+    loadError = err instanceof Error ? err.message : 'Failed to load SAM2 models';
     encoderSession = null;
     decoderSession = null;
     throw err;
@@ -123,11 +122,13 @@ export async function encodeImage(image: HTMLImageElement | HTMLCanvasElement): 
 
   const results = await encoderSession.run({ image: inputTensor });
 
-  currentEmbeddings = {
-    imageEmbed: results.image_embed!,
-    highResFeats0: results.high_res_feats_0!,
-    highResFeats1: results.high_res_feats_1!,
-  };
+  const imageEmbed = results['image_embed'];
+  const highResFeats0 = results['high_res_feats_0'];
+  const highResFeats1 = results['high_res_feats_1'];
+  if (!imageEmbed || !highResFeats0 || !highResFeats1) {
+    throw new Error('Encoder did not return expected embedding tensors.');
+  }
+  currentEmbeddings = { imageEmbed, highResFeats0, highResFeats1 };
 }
 
 /**
@@ -180,9 +181,15 @@ export async function predictMask(points: ClickPoint[], imageWidth: number, imag
 
   const results = await decoderSession.run(feeds);
 
-  const masks = results.masks!;
+  const masks = results['masks'];
+  if (!masks) {
+    throw new Error('Decoder did not return mask data.');
+  }
   const maskData = masks.data as Float32Array;
-  const iouPredictions = results.iou_predictions!;
+  const iouPredictions = results['iou_predictions'];
+  if (!iouPredictions) {
+    throw new Error('Decoder did not return IoU predictions.');
+  }
   const score = (iouPredictions.data as Float32Array)[0] ?? 0;
 
   // Convert 256x256 mask → original image size ImageData

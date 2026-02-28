@@ -1,5 +1,4 @@
-// @ts-nocheck
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // @vitest-environment jsdom
 /**
  * Studio Component Tests - Generation Flow
@@ -20,7 +19,7 @@ import { vi, describe, it, expect, beforeAll, beforeEach, afterEach } from 'vite
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { mockProducts, mockGenerations, singleCompletedGeneration } from '@/fixtures';
+import { mockProducts, singleCompletedGeneration } from '@/fixtures';
 
 vi.setConfig({ testTimeout: 15000, hookTimeout: 20000 });
 
@@ -118,31 +117,31 @@ vi.mock('@/components/SaveToCatalogDialog', () => ({
 }));
 
 vi.mock('@/components/studio/InspectorPanel', () => ({
-  InspectorPanel: (props: any) => <div data-testid="mock-inspector-panel">Mock Inspector Panel</div>,
+  InspectorPanel: (_props: any) => <div data-testid="mock-inspector-panel">Mock Inspector Panel</div>,
 }));
 
 vi.mock('@/components/studio/IdeaBankBar', () => ({
-  IdeaBankBar: (props: any) => <div data-testid="mock-idea-bank-bar">Mock Idea Bank Bar</div>,
+  IdeaBankBar: (_props: any) => <div data-testid="mock-idea-bank-bar">Mock Idea Bank Bar</div>,
 }));
 
 vi.mock('@/components/studio/AgentChat', () => ({
-  AgentChatPanel: (props: any) => <div data-testid="mock-agent-chat">Mock Agent Chat</div>,
+  AgentChatPanel: (_props: any) => <div data-testid="mock-agent-chat">Mock Agent Chat</div>,
 }));
 
 vi.mock('@/components/ContentPlannerGuidance', () => ({
-  ContentPlannerGuidance: (props: any) => <div data-testid="mock-content-planner">Mock Content Planner</div>,
+  ContentPlannerGuidance: (_props: any) => <div data-testid="mock-content-planner">Mock Content Planner</div>,
 }));
 
 vi.mock('@/components/CarouselBuilder', () => ({
-  CarouselBuilder: (props: any) => <div data-testid="mock-carousel-builder">Mock Carousel Builder</div>,
+  CarouselBuilder: (_props: any) => <div data-testid="mock-carousel-builder">Mock Carousel Builder</div>,
 }));
 
 vi.mock('@/components/BeforeAfterBuilder', () => ({
-  BeforeAfterBuilder: (props: any) => <div data-testid="mock-before-after-builder">Mock Before After Builder</div>,
+  BeforeAfterBuilder: (_props: any) => <div data-testid="mock-before-after-builder">Mock Before After Builder</div>,
 }));
 
 vi.mock('@/components/TextOnlyMode', () => ({
-  TextOnlyMode: (props: any) => <div data-testid="mock-text-only-mode">Mock Text Only Mode</div>,
+  TextOnlyMode: (_props: any) => <div data-testid="mock-text-only-mode">Mock Text Only Mode</div>,
 }));
 
 vi.mock('@/components/ErrorBoundary', () => ({
@@ -265,7 +264,7 @@ function createWrapper() {
   };
 }
 
-let Studio: () => JSX.Element;
+let Studio: () => React.JSX.Element;
 
 describe('Studio Component - Generation Flow', () => {
   beforeAll(async () => {
@@ -394,7 +393,8 @@ describe('Studio Component - Generation Flow', () => {
       await waitFor(() => {
         const productImages = screen.getAllByAltText(/NDS EZ-Drain/i);
         expect(productImages.length).toBeGreaterThan(0);
-        fireEvent.click(productImages[0]);
+        const firstProduct = productImages[0];
+        if (firstProduct) fireEvent.click(firstProduct);
       });
 
       const quickStartTextarea = screen.getByPlaceholderText(/Describe your ideal ad creative/i);
@@ -426,8 +426,8 @@ describe('Studio Component - Generation Flow', () => {
 
       await waitFor(() => {
         // Price estimate appears when there are inputs
-        const priceElement = screen.queryByText(/Estimated cost:/i);
-        // May or may not be visible depending on state
+        // Price estimate may or may not be visible depending on state
+        screen.queryByText(/Estimated cost:/i);
         expect(document.body).toBeInTheDocument();
       });
     });
@@ -652,7 +652,8 @@ describe('Studio Component - Generation Flow', () => {
       await waitFor(() => {
         const productImages = screen.getAllByAltText(/NDS EZ-Drain/i);
         expect(productImages.length).toBeGreaterThan(0);
-        fireEvent.click(productImages[0]);
+        const firstProduct = productImages[0];
+        if (firstProduct) fireEvent.click(firstProduct);
       });
 
       // Type prompt and click generate
@@ -674,7 +675,7 @@ describe('Studio Component - Generation Flow', () => {
     });
 
     it('shows error message on generation failure', async () => {
-      global.fetch = vi.fn().mockImplementation((url: string, options?: any) => {
+      global.fetch = vi.fn().mockImplementation((url: string) => {
         if (url.includes('/api/transform')) {
           return Promise.resolve({
             ok: false,

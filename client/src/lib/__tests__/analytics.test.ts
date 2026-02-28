@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Tests for lib/analytics.ts
  * Tests the no-op behavior when posthog-js is not available.
@@ -12,7 +11,7 @@ import { describe, it, expect, vi } from 'vitest';
 // by mocking it before the test module loads
 vi.mock('posthog-js', () => ({}), { virtual: true });
 
-import { initAnalytics, track, identify, resetAnalytics, _resetCsrfToken } from '../analytics';
+import { initAnalytics, track, identify, resetAnalytics } from '../analytics';
 
 describe('analytics — safe no-ops when posthog unavailable', () => {
   it('track() does not throw', () => {
