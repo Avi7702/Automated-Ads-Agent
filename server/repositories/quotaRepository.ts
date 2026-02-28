@@ -23,40 +23,32 @@ import { and, eq, desc, gte, lte, sql } from 'drizzle-orm';
 // ============================================
 
 export async function upsertQuotaMetrics(metrics: InsertGeminiQuotaMetrics): Promise<GeminiQuotaMetrics> {
-  const existing = await db
-    .select()
-    .from(geminiQuotaMetrics)
-    .where(
-      and(
-        eq(geminiQuotaMetrics.brandId, metrics.brandId),
-        eq(geminiQuotaMetrics.windowType, metrics.windowType),
-        eq(geminiQuotaMetrics.windowStart, metrics.windowStart),
-      ),
-    )
-    .limit(1);
+  // Optimized: Use single atomic PostgreSQL UPSERT instead of SELECT-then-UPDATE
+  // This reduces database roundtrips from 2-3 queries down to 1
+  const [result] = await db
+    .insert(geminiQuotaMetrics)
+    .values(metrics)
+    .onConflictDoUpdate({
+      target: [geminiQuotaMetrics.windowType, geminiQuotaMetrics.windowStart, geminiQuotaMetrics.brandId],
+      set: {
+        requestCount: sql`${geminiQuotaMetrics.requestCount} + EXCLUDED.request_count`,
+        successCount: sql`${geminiQuotaMetrics.successCount} + EXCLUDED.success_count`,
+        errorCount: sql`${geminiQuotaMetrics.errorCount} + EXCLUDED.error_count`,
+        rateLimitCount: sql`${geminiQuotaMetrics.rateLimitCount} + EXCLUDED.rate_limit_count`,
+        inputTokensTotal: sql`${geminiQuotaMetrics.inputTokensTotal} + EXCLUDED.input_tokens_total`,
+        outputTokensTotal: sql`${geminiQuotaMetrics.outputTokensTotal} + EXCLUDED.output_tokens_total`,
+        estimatedCostMicros: sql`${geminiQuotaMetrics.estimatedCostMicros} + EXCLUDED.estimated_cost_micros`,
+        generateCount: sql`${geminiQuotaMetrics.generateCount} + EXCLUDED.generate_count`,
+        editCount: sql`${geminiQuotaMetrics.editCount} + EXCLUDED.edit_count`,
+        analyzeCount: sql`${geminiQuotaMetrics.analyzeCount} + EXCLUDED.analyze_count`,
+        // Bug fix: Ensure modelBreakdown is merged during updates
+        // Note: || operator in JSONB performs a shallow merge
+        modelBreakdown: sql`COALESCE(${geminiQuotaMetrics.modelBreakdown}, '{}'::jsonb) || EXCLUDED.model_breakdown`,
+      },
+    })
+    .returning();
 
-  if (existing.length > 0) {
-    const [updated] = await db
-      .update(geminiQuotaMetrics)
-      .set({
-        requestCount: sql`${geminiQuotaMetrics.requestCount} + ${metrics.requestCount}`,
-        successCount: sql`${geminiQuotaMetrics.successCount} + ${metrics.successCount}`,
-        errorCount: sql`${geminiQuotaMetrics.errorCount} + ${metrics.errorCount}`,
-        rateLimitCount: sql`${geminiQuotaMetrics.rateLimitCount} + ${metrics.rateLimitCount}`,
-        inputTokensTotal: sql`${geminiQuotaMetrics.inputTokensTotal} + ${metrics.inputTokensTotal}`,
-        outputTokensTotal: sql`${geminiQuotaMetrics.outputTokensTotal} + ${metrics.outputTokensTotal}`,
-        estimatedCostMicros: sql`${geminiQuotaMetrics.estimatedCostMicros} + ${metrics.estimatedCostMicros}`,
-        generateCount: sql`${geminiQuotaMetrics.generateCount} + ${metrics.generateCount}`,
-        editCount: sql`${geminiQuotaMetrics.editCount} + ${metrics.editCount}`,
-        analyzeCount: sql`${geminiQuotaMetrics.analyzeCount} + ${metrics.analyzeCount}`,
-      })
-      .where(eq(geminiQuotaMetrics.id, existing[0]!.id))
-      .returning();
-    return updated!;
-  }
-
-  const [inserted] = await db.insert(geminiQuotaMetrics).values(metrics).returning();
-  return inserted!;
+  return result!;
 }
 
 export async function getQuotaMetrics(params: {
