@@ -1,5 +1,4 @@
-// @ts-nocheck
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // @vitest-environment jsdom
 /**
  * Studio Component Tests - Integration
@@ -16,7 +15,7 @@
  */
 import React from 'react';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { mockProducts, mockAdSceneTemplates, mockGenerations, singleCompletedGeneration } from '@/fixtures';
@@ -49,7 +48,6 @@ vi.mock('@/components/IdeaBankPanel', () => ({
     onSetPlatform,
     onSetAspectRatio,
     onQuickGenerate,
-    selectedPromptId,
     isGenerating,
     mode,
     templateId,
@@ -109,16 +107,12 @@ vi.mock('@/components/IdeaBankPanel', () => ({
 vi.mock('@/components/LinkedInPostPreview', () => ({
   LinkedInPostPreview: ({
     authorName,
-    authorHeadline,
     postText,
     imageUrl,
-    hashtags,
     isEditable,
     onTextChange,
     onGenerateCopy,
     onGenerateImage,
-    isGeneratingCopy,
-    isGeneratingImage,
   }: any) => (
     <div
       data-testid="mock-linkedin-preview"
@@ -145,7 +139,7 @@ vi.mock('@/components/LinkedInPostPreview', () => ({
 }));
 
 vi.mock('@/components/TemplateLibrary', () => ({
-  TemplateLibrary: ({ onSelectTemplate, selectedTemplateId, className }: any) => (
+  TemplateLibrary: ({ onSelectTemplate, selectedTemplateId }: any) => (
     <div data-testid="mock-template-library" data-selected={selectedTemplateId}>
       {mockAdSceneTemplates.slice(0, 3).map((template) => (
         <button key={template.id} data-testid={`template-${template.id}`} onClick={() => onSelectTemplate?.(template)}>
@@ -203,7 +197,7 @@ vi.mock('@/components/HistoryTimeline', () => ({
 }));
 
 vi.mock('@/components/studio/HistoryPanel', () => ({
-  HistoryPanel: ({ isOpen, onToggle, onSelectGeneration, className }: any) => (
+  HistoryPanel: ({ isOpen, onToggle, onSelectGeneration }: any) => (
     <div data-testid="mock-history-panel" data-open={isOpen}>
       <button data-testid="toggle-history-btn" onClick={onToggle}>
         {isOpen ? 'Close History' : 'Open History'}
@@ -216,7 +210,7 @@ vi.mock('@/components/studio/HistoryPanel', () => ({
 }));
 
 vi.mock('@/components/SaveToCatalogDialog', () => ({
-  SaveToCatalogDialog: ({ isOpen, onClose, imageUrl, defaultName }: any) => (
+  SaveToCatalogDialog: ({ isOpen, onClose, imageUrl }: any) => (
     <div data-testid="mock-save-dialog" data-open={isOpen} data-image={imageUrl}>
       <button data-testid="close-save-dialog" onClick={onClose}>
         Close
@@ -226,31 +220,31 @@ vi.mock('@/components/SaveToCatalogDialog', () => ({
 }));
 
 vi.mock('@/components/studio/InspectorPanel', () => ({
-  InspectorPanel: (props: any) => <div data-testid="mock-inspector-panel">Mock Inspector Panel</div>,
+  InspectorPanel: (_props: any) => <div data-testid="mock-inspector-panel">Mock Inspector Panel</div>,
 }));
 
 vi.mock('@/components/studio/IdeaBankBar', () => ({
-  IdeaBankBar: (props: any) => <div data-testid="mock-idea-bank-bar">Mock Idea Bank Bar</div>,
+  IdeaBankBar: (_props: any) => <div data-testid="mock-idea-bank-bar">Mock Idea Bank Bar</div>,
 }));
 
 vi.mock('@/components/studio/AgentChat', () => ({
-  AgentChatPanel: (props: any) => <div data-testid="mock-agent-chat">Mock Agent Chat</div>,
+  AgentChatPanel: (_props: any) => <div data-testid="mock-agent-chat">Mock Agent Chat</div>,
 }));
 
 vi.mock('@/components/ContentPlannerGuidance', () => ({
-  ContentPlannerGuidance: (props: any) => null,
+  ContentPlannerGuidance: () => null,
 }));
 
 vi.mock('@/components/CarouselBuilder', () => ({
-  CarouselBuilder: (props: any) => null,
+  CarouselBuilder: () => null,
 }));
 
 vi.mock('@/components/BeforeAfterBuilder', () => ({
-  BeforeAfterBuilder: (props: any) => null,
+  BeforeAfterBuilder: () => null,
 }));
 
 vi.mock('@/components/TextOnlyMode', () => ({
-  TextOnlyMode: (props: any) => null,
+  TextOnlyMode: () => null,
 }));
 
 vi.mock('@/components/ErrorBoundary', () => ({
@@ -358,7 +352,7 @@ function createWrapper() {
   };
 }
 
-let Studio: () => JSX.Element;
+let Studio: () => React.JSX.Element;
 
 async function selectProductForGeneration() {
   await waitFor(() => {
@@ -366,7 +360,9 @@ async function selectProductForGeneration() {
     expect(screen.getByPlaceholderText('Search products...')).toBeInTheDocument();
   });
 
-  const firstProductImage = await screen.findByAltText(mockProducts[0].name);
+  const firstProduct = mockProducts[0];
+  if (!firstProduct) throw new Error('No mock products available');
+  const firstProductImage = await screen.findByAltText(firstProduct.name);
   const productButton = firstProductImage.closest('button');
   expect(productButton).not.toBeNull();
   fireEvent.click(productButton as HTMLButtonElement);
@@ -383,7 +379,7 @@ describe('Studio Component - Integration', () => {
     vi.resetAllMocks();
     mockLocalStorage.clear();
 
-    global.fetch = vi.fn().mockImplementation((url: string, options?: any) => {
+    global.fetch = vi.fn().mockImplementation((url: string) => {
       if (url.includes('/api/products')) {
         return Promise.resolve({
           ok: true,

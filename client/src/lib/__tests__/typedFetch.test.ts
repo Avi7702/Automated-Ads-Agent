@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Tests for lib/typedFetch.ts
  * - typedGet

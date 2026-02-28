@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Tests for lib/utils.ts
  * - cn() class merging utility

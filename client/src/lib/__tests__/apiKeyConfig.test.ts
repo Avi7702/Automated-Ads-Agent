@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Tests for lib/apiKeyConfig.ts
  * - SERVICE_CONFIG structure
