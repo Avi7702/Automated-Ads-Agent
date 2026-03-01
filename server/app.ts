@@ -258,6 +258,9 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 // CSRF token endpoint - clients must fetch this before making state-changing requests
 app.get('/api/csrf-token', (req: Request, res: Response) => {
+  // Mark session as initialized so it persists (saveUninitialized: false requires data)
+  // Without this, no session cookie is sent and CSRF validation fails on the next request
+  (req.session as unknown as Record<string, unknown>)['csrfInit'] = true;
   req.session.save((err: Error | null) => {
     if (err) {
       res.status(500).json({ error: 'Session save failed' });
