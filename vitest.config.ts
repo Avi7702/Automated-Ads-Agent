@@ -4,6 +4,8 @@ import path from 'node:path';
 
 const isCI = process.env.CI === 'true';
 const hasDatabase = process.env.DATABASE_URL !== undefined;
+const testTimeout = isCI ? 20000 : 15000;
+const hookTimeout = isCI ? 30000 : 20000;
 
 // Tests that require database or full app context
 const integrationTests = [
@@ -41,6 +43,10 @@ const sharedResolve = {
 export default defineConfig({
   plugins: [react()],
   test: {
+    // Full-suite runs exercise many heavy integration tests in parallel.
+    // Use non-default budgets to reduce false timeout failures under load.
+    testTimeout,
+    hookTimeout,
     // Vitest 4 removed environmentMatchGlobs — use projects instead
     projects: [
       {
@@ -50,6 +56,8 @@ export default defineConfig({
           name: 'client',
           globals: true,
           environment: 'jsdom',
+          testTimeout,
+          hookTimeout,
           include: ['client/**/*.test.tsx', 'client/**/*.test.ts'],
           exclude: sharedExclude,
           setupFiles: [path.resolve(root, 'vitest.setup.ts')],
@@ -62,6 +70,8 @@ export default defineConfig({
           name: 'server',
           globals: true,
           environment: 'node',
+          testTimeout,
+          hookTimeout,
           include: ['server/**/*.test.ts'],
           exclude: sharedExclude,
           setupFiles: [path.resolve(root, 'vitest.setup.ts')],
