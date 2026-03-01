@@ -36,10 +36,16 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
+        const userId = req.session?.userId;
+        if (!userId) {
+          return res.status(401).json({ error: 'Unauthorized' });
+        }
+
         const limitQuery = req.query['limit'];
         const limitValue = Array.isArray(limitQuery) ? limitQuery[0] : limitQuery;
         const limit = Number.parseInt(typeof limitValue === 'string' ? limitValue : '', 10) || 50;
-        const allGenerations = await storage.getGenerations(limit);
+        // Optimization: Scope generation retrieval to the user at the database level
+        const allGenerations = await storage.getGenerationsByUserId(userId, limit);
         res.json(toGenerationDTOArray(allGenerations));
       } catch (err: unknown) {
         logger.error({ module: 'Generations', err }, 'Error fetching generations');
