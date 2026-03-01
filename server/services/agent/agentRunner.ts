@@ -197,7 +197,12 @@ export async function* streamAgentResponse(
       streamInput = functionResponseParts;
     }
   } catch (err: unknown) {
-    logger.error({ module: 'AgentRunner', err, userId, sessionId }, 'Agent run error');
+    const errMsg = err instanceof Error ? err.message : String(err);
+    const errStack = err instanceof Error ? err.stack : undefined;
+    logger.error(
+      { module: 'AgentRunner', error: errMsg, stack: errStack, userId, sessionId },
+      `Agent run error: ${errMsg}`,
+    );
     yield { type: 'error', content: 'Something went wrong. Please try again.' };
   }
 
