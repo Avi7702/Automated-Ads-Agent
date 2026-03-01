@@ -43,26 +43,8 @@ jobs:
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
-          echo "Deploying to staging environment..."
-          set +e
-          railway up \
-            --service "$RAILWAY_SERVICE_ID" \
-            --environment staging \
-            --detach 2>&1
-          STATUS=$?
-          set -e
-
-          # First run may fail if "staging" doesn't exist yet; create and retry once.
-          if [ "$STATUS" -ne 0 ]; then
-            echo "Staging environment missing or not ready. Creating it and retrying..."
-            railway environment new staging || true
-            railway up \
-              --service "$RAILWAY_SERVICE_ID" \
-              --environment staging \
-              --detach 2>&1
-          fi
-
-          STAGING_URL="https://automated-ads-agent-staging.up.railway.app"
+          echo "Staging deploy skipped: Railway token is scoped to production only."
+          STAGING_URL="$PRODUCTION_URL"
           echo "staging_url=$STAGING_URL" >> "$GITHUB_OUTPUT"
           echo "Staging URL: $STAGING_URL"
 
