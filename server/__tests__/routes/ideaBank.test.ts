@@ -52,16 +52,12 @@ describe('IdeaBank Router — /api/idea-bank', () => {
   // ---------- POST /suggest ----------
   describe('POST /api/idea-bank/suggest', () => {
     it('returns 400 when no productId or uploadDescriptions provided', async () => {
-      const res = await request(app)
-        .post('/api/idea-bank/suggest')
-        .send({});
+      const res = await request(app).post('/api/idea-bank/suggest').send({});
       expect(res.status).toBe(400);
     });
 
     it('returns 200 with suggestions for a single product', async () => {
-      const res = await request(app)
-        .post('/api/idea-bank/suggest')
-        .send({ productId: 'prod-1' });
+      const res = await request(app).post('/api/idea-bank/suggest').send({ productId: 'prod-1' });
       expect(res.status).toBe(200);
       expect(res.body.suggestions).toHaveLength(1);
       expect(res.body.analysisStatus).toBeDefined();
@@ -75,9 +71,7 @@ describe('IdeaBank Router — /api/idea-bank', () => {
     });
 
     it('returns 400 when mode is template but no templateId', async () => {
-      const res = await request(app)
-        .post('/api/idea-bank/suggest')
-        .send({ productId: 'prod-1', mode: 'template' });
+      const res = await request(app).post('/api/idea-bank/suggest').send({ productId: 'prod-1', mode: 'template' });
       expect(res.status).toBe(400);
     });
 
@@ -96,9 +90,7 @@ describe('IdeaBank Router — /api/idea-bank', () => {
         },
       };
       const rebuilt = createTestAppForRouter(ideaBankRouter, '/api/idea-bank', rateLimitOverrides);
-      const res = await request(rebuilt.app)
-        .post('/api/idea-bank/suggest')
-        .send({ productId: 'prod-1' });
+      const res = await request(rebuilt.app).post('/api/idea-bank/suggest').send({ productId: 'prod-1' });
       expect(res.status).toBe(429);
     });
 
@@ -117,10 +109,34 @@ describe('IdeaBank Router — /api/idea-bank', () => {
         },
       };
       const rebuilt = createTestAppForRouter(ideaBankRouter, '/api/idea-bank', notFoundOverrides);
+      const res = await request(rebuilt.app).post('/api/idea-bank/suggest').send({ productId: 'missing' });
+      expect(res.status).toBe(404);
+    });
+
+    it('returns deterministic fallback suggestions when LLM fails', async () => {
+      const llmFailureOverrides: ContextOverrides = {
+        domainServices: {
+          ideaBank: {
+            generateSuggestions: vi.fn().mockResolvedValue({
+              success: false,
+              error: { code: 'LLM_ERROR', message: 'Gemini API unavailable' },
+            }),
+            getMatchedTemplates: vi.fn(),
+          } as unknown as ContextOverrides['domainServices'] extends undefined
+            ? never
+            : NonNullable<ContextOverrides['domainServices']>['ideaBank'],
+        },
+      };
+      const rebuilt = createTestAppForRouter(ideaBankRouter, '/api/idea-bank', llmFailureOverrides);
       const res = await request(rebuilt.app)
         .post('/api/idea-bank/suggest')
-        .send({ productId: 'missing' });
-      expect(res.status).toBe(404);
+        .send({ productId: 'prod-1', userGoal: 'Launch a new product line' });
+
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body.suggestions)).toBe(true);
+      expect(res.body.suggestions.length).toBeGreaterThan(0);
+      expect(res.body.fallback).toBe(true);
+      expect(res.body.meta?.provider).toBe('fallback');
     });
 
     it('supports uploadDescriptions without productId', async () => {
@@ -140,9 +156,7 @@ describe('IdeaBank Router — /api/idea-bank', () => {
 
     it('returns 200 with matched templates', async () => {
       cookie = await loginAs(app);
-      const res = await request(app)
-        .get('/api/idea-bank/templates/prod-1')
-        .set('Cookie', cookie);
+      const res = await request(app).get('/api/idea-bank/templates/prod-1').set('Cookie', cookie);
       expect(res.status).toBe(200);
       expect(res.body.templates).toHaveLength(1);
       expect(res.body.productAnalysis).toBeDefined();
@@ -161,9 +175,7 @@ describe('IdeaBank Router — /api/idea-bank', () => {
       };
       const rebuilt = createTestAppForRouter(ideaBankRouter, '/api/idea-bank', nullOverrides);
       cookie = await loginAs(rebuilt.app);
-      const res = await request(rebuilt.app)
-        .get('/api/idea-bank/templates/missing')
-        .set('Cookie', cookie);
+      const res = await request(rebuilt.app).get('/api/idea-bank/templates/missing').set('Cookie', cookie);
       expect(res.status).toBe(404);
     });
   });

@@ -40,6 +40,7 @@ import type { PreGenGateResult } from './preGenGate';
 import { captureException } from '../../lib/sentry';
 import { notify } from '../notificationService';
 import { getBrandDNAContext } from '../brandDNAService';
+import { generateContentWithRetry } from '../../lib/geminiClient';
 
 import type {
   GenerationContext,
@@ -569,7 +570,7 @@ async function buildImageParts(
 async function stageGeneration(ctx: GenerationContext) {
   const geminiClient = await resolveGeminiClient(ctx.input.userId);
 
-  const modelName = 'gemini-3-pro-image-preview';
+  const modelName = 'gemini-3.1-flash-image-preview';
   const validResolutions = ['1K', '2K', '4K'];
   const resolution = validResolutions.includes(ctx.input.resolution) ? ctx.input.resolution : '2K';
 
@@ -581,15 +582,19 @@ async function stageGeneration(ctx: GenerationContext) {
 
   logger.info({ module: 'GenerationPipeline', model: modelName, resolution }, 'Calling Gemini API');
 
-  const result = await geminiClient.models.generateContent({
-    model: modelName,
-    contents,
-    config: {
-      imageConfig: {
-        imageSize: resolution,
+  const result = await generateContentWithRetry(
+    {
+      model: modelName,
+      contents,
+      config: {
+        imageConfig: {
+          imageSize: resolution,
+        },
       },
     },
-  });
+    { operation: 'image_generation' },
+    geminiClient,
+  );
 
   // Extract image from response
   if (!result.candidates?.[0]?.content?.parts?.[0]) {
@@ -668,7 +673,7 @@ async function stagePersistence(
     await storage.saveGenerationUsage({
       generationId: generation.id,
       brandId: ctx.input.userId || 'anonymous',
-      model: 'gemini-3-pro-image-preview',
+      model: 'gemini-3.1-flash-image-preview',
       operation: 'generate',
       resolution: ctx.input.resolution,
       inputImagesCount: ctx.input.images.length,

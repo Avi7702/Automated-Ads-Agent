@@ -10,6 +10,8 @@ import type { IStorage } from '../../storage';
 import { getSystemInstruction, getToolDeclarations, getToolExecutors } from './agentDefinition';
 import type { ToolExecutor } from './agentDefinition';
 import { logger } from '../../lib/logger';
+import { buildFallbackAgentReply } from '../../lib/aiFallbacks';
+import { isLikelyGeminiError } from '../../lib/geminiResilience';
 
 /** SSE event protocol sent to the client — identical to previous version */
 export type AgentSSEEvent =
@@ -71,7 +73,20 @@ export async function* streamAgentResponse(
   sessionId: string,
   userMessage: string,
 ): AsyncGenerator<AgentSSEEvent> {
-  const client = getClient();
+  let client: GoogleGenAI;
+  try {
+    client = getClient();
+  } catch (err: unknown) {
+    logger.error({ module: 'AgentRunner', err, userId, sessionId }, 'Failed to initialize Gemini client');
+    if (isLikelyGeminiError(err)) {
+      yield { type: 'text_delta', content: buildFallbackAgentReply(userMessage) };
+    } else {
+      yield { type: 'error', content: 'Something went wrong. Please try again.' };
+    }
+    yield { type: 'done' };
+    return;
+  }
+
   const systemInstruction = getSystemInstruction();
   const toolDeclarations = getToolDeclarations();
   const toolExecutors = getToolExecutors(storage);
@@ -108,7 +123,7 @@ export async function* streamAgentResponse(
       const response = await session.chat.sendMessageStream({ message: streamInput });
 
       // Collect text and function calls from the stream
-      let functionCalls: Array<{ name: string; args: Record<string, unknown>; id?: string }> = [];
+      const functionCalls: Array<{ name: string; args: Record<string, unknown>; id?: string }> = [];
 
       for await (const chunk of response) {
         // Emit text deltas
@@ -203,7 +218,11 @@ export async function* streamAgentResponse(
       { module: 'AgentRunner', error: errMsg, stack: errStack, userId, sessionId },
       `Agent run error: ${errMsg}`,
     );
-    yield { type: 'error', content: 'Something went wrong. Please try again.' };
+    if (isLikelyGeminiError(err)) {
+      yield { type: 'text_delta', content: buildFallbackAgentReply(userMessage) };
+    } else {
+      yield { type: 'error', content: 'Something went wrong. Please try again.' };
+    }
   }
 
   yield { type: 'done' };

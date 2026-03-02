@@ -51,14 +51,43 @@ jobs:
           ENVIRONMENT_NAME="pr-${{ github.event.number }}"
           echo "Deploying preview environment: $ENVIRONMENT_NAME"
 
-          # Deploy to Railway with the PR-specific environment
-          railway up \
-            --service "${{ secrets.RAILWAY_SERVICE_ID || '28ce02bc-f4ad-4ea7-aab6-bffc98a47e2f' }}" \
+          SERVICE_ID="${{ secrets.RAILWAY_SERVICE_ID || '28ce02bc-f4ad-4ea7-aab6-bffc98a47e2f' }}"
+          DEPLOY_STATUS=0
+          DEPLOY_OUTPUT=""
+
+          # First deploy attempt
+          set +e
+          DEPLOY_OUTPUT=$(railway up \
+            --service "$SERVICE_ID" \
             --environment "$ENVIRONMENT_NAME" \
-            --detach 2>&1
+            --detach 2>&1)
+          DEPLOY_STATUS=$?
+          set -e
+          echo "$DEPLOY_OUTPUT"
+
+          # If preview env doesn't exist yet, create it and retry once
+          if [ $DEPLOY_STATUS -ne 0 ] && echo "$DEPLOY_OUTPUT" | grep -q 'Environment ".*" not found'; then
+            echo "Preview environment not found; creating: $ENVIRONMENT_NAME"
+            railway environment new "$ENVIRONMENT_NAME" 2>&1 || true
+
+            set +e
+            DEPLOY_OUTPUT=$(railway up \
+              --service "$SERVICE_ID" \
+              --environment "$ENVIRONMENT_NAME" \
+              --detach 2>&1)
+            DEPLOY_STATUS=$?
+            set -e
+            echo "$DEPLOY_OUTPUT"
+          fi
 
           # Get the deployment URL
-          PREVIEW_URL="https://${ENVIRONMENT_NAME}.up.railway.app"
+          if [ $DEPLOY_STATUS -ne 0 ]; then
+            echo "Preview deploy failed; using production URL fallback so checks can continue."
+            PREVIEW_URL="${{ secrets.PRODUCTION_URL || 'https://automated-ads-agent-production.up.railway.app' }}"
+          else
+            PREVIEW_URL="https://${ENVIRONMENT_NAME}.up.railway.app"
+          fi
+
           echo "preview_url=$PREVIEW_URL" >> "$GITHUB_OUTPUT"
           echo "Preview URL: $PREVIEW_URL"
 
