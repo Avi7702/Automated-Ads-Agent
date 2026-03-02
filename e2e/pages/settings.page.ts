@@ -163,7 +163,10 @@ export class SettingsPage {
    */
   async waitForSectionContent() {
     // Wait for any loading spinners to disappear
-    const spinner = this.page.locator('[class*="animate-spin"]');
+    // Use .first() because pages like Knowledge Base render multiple spinners
+    // (e.g. 4 stat card spinners + 1 main spinner) and Playwright strict mode
+    // rejects waitFor() on locators that resolve to multiple elements.
+    const spinner = this.page.locator('[class*="animate-spin"]').first();
     if (await spinner.isVisible().catch(() => false)) {
       await spinner.waitFor({ state: 'hidden', timeout: 10000 });
     }
