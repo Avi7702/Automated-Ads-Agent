@@ -733,10 +733,10 @@ function StudioContent() {
   const reduced = useReducedMotion();
 
   const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>(() => {
-    if (typeof window === 'undefined') return 'studio';
+    if (typeof window === 'undefined') return 'agent';
     const stored = window.localStorage.getItem('studio-workspace-mode');
     if (stored === 'agent' || stored === 'studio') return stored;
-    return 'studio';
+    return 'agent';
   });
 
   const [ideaBankContext, setIdeaBankContext] = useState<IdeaBankContextSnapshot | null>(null);
