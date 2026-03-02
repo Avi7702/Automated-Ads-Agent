@@ -24,7 +24,7 @@ test.describe('Settings - API Keys', { tag: '@settings' }, () => {
   // --- Security Notice ---
 
   test('shows AES-256-GCM security notice', async ({ page }) => {
-    const securityAlert = page.getByText(/encrypted with AES-256-GCM/i);
+    const securityAlert = page.getByText(/encrypted with AES-256-GCM/i).first();
     await expect(securityAlert).toBeVisible({ timeout: 10000 });
   });
 
@@ -64,9 +64,10 @@ test.describe('Settings - API Keys', { tag: '@settings' }, () => {
   test('each service card shows a status badge', async ({ page }) => {
     await page.waitForTimeout(2000);
 
-    // Badges can be: "Using Default", "Custom Key", "Not Configured", "Invalid"
-    const badges = page.locator('[data-slot="badge"], [class*="Badge"]');
-    const badgeCount = await badges.count();
+    // Badges render as <div> with badgeVariants classes (inline-flex, rounded-md, text-xs, font-semibold)
+    // Status text: "Using Default", "Custom Key", "Not Configured", "Invalid Key"
+    const badgeTexts = page.getByText(/Using Default|Custom Key|Not Configured|Invalid Key/);
+    const badgeCount = await badgeTexts.count();
     // At least 4 badges for 4 services
     expect(badgeCount).toBeGreaterThanOrEqual(4);
   });
@@ -76,8 +77,8 @@ test.describe('Settings - API Keys', { tag: '@settings' }, () => {
   test('service cards have Configure or Edit button', async ({ page }) => {
     await page.waitForTimeout(2000);
 
-    // Each card has a Configure or Edit action
-    const configureButtons = page.getByRole('button', { name: /Configure|Edit/i });
+    // Each card has an "Add Key" or "Edit Key" action button
+    const configureButtons = page.getByRole('button', { name: /Add Key|Edit Key/i });
     const count = await configureButtons.count();
     expect(count).toBeGreaterThanOrEqual(1);
   });
@@ -85,7 +86,7 @@ test.describe('Settings - API Keys', { tag: '@settings' }, () => {
   test('clicking Configure opens the API key form dialog', async ({ page }) => {
     await page.waitForTimeout(2000);
 
-    const configureBtn = page.getByRole('button', { name: /Configure|Edit/i }).first();
+    const configureBtn = page.getByRole('button', { name: /Add Key|Edit Key/i }).first();
     await expect(configureBtn).toBeVisible();
     await configureBtn.click();
 
@@ -96,7 +97,7 @@ test.describe('Settings - API Keys', { tag: '@settings' }, () => {
   test('API key form dialog has input fields and Save button', async ({ page }) => {
     await page.waitForTimeout(2000);
 
-    const configureBtn = page.getByRole('button', { name: /Configure|Edit/i }).first();
+    const configureBtn = page.getByRole('button', { name: /Add Key|Edit Key/i }).first();
     await expect(configureBtn).toBeVisible();
     await configureBtn.click();
 
@@ -115,7 +116,7 @@ test.describe('Settings - API Keys', { tag: '@settings' }, () => {
   test('API key form dialog can be closed', async ({ page }) => {
     await page.waitForTimeout(2000);
 
-    const configureBtn = page.getByRole('button', { name: /Configure|Edit/i }).first();
+    const configureBtn = page.getByRole('button', { name: /Add Key|Edit Key/i }).first();
     await expect(configureBtn).toBeVisible();
     await configureBtn.click();
 
@@ -141,10 +142,13 @@ test.describe('Settings - API Keys', { tag: '@settings' }, () => {
   test('n8n section has URL and API key inputs', async ({ page }) => {
     await page.waitForTimeout(2000);
 
-    await expect(page.getByText('n8n Instance URL')).toBeVisible();
+    // Scope to the n8n section to avoid strict mode violations from duplicate text
+    const n8nSection = page.locator('div').filter({ hasText: 'n8n Automation' }).first();
+
+    await expect(n8nSection.getByText('n8n Instance URL')).toBeVisible();
     await expect(page.getByPlaceholder(/your-instance.app.n8n.cloud/i)).toBeVisible();
 
-    await expect(page.getByText('n8n API Key')).toBeVisible();
+    await expect(n8nSection.getByText('n8n API Key').first()).toBeVisible();
     await expect(page.getByPlaceholder(/n8n_api_xyz/i)).toBeVisible();
   });
 

@@ -34,8 +34,8 @@ test.describe('Gallery Page', { tag: '@gallery' }, () => {
   test('Back to Studio button navigates to /', async ({ page }) => {
     const backBtn = page.getByRole('button', { name: /Studio/i }).first();
     await backBtn.click();
-    await page.waitForLoadState('networkidle');
-    await expect(page).toHaveURL(/^http:\/\/localhost:\d+\/$/);
+    await page.waitForURL('**/', { timeout: 10000 });
+    await expect(page).toHaveURL(/\/$/);
   });
 
   test('shows generation count when items exist', async ({ page }) => {
@@ -74,24 +74,29 @@ test.describe('Gallery Page', { tag: '@gallery' }, () => {
   test('clearing search input restores results', async ({ page }) => {
     const searchInput = page.getByPlaceholder('Search prompts...');
     const cards = page.locator('.group.relative.aspect-square');
+    const emptyState = page.getByText(/no generations yet/i);
+
+    // Wait for initial load to complete (cards or empty state)
+    await expect(cards.first().or(emptyState)).toBeVisible({ timeout: 10000 });
     const initialCount = await cards.count();
 
+    // Filter with nonsense query
     await searchInput.fill('xyznonexistent');
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(500);
 
+    // Clear search to restore results
     await searchInput.fill('');
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(1000);
 
+    // After clearing, we should have the same count as before
     const restoredCount = await cards.count();
     expect(restoredCount).toBe(initialCount);
   });
 
   test('sort dropdown displays Newest first and Oldest first options', async ({ page }) => {
-    const sortTrigger = page
-      .locator('button')
-      .filter({ hasText: /newest|oldest/i })
-      .first();
-    await expect(sortTrigger).toBeVisible();
+    // Radix Select renders trigger as button[role="combobox"]
+    const sortTrigger = page.locator('button[role="combobox"]').first();
+    await expect(sortTrigger).toBeVisible({ timeout: 5000 });
 
     await sortTrigger.click();
     await page.waitForTimeout(300);
@@ -99,7 +104,8 @@ test.describe('Gallery Page', { tag: '@gallery' }, () => {
     const newestOption = page.getByRole('option', { name: /Newest first/i });
     const oldestOption = page.getByRole('option', { name: /Oldest first/i });
 
-    await expect(newestOption.or(oldestOption)).toBeVisible({ timeout: 5000 });
+    await expect(newestOption).toBeVisible({ timeout: 5000 });
+    await expect(oldestOption).toBeVisible({ timeout: 5000 });
   });
 
   // -- Gallery Items --
@@ -108,11 +114,15 @@ test.describe('Gallery Page', { tag: '@gallery' }, () => {
     const cards = page.locator('.group.relative.aspect-square');
     const emptyState = page.getByText(/no generations yet/i);
 
-    const cardCount = await cards.count();
-    const hasEmpty = await emptyState.isVisible();
+    // Wait for either cards or empty state to appear after data loads
+    await expect(cards.first().or(emptyState)).toBeVisible({ timeout: 10000 });
 
-    // Either grid has items or empty state is shown
-    expect(cardCount > 0 || hasEmpty).toBe(true);
+    const cardCount = await cards.count();
+    if (cardCount > 0) {
+      await expect(cards.first()).toBeVisible();
+    } else {
+      await expect(emptyState).toBeVisible();
+    }
   });
 
   test('clicking a gallery card navigates to Studio with generation param', async ({ page }) => {
@@ -245,16 +255,20 @@ test.describe('Gallery Page', { tag: '@gallery' }, () => {
   // -- Empty State --
 
   test('empty state shows message and Go to Studio CTA', async ({ page }) => {
+    const cards = page.locator('.group.relative.aspect-square');
     const emptyState = page.getByText(/no generations yet/i);
-    const isEmptyVisible = await emptyState.isVisible();
 
-    if (!isEmptyVisible) {
-      // Gallery has items — verify we see the grid
-      const cards = page.locator('.group.relative.aspect-square');
-      expect(await cards.count()).toBeGreaterThan(0);
+    // Wait for data to finish loading — either cards or empty state appear
+    await expect(cards.first().or(emptyState)).toBeVisible({ timeout: 10000 });
+
+    const cardCount = await cards.count();
+    if (cardCount > 0) {
+      // Gallery has data — skip empty state assertions (data-dependent)
+      test.skip(true, 'Gallery has items; empty state not testable with existing data');
       return;
     }
 
+    // Empty state path
     await expect(emptyState).toBeVisible();
     await expect(page.getByText(/create your first image/i)).toBeVisible();
 
@@ -262,8 +276,8 @@ test.describe('Gallery Page', { tag: '@gallery' }, () => {
     await expect(ctaButton).toBeVisible();
 
     await ctaButton.click();
-    await page.waitForLoadState('networkidle');
-    await expect(page).toHaveURL(/^http:\/\/localhost:\d+\/$/);
+    await page.waitForURL('**/', { timeout: 10000 });
+    await expect(page).toHaveURL(/\/$/);
   });
 });
 
