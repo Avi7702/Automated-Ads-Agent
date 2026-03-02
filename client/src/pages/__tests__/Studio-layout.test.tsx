@@ -303,15 +303,15 @@ describe('Studio Component - Layout & Structure', () => {
       render(<Studio />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        expect(screen.getByText(/Chat with the assistant, add products and references/)).toBeInTheDocument();
+        expect(screen.getByText(/Add products and references, and generate professional/)).toBeInTheDocument();
       });
     });
 
-    it('renders the agent chat panel in idle state', async () => {
+    it('does not render chat panel in studio mode', async () => {
       render(<Studio />, { wrapper: createWrapper() });
 
       await waitFor(() => {
-        expect(screen.getByTestId('mock-agent-chat')).toBeInTheDocument();
+        expect(screen.queryByTestId('mock-agent-chat')).not.toBeInTheDocument();
       });
     });
 

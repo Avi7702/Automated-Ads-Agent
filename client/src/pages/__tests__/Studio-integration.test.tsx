@@ -505,7 +505,6 @@ describe('Studio Component - Integration', () => {
       await waitFor(() => {
         expect(screen.getByRole('button', { name: 'Agent Mode' })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Studio Mode' })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Split View' })).toBeInTheDocument();
       });
     });
 
@@ -520,14 +519,14 @@ describe('Studio Component - Integration', () => {
       });
     });
 
-    it('switches to split view and updates heading', async () => {
+    it('switches to studio mode and updates heading', async () => {
       render(<Studio />, { wrapper: createWrapper() });
 
-      const splitModeButton = await screen.findByRole('button', { name: 'Split View' });
-      fireEvent.click(splitModeButton);
+      const studioModeButton = await screen.findByRole('button', { name: 'Studio Mode' });
+      fireEvent.click(studioModeButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/Plan with the assistant while composing visuals/i)).toBeInTheDocument();
+        expect(screen.getByText(/Create stunning product visuals/i)).toBeInTheDocument();
       });
     });
 

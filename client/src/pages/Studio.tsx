@@ -26,7 +26,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles, History, TrendingUp, Star, Layout, X, MessageSquare, Paintbrush, Columns } from 'lucide-react';
+import { Sparkles, History, TrendingUp, Star, Layout, X, MessageSquare, Paintbrush } from 'lucide-react';
 
 import { useStudioProducts } from '@/hooks/studio/useStudioProducts';
 import { useStudioGeneration } from '@/hooks/studio/useStudioGeneration';
@@ -40,7 +40,7 @@ import type { ShortcutConfig } from '@/hooks/useKeyboardShortcuts';
 import type { Product } from '@shared/schema';
 import type { IdeaBankContextSnapshot } from '@/components/ideabank/types';
 
-type WorkspaceMode = 'agent' | 'studio' | 'split';
+type WorkspaceMode = 'agent' | 'studio';
 type IdeaBankBridgeState = 'idle' | 'waiting' | 'ready' | 'error' | 'sent';
 
 function ContextBar({
@@ -146,7 +146,6 @@ function KeyboardShortcutsPanel({
 const MODE_OPTIONS = [
   { mode: 'agent' as WorkspaceMode, label: 'Agent Mode', icon: MessageSquare },
   { mode: 'studio' as WorkspaceMode, label: 'Studio Mode', icon: Paintbrush },
-  { mode: 'split' as WorkspaceMode, label: 'Split View', icon: Columns },
 ];
 
 export default function Studio() {
@@ -734,10 +733,10 @@ function StudioContent() {
   const reduced = useReducedMotion();
 
   const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>(() => {
-    if (typeof window === 'undefined') return 'split';
+    if (typeof window === 'undefined') return 'studio';
     const stored = window.localStorage.getItem('studio-workspace-mode');
-    if (stored === 'agent' || stored === 'studio' || stored === 'split') return stored;
-    return window.innerWidth >= 1280 ? 'split' : 'studio';
+    if (stored === 'agent' || stored === 'studio') return stored;
+    return 'studio';
   });
 
   const [ideaBankContext, setIdeaBankContext] = useState<IdeaBankContextSnapshot | null>(null);
@@ -776,7 +775,7 @@ function StudioContent() {
         text: buildIdeaBankAgentMessage(context),
       });
       setIdeaBankBridgeState('sent');
-      setWorkspaceMode('split');
+      setWorkspaceMode('agent');
       return true;
     },
     [buildIdeaBankAgentMessage],
@@ -846,7 +845,6 @@ function StudioContent() {
 
   const workspaceHeadline = useMemo(() => {
     if (workspaceMode === 'agent') return 'Plan, ask, and execute with the assistant';
-    if (workspaceMode === 'split') return 'Plan with the assistant while composing visuals';
     return 'Create stunning product visuals';
   }, [workspaceMode]);
 
@@ -854,10 +852,7 @@ function StudioContent() {
     if (workspaceMode === 'agent') {
       return 'Use one focused chat workspace for strategy, content planning, and generation commands.';
     }
-    if (workspaceMode === 'split') {
-      return 'Agent and composer side-by-side: pick products, review Idea Bank, edit prompts, and generate faster.';
-    }
-    return 'Chat with the assistant, add products and references, and generate professional marketing visuals in minutes.';
+    return 'Add products and references, and generate professional marketing visuals in minutes.';
   }, [workspaceMode]);
 
   const renderStudioCanvas = () => (
@@ -1035,40 +1030,7 @@ function StudioContent() {
           </div>
         )}
 
-        {workspaceMode === 'studio' && (
-          <>
-            <AgentChatPanel
-              products={orch.selectedProducts}
-              title="Studio Assistant"
-              ideaBankContext={ideaBankContext}
-              ideaBankBridgeState={ideaBankBridgeState}
-              externalMessage={agentExternalMessage}
-              onExternalMessageConsumed={handleExternalMessageConsumed}
-            />
-            {renderStudioCanvas()}
-          </>
-        )}
-
-        {workspaceMode === 'split' && (
-          <div className="grid gap-8 xl:grid-cols-[minmax(320px,420px)_1fr]">
-            <div className="min-w-0">
-              <div className="xl:sticky xl:top-24">
-                <AgentChatPanel
-                  products={orch.selectedProducts}
-                  title="Ad Assistant"
-                  forceExpanded
-                  showCollapseToggle={false}
-                  bodyMaxHeightClassName="max-h-[calc(100vh-280px)]"
-                  ideaBankContext={ideaBankContext}
-                  ideaBankBridgeState={ideaBankBridgeState}
-                  externalMessage={agentExternalMessage}
-                  onExternalMessageConsumed={handleExternalMessageConsumed}
-                />
-              </div>
-            </div>
-            <div className="min-w-0">{renderStudioCanvas()}</div>
-          </div>
-        )}
+        {workspaceMode === 'studio' && renderStudioCanvas()}
       </main>
 
       {orch.generatedImage && (
