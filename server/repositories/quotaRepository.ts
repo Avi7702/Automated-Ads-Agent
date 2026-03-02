@@ -23,22 +23,14 @@ import { and, eq, desc, gte, lte, sql } from 'drizzle-orm';
 // ============================================
 
 export async function upsertQuotaMetrics(metrics: InsertGeminiQuotaMetrics): Promise<GeminiQuotaMetrics> {
-  const existing = await db
-    .select()
-    .from(geminiQuotaMetrics)
-    .where(
-      and(
-        eq(geminiQuotaMetrics.brandId, metrics.brandId),
-        eq(geminiQuotaMetrics.windowType, metrics.windowType),
-        eq(geminiQuotaMetrics.windowStart, metrics.windowStart),
-      ),
-    )
-    .limit(1);
-
-  if (existing.length > 0) {
-    const [updated] = await db
-      .update(geminiQuotaMetrics)
-      .set({
+  // Refactored to use atomic ON CONFLICT DO UPDATE to eliminate select round-trip and race conditions.
+  // This reduces database round-trips by 50% for every API call tracking event.
+  const [result] = await db
+    .insert(geminiQuotaMetrics)
+    .values(metrics)
+    .onConflictDoUpdate({
+      target: [geminiQuotaMetrics.windowType, geminiQuotaMetrics.windowStart, geminiQuotaMetrics.brandId],
+      set: {
         requestCount: sql`${geminiQuotaMetrics.requestCount} + ${metrics.requestCount}`,
         successCount: sql`${geminiQuotaMetrics.successCount} + ${metrics.successCount}`,
         errorCount: sql`${geminiQuotaMetrics.errorCount} + ${metrics.errorCount}`,
@@ -49,14 +41,11 @@ export async function upsertQuotaMetrics(metrics: InsertGeminiQuotaMetrics): Pro
         generateCount: sql`${geminiQuotaMetrics.generateCount} + ${metrics.generateCount}`,
         editCount: sql`${geminiQuotaMetrics.editCount} + ${metrics.editCount}`,
         analyzeCount: sql`${geminiQuotaMetrics.analyzeCount} + ${metrics.analyzeCount}`,
-      })
-      .where(eq(geminiQuotaMetrics.id, existing[0]!.id))
-      .returning();
-    return updated!;
-  }
+      },
+    })
+    .returning();
 
-  const [inserted] = await db.insert(geminiQuotaMetrics).values(metrics).returning();
-  return inserted!;
+  return result!;
 }
 
 export async function getQuotaMetrics(params: {
