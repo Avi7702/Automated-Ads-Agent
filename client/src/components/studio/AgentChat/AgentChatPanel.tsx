@@ -132,6 +132,7 @@ export function AgentChatPanel({
   const [isUploading, setIsUploading] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<{ stop: () => void } | null>(null);
@@ -400,7 +401,10 @@ export function AgentChatPanel({
   }, [forceExpanded, isOpen]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
   }, [messages]);
 
   useEffect(() => {
@@ -529,7 +533,10 @@ export function AgentChatPanel({
             className="overflow-hidden"
           >
             <div className="border border-t-0 border-border/60 rounded-b-2xl bg-card/40 backdrop-blur-md">
-              <div className={cn(bodyMaxHeightClassName, 'overflow-y-auto px-5 py-4 space-y-4 scrollbar-hide')}>
+              <div
+                ref={messagesContainerRef}
+                className={cn(bodyMaxHeightClassName, 'overflow-y-auto px-5 py-4 space-y-4 scrollbar-hide')}
+              >
                 {(ideaBankBridgeState === 'waiting' || ideaBankBridgeState === 'sent' || ideaBankContext?.status) && (
                   <div className="text-sm rounded-xl border border-border bg-muted/40 px-4 py-3 text-muted-foreground">
                     {ideaBankBridgeState === 'waiting' && 'Idea Bank is running. I will use the results when ready.'}
