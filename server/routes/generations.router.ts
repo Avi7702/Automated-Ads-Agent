@@ -993,10 +993,10 @@ export const transformRouter: RouterFactory = (ctx: RouterContext): Router => {
 
         if (err instanceof Error && err.name === 'PreGenGateError') {
           const gateErr = err as Error & { score?: number; suggestions?: string[]; breakdown?: unknown };
-        telemetry.trackError({
-          endpoint: '/api/transform',
-          errorType: 'pre_gen_gate_blocked',
-          statusCode: 400,
+          telemetry.trackError({
+            endpoint: '/api/transform',
+            errorType: 'pre_gen_gate_blocked',
+            statusCode: 400,
             ...(userId != null && { userId }),
           });
 
