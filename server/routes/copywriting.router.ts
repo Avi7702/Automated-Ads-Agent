@@ -9,6 +9,8 @@
 import type { Router, Request, Response } from 'express';
 import type { RouterContext, RouterFactory, RouterModule } from '../types/router';
 import { createRouter, asyncHandler } from './utils/createRouter';
+import { buildFallbackCopyVariations } from '../lib/aiFallbacks';
+import { isLikelyGeminiError } from '../lib/geminiResilience';
 
 export const copywritingRouter: RouterFactory = (ctx: RouterContext): Router => {
   const router = createRouter();
@@ -22,6 +24,14 @@ export const copywritingRouter: RouterFactory = (ctx: RouterContext): Router => 
     '/standalone',
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
+      let fallbackInput: {
+        platform: string;
+        productName: string;
+        productDescription: string;
+        industry: string;
+        variationCount: number;
+      } | null = null;
+
       try {
         const {
           platform = 'linkedin',
@@ -44,6 +54,13 @@ export const copywritingRouter: RouterFactory = (ctx: RouterContext): Router => 
 
         // Validate variations
         const variationCount = Math.min(Math.max(parseInt(variations) || 3, 1), 5);
+        fallbackInput = {
+          platform,
+          productName,
+          productDescription,
+          industry,
+          variationCount,
+        };
 
         // Call copywriting service
         const { copywritingService } = await import('../services/copywritingService');
@@ -77,6 +94,31 @@ export const copywritingRouter: RouterFactory = (ctx: RouterContext): Router => 
         });
       } catch (err: unknown) {
         logger.error({ module: 'StandaloneCopy', err }, 'Error generating standalone copy');
+
+        if (fallbackInput && isLikelyGeminiError(err)) {
+          const fallbackVariations = buildFallbackCopyVariations({
+            productName: fallbackInput.productName,
+            productDescription: fallbackInput.productDescription,
+            platform: fallbackInput.platform,
+            industry: fallbackInput.industry,
+            count: fallbackInput.variationCount,
+          }).map((v) => ({
+            copy: v.caption || v.bodyText || '',
+            headline: v.headline,
+            hook: v.hook,
+            hashtags: v.hashtags || [],
+            framework: v.framework,
+            cta: v.cta,
+          }));
+
+          return res.status(200).json({
+            success: true,
+            fallback: true,
+            meta: { provider: 'fallback', reason: 'gemini_unavailable' },
+            variations: fallbackVariations,
+          });
+        }
+
         res.status(500).json({
           error: 'Failed to generate copy',
         });

@@ -11,6 +11,8 @@ import type { Router, Request, Response } from 'express';
 import type { IdeaBankSuggestResponse } from '@shared/types/ideaBank';
 import type { RouterContext, RouterFactory, RouterModule } from '../types/router';
 import { createRouter, asyncHandler } from './utils/createRouter';
+import { buildFallbackIdeaBankResponse, buildFallbackTemplateResponse } from '../lib/aiFallbacks';
+import { isLikelyGeminiError } from '../lib/geminiResilience';
 
 export const ideaBankRouter: RouterFactory = (ctx: RouterContext): Router => {
   const router = createRouter();
@@ -96,7 +98,20 @@ export const ideaBankRouter: RouterFactory = (ctx: RouterContext): Router => {
           // Filter successful results and aggregate
           const successfulResults = results.filter((r) => r.success);
           if (successfulResults.length === 0) {
-            return res.status(500).json({ error: 'Failed to generate suggestions for all products' });
+            const fallback = buildFallbackIdeaBankResponse({
+              maxSuggestions: Math.min(maxSuggestions || 6, 10),
+              uploadDescriptions: validUploadDescriptions,
+              ...(typeof userGoal === 'string' ? { userGoal } : {}),
+            });
+
+            return res.status(200).json({
+              ...fallback,
+              fallback: true,
+              meta: {
+                provider: 'fallback',
+                reason: 'all_products_failed',
+              },
+            });
           }
 
           // Merge suggestions and aggregate analysis status
@@ -146,9 +161,43 @@ export const ideaBankRouter: RouterFactory = (ctx: RouterContext): Router => {
         });
 
         if (!result.success) {
-          const statusCode =
-            result.error.code === 'RATE_LIMITED' ? 429 : result.error.code === 'PRODUCT_NOT_FOUND' ? 404 : 500;
-          return res.status(statusCode).json({ error: result.error.message, code: result.error.code });
+          if (result.error.code === 'RATE_LIMITED') {
+            return res.status(429).json({ error: result.error.message, code: result.error.code });
+          }
+          if (result.error.code === 'PRODUCT_NOT_FOUND') {
+            return res.status(404).json({ error: result.error.message, code: result.error.code });
+          }
+
+          if (mode === 'template' && typeof templateId === 'string' && templateId.trim().length > 0) {
+            const fallbackTemplate = buildFallbackTemplateResponse({
+              templateId,
+              ...(typeof userGoal === 'string' ? { userGoal } : {}),
+            });
+
+            return res.status(200).json({
+              ...fallbackTemplate,
+              fallback: true,
+              meta: {
+                provider: 'fallback',
+                reason: result.error.code,
+              },
+            });
+          }
+
+          const fallback = buildFallbackIdeaBankResponse({
+            maxSuggestions: Math.min(maxSuggestions || 3, 5),
+            uploadDescriptions: validUploadDescriptions,
+            ...(typeof userGoal === 'string' ? { userGoal } : {}),
+          });
+
+          return res.status(200).json({
+            ...fallback,
+            fallback: true,
+            meta: {
+              provider: 'fallback',
+              reason: result.error.code,
+            },
+          });
         }
 
         // Response shape changes based on mode
@@ -183,6 +232,35 @@ export const ideaBankRouter: RouterFactory = (ctx: RouterContext): Router => {
         res.json(response);
       } catch (err: unknown) {
         logger.error({ module: 'IdeaBankSuggest', err }, 'Error suggesting ideas');
+
+        if (isLikelyGeminiError(err)) {
+          const { userGoal, uploadDescriptions, maxSuggestions } = req.body as {
+            userGoal?: unknown;
+            uploadDescriptions?: unknown;
+            maxSuggestions?: unknown;
+          };
+
+          const validUploadDescriptions: string[] = Array.isArray(uploadDescriptions)
+            ? uploadDescriptions
+                .filter((d: unknown): d is string => typeof d === 'string' && d.trim().length > 0)
+                .slice(0, 6)
+            : [];
+
+          const fallback = buildFallbackIdeaBankResponse({
+            uploadDescriptions: validUploadDescriptions,
+            ...(typeof userGoal === 'string' ? { userGoal } : {}),
+            ...(typeof maxSuggestions === 'number' && Number.isFinite(maxSuggestions) ? { maxSuggestions } : {}),
+          });
+
+          return res.status(200).json({
+            ...fallback,
+            fallback: true,
+            meta: {
+              provider: 'fallback',
+              reason: 'gemini_unavailable',
+            },
+          });
+        }
 
         // Return structured error with retry signal
         res.status(500).json({
