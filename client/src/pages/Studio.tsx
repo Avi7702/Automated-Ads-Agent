@@ -733,10 +733,10 @@ function StudioContent() {
   const reduced = useReducedMotion();
 
   const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>(() => {
-    if (typeof window === 'undefined') return 'split';
+    if (typeof window === 'undefined') return 'studio';
     const stored = window.localStorage.getItem('studio-workspace-mode');
-    if (stored === 'agent' || stored === 'studio' || stored === 'split') return stored;
-    return window.innerWidth >= 1280 ? 'split' : 'studio';
+    if (stored === 'agent' || stored === 'studio') return stored;
+    return 'studio';
   });
 
   const [ideaBankContext, setIdeaBankContext] = useState<IdeaBankContextSnapshot | null>(null);
@@ -845,7 +845,6 @@ function StudioContent() {
 
   const workspaceHeadline = useMemo(() => {
     if (workspaceMode === 'agent') return 'Plan, ask, and execute with the assistant';
-    if (workspaceMode === 'split') return 'Plan with the assistant while composing visuals';
     return 'Create stunning product visuals';
   }, [workspaceMode]);
 
@@ -853,10 +852,7 @@ function StudioContent() {
     if (workspaceMode === 'agent') {
       return 'Use one focused chat workspace for strategy, content planning, and generation commands.';
     }
-    if (workspaceMode === 'split') {
-      return 'Agent and composer side-by-side: pick products, review Idea Bank, edit prompts, and generate faster.';
-    }
-    return 'Chat with the assistant, add products and references, and generate professional marketing visuals in minutes.';
+    return 'Add products and references, and generate professional marketing visuals in minutes.';
   }, [workspaceMode]);
 
   const renderStudioCanvas = () => (
