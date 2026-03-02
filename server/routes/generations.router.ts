@@ -21,6 +21,8 @@ import type { EditJobData, VideoGenerateJobData } from '../jobs/types';
 import { getGlobalGeminiClient } from '../lib/geminiClient';
 import type { Part } from '@google/genai';
 import { promptInjectionGuard } from '../middleware/promptInjectionGuard';
+import { buildFallbackAnalysisAnswer, buildFallbackImageUrl } from '../lib/aiFallbacks';
+import { isLikelyGeminiError } from '../lib/geminiResilience';
 
 export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => {
   const router = createRouter();
@@ -254,6 +256,12 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
     '/:id/analyze',
     requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
+      const generationIdParam = typeof req.params['id'] === 'string' ? req.params['id'] : undefined;
+      const fallbackQuestion =
+        typeof req.body?.question === 'string' ? req.body.question : 'How can I improve this generation?';
+      let fallbackPrompt = '';
+      let fallbackEditPrompt: string | null | undefined;
+
       try {
         const id = req.params['id'];
         const { question } = req.body;
@@ -278,6 +286,8 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
             error: 'Generation not found',
           });
         }
+        fallbackPrompt = generation.prompt;
+        fallbackEditPrompt = generation.editPrompt;
 
         logger.info({ module: 'Analyze', generationId: id, question }, 'Analyzing generation');
 
@@ -386,9 +396,17 @@ Please analyze the transformation and answer the user's question.`,
         });
         const answer = result.candidates?.[0]?.content?.parts?.[0]?.text;
         if (!answer) {
-          return res.status(500).json({
-            success: false,
-            error: 'AI did not return a response',
+          return res.status(200).json({
+            success: true,
+            fallback: true,
+            meta: { provider: 'fallback', reason: 'empty_ai_response' },
+            answer: buildFallbackAnalysisAnswer({
+              question,
+              originalPrompt: generation.prompt,
+              editPrompt: generation.editPrompt,
+            }),
+            generationId: id,
+            question,
           });
         }
 
@@ -400,6 +418,22 @@ Please analyze the transformation and answer the user's question.`,
         });
       } catch (err: unknown) {
         logger.error({ module: 'Analyze', err }, 'Analyze error');
+
+        if (isLikelyGeminiError(err)) {
+          return res.status(200).json({
+            success: true,
+            fallback: true,
+            meta: { provider: 'fallback', reason: 'gemini_unavailable' },
+            answer: buildFallbackAnalysisAnswer({
+              question: fallbackQuestion,
+              originalPrompt: fallbackPrompt,
+              ...(fallbackEditPrompt !== undefined ? { editPrompt: fallbackEditPrompt } : {}),
+            }),
+            generationId: generationIdParam ?? null,
+            question: fallbackQuestion,
+          });
+        }
+
         return res.status(500).json({
           success: false,
           error: 'Failed to analyze image',
@@ -729,10 +763,17 @@ export const transformRouter: RouterFactory = (ctx: RouterContext): Router => {
       let success = false;
       let errorType: string | undefined;
       let totalImageCount = 0;
+      let parsedProductIds: string[] = [];
+      let generationMode: 'standard' | 'exact_insert' | 'inspiration' = 'standard';
+      let selectedResolution: '1K' | '2K' | '4K' = '2K';
+      let promptText = '';
+      let templateIdValue: string | undefined;
 
       try {
         const files = Array.isArray(req.files) ? (req.files as Express.Multer.File[]) : [];
         const { prompt, resolution, mode, templateId, templateReferenceUrls, recipe: recipeJson } = req.body;
+        promptText = typeof prompt === 'string' ? prompt : '';
+        templateIdValue = typeof templateId === 'string' ? templateId : undefined;
 
         if (typeof prompt !== 'string' || prompt.trim().length === 0) {
           return res.status(400).json({ error: 'No prompt provided' });
@@ -770,9 +811,9 @@ export const transformRouter: RouterFactory = (ctx: RouterContext): Router => {
           }
         }
 
-        const parsedProductIds = parseStringArray(req.body.productIds).slice(0, 6);
+        parsedProductIds = parseStringArray(req.body.productIds).slice(0, 6);
 
-        const generationMode = mode || 'standard';
+        generationMode = (mode || 'standard') as 'standard' | 'exact_insert' | 'inspiration';
         const validModes = ['standard', 'exact_insert', 'inspiration'];
         if (!validModes.includes(generationMode)) {
           return res.status(400).json({ error: `Invalid mode. Must be one of: ${validModes.join(', ')}` });
@@ -783,7 +824,7 @@ export const transformRouter: RouterFactory = (ctx: RouterContext): Router => {
         }
 
         const { normalizeResolution } = ctx.domainServices.pricingEstimator;
-        const selectedResolution = normalizeResolution(resolution) || '2K';
+        selectedResolution = (normalizeResolution(resolution) || '2K') as '1K' | '2K' | '4K';
         logger.info(
           {
             module: 'Transform',
@@ -952,10 +993,10 @@ export const transformRouter: RouterFactory = (ctx: RouterContext): Router => {
 
         if (err instanceof Error && err.name === 'PreGenGateError') {
           const gateErr = err as Error & { score?: number; suggestions?: string[]; breakdown?: unknown };
-          telemetry.trackError({
-            endpoint: '/api/transform',
-            errorType: 'pre_gen_gate_blocked',
-            statusCode: 400,
+        telemetry.trackError({
+          endpoint: '/api/transform',
+          errorType: 'pre_gen_gate_blocked',
+          statusCode: 400,
             ...(userId != null && { userId }),
           });
 
@@ -965,6 +1006,44 @@ export const transformRouter: RouterFactory = (ctx: RouterContext): Router => {
             score: gateErr.score,
             suggestions: gateErr.suggestions,
             breakdown: gateErr.breakdown,
+          });
+        }
+
+        if (isLikelyGeminiError(err)) {
+          errorType = 'gemini_fallback';
+
+          const fallbackImageUrl = buildFallbackImageUrl(promptText, selectedResolution);
+          let generationId: string | null = null;
+          try {
+            const saved = await storage.saveGeneration({
+              userId: userId || undefined,
+              prompt: promptText || 'Fallback generation prompt',
+              generatedImagePath: fallbackImageUrl,
+              originalImagePaths: [],
+              resolution: selectedResolution,
+              conversationHistory: null,
+              parentGenerationId: null,
+              editPrompt: null,
+              productIds: parsedProductIds.length > 0 ? parsedProductIds : null,
+              templateId: templateIdValue ?? null,
+              generationMode: generationMode ?? 'standard',
+            });
+            generationId = saved.id;
+          } catch (persistErr) {
+            logger.warn({ module: 'Transform', err: persistErr }, 'Failed to persist fallback generation');
+          }
+
+          return res.status(200).json({
+            success: true,
+            fallback: true,
+            meta: { provider: 'fallback', reason: 'gemini_unavailable' },
+            imageUrl: fallbackImageUrl,
+            generationId,
+            prompt: promptText,
+            canEdit: false,
+            mode: generationMode,
+            templateId: templateIdValue || null,
+            stagesCompleted: ['fallback'],
           });
         }
 
@@ -984,7 +1063,7 @@ export const transformRouter: RouterFactory = (ctx: RouterContext): Router => {
         const inputTokensEstimate = Math.ceil((req.body.prompt?.length || 0) * 0.25);
 
         telemetry.trackGeminiUsage({
-          model: 'gemini-3-pro-image-preview',
+          model: 'gemini-3.1-flash-image-preview',
           operation: 'generate',
           inputTokens: inputTokensEstimate,
           outputTokens: 0,
@@ -999,7 +1078,7 @@ export const transformRouter: RouterFactory = (ctx: RouterContext): Router => {
           await quotaMonitoring.trackApiCall({
             brandId: userId || 'anonymous',
             operation: 'generate',
-            model: 'gemini-3-pro-image-preview',
+            model: 'gemini-3.1-flash-image-preview',
             success,
             durationMs,
             inputTokens: inputTokensEstimate,

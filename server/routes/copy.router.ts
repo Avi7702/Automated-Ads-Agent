@@ -13,6 +13,9 @@ import type { Router, Request, Response } from 'express';
 import type { RouterContext, RouterFactory, RouterModule } from '../types/router';
 import { createRouter, asyncHandler } from './utils/createRouter';
 import { promptInjectionGuard } from '../middleware/promptInjectionGuard';
+import type { GenerateCopyInput } from '../validation/schemas';
+import { buildFallbackCopyVariations } from '../lib/aiFallbacks';
+import { isLikelyGeminiError } from '../lib/geminiResilience';
 
 export const copyRouter: RouterFactory = (ctx: RouterContext): Router => {
   const router = createRouter();
@@ -25,22 +28,41 @@ export const copyRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/generate',
     promptInjectionGuard,
     asyncHandler(async (req: Request, res: Response) => {
-      try {
-        // Use session userId if available, otherwise use a default for demo
-        const userId = req.session?.userId || 'demo-user';
+      const userId = req.session?.userId || 'demo-user';
+      let validatedData: GenerateCopyInput | undefined;
 
+      const toClientVariation = (variation: {
+        headline?: string | null;
+        hook?: string | null;
+        bodyText?: string | null;
+        cta?: string | null;
+        caption?: string | null;
+        hashtags?: string[] | null;
+        framework?: string | null;
+      }) => ({
+        copy: variation.caption || variation.bodyText || '',
+        caption: variation.caption || variation.bodyText || '',
+        headline: variation.headline || '',
+        hook: variation.hook || '',
+        cta: variation.cta || '',
+        hashtags: variation.hashtags || [],
+        framework: variation.framework || 'fallback',
+      });
+
+      try {
         // Validate request
         const { generateCopySchema } = await import('../validation/schemas');
-        const validatedData = generateCopySchema.parse(req.body);
+        const parsed = generateCopySchema.parse(req.body);
+        validatedData = parsed;
 
         // Verify generation exists
-        const generation = await storage.getGenerationById(validatedData.generationId);
+        const generation = await storage.getGenerationById(parsed.generationId);
         if (!generation) {
           return res.status(404).json({ error: 'Generation not found' });
         }
 
         // Get user's brand voice if not provided
-        let brandVoice = validatedData.brandVoice;
+        let brandVoice = parsed.brandVoice;
         if (!brandVoice) {
           const user = await storage.getUserById(userId);
           if (user?.brandVoice) {
@@ -51,7 +73,7 @@ export const copyRouter: RouterFactory = (ctx: RouterContext): Router => {
         // Generate copy variations
         const { copywritingService } = await import('../services/copywritingService');
         const variations = await copywritingService.generateCopy({
-          ...validatedData,
+          ...parsed,
           brandVoice,
         });
 
@@ -59,7 +81,7 @@ export const copyRouter: RouterFactory = (ctx: RouterContext): Router => {
         const saveResults = await Promise.allSettled(
           variations.map((variation, index) =>
             storage.saveAdCopy({
-              generationId: validatedData.generationId,
+              generationId: parsed.generationId,
               userId,
               headline: variation.headline,
               hook: variation.hook,
@@ -67,18 +89,18 @@ export const copyRouter: RouterFactory = (ctx: RouterContext): Router => {
               cta: variation.cta,
               caption: variation.caption,
               hashtags: variation.hashtags,
-              platform: validatedData.platform,
-              tone: validatedData.tone,
+              platform: parsed.platform,
+              tone: parsed.tone,
               framework: variation.framework.toLowerCase(),
-              campaignObjective: validatedData.campaignObjective,
-              productName: validatedData.productName,
-              productDescription: validatedData.productDescription,
-              productBenefits: validatedData.productBenefits,
-              uniqueValueProp: validatedData.uniqueValueProp,
-              industry: validatedData.industry,
-              targetAudience: validatedData.targetAudience,
+              campaignObjective: parsed.campaignObjective,
+              productName: parsed.productName,
+              productDescription: parsed.productDescription,
+              productBenefits: parsed.productBenefits,
+              uniqueValueProp: parsed.uniqueValueProp,
+              industry: parsed.industry,
+              targetAudience: parsed.targetAudience,
               brandVoice: brandVoice,
-              socialProof: validatedData.socialProof,
+              socialProof: parsed.socialProof,
               qualityScore: variation.qualityScore,
               characterCounts: variation.characterCounts,
               variationNumber: index + 1,
@@ -101,12 +123,23 @@ export const copyRouter: RouterFactory = (ctx: RouterContext): Router => {
         }
 
         if (savedCopies.length === 0) {
-          return res.status(500).json({ error: 'Failed to save any copy variations' });
+          const fallbackVariations = variations.map(toClientVariation);
+          return res.status(200).json({
+            success: true,
+            fallback: true,
+            meta: { provider: 'fallback', reason: 'save_failed' },
+            copies: [],
+            variations: fallbackVariations,
+            recommended: 0,
+          });
         }
+
+        const clientVariations = savedCopies.map(toClientVariation);
 
         res.json({
           success: true,
           copies: savedCopies,
+          variations: clientVariations,
           recommended: 0, // First variation is recommended
         });
       } catch (err: unknown) {
@@ -116,6 +149,62 @@ export const copyRouter: RouterFactory = (ctx: RouterContext): Router => {
             .status(400)
             .json({ error: 'Validation failed', details: (err as unknown as { issues: unknown }).issues });
         }
+
+        const fallbackData = validatedData;
+        if (fallbackData && isLikelyGeminiError(err)) {
+          const fallbackVariations = buildFallbackCopyVariations({
+            productName: fallbackData.productName,
+            productDescription: fallbackData.productDescription,
+            platform: fallbackData.platform,
+            industry: fallbackData.industry,
+            count: fallbackData.variations,
+          });
+
+          const saveResults = await Promise.allSettled(
+            fallbackVariations.map((variation, index) =>
+              storage.saveAdCopy({
+                generationId: fallbackData.generationId,
+                userId,
+                headline: variation.headline,
+                hook: variation.hook,
+                bodyText: variation.bodyText,
+                cta: variation.cta,
+                caption: variation.caption,
+                hashtags: variation.hashtags,
+                platform: fallbackData.platform,
+                tone: fallbackData.tone,
+                framework: variation.framework.toLowerCase(),
+                campaignObjective: fallbackData.campaignObjective,
+                productName: fallbackData.productName,
+                productDescription: fallbackData.productDescription,
+                productBenefits: fallbackData.productBenefits,
+                uniqueValueProp: fallbackData.uniqueValueProp,
+                industry: fallbackData.industry,
+                targetAudience: fallbackData.targetAudience,
+                brandVoice: fallbackData.brandVoice,
+                socialProof: fallbackData.socialProof,
+                qualityScore: variation.qualityScore,
+                characterCounts: variation.characterCounts,
+                variationNumber: index + 1,
+                parentCopyId: null,
+              }),
+            ),
+          );
+
+          const savedCopies = saveResults
+            .filter((result) => result.status === 'fulfilled')
+            .map((result) => (result as PromiseFulfilledResult<Awaited<ReturnType<typeof storage.saveAdCopy>>>).value);
+
+          return res.status(200).json({
+            success: true,
+            fallback: true,
+            meta: { provider: 'fallback', reason: 'gemini_unavailable' },
+            copies: savedCopies,
+            variations: fallbackVariations.map(toClientVariation),
+            recommended: 0,
+          });
+        }
+
         res
           .status(500)
           .json({ error: 'Failed to generate copy', details: err instanceof Error ? err.message : String(err) });

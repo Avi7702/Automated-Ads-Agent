@@ -11,6 +11,7 @@
 import { genAI } from './gemini';
 import { geminiLogger } from './logger';
 import { recordGeminiSuccess, recordGeminiFailure } from './geminiHealthMonitor';
+import { withGeminiResilience } from './geminiResilience';
 
 // Global override client — set when user saves their Gemini API key via Settings UI
 let _overrideClient: typeof genAI | null = null;
@@ -191,34 +192,36 @@ export async function generateContentWithRetry(
   client?: typeof genAI,
 ): Promise<Awaited<ReturnType<typeof genAI.models.generateContent>>> {
   const geminiClient = client || _overrideClient || genAI;
-  try {
-    return await callGeminiWithRetry(() => geminiClient.models.generateContent(params), context);
-  } catch (primaryError: unknown) {
-    // Try fallback model if available
-    const modelName =
-      typeof params === 'object' && params !== null && 'model' in params
-        ? String((params as unknown as Record<string, unknown>)['model'] ?? '')
-        : '';
-    const fallbackModel = MODEL_FALLBACK[modelName];
+  return withGeminiResilience(context.operation, async () => {
+    try {
+      return await callGeminiWithRetry(() => geminiClient.models.generateContent(params), context);
+    } catch (primaryError: unknown) {
+      // Try fallback model if available
+      const modelName =
+        typeof params === 'object' && params !== null && 'model' in params
+          ? String((params as unknown as Record<string, unknown>)['model'] ?? '')
+          : '';
+      const fallbackModel = MODEL_FALLBACK[modelName];
 
-    if (fallbackModel && !isRetryableError(primaryError)) {
-      geminiLogger.warn(
-        {
-          operation: context.operation,
-          primaryModel: modelName,
-          fallbackModel,
-        },
-        'Primary model failed, attempting fallback',
-      );
+      if (fallbackModel && !isRetryableError(primaryError)) {
+        geminiLogger.warn(
+          {
+            operation: context.operation,
+            primaryModel: modelName,
+            fallbackModel,
+          },
+          'Primary model failed, attempting fallback',
+        );
 
-      const fallbackParams = { ...params, model: fallbackModel } as typeof params;
-      return callGeminiWithRetry(() => geminiClient.models.generateContent(fallbackParams), {
-        ...context,
-        operation: `${context.operation}_fallback`,
-      });
+        const fallbackParams = { ...params, model: fallbackModel } as typeof params;
+        return callGeminiWithRetry(() => geminiClient.models.generateContent(fallbackParams), {
+          ...context,
+          operation: `${context.operation}_fallback`,
+        });
+      }
+      throw primaryError;
     }
-    throw primaryError;
-  }
+  });
 }
 
 /**

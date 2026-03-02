@@ -123,6 +123,32 @@ describe('IdeaBank Router — /api/idea-bank', () => {
       expect(res.status).toBe(404);
     });
 
+    it('returns deterministic fallback suggestions when LLM fails', async () => {
+      const llmFailureOverrides: ContextOverrides = {
+        domainServices: {
+          ideaBank: {
+            generateSuggestions: vi.fn().mockResolvedValue({
+              success: false,
+              error: { code: 'LLM_ERROR', message: 'Gemini API unavailable' },
+            }),
+            getMatchedTemplates: vi.fn(),
+          } as unknown as ContextOverrides['domainServices'] extends undefined
+            ? never
+            : NonNullable<ContextOverrides['domainServices']>['ideaBank'],
+        },
+      };
+      const rebuilt = createTestAppForRouter(ideaBankRouter, '/api/idea-bank', llmFailureOverrides);
+      const res = await request(rebuilt.app)
+        .post('/api/idea-bank/suggest')
+        .send({ productId: 'prod-1', userGoal: 'Launch a new product line' });
+
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body.suggestions)).toBe(true);
+      expect(res.body.suggestions.length).toBeGreaterThan(0);
+      expect(res.body.fallback).toBe(true);
+      expect(res.body.meta?.provider).toBe('fallback');
+    });
+
     it('supports uploadDescriptions without productId', async () => {
       const res = await request(app)
         .post('/api/idea-bank/suggest')
