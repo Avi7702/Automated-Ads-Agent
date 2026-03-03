@@ -59,22 +59,29 @@ export const adTemplatesRouter: RouterFactory = (ctx: RouterContext): Router => 
         }
 
         // Otherwise use filters
-        const filters: { category?: string; isGlobal?: boolean } = {};
+        const filters: {
+          category?: string;
+          isGlobal?: boolean;
+          platform?: string;
+          aspectRatio?: string;
+        } = {};
+
         if (category && typeof category === 'string') {
           filters.category = category;
         }
+
+        if (platform && typeof platform === 'string') {
+          filters.platform = platform;
+        }
+
+        if (aspectRatio && typeof aspectRatio === 'string') {
+          filters.aspectRatio = aspectRatio;
+        }
+
         filters.isGlobal = true; // Only return global templates by default
 
-        let templates = await storage.getAdSceneTemplates(filters);
-
-        // Additional filtering for platform and aspect ratio
-        if (platform && typeof platform === 'string') {
-          templates = templates.filter((t) => t.platformHints?.includes(platform));
-        }
-        if (aspectRatio && typeof aspectRatio === 'string') {
-          templates = templates.filter((t) => t.aspectRatioHints?.includes(aspectRatio));
-        }
-
+        // Use database-side filtering for better performance
+        const templates = await storage.getAdSceneTemplates(filters);
         res.json(templates);
       } catch (err: unknown) {
         logger.error({ module: 'GetAdTemplates', err }, 'Error fetching ad templates');
