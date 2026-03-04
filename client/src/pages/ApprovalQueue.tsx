@@ -253,6 +253,18 @@ export default function ApprovalQueue({ embedded = false }: ApprovalQueueProps) 
 
 // ── Sub-components ──────────────────────────────────────
 
+/** Static Tailwind class map — dynamic template literals (e.g. `bg-${color}-100`) are
+ *  invisible to the Tailwind compiler and produce no CSS. Map each color token to
+ *  its full set of utility classes so the compiler can tree-shake correctly. */
+const statCardColors: Record<string, { bg: string; icon: string }> = {
+  blue: { bg: 'bg-blue-100 dark:bg-blue-900/20', icon: 'text-blue-600 dark:text-blue-400' },
+  green: { bg: 'bg-green-100 dark:bg-green-900/20', icon: 'text-green-600 dark:text-green-400' },
+  red: { bg: 'bg-red-100 dark:bg-red-900/20', icon: 'text-red-600 dark:text-red-400' },
+  orange: { bg: 'bg-orange-100 dark:bg-orange-900/20', icon: 'text-orange-600 dark:text-orange-400' },
+};
+
+const defaultStatCardColor = { bg: 'bg-gray-100 dark:bg-gray-900/20', icon: 'text-gray-600 dark:text-gray-400' };
+
 function StatCard({
   icon: Icon,
   color,
@@ -264,12 +276,13 @@ function StatCard({
   value: string | number;
   label: string;
 }) {
+  const palette = statCardColors[color] ?? defaultStatCardColor;
   return (
     <Card>
       <CardContent className="p-4">
         <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-lg bg-${color}-100 dark:bg-${color}-900/20`}>
-            <Icon className={`w-5 h-5 text-${color}-600 dark:text-${color}-400`} />
+          <div className={`p-2 rounded-lg ${palette.bg}`}>
+            <Icon className={`w-5 h-5 ${palette.icon}`} />
           </div>
           <div>
             <div className="text-2xl font-bold">{value}</div>
