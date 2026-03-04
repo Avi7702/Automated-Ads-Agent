@@ -21,15 +21,21 @@ export async function savePromptTemplate(insertTemplate: InsertPromptTemplate): 
   return template!;
 }
 
-export async function getPromptTemplates(category?: string): Promise<PromptTemplate[]> {
+export async function getPromptTemplates(
+  category?: string,
+  limit: number = 50,
+  offset: number = 0,
+): Promise<PromptTemplate[]> {
   if (category) {
     return await db
       .select()
       .from(promptTemplates)
       .where(eq(promptTemplates.category, category))
-      .orderBy(desc(promptTemplates.createdAt));
+      .orderBy(desc(promptTemplates.createdAt))
+      .limit(limit)
+      .offset(offset);
   }
-  return await db.select().from(promptTemplates).orderBy(desc(promptTemplates.createdAt));
+  return await db.select().from(promptTemplates).orderBy(desc(promptTemplates.createdAt)).limit(limit).offset(offset);
 }
 
 export async function getPromptTemplateById(id: string): Promise<PromptTemplate | undefined> {
@@ -101,14 +107,20 @@ export async function deleteAdSceneTemplate(id: string): Promise<void> {
   await db.delete(adSceneTemplates).where(eq(adSceneTemplates.id, id));
 }
 
-export async function searchAdSceneTemplates(query: string): Promise<AdSceneTemplate[]> {
+export async function searchAdSceneTemplates(
+  query: string,
+  limit: number = 50,
+  offset: number = 0,
+): Promise<AdSceneTemplate[]> {
   // Search in title, description, and tags
   const searchTerm = `%${query.toLowerCase()}%`;
   return await db
     .select()
     .from(adSceneTemplates)
     .where(ilike(adSceneTemplates.title, searchTerm))
-    .orderBy(desc(adSceneTemplates.createdAt));
+    .orderBy(desc(adSceneTemplates.createdAt))
+    .limit(limit)
+    .offset(offset);
 }
 
 // ============================================
@@ -120,12 +132,18 @@ export async function createPerformingAdTemplate(template: InsertPerformingAdTem
   return result!;
 }
 
-export async function getPerformingAdTemplates(userId: string): Promise<PerformingAdTemplate[]> {
+export async function getPerformingAdTemplates(
+  userId: string,
+  limit: number = 50,
+  offset: number = 0,
+): Promise<PerformingAdTemplate[]> {
   return await db
     .select()
     .from(performingAdTemplates)
     .where(eq(performingAdTemplates.userId, userId))
-    .orderBy(desc(performingAdTemplates.createdAt));
+    .orderBy(desc(performingAdTemplates.createdAt))
+    .limit(limit)
+    .offset(offset);
 }
 
 export async function getPerformingAdTemplate(id: string): Promise<PerformingAdTemplate | undefined> {
@@ -136,17 +154,23 @@ export async function getPerformingAdTemplate(id: string): Promise<PerformingAdT
 export async function getPerformingAdTemplatesByCategory(
   userId: string,
   category: string,
+  limit: number = 50,
+  offset: number = 0,
 ): Promise<PerformingAdTemplate[]> {
   return await db
     .select()
     .from(performingAdTemplates)
     .where(and(eq(performingAdTemplates.userId, userId), eq(performingAdTemplates.category, category)))
-    .orderBy(desc(performingAdTemplates.createdAt));
+    .orderBy(desc(performingAdTemplates.createdAt))
+    .limit(limit)
+    .offset(offset);
 }
 
 export async function getPerformingAdTemplatesByPlatform(
   userId: string,
   platform: string,
+  limit: number = 50,
+  offset: number = 0,
 ): Promise<PerformingAdTemplate[]> {
   // Refactored to use database-side filtering with arrayContains
   return await db
@@ -155,10 +179,16 @@ export async function getPerformingAdTemplatesByPlatform(
     .where(
       and(eq(performingAdTemplates.userId, userId), arrayContains(performingAdTemplates.targetPlatforms, [platform])),
     )
-    .orderBy(desc(performingAdTemplates.createdAt));
+    .orderBy(desc(performingAdTemplates.createdAt))
+    .limit(limit)
+    .offset(offset);
 }
 
-export async function getFeaturedPerformingAdTemplates(userId: string): Promise<PerformingAdTemplate[]> {
+export async function getFeaturedPerformingAdTemplates(
+  userId: string,
+  limit: number = 50,
+  offset: number = 0,
+): Promise<PerformingAdTemplate[]> {
   return await db
     .select()
     .from(performingAdTemplates)
@@ -169,7 +199,9 @@ export async function getFeaturedPerformingAdTemplates(userId: string): Promise<
         eq(performingAdTemplates.isActive, true),
       ),
     )
-    .orderBy(desc(performingAdTemplates.createdAt));
+    .orderBy(desc(performingAdTemplates.createdAt))
+    .limit(limit)
+    .offset(offset);
 }
 
 export async function getTopPerformingAdTemplates(userId: string, limit: number = 10): Promise<PerformingAdTemplate[]> {
@@ -208,6 +240,8 @@ export async function searchPerformingAdTemplates(
     industry?: string;
     objective?: string;
   },
+  limit: number = 50,
+  offset: number = 0,
 ): Promise<PerformingAdTemplate[]> {
   // Refactored to build a dynamic SQL query for efficient database-side filtering
   // This replaces inefficient in-memory filtering of the entire templates table
@@ -239,5 +273,7 @@ export async function searchPerformingAdTemplates(
     .select()
     .from(performingAdTemplates)
     .where(and(...conditions))
-    .orderBy(desc(performingAdTemplates.estimatedEngagementRate));
+    .orderBy(desc(performingAdTemplates.estimatedEngagementRate))
+    .limit(limit)
+    .offset(offset);
 }

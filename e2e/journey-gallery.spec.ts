@@ -17,8 +17,8 @@ test.describe('Gallery Journey', () => {
       const generationCount = page.getByText(/\d+ generation/);
       const emptyState = page.getByText(/no generations yet/i);
 
-      const hasCount = await generationCount.isVisible().catch(() => false);
-      const hasEmpty = await emptyState.isVisible().catch(() => false);
+      const hasCount = await generationCount.isVisible();
+      const hasEmpty = await emptyState.isVisible();
 
       expect(hasCount || hasEmpty).toBe(true);
     });
@@ -56,7 +56,10 @@ test.describe('Gallery Journey', () => {
       await gotoWithAuth(page, '/gallery');
 
       // The sort trigger is a SelectTrigger button
-      const sortTrigger = page.locator('button').filter({ hasText: /newest|oldest/i }).first();
+      const sortTrigger = page
+        .locator('button')
+        .filter({ hasText: /newest|oldest/i })
+        .first();
       await expect(sortTrigger).toBeVisible();
 
       // Click to open sort dropdown
@@ -67,11 +70,11 @@ test.describe('Gallery Journey', () => {
       const newestOption = page.getByRole('option', { name: /newest/i });
       const oldestOption = page.getByRole('option', { name: /oldest/i });
 
-      const hasNewest = await newestOption.isVisible().catch(() => false);
-      const hasOldest = await oldestOption.isVisible().catch(() => false);
+      const hasNewest = await newestOption.isVisible();
+      const hasOldest = await oldestOption.isVisible();
 
       // Either found options or the sort trigger works
-      expect(hasNewest || hasOldest || await sortTrigger.isVisible()).toBe(true);
+      expect(hasNewest || hasOldest || (await sortTrigger.isVisible())).toBe(true);
     });
   });
 
@@ -93,7 +96,7 @@ test.describe('Gallery Journey', () => {
       const ctaButton = page.getByRole('button', { name: /go to studio/i });
       if (await ctaButton.isVisible()) {
         await ctaButton.click();
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
         await expect(page).toHaveURL(/^http:\/\/localhost:\d+\/$/);
       }
     });
@@ -132,7 +135,7 @@ test.describe('Gallery Journey', () => {
 
       if (cardCount > 0) {
         await cards.first().click();
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // Should navigate to Studio with generation param
         await expect(page).toHaveURL(/\/\?generation=/);
@@ -146,7 +149,7 @@ test.describe('Gallery Journey', () => {
 
       const backButton = page.getByRole('button', { name: /studio/i });
       await backButton.click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       await expect(page).toHaveURL(/^http:\/\/localhost:\d+\/$/);
     });

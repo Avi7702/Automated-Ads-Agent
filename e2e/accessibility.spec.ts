@@ -11,7 +11,7 @@ import AxeBuilder from '@axe-core/playwright';
 test.describe('Accessibility — axe-core scans', () => {
   test('Studio page (/) has no critical/serious a11y violations', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
 
@@ -21,7 +21,7 @@ test.describe('Accessibility — axe-core scans', () => {
 
   test('Gallery page (/gallery) has no critical/serious a11y violations', async ({ page }) => {
     await page.goto('/gallery');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
 
@@ -31,7 +31,7 @@ test.describe('Accessibility — axe-core scans', () => {
 
   test('Pipeline page (/pipeline) has no critical/serious a11y violations', async ({ page }) => {
     await page.goto('/pipeline');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
 
@@ -41,7 +41,7 @@ test.describe('Accessibility — axe-core scans', () => {
 
   test('Settings page (/settings) has no critical/serious a11y violations', async ({ page }) => {
     await page.goto('/settings');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
 

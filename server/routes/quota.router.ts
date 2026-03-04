@@ -27,6 +27,9 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
   const { requireAuth } = ctx.middleware;
   const { quotaMonitoring, getGoogleCloudService } = ctx.domainServices;
 
+  // All quota endpoints require authentication
+  router.use(requireAuth);
+
   /**
    * GET /status - Real-time quota status
    */
@@ -34,7 +37,7 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/status',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const brandId = req.session?.userId || 'anonymous';
+        const brandId = req.user!.id;
         const status = await quotaMonitoring.getQuotaStatus(brandId);
         res.json(status);
       } catch (err: unknown) {
@@ -51,7 +54,7 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/history',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const brandId = req.session?.userId || 'anonymous';
+        const brandId = req.user!.id;
         const { windowType, startDate, endDate } = req.query;
 
         const history = await quotaMonitoring.getUsageHistory({
@@ -79,7 +82,7 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/breakdown',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const brandId = req.session?.userId || 'anonymous';
+        const brandId = req.user!.id;
         const { period } = req.query;
 
         const breakdown = await quotaMonitoring.getUsageBreakdown({
@@ -102,7 +105,7 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/rate-limit-status',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const brandId = req.session?.userId || 'anonymous';
+        const brandId = req.user!.id;
         const status = await quotaMonitoring.getRateLimitStatus(brandId);
         res.json(status);
       } catch (err: unknown) {
@@ -117,13 +120,9 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
    */
   router.get(
     '/alerts',
-    requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const brandId = req.session.userId;
-        if (!brandId) {
-          return res.status(401).json({ error: 'Not authenticated' });
-        }
+        const brandId = req.user!.id;
         const alerts = await quotaMonitoring.getAlerts(brandId);
         res.json({ alerts });
       } catch (err: unknown) {
@@ -138,13 +137,9 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
    */
   router.put(
     '/alerts',
-    requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const brandId = req.session.userId;
-        if (!brandId) {
-          return res.status(401).json({ error: 'Not authenticated' });
-        }
+        const brandId = req.user!.id;
         const { alertType, thresholdValue, isEnabled } = req.body;
 
         if (!alertType || thresholdValue === undefined) {
@@ -173,7 +168,7 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/check-alerts',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const brandId = req.session?.userId || 'anonymous';
+        const brandId = req.user!.id;
         const triggered = await quotaMonitoring.checkAlerts(brandId);
         res.json({ triggered });
       } catch (err: unknown) {
@@ -249,7 +244,6 @@ export const quotaRouter: RouterFactory = (ctx: RouterContext): Router => {
    */
   router.post(
     '/google/sync',
-    ctx.middleware.requireAuth,
     asyncHandler(async (_req: Request, res: Response) => {
       try {
         const service = await getGoogleCloudService();
@@ -366,6 +360,6 @@ export const quotaRouterModule: RouterModule = {
   factory: quotaRouter,
   description: 'Quota monitoring, alerts, and Google Cloud sync',
   endpointCount: 12,
-  requiresAuth: false, // Mixed - some endpoints don't require auth
+  requiresAuth: true,
   tags: ['quota', 'monitoring', 'google-cloud'],
 };

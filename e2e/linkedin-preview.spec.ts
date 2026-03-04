@@ -8,7 +8,7 @@ test.describe('LinkedIn Post Preview - Always Visible', () => {
     // Navigate to Studio
     await page.goto('/');
     // Wait for page to fully load
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('should show LinkedIn Preview panel on desktop', async ({ page }) => {
@@ -89,12 +89,14 @@ test.describe('LinkedIn Post Preview - Always Visible', () => {
     const generateCopyButton = page.locator('[data-testid="generate-copy-button-linkedin"]');
 
     // If visible, click it to generate copy
-    if (await generateCopyButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await generateCopyButton.isVisible({ timeout: 5000 })) {
       await generateCopyButton.click();
 
       // Wait for copy generation
-      await expect(page.locator('text=Generating...'))
-        .toBeVisible({ timeout: 5000 })
+      // Optional: generating indicator may not appear if copy is fast
+      await page
+        .locator('text=Generating...')
+        .waitFor({ state: 'visible', timeout: 5000 })
         .catch(() => {});
 
       // After generation, the placeholder should be replaced with actual text
@@ -150,7 +152,7 @@ test.describe('LinkedIn Preview - Visual Elements', () => {
   test('LinkedIn mockup has correct visual elements', async ({ page }) => {
     await page.goto('/');
     await page.setViewportSize({ width: 1280, height: 800 });
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Check LinkedIn card structure exists
     const linkedInCard = page.locator('.bg-white.rounded-lg');
@@ -170,7 +172,7 @@ test.describe('LinkedIn Preview - Visual Elements', () => {
   test('should show status notice based on content state', async ({ page }) => {
     await page.goto('/');
     await page.setViewportSize({ width: 1280, height: 800 });
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Initially should show the "Generate image and copy" notice
     await expect(page.locator('text=Generate image and copy to preview')).toBeVisible();
@@ -183,7 +185,7 @@ test.describe('LinkedIn Preview - Mobile Experience', () => {
   test('mobile preview bar shows correct status', async ({ page }) => {
     await page.goto('/');
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Should show "Empty" status initially
     const mobileBar = page.locator('.lg\\:hidden').filter({ hasText: 'LinkedIn Preview' });
@@ -194,7 +196,7 @@ test.describe('LinkedIn Preview - Mobile Experience', () => {
   test('mobile preview expands on click', async ({ page }) => {
     await page.goto('/');
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Click the mobile preview bar to expand
     const mobileButton = page.locator('.lg\\:hidden button').filter({ hasText: 'LinkedIn Preview' });

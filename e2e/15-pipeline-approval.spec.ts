@@ -15,11 +15,7 @@ async function queueLoadedOrErrored(page: Page): Promise<'loaded' | 'errored'> {
   await expect(page.getByText(/Content Approval Queue|Something went wrong/i).first()).toBeVisible({ timeout: 45000 });
 
   // Determine which state we're in
-  const errored = await page
-    .getByText('Something went wrong')
-    .first()
-    .isVisible()
-    .catch(() => false);
+  const errored = await page.getByText('Something went wrong').first().isVisible();
   return errored ? 'errored' : 'loaded';
 }
 
@@ -57,11 +53,7 @@ test.describe('Pipeline - Approval Queue', { tag: '@pipeline' }, () => {
     const state = await queueLoadedOrErrored(page);
     if (state === 'errored') return;
     // API may crash after heading renders — check for stat card OR error boundary
-    const visible = await page
-      .getByText('Pending Review')
-      .first()
-      .isVisible({ timeout: 10000 })
-      .catch(() => false);
+    const visible = await page.getByText('Pending Review').first().isVisible({ timeout: 10000 });
     if (!visible) {
       // Error boundary may have appeared after initial check
       await expect(page.getByText('Something went wrong').first()).toBeVisible({ timeout: 5000 });

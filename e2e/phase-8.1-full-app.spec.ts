@@ -21,8 +21,7 @@ const PRODUCTION_URL = 'https://automated-ads-agent-production.up.railway.app';
 // Helper function to measure navigation performance
 async function measureNavigationTime(page: Page, targetUrl: string): Promise<number> {
   const startTime = Date.now();
-  await page.goto(targetUrl);
-  await page.waitForLoadState('networkidle');
+  await page.goto(targetUrl, { waitUntil: 'domcontentloaded' });
   return Date.now() - startTime;
 }
 
@@ -36,7 +35,7 @@ test.describe('Phase 8.1: Authentication & Session', () => {
     });
 
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Should either be logged in (Studio) or see login form
     const studioHeading = page.locator('h1').first();
@@ -49,16 +48,16 @@ test.describe('Phase 8.1: Authentication & Session', () => {
 
   test('should maintain session across page reloads', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // If logged in, verify user menu exists
     const userMenu = page.locator('[data-testid="user-menu"]');
-    const hasUserMenu = await userMenu.count() > 0;
+    const hasUserMenu = (await userMenu.count()) > 0;
 
     if (hasUserMenu) {
       // Reload the page
       await page.reload();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // User menu should still exist (session persisted)
       await expect(userMenu).toBeVisible();
@@ -69,7 +68,7 @@ test.describe('Phase 8.1: Authentication & Session', () => {
 test.describe('Phase 8.1: Studio Page - Core Functionality', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('should display product selection grid', async ({ page }) => {
@@ -165,12 +164,12 @@ test.describe('Phase 8.1: Studio Page - Core Functionality', () => {
 test.describe('Phase 8.1: Library Page', () => {
   test('should navigate to Library page', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Click Library in navigation
     const libraryLink = page.locator('a[href="/library"]');
     await libraryLink.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Verify we're on Library page
     await expect(page).toHaveURL(/\/library/);
@@ -182,7 +181,7 @@ test.describe('Phase 8.1: Library Page', () => {
 
   test('should display product library', async ({ page }) => {
     await page.goto('/library');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(1000);
 
     // Products should be displayed
@@ -195,7 +194,7 @@ test.describe('Phase 8.1: Library Page', () => {
 
   test('should have brand images section', async ({ page }) => {
     await page.goto('/library');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Check for Brand Images navigation or section
     const brandImagesSection = page.locator('text=Brand Images');
@@ -206,7 +205,7 @@ test.describe('Phase 8.1: Library Page', () => {
 
   test('should have templates section', async ({ page }) => {
     await page.goto('/library');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Check for Templates navigation or section
     const templatesSection = page.locator('text=Templates');
@@ -219,12 +218,12 @@ test.describe('Phase 8.1: Library Page', () => {
 test.describe('Phase 8.1: Social Accounts Page', () => {
   test('should navigate to Social Accounts page', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Click Social Accounts in navigation
     const socialAccountsLink = page.locator('a[href="/social-accounts"]');
     await socialAccountsLink.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Verify we're on Social Accounts page
     await expect(page).toHaveURL(/\/social-accounts/);
@@ -232,7 +231,7 @@ test.describe('Phase 8.1: Social Accounts Page', () => {
 
   test('should display social accounts page without 500 error', async ({ page }) => {
     await page.goto('/social-accounts');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Page should load successfully (no 500 error)
     const pageError = page.locator('text=500');
@@ -259,7 +258,7 @@ test.describe('Phase 8.1: Social Accounts Page', () => {
     });
 
     await page.goto('/social-accounts');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(1000);
 
     // API should return 200 OK (not 500)
@@ -271,7 +270,7 @@ test.describe('Phase 8.1: Social Accounts Page', () => {
 
   test('should display empty state or account list', async ({ page }) => {
     await page.goto('/social-accounts');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Should either show accounts or empty state
     const accountsList = page.locator('[data-testid="social-accounts-list"]');
@@ -288,12 +287,12 @@ test.describe('Phase 8.1: Social Accounts Page', () => {
 test.describe('Phase 8.1: Settings Page', () => {
   test('should navigate to Settings page', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Click Settings in navigation
     const settingsLink = page.locator('a[href="/settings"]');
     await settingsLink.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Verify we're on Settings page
     await expect(page).toHaveURL(/\/settings/);
@@ -301,7 +300,7 @@ test.describe('Phase 8.1: Settings Page', () => {
 
   test('should display settings sections', async ({ page }) => {
     await page.goto('/settings');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Settings heading should be visible
     const settingsHeading = page.locator('h1:has-text("Settings")');
@@ -322,7 +321,7 @@ test.describe('Phase 8.1: Settings Page', () => {
 
   test('should have n8n configuration section', async ({ page }) => {
     await page.goto('/settings');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Check for n8n configuration
     const n8nSection = page.locator('text=n8n');
@@ -335,12 +334,12 @@ test.describe('Phase 8.1: Settings Page', () => {
 test.describe('Phase 8.1: Navigation Performance', () => {
   test('should navigate between pages quickly (< 2 seconds)', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Measure navigation to Library
     const libraryStartTime = Date.now();
     await page.locator('a[href="/library"]').click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     const libraryLoadTime = Date.now() - libraryStartTime;
 
     console.log(`Library navigation: ${libraryLoadTime}ms`);
@@ -349,7 +348,7 @@ test.describe('Phase 8.1: Navigation Performance', () => {
     // Measure navigation to Settings
     const settingsStartTime = Date.now();
     await page.locator('a[href="/settings"]').click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     const settingsLoadTime = Date.now() - settingsStartTime;
 
     console.log(`Settings navigation: ${settingsLoadTime}ms`);
@@ -358,7 +357,7 @@ test.describe('Phase 8.1: Navigation Performance', () => {
     // Measure navigation back to Studio
     const studioStartTime = Date.now();
     await page.locator('a[href="/"]').click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     const studioLoadTime = Date.now() - studioStartTime;
 
     console.log(`Studio navigation: ${studioLoadTime}ms`);
@@ -367,7 +366,7 @@ test.describe('Phase 8.1: Navigation Performance', () => {
 
   test('Header should not re-render unnecessarily during navigation', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Add marker to track re-renders
     await page.evaluate(() => {
@@ -383,11 +382,11 @@ test.describe('Phase 8.1: Navigation Performance', () => {
 
     // Navigate to Library
     await page.locator('a[href="/library"]').click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Navigate to Settings
     await page.locator('a[href="/settings"]').click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Check render count
     const renderCount = await page.evaluate(() => {
@@ -422,7 +421,7 @@ test.describe('Phase 8.1: Performance Optimizations - Compression', () => {
     });
 
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     console.log(`Compressed assets: ${compressedAssets}/${totalAssets}`);
 
@@ -455,13 +454,13 @@ test.describe('Phase 8.1: Performance Optimizations - Compression', () => {
     });
 
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     console.log(`Bundle sizes - Uncompressed: ${uncompressedSize}, Compressed: ${compressedSize}`);
 
     // If we have compressed size, it should be significantly smaller
     if (compressedSize > 0) {
-      const reductionRate = 1 - (compressedSize / (compressedSize + uncompressedSize));
+      const reductionRate = 1 - compressedSize / (compressedSize + uncompressedSize);
       console.log(`Compression rate: ${(reductionRate * 100).toFixed(1)}%`);
       expect(reductionRate).toBeGreaterThan(0.5); // At least 50% reduction
     }
@@ -488,7 +487,7 @@ test.describe('Phase 8.1: Performance Optimizations - Cache Headers', () => {
     });
 
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     console.log(`Assets with cache headers: ${assetsWithCache}/${totalAssets}`);
 
@@ -511,7 +510,7 @@ test.describe('Phase 8.1: Performance Optimizations - Cache Headers', () => {
     });
 
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     if (htmlResponse) {
       const cacheControl = htmlResponse.headers()['cache-control'];
@@ -525,11 +524,11 @@ test.describe('Phase 8.1: Performance Optimizations - Cache Headers', () => {
   test('should enable fast repeat visits with cached assets', async ({ page }) => {
     // First visit
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Second visit (should be faster due to cache)
     const startTime = Date.now();
-    await page.goto('/', { waitUntil: 'networkidle' });
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
     const repeatVisitTime = Date.now() - startTime;
 
     console.log(`Repeat visit time: ${repeatVisitTime}ms`);
@@ -548,7 +547,7 @@ test.describe('Phase 8.1: Performance Optimizations - Overall Page Performance',
 
     const domLoadTime = Date.now() - startTime;
 
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const fullLoadTime = Date.now() - startTime;
 
@@ -568,11 +567,13 @@ test.describe('Phase 8.1: Performance Optimizations - Overall Page Performance',
       if (msg.type() === 'error') {
         const text = msg.text();
         // Filter out known non-critical errors
-        if (!text.includes('favicon') &&
-            !text.includes('404') &&
-            !text.includes('401') &&
-            !text.includes('net::ERR') &&
-            !text.includes('Failed to load resource')) {
+        if (
+          !text.includes('favicon') &&
+          !text.includes('404') &&
+          !text.includes('401') &&
+          !text.includes('net::ERR') &&
+          !text.includes('Failed to load resource')
+        ) {
           consoleErrors.push(text);
         }
       }
@@ -580,16 +581,16 @@ test.describe('Phase 8.1: Performance Optimizations - Overall Page Performance',
 
     // Navigate through app
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     await page.goto('/library');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     await page.goto('/social-accounts');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     await page.goto('/settings');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     console.log(`Console errors: ${consoleErrors.length}`);
     if (consoleErrors.length > 0) {
@@ -637,7 +638,7 @@ test.describe('Phase 8.1: Database Migration - Social Connections', () => {
     });
 
     await page.goto('/social-accounts');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(1000);
 
     // API should return 200 OK with valid JSON (not 500 error)
@@ -653,11 +654,11 @@ test.describe('Phase 8.1: Database Migration - Social Connections', () => {
 
 // Production-specific tests
 test.describe('Phase 8.1: Production Validation', () => {
-  test.skip(({ }, testInfo) => !testInfo.project.name.includes('production'), 'Production only');
+  test.skip(({}, testInfo) => !testInfo.project.name.includes('production'), 'Production only');
 
   test('should load production site with all Phase 8.1 optimizations', async ({ page }) => {
     await page.goto(PRODUCTION_URL);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Verify page loads
     await expect(page).toHaveTitle(/Product Content Studio|Automated Ads/i);
@@ -677,7 +678,7 @@ test.describe('Phase 8.1: Production Validation', () => {
     });
 
     await page.goto(PRODUCTION_URL);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     expect(hasCompression).toBe(true);
 

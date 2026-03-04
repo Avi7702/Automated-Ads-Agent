@@ -98,7 +98,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
       await page.waitForTimeout(1000);
       const userMessage = page.locator('text=Hello assistant');
       // Soft check — message may render in various containers
-      const visible = await userMessage.isVisible().catch(() => false);
+      const visible = await userMessage.isVisible();
       expect(visible).toBeDefined();
     });
 
@@ -161,7 +161,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
         .locator('button')
         .filter({ has: page.locator('svg.lucide-mic') })
         .first();
-      const voiceSupported = await voiceBtn.isVisible().catch(() => false);
+      const voiceSupported = await voiceBtn.isVisible();
       test.skip(!voiceSupported, 'Voice input not available in this environment');
 
       // Just verify it exists and is clickable without crashing
@@ -213,7 +213,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
         .filter({ has: page.locator('svg.lucide-mic') })
         .first();
 
-      const hasVoice = (await voiceBtn.isVisible().catch(() => false)) || (await micBtn.isVisible().catch(() => false));
+      const hasVoice = (await voiceBtn.isVisible()) || (await micBtn.isVisible());
       // Voice support depends on browser — just verify no crash
       expect(hasVoice).toBeDefined();
     });
@@ -251,7 +251,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
         (el) => el.classList.toString().includes('ring') || el.classList.toString().includes('border-primary'),
       );
       const checkmark = firstProduct.locator('svg.lucide-check');
-      const hasCheckmark = await checkmark.isVisible().catch(() => false);
+      const hasCheckmark = await checkmark.isVisible();
 
       expect(hasSelectionRing || hasCheckmark || (await studio.getSelectedProductCount()) > 0).toBeTruthy();
     });
@@ -444,7 +444,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
       await page.waitForTimeout(2000);
 
       const chips = studio.ideaBankBarChips;
-      const chipCount = await chips.count().catch(() => 0);
+      const chipCount = await chips.count();
       test.skip(chipCount === 0, 'No IdeaBank suggestions loaded');
 
       await chips.first().click();
@@ -465,7 +465,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
       await page.waitForTimeout(2000);
 
       const refreshBtn = studio.ideaBankBarRefresh;
-      if (await refreshBtn.isVisible().catch(() => false)) {
+      if (await refreshBtn.isVisible()) {
         await refreshBtn.click();
         await page.waitForTimeout(1000);
         expect(await studio.isVisible()).toBe(true);
@@ -478,7 +478,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
   test.describe('Output Settings', () => {
     test('25. platform dropdown — select platform', async ({ page }) => {
       const platformTrigger = studio.platformSelect;
-      if (await platformTrigger.isVisible().catch(() => false)) {
+      if (await platformTrigger.isVisible()) {
         await platformTrigger.click();
         await page.waitForTimeout(300);
 
@@ -493,7 +493,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
 
     test('26. aspect ratio dropdown — select ratio', async ({ page }) => {
       const aspectTrigger = studio.aspectRatioSelect;
-      if (await aspectTrigger.isVisible().catch(() => false)) {
+      if (await aspectTrigger.isVisible()) {
         await aspectTrigger.click();
         await page.waitForTimeout(300);
 
@@ -508,7 +508,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
 
     test('27. resolution dropdown — select resolution', async ({ page }) => {
       const resTrigger = studio.resolutionSelect;
-      if (await resTrigger.isVisible().catch(() => false)) {
+      if (await resTrigger.isVisible()) {
         await resTrigger.click();
         await page.waitForTimeout(300);
 
@@ -569,7 +569,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
 
     test('30. download button on result — exists when result visible', async () => {
       // Check via history to see if we have a prior result
-      const hasResult = await studio.generatedImage.isVisible().catch(() => false);
+      const hasResult = await studio.generatedImage.isVisible();
       if (hasResult) {
         await expect(studio.downloadButton).toBeVisible();
       } else {
@@ -579,7 +579,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
     });
 
     test('31. Start New button — resets to composer', async ({ page }) => {
-      const hasResult = await studio.generatedImage.isVisible().catch(() => false);
+      const hasResult = await studio.generatedImage.isVisible();
       test.skip(!hasResult, 'No generated result to reset from');
 
       await studio.startNewButton.click();
@@ -590,7 +590,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
     });
 
     test('32. edit button — edit section opens', async ({ page }) => {
-      const hasResult = await studio.generatedImage.isVisible().catch(() => false);
+      const hasResult = await studio.generatedImage.isVisible();
       test.skip(!hasResult, 'No generated result for edit test');
 
       const editBtn = page.getByRole('button', { name: /^Edit$/i }).first();
@@ -601,14 +601,13 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
         // Edit section should now be visible
         const editSection = page.locator('text=Refine Your Image');
         const editTextarea = page.locator('textarea[placeholder*="changes"]');
-        const editVisible =
-          (await editSection.isVisible().catch(() => false)) || (await editTextarea.isVisible().catch(() => false));
+        const editVisible = (await editSection.isVisible()) || (await editTextarea.isVisible());
         expect(editVisible).toBeDefined();
       }
     });
 
     test('33. edit preset buttons — preset text applied', async ({ page }) => {
-      const hasResult = await studio.generatedImage.isVisible().catch(() => false);
+      const hasResult = await studio.generatedImage.isVisible();
       test.skip(!hasResult, 'No generated result for preset test');
 
       // Open edit mode
@@ -634,7 +633,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
 
     test('34. Apply Changes button — triggers new generation', async ({ page }) => {
       test.slow();
-      const hasResult = await studio.generatedImage.isVisible().catch(() => false);
+      const hasResult = await studio.generatedImage.isVisible();
       test.skip(!hasResult, 'No generated result for apply changes test');
 
       const editBtn = page.getByRole('button', { name: /^Edit$/i }).first();
@@ -659,7 +658,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
     });
 
     test('35. copy button — copy section opens', async ({ page }) => {
-      const hasResult = await studio.generatedImage.isVisible().catch(() => false);
+      const hasResult = await studio.generatedImage.isVisible();
       test.skip(!hasResult, 'No generated result');
 
       const copyBtn = page.getByRole('button', { name: /^Copy$/i }).first();
@@ -669,12 +668,12 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
 
         // Copy/Ask AI section should appear
         const copySection = page.locator('text=Ask AI About This Image');
-        expect(await copySection.isVisible().catch(() => false)).toBeDefined();
+        expect(await copySection.isVisible()).toBeDefined();
       }
     });
 
     test('36. AI Canvas button — canvas editor opens', async ({ page }) => {
-      const hasResult = await studio.generatedImage.isVisible().catch(() => false);
+      const hasResult = await studio.generatedImage.isVisible();
       test.skip(!hasResult, 'No generated result');
 
       const canvasBtn = page.getByRole('button', { name: /AI Canvas/i }).first();
@@ -688,7 +687,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
     });
 
     test('37. preview button — preview section opens', async ({ page }) => {
-      const hasResult = await studio.generatedImage.isVisible().catch(() => false);
+      const hasResult = await studio.generatedImage.isVisible();
       test.skip(!hasResult, 'No generated result');
 
       const previewBtn = page.getByRole('button', { name: /Preview/i }).first();
@@ -701,7 +700,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
     });
 
     test('38. save button — save dialog opens', async ({ page }) => {
-      const hasResult = await studio.generatedImage.isVisible().catch(() => false);
+      const hasResult = await studio.generatedImage.isVisible();
       test.skip(!hasResult, 'No generated result');
 
       const saveBtn = page.getByRole('button', { name: /Save/i }).first();
@@ -711,7 +710,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
 
         // Save to Catalog dialog should appear
         const dialog = page.locator('[role="dialog"]');
-        const dialogVisible = await dialog.isVisible().catch(() => false);
+        const dialogVisible = await dialog.isVisible();
         expect(dialogVisible).toBeDefined();
       }
     });
@@ -729,7 +728,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
     test('39. edit tab — edit content shown', async ({ page }) => {
       // Inspector panel tabs are in the right column
       const editTab = studio.inspectorEditTab;
-      if (await editTab.isVisible().catch(() => false)) {
+      if (await editTab.isVisible()) {
         await editTab.click();
         await page.waitForTimeout(300);
 
@@ -740,7 +739,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
 
     test('40. copy tab — copy generation content', async ({ page }) => {
       const copyTab = studio.inspectorCopyTab;
-      if (await copyTab.isVisible().catch(() => false)) {
+      if (await copyTab.isVisible()) {
         await copyTab.click();
         await page.waitForTimeout(300);
         expect(await studio.isVisible()).toBe(true);
@@ -749,19 +748,19 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
 
     test('41. Ask AI tab — question input shown', async ({ page }) => {
       const askAITab = studio.inspectorAskAITab;
-      if (await askAITab.isVisible().catch(() => false)) {
+      if (await askAITab.isVisible()) {
         await askAITab.click();
         await page.waitForTimeout(300);
 
         const askInput = studio.askAIInput;
-        const visible = await askInput.isVisible().catch(() => false);
+        const visible = await askInput.isVisible();
         expect(visible).toBeDefined();
       }
     });
 
     test('42. Details tab — generation metadata shown', async ({ page }) => {
       const detailsTab = studio.inspectorDetailsTab;
-      if (await detailsTab.isVisible().catch(() => false)) {
+      if (await detailsTab.isVisible()) {
         await detailsTab.click();
         await page.waitForTimeout(300);
         expect(await studio.isVisible()).toBe(true);
@@ -770,11 +769,11 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
 
     test('43. Ask AI send — AI response displayed', async ({ page }) => {
       test.slow();
-      const hasResult = await studio.generatedImage.isVisible().catch(() => false);
+      const hasResult = await studio.generatedImage.isVisible();
       test.skip(!hasResult, 'No generated result — Ask AI needs a generation');
 
       const askAITab = studio.inspectorAskAITab;
-      if (await askAITab.isVisible().catch(() => false)) {
+      if (await askAITab.isVisible()) {
         await askAITab.click();
         await page.waitForTimeout(300);
 
@@ -786,7 +785,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
 
           // Response area should have content
           const response = studio.askAIResponse;
-          const hasResponse = await response.isVisible().catch(() => false);
+          const hasResponse = await response.isVisible();
           expect(hasResponse).toBeDefined();
         }
       }
@@ -815,7 +814,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
     });
 
     test('45. Ctrl+D — download if result exists', async ({ page }) => {
-      const hasResult = await studio.generatedImage.isVisible().catch(() => false);
+      const hasResult = await studio.generatedImage.isVisible();
       test.skip(!hasResult, 'No result for download shortcut');
 
       // Press Ctrl+D (may trigger download or browser default)
@@ -864,7 +863,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
 
       // Look for the keyboard shortcuts panel
       const shortcutsPanel = page.locator('text=Keyboard Shortcuts');
-      const visible = await shortcutsPanel.isVisible().catch(() => false);
+      const visible = await shortcutsPanel.isVisible();
       // Should show the panel (or toggle it)
       expect(visible).toBeDefined();
 
@@ -900,7 +899,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
         await historyBtn.click();
         await page.waitForTimeout(1000);
 
-        const historyCount = await studio.historyItems.count().catch(() => 0);
+        const historyCount = await studio.historyItems.count();
         if (historyCount > 0) {
           await studio.historyItems.first().click();
           await page.waitForTimeout(500);
@@ -932,7 +931,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
 
       // Inspector panel has class "hidden lg:block" — should not be visible on mobile
       const inspectorDesktop = page.locator('.hidden.lg\\:block .sticky.top-24').first();
-      const visible = await inspectorDesktop.isVisible().catch(() => false);
+      const visible = await inspectorDesktop.isVisible();
       expect(visible).toBe(false);
     });
 

@@ -91,7 +91,7 @@ export class LibraryPage {
    */
   async goto() {
     await this.page.goto('/library');
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   /**
@@ -99,7 +99,7 @@ export class LibraryPage {
    */
   async gotoTab(tab: string) {
     await this.page.goto(`/library?tab=${tab}`);
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   /**

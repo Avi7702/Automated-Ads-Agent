@@ -20,7 +20,7 @@ test.describe('Cross-Feature Flows', { tag: '@cross-feature' }, () => {
 
     await expect(galleryLink).toBeVisible({ timeout: 10000 });
     await galleryLink.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     expect(page.url()).toContain('/gallery');
   });
 
@@ -32,7 +32,7 @@ test.describe('Cross-Feature Flows', { tag: '@cross-feature' }, () => {
 
     await expect(pipelineLink).toBeVisible({ timeout: 10000 });
     await pipelineLink.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     expect(page.url()).toContain('/pipeline');
   });
 
@@ -44,7 +44,7 @@ test.describe('Cross-Feature Flows', { tag: '@cross-feature' }, () => {
 
     await expect(settingsLink).toBeVisible({ timeout: 10000 });
     await settingsLink.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     expect(page.url()).toContain('/settings');
   });
 
@@ -56,7 +56,7 @@ test.describe('Cross-Feature Flows', { tag: '@cross-feature' }, () => {
 
     await expect(studioLink).toBeVisible({ timeout: 10000 });
     await studioLink.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     const url = page.url();
     expect(url.endsWith('/') || url.endsWith(':3000')).toBeTruthy();
   });
@@ -65,7 +65,7 @@ test.describe('Cross-Feature Flows', { tag: '@cross-feature' }, () => {
 
   test('/content-planner redirects to /pipeline?tab=planner', async ({ page }) => {
     await gotoWithAuth(page, '/content-planner');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     expect(page.url()).toContain('/pipeline');
     expect(page.url()).toContain('tab=planner');
@@ -73,7 +73,7 @@ test.describe('Cross-Feature Flows', { tag: '@cross-feature' }, () => {
 
   test('/usage redirects to /settings?section=usage', async ({ page }) => {
     await gotoWithAuth(page, '/usage');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     expect(page.url()).toContain('/settings');
     expect(page.url()).toContain('section=usage');
@@ -81,14 +81,14 @@ test.describe('Cross-Feature Flows', { tag: '@cross-feature' }, () => {
 
   test('/brand-profile redirects to /settings', async ({ page }) => {
     await gotoWithAuth(page, '/brand-profile');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     expect(page.url()).toContain('/settings');
   });
 
   test('/settings/api-keys redirects to /settings?section=api-keys', async ({ page }) => {
     await gotoWithAuth(page, '/settings/api-keys');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     expect(page.url()).toContain('/settings');
     expect(page.url()).toContain('section=api-keys');
@@ -108,11 +108,11 @@ test.describe('Cross-Feature Flows', { tag: '@cross-feature' }, () => {
 
     await expect(galleryLink).toBeVisible({ timeout: 10000 });
     await galleryLink.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Navigate back to settings via browser back
     await page.goBack();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // URL should still have the section param
     expect(page.url()).toContain('section=api-keys');
@@ -128,7 +128,7 @@ test.describe('Cross-Feature Flows', { tag: '@cross-feature' }, () => {
     const productsLink = page.locator('a[href="/library?tab=products"]').first();
     await expect(productsLink).toBeVisible({ timeout: 10000 });
     await productsLink.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     expect(page.url()).toContain('/library');
     expect(page.url()).toContain('tab=products');

@@ -56,7 +56,7 @@ test.describe('Studio Workflow', () => {
     test('navigation to Studio from other pages works', async ({ page }) => {
       // Navigate to library first
       await page.goto('/library');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Navigate back to Studio via header
       const studioNavLink = page.locator('nav a[href="/"], nav button').filter({ hasText: 'Studio' });
@@ -156,7 +156,7 @@ test.describe('Studio Workflow', () => {
       await page.waitForTimeout(1500);
 
       // Idea Bank may take time to load
-      const ideaBankVisible = await studioPage.ideaBankPanel.isVisible().catch(() => false);
+      const ideaBankVisible = await studioPage.ideaBankPanel.isVisible();
       // This is a soft check - Idea Bank requires AI processing
       if (ideaBankVisible) {
         await expect(studioPage.ideaBankPanel).toBeVisible();
@@ -172,10 +172,7 @@ test.describe('Studio Workflow', () => {
       await studioPage.selectProduct(0);
       await page.waitForTimeout(2000);
 
-      const suggestionVisible = await studioPage.useSuggestionButton
-        .first()
-        .isVisible()
-        .catch(() => false);
+      const suggestionVisible = await studioPage.useSuggestionButton.first().isVisible();
       test.skip(!suggestionVisible, 'No Idea Bank suggestions available');
 
       await studioPage.useIdeaBankSuggestion(0);
@@ -233,7 +230,7 @@ test.describe('Studio Workflow', () => {
 
     test('download button functionality exists', async () => {
       // Check if there's an existing result or history item
-      const hasResult = await studioPage.generatedImage.isVisible().catch(() => false);
+      const hasResult = await studioPage.generatedImage.isVisible();
 
       if (hasResult) {
         await expect(studioPage.downloadButton).toBeVisible();
@@ -241,11 +238,11 @@ test.describe('Studio Workflow', () => {
     });
 
     test('edit button functionality exists', async () => {
-      const hasResult = await studioPage.generatedImage.isVisible().catch(() => false);
+      const hasResult = await studioPage.generatedImage.isVisible();
 
       if (hasResult) {
         const editButton = studioPage.editButton;
-        const isVisible = await editButton.isVisible().catch(() => false);
+        const isVisible = await editButton.isVisible();
         // Edit button should exist in result state
         expect(isVisible).toBeDefined();
       }
@@ -256,7 +253,7 @@ test.describe('Studio Workflow', () => {
     test('history can be accessed', async ({ page }) => {
       // Navigate to history view
       await studioPage.gotoWithParams({ view: 'history' });
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Page should load without errors
       expect(page.url()).toContain('view=history');
@@ -264,9 +261,9 @@ test.describe('Studio Workflow', () => {
 
     test('history items are clickable', async ({ page }) => {
       await studioPage.gotoWithParams({ view: 'history' });
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
-      const historyCount = await studioPage.historyItems.count().catch(() => 0);
+      const historyCount = await studioPage.historyItems.count();
       if (historyCount > 0) {
         await studioPage.historyItems.first().click();
         await page.waitForTimeout(500);
@@ -277,7 +274,7 @@ test.describe('Studio Workflow', () => {
 
   test.describe('Platform Selection', () => {
     test('platform selector is available', async () => {
-      const platformVisible = await studioPage.platformSelect.isVisible().catch(() => false);
+      const platformVisible = await studioPage.platformSelect.isVisible();
       // Platform selection may be in a collapsed section
       expect(platformVisible).toBeDefined();
     });
@@ -289,7 +286,7 @@ test.describe('Studio Workflow', () => {
       await page.setViewportSize({ width: 1920, height: 1080 });
       await studioPage.goto();
 
-      const previewVisible = await studioPage.linkedInPreview.isVisible().catch(() => false);
+      const previewVisible = await studioPage.linkedInPreview.isVisible();
       // LinkedIn preview is typically visible on desktop
       expect(previewVisible).toBeDefined();
     });

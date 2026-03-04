@@ -19,13 +19,13 @@ test.describe('Error Recovery Journey', () => {
 
       // Look for generate button
       const generateButton = page.getByRole('button', { name: /generate/i }).first();
-      if (await generateButton.isVisible() && await generateButton.isEnabled()) {
+      if ((await generateButton.isVisible()) && (await generateButton.isEnabled())) {
         await generateButton.click();
         await page.waitForTimeout(2000);
 
         // Should show error (toast or inline message)
         const errorMessage = page.getByText(/error|failed|try again/i).first();
-        const hasError = await errorMessage.isVisible().catch(() => false);
+        const hasError = await errorMessage.isVisible();
         // Error handling exists but may not show immediately
         expect(true).toBe(true);
       }
@@ -42,7 +42,7 @@ test.describe('Error Recovery Journey', () => {
 
       // Should show error state or empty state (not crash)
       const errorBoundary = page.getByText(/something went wrong|crash/i).first();
-      const hasCrash = await errorBoundary.isVisible().catch(() => false);
+      const hasCrash = await errorBoundary.isVisible();
       expect(hasCrash).toBe(false);
     });
   });
@@ -68,14 +68,14 @@ test.describe('Error Recovery Journey', () => {
   test.describe('404 Page', () => {
     test('invalid route shows Not Found page', async ({ page }) => {
       await page.goto('/this-route-does-not-exist-xyz');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Should show 404 or redirect to a known page
       const notFound = page.getByText(/not found|404|page.*exist/i).first();
       const heading = page.locator('h1').first();
 
-      const hasNotFound = await notFound.isVisible().catch(() => false);
-      const hasHeading = await heading.isVisible().catch(() => false);
+      const hasNotFound = await notFound.isVisible();
+      const hasHeading = await heading.isVisible();
 
       // Either shows 404 page or redirects to valid page
       expect(hasNotFound || hasHeading).toBe(true);
@@ -113,7 +113,7 @@ test.describe('Error Recovery Journey', () => {
 
       // No error boundary
       const crash = page.getByText(/something went wrong|crash/i).first();
-      const hasCrash = await crash.isVisible().catch(() => false);
+      const hasCrash = await crash.isVisible();
       expect(hasCrash).toBe(false);
     });
 

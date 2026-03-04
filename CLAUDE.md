@@ -7,6 +7,7 @@
 **Multiple AI agents (Claude Code, Codex, etc.) may work on this repo simultaneously.**
 
 ### Rules for ALL agents:
+
 1. **NEVER push directly to `main`** — always create a feature branch
 2. **Branch naming**: `claude/<short-description>` or `codex/<short-description>`
 3. **Open a PR** for every change — even small fixes
@@ -15,6 +16,7 @@
 6. **Do NOT merge your own PR** unless the user explicitly says to
 
 ### Why:
+
 When two agents push to `main` independently, the second push overwrites the first.
 Feature branches + PRs let the user review and merge in the correct order.
 
@@ -47,6 +49,7 @@ You must verify information before responding. Never make assumptions about code
 5. **Store historical data** - Don't just show real-time, track trends
 
 ### Examples of WRONG approach (DO NOT DO):
+
 - ❌ "Google doesn't provide X" without verifying with web search
 - ❌ Building local tracking when Cloud Monitoring API exists
 - ❌ Using estimates when real data is available via API
@@ -54,6 +57,7 @@ You must verify information before responding. Never make assumptions about code
 - ❌ Assuming an API has limitations without checking latest docs
 
 ### Examples of CORRECT approach:
+
 - ✅ Web search for "[Service] API quota monitoring endpoint 2025"
 - ✅ Checking official docs for Cloud Monitoring metrics
 - ✅ Implementing proper service account authentication
@@ -127,16 +131,23 @@ You must verify information before responding. Never make assumptions about code
 - ❌ Implicit returns in functions (always explicit)
 - ❌ Array access without null checks: `arr[0]` → `arr[0] ?? fallback`
 
-### Test Coverage Requirements (80%+ MANDATORY)
+### Test Coverage Requirements
+
+**Current enforced thresholds** (in `vitest.config.ts`):
+
+- Statements: 33%
+- Branches: 26%
+- Functions: 32%
+- Lines: 33%
+
+**Target** (not yet achieved): 80% statements, 75% branches, 80% functions, 80% lines.
+
+These thresholds act as a **regression floor** — any PR that lowers coverage below the current baseline will fail CI. As coverage improves, raise the thresholds in `vitest.config.ts`.
 
 **Before committing ANY feature/fix:**
 
 1. ✅ Write tests FIRST (TDD: Red → Green → Refactor)
-2. ✅ Run `npm run test:coverage` and verify:
-   - Statements: ≥80%
-   - Branches: ≥75%
-   - Functions: ≥80%
-   - Lines: ≥80%
+2. ✅ Run `npm run test:coverage` and verify coverage does not drop below the enforced thresholds
 3. ✅ All tests must pass: `npm test`
 4. ✅ E2E tests for user-facing features: `npm run test:e2e`
 
@@ -147,7 +158,7 @@ You must verify information before responding. Never make assumptions about code
 - **Refactor** → All existing tests still pass
 - **API Endpoint** → Integration tests with supertest
 
-**Coverage will FAIL the build if below 80%** - this is enforced in `vitest.config.ts`.
+**Coverage will FAIL the build if below the enforced thresholds** — see `vitest.config.ts`.
 
 ---
 
@@ -343,20 +354,20 @@ docs/
 
 ## Task Status
 
-| Task | Status | Branch |
-|------|--------|--------|
-| 1.1 Rate Limiting | Complete | `claude/task-1.1-rate-limiting` |
-| 1.2 Authentication | Complete | `claude/task-1.2-authentication` |
-| 2.1 Input Validation | Complete | `claude/task-2.1-input-validation` |
-| 2.2 Gemini Integration | Complete | `claude/task-2.2-gemini-integration` |
-| 2.3 Image Storage | Complete | `claude/task-2.3-image-storage` |
-| 2.4 Transform Endpoint | Complete | `claude/task-2.4-generate-endpoint` |
-| 3.1 Edit Schema | Complete | `claude/task-3.1-edit-schema` |
-| 3.2 Edit Endpoint | Complete | `claude/task-3.2-edit-endpoint` |
-| 3.3 History Endpoint | Complete | `claude/task-3.3-history-endpoint` |
-| 3.4 Frontend Edit UI | Complete | `claude/task-3.4-frontend-edit-ui` |
-| **4.1 Copywriting Backend** | **Complete** | `main` (Dec 24, 2025) |
-| **6.0 Idea Bank UI** | **Complete** | `main` (Dec 24, 2025) |
+| Task                        | Status       | Branch                               |
+| --------------------------- | ------------ | ------------------------------------ |
+| 1.1 Rate Limiting           | Complete     | `claude/task-1.1-rate-limiting`      |
+| 1.2 Authentication          | Complete     | `claude/task-1.2-authentication`     |
+| 2.1 Input Validation        | Complete     | `claude/task-2.1-input-validation`   |
+| 2.2 Gemini Integration      | Complete     | `claude/task-2.2-gemini-integration` |
+| 2.3 Image Storage           | Complete     | `claude/task-2.3-image-storage`      |
+| 2.4 Transform Endpoint      | Complete     | `claude/task-2.4-generate-endpoint`  |
+| 3.1 Edit Schema             | Complete     | `claude/task-3.1-edit-schema`        |
+| 3.2 Edit Endpoint           | Complete     | `claude/task-3.2-edit-endpoint`      |
+| 3.3 History Endpoint        | Complete     | `claude/task-3.3-history-endpoint`   |
+| 3.4 Frontend Edit UI        | Complete     | `claude/task-3.4-frontend-edit-ui`   |
+| **4.1 Copywriting Backend** | **Complete** | `main` (Dec 24, 2025)                |
+| **6.0 Idea Bank UI**        | **Complete** | `main` (Dec 24, 2025)                |
 
 ## Phase 6 Implementation
 
@@ -369,6 +380,7 @@ docs/
 Enhanced Idea Bank UI with standardized response handling:
 
 **Features Implemented:**
+
 1. New IdeaBankPanel component with rich metadata display
 2. Multi-product support (1-6 products)
 3. Mode badges (exact_insert, inspiration, standard)
@@ -381,14 +393,17 @@ Enhanced Idea Bank UI with standardized response handling:
 10. Error handling and fallback flows
 
 **Files Created:**
+
 - `client/src/components/IdeaBankPanel.tsx` - Main component (350 lines)
 
 **Files Modified:**
+
 - `client/src/pages/Home.tsx` - Integrated IdeaBankPanel, removed old code
 - `server/routes.ts` - Added multi-product support to `/api/idea-bank/suggest`
 - `shared/types/ideaBank.ts` - Updated request interface
 
 **Documentation:**
+
 - `docs/PHASE-6-IDEA-BANK-UI.md` - Technical overview
 - `docs/IDEA-BANK-COMPONENT-STRUCTURE.md` - Component architecture
 - `docs/IDEA-BANK-USAGE-GUIDE.md` - User guide
@@ -401,6 +416,7 @@ Enhanced Idea Bank UI with standardized response handling:
 **Full spec with production-ready code:** `docs/PHASE-3-IMPLEMENTATION-READY.md`
 
 This document contains:
+
 - Complete code for all 4 tasks
 - All test cases (30 new tests total)
 - Schema changes, type definitions, API endpoints
@@ -414,6 +430,7 @@ This document contains:
 ### Backend Complete (100%) ✅
 
 All 13 features implemented:
+
 1. Hook generation (6 proven patterns)
 2. Copywriting frameworks (AIDA, PAS, BAB, FAB + Auto)
 3. Character limit validation (all 5 platforms)
@@ -429,6 +446,7 @@ All 13 features implemented:
 13. Product benefits
 
 **Files Created/Modified:**
+
 - `shared/schema.ts` - Added `adCopy` table + `brandVoice` to users
 - `server/validation/schemas.ts` - Added `generateCopySchema`
 - `server/services/copywritingService.ts` - 550+ lines, PTCF prompts
@@ -439,6 +457,7 @@ All 13 features implemented:
 **Test Coverage:** 24 test suites, 400+ assertions
 
 **Next Steps:**
+
 1. Run `npm run db:push` to create database tables
 2. (Optional) Build frontend CopyPanel UI
 3. (Optional) Add brand voice settings UI
@@ -447,13 +466,13 @@ All 13 features implemented:
 
 The following plugins from the anthropics/claude-code marketplace are enabled:
 
-| Plugin | Purpose | Usage |
-|--------|---------|-------|
-| **code-review** | Multi-agent PR review with confidence scoring | `/code-review` or `/code-review --comment` |
-| **commit-commands** | Streamlined git commit workflow | `/commit` |
-| **pr-review-toolkit** | Enhanced PR review capabilities | `/review-pr [PR#]` |
-| **frontend-design** | Distinctive UI design, avoids generic AI aesthetics | Auto-activates for frontend work |
-| **security-guidance** | PreToolUse hook monitoring security patterns | Auto-activates on file edits |
+| Plugin                | Purpose                                             | Usage                                      |
+| --------------------- | --------------------------------------------------- | ------------------------------------------ |
+| **code-review**       | Multi-agent PR review with confidence scoring       | `/code-review` or `/code-review --comment` |
+| **commit-commands**   | Streamlined git commit workflow                     | `/commit`                                  |
+| **pr-review-toolkit** | Enhanced PR review capabilities                     | `/review-pr [PR#]`                         |
+| **frontend-design**   | Distinctive UI design, avoids generic AI aesthetics | Auto-activates for frontend work           |
+| **security-guidance** | PreToolUse hook monitoring security patterns        | Auto-activates on file edits               |
 
 ### Security Patterns Monitored (via security-guidance)
 
@@ -467,6 +486,7 @@ The following plugins from the anthropics/claude-code marketplace are enabled:
 ### Existing Hookify Rules (local)
 
 Located in `.claude/hookify.*.local.md`:
+
 - `console-log` - Prevents console.log in production
 - `no-secrets` - Blocks hardcoded secrets
 - `no-eval` - Prevents eval() usage
@@ -478,72 +498,16 @@ Located in `.claude/hookify.*.local.md`:
 ## Agent Handoff Protocol
 
 When completing a task, update this file with:
+
 1. Task status in the table above
 2. Any new key files added
 3. Any gotchas for the next agent
 
 ---
 
-## Railway Deployment (API Access)
+## Railway Deployment
 
 **Production URL:** https://automated-ads-agent-production.up.railway.app
 **Health Check:** `/api/health`
 
-### API Credentials (DO NOT MODIFY)
-
-```
-Token: 4615359f-6328-413f-b418-4f0c6979161a
-Project ID: 772de8a1-ac15-4f2a-8fdb-766c78c41761
-Service ID: 28ce02bc-f4ad-4ea7-aab6-bffc98a47e2f
-Environment ID: 14f7ad84-cb42-4ec6-a9e5-29826e2f9882 (production)
-Project Name: surprising-smile
-Service Name: automated-ads-agent
-```
-
-### Authentication
-
-Railway uses `Project-Access-Token` header (NOT `Authorization: Bearer`):
-
-```bash
-curl -X POST https://backboard.railway.app/graphql/v2 \
-  -H "Content-Type: application/json" \
-  -H "Project-Access-Token: 4615359f-6328-413f-b418-4f0c6979161a" \
-  -d '{"query": "YOUR_GRAPHQL_QUERY"}'
-```
-
-### Common Operations
-
-**Check Deployment Status:**
-```bash
-curl -s -X POST https://backboard.railway.app/graphql/v2 \
-  -H "Content-Type: application/json" \
-  -H "Project-Access-Token: 4615359f-6328-413f-b418-4f0c6979161a" \
-  -d '{"query": "query { deployments(first: 3, input: { serviceId: \"28ce02bc-f4ad-4ea7-aab6-bffc98a47e2f\" }) { edges { node { id status createdAt } } } }"}'
-```
-
-**Trigger Redeploy:**
-```bash
-curl -s -X POST https://backboard.railway.app/graphql/v2 \
-  -H "Content-Type: application/json" \
-  -H "Project-Access-Token: 4615359f-6328-413f-b418-4f0c6979161a" \
-  -d '{"query": "mutation { serviceInstanceRedeploy(serviceId: \"28ce02bc-f4ad-4ea7-aab6-bffc98a47e2f\", environmentId: \"14f7ad84-cb42-4ec6-a9e5-29826e2f9882\") }"}'
-```
-
-**Check JS Bundle Hash (verify deployment):**
-```bash
-curl -s "https://automated-ads-agent-production.up.railway.app/" | grep -o 'assets/index-[^"]*\.js'
-```
-
-### Deployment Status Values
-
-- `INITIALIZING` - Starting build
-- `BUILDING` - Build in progress
-- `DEPLOYING` - Deploying to infrastructure
-- `SUCCESS` - Deployment complete
-- `FAILED` - Build/deploy failed
-- `REMOVED` - Old deployment removed
-
-### Docs
-
-- [Railway Public API Guide](https://docs.railway.com/guides/public-api)
-- [Manage Deployments](https://docs.railway.com/guides/manage-deployments)
+See `.env` for Railway credentials. Never commit tokens to version control.

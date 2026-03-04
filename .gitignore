@@ -44,6 +44,8 @@ playwright-report/
 
 # Temp debug files
 tmp_*.json
+tmpclaude-*
+tmp-*
 cookies*.txt
 *csrf_test*.txt
 *test_cookies*.txt

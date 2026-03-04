@@ -178,29 +178,21 @@ export async function generateCompletePost(
 }
 
 /**
- * Fetch products by IDs
+ * Fetch products by IDs (batch query instead of N+1)
  */
 async function fetchProducts(_userId: string, productIds: string[]): Promise<Product[]> {
-  const products: Product[] = [];
-
-  for (const productId of productIds) {
-    try {
-      const product = await storage.getProductById(productId);
-      if (product) {
-        products.push(product);
-      }
-    } catch (e) {
-      logger.warn(
-        {
-          module: 'ContentPlannerService',
-          productId,
-        },
-        'Failed to fetch product',
-      );
-    }
+  try {
+    return await storage.getProductsByIds(productIds);
+  } catch {
+    logger.warn(
+      {
+        module: 'ContentPlannerService',
+        productIds,
+      },
+      'Failed to batch-fetch products',
+    );
+    return [];
   }
-
-  return products;
 }
 
 /**

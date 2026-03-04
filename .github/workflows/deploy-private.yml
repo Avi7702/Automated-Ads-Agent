@@ -38,6 +38,7 @@ jobs:
       - name: Install Railway CLI
         run: npm install -g @railway/cli
 
+      # NOTE: Staging deploy not configured — Railway staging environment needed. See audit S2-7.
       - name: Deploy to staging environment
         id: deploy
         env:

@@ -46,12 +46,14 @@ export async function getProductsByIds(ids: string[]): Promise<Product[]> {
   return await db.select().from(products).where(inArray(products.id, ids));
 }
 
-export async function searchProductsByTag(tag: string): Promise<Product[]> {
+export async function searchProductsByTag(tag: string, limit: number = 100, offset: number = 0): Promise<Product[]> {
   return await db
     .select()
     .from(products)
     .where(arrayContains(products.tags, [tag]))
-    .orderBy(desc(products.createdAt));
+    .orderBy(desc(products.createdAt))
+    .limit(limit)
+    .offset(offset);
 }
 
 // ============================================

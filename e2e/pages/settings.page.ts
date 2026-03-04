@@ -95,7 +95,7 @@ export class SettingsPage {
    */
   async goto() {
     await this.page.goto('/settings');
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   /**
@@ -103,7 +103,7 @@ export class SettingsPage {
    */
   async gotoSection(section: string) {
     await this.page.goto(`/settings?section=${section}`);
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   /**

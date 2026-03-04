@@ -538,7 +538,7 @@ test.describe('Pipeline - Full App E2E', { tag: '@pipeline' }, () => {
 
       // Refresh the page
       await page.reload();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Tab should still be approval
       expect(page.url()).toContain('tab=approval');

@@ -63,7 +63,7 @@ export class PipelinePage {
    */
   async goto() {
     await this.page.goto('/pipeline');
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   /**
@@ -71,7 +71,7 @@ export class PipelinePage {
    */
   async gotoTab(tab: 'dashboard' | 'planner' | 'calendar' | 'approval' | 'accounts') {
     await this.page.goto(`/pipeline?tab=${tab}`);
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   /**

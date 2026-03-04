@@ -313,7 +313,16 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
           try {
             const isUrl = imagePath.startsWith('http://') || imagePath.startsWith('https://');
             if (isUrl) {
-              // Fetch image from URL and convert to base64
+              // SSRF guard: validate URL before fetching
+              const { validateUrlSafe } = await import('../lib/ssrfGuard');
+              const ssrfResult = validateUrlSafe(imagePath, ['http:', 'https:']);
+              if (!ssrfResult.safe) {
+                logger.warn(
+                  { module: 'Analyze', imagePath, reason: ssrfResult.reason },
+                  'SSRF: skipped unsafe image URL',
+                );
+                continue;
+              }
               const response = await fetch(imagePath);
               const arrayBuffer = await response.arrayBuffer();
               const base64 = Buffer.from(arrayBuffer).toString('base64');
@@ -338,11 +347,21 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
           try {
             const isUrl = genPath.startsWith('http://') || genPath.startsWith('https://');
             if (isUrl) {
-              const response = await fetch(genPath);
-              const arrayBuffer = await response.arrayBuffer();
-              const base64 = Buffer.from(arrayBuffer).toString('base64');
-              const mimeType = response.headers.get('content-type') || getMimeType(genPath);
-              generatedImage = { data: base64, mimeType };
+              // SSRF guard: validate URL before fetching
+              const { validateUrlSafe: validateGenUrl } = await import('../lib/ssrfGuard');
+              const ssrfCheck = validateGenUrl(genPath, ['http:', 'https:']);
+              if (!ssrfCheck.safe) {
+                logger.warn(
+                  { module: 'Analyze', genPath, reason: ssrfCheck.reason },
+                  'SSRF: skipped unsafe generated image URL',
+                );
+              } else {
+                const response = await fetch(genPath);
+                const arrayBuffer = await response.arrayBuffer();
+                const base64 = Buffer.from(arrayBuffer).toString('base64');
+                const mimeType = response.headers.get('content-type') || getMimeType(genPath);
+                generatedImage = { data: base64, mimeType };
+              }
             } else {
               const fullPath = pathModule.join(process.cwd(), genPath);
               const buffer = await fs.readFile(fullPath);
@@ -390,10 +409,13 @@ Please analyze the transformation and answer the user's question.`,
           parts.push({ text: '[Generated/transformed image]' });
         }
 
-        const result = await getGlobalGeminiClient().models.generateContent({
-          model: 'gemini-3-flash',
-          contents: [{ role: 'user', parts }],
-        });
+        const { withGeminiResilience } = await import('../lib/geminiResilience');
+        const result = await withGeminiResilience('analyze', () =>
+          getGlobalGeminiClient().models.generateContent({
+            model: 'gemini-3-flash',
+            contents: [{ role: 'user', parts }],
+          }),
+        );
         const answer = result.candidates?.[0]?.content?.parts?.[0]?.text;
         if (!answer) {
           return res.status(200).json({
@@ -546,6 +568,7 @@ export const jobsRouter: RouterFactory = (ctx: RouterContext): Router => {
    */
   router.get(
     '/:jobId',
+    requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const jobId = req.params['jobId'];
@@ -562,6 +585,15 @@ export const jobsRouter: RouterFactory = (ctx: RouterContext): Router => {
           return res.status(404).json({
             success: false,
             error: 'Job not found',
+          });
+        }
+
+        // Ownership check: verify the job belongs to the authenticated user
+        // Allow access if old jobs have no userId (backwards compat)
+        if (job.data.userId && job.data.userId !== req.user!.id) {
+          return res.status(403).json({
+            success: false,
+            error: 'Access denied',
           });
         }
 
@@ -850,9 +882,13 @@ export const transformRouter: RouterFactory = (ctx: RouterContext): Router => {
         }> = [];
 
         if (parsedProductIds.length > 0 && imageInputs.length < 6) {
+          // Batch-fetch all products in one query instead of N+1 individual queries
+          const fetchedProducts = await storage.getProductsByIds(parsedProductIds);
+          const productMap = new Map(fetchedProducts.map((p) => [String(p.id), p]));
+
           for (const productId of parsedProductIds) {
             if (imageInputs.length >= 6) break;
-            const product = await storage.getProductById(productId);
+            const product = productMap.get(productId);
             if (!product) continue;
 
             recipeProductsFromIds.push({
@@ -1056,7 +1092,6 @@ export const transformRouter: RouterFactory = (ctx: RouterContext): Router => {
 
         res.status(500).json({
           error: 'Failed to transform image',
-          details: errMessage,
         });
       } finally {
         const durationMs = Date.now() - startTime;

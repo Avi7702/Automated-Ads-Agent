@@ -87,13 +87,13 @@ test.describe('Learn from Winners Page', () => {
     test('page has no console errors on load', async ({ page }) => {
       const errors: string[] = [];
 
-      page.on('console', msg => {
+      page.on('console', (msg) => {
         if (msg.type() === 'error') {
           errors.push(msg.text());
         }
       });
 
-      page.on('pageerror', error => {
+      page.on('pageerror', (error) => {
         errors.push(`Page error: ${error.message}`);
       });
 
@@ -102,11 +102,8 @@ test.describe('Learn from Winners Page', () => {
       await learnPage.waitForPatternsLoad();
 
       // Filter out expected warnings/errors (like React dev mode warnings)
-      const criticalErrors = errors.filter(e =>
-        !e.includes('DevTools') &&
-        !e.includes('React') &&
-        !e.includes('Warning:') &&
-        !e.includes('Hydration')
+      const criticalErrors = errors.filter(
+        (e) => !e.includes('DevTools') && !e.includes('React') && !e.includes('Warning:') && !e.includes('Hydration'),
       );
 
       // Should have no critical errors
@@ -159,7 +156,7 @@ test.describe('Learn from Winners Page', () => {
     test('can navigate to Learn from Winners from header', async ({ page }) => {
       // Start at home page
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Find and click the Patterns link in header
       const patternsLink = page.locator('nav a, header a').filter({ hasText: /Patterns/i });
@@ -195,11 +192,11 @@ test.describe('Learn from Winners Page', () => {
 
     test('handles empty patterns response gracefully', async ({ page }) => {
       // Mock empty response
-      await page.route('/api/learned-patterns*', async route => {
+      await page.route('/api/learned-patterns*', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ patterns: [], count: 0, filters: {} })
+          body: JSON.stringify({ patterns: [], count: 0, filters: {} }),
         });
       });
 
@@ -214,7 +211,7 @@ test.describe('Learn from Winners Page', () => {
 
     test('handles patterns response correctly', async ({ page }) => {
       // Mock response with patterns
-      await page.route('/api/learned-patterns*', async route => {
+      await page.route('/api/learned-patterns*', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -228,12 +225,12 @@ test.describe('Learn from Winners Page', () => {
                 usageCount: 5,
                 confidenceScore: 0.85,
                 isActive: true,
-                createdAt: new Date().toISOString()
-              }
+                createdAt: new Date().toISOString(),
+              },
             ],
             count: 1,
-            filters: {}
-          })
+            filters: {},
+          }),
         });
       });
 
@@ -248,11 +245,11 @@ test.describe('Learn from Winners Page', () => {
 
     test('handles API error gracefully', async ({ page }) => {
       // Mock error response
-      await page.route('/api/learned-patterns*', async route => {
+      await page.route('/api/learned-patterns*', async (route) => {
         await route.fulfill({
           status: 500,
           contentType: 'application/json',
-          body: JSON.stringify({ error: 'Internal server error' })
+          body: JSON.stringify({ error: 'Internal server error' }),
         });
       });
 
@@ -263,7 +260,7 @@ test.describe('Learn from Winners Page', () => {
       await page.waitForTimeout(2000);
 
       // Should show error message
-      const errorVisible = await learnPage.errorMessage.isVisible().catch(() => false);
+      const errorVisible = await learnPage.errorMessage.isVisible();
       // Note: The page might handle errors differently, just ensure no crash
       const isVisible = await learnPage.isVisible();
       expect(isVisible).toBe(true);

@@ -59,8 +59,8 @@ test.describe('Library Tabs Journey', () => {
       const productCards = page.locator('[class*="card"], [class*="Card"]').first();
       const emptyState = page.getByText(/add.*product|no.*product|get started/i).first();
 
-      const hasProducts = await productCards.isVisible().catch(() => false);
-      const isEmpty = await emptyState.isVisible().catch(() => false);
+      const hasProducts = await productCards.isVisible();
+      const isEmpty = await emptyState.isVisible();
 
       expect(hasProducts || isEmpty).toBe(true);
     });
@@ -101,9 +101,9 @@ test.describe('Library Tabs Journey', () => {
       const imageGrid = page.locator('[class*="grid"]').first();
       const emptyState = page.getByText(/upload|no.*image|get started/i).first();
 
-      const hasUpload = await uploadButton.isVisible().catch(() => false);
-      const hasGrid = await imageGrid.isVisible().catch(() => false);
-      const isEmpty = await emptyState.isVisible().catch(() => false);
+      const hasUpload = await uploadButton.isVisible();
+      const hasGrid = await imageGrid.isVisible();
+      const isEmpty = await emptyState.isVisible();
 
       expect(hasUpload || hasGrid || isEmpty).toBe(true);
     });
@@ -114,8 +114,11 @@ test.describe('Library Tabs Journey', () => {
       await libraryPage.waitForTabContent();
 
       // Look for category filter (select or dropdown)
-      const categoryFilter = page.locator('select, [role="combobox"], button').filter({ hasText: /categor|all/i }).first();
-      const exists = await categoryFilter.isVisible().catch(() => false);
+      const categoryFilter = page
+        .locator('select, [role="combobox"], button')
+        .filter({ hasText: /categor|all/i })
+        .first();
+      const exists = await categoryFilter.isVisible();
       // Category filter may not be visible if no images exist — that's fine
       expect(true).toBe(true);
     });
@@ -139,7 +142,7 @@ test.describe('Library Tabs Journey', () => {
 
       // Check for search or filter UI elements
       const searchOrFilter = page.locator('input[placeholder*="earch"], select, [role="combobox"]').first();
-      const exists = await searchOrFilter.isVisible().catch(() => false);
+      const exists = await searchOrFilter.isVisible();
       // Template page may show empty state with no filters — acceptable
       expect(true).toBe(true);
     });
@@ -169,8 +172,8 @@ test.describe('Library Tabs Journey', () => {
       const inspiration = page.locator('[data-testid="mode-inspiration"], button:has-text("Inspiration")').first();
 
       // Mode toggles may not be visible until a template is selected
-      const hasExactInsert = await exactInsert.isVisible().catch(() => false);
-      const hasInspiration = await inspiration.isVisible().catch(() => false);
+      const hasExactInsert = await exactInsert.isVisible();
+      const hasInspiration = await inspiration.isVisible();
 
       // Either both visible or neither (template not selected yet)
       expect(hasExactInsert === hasInspiration).toBe(true);
@@ -188,9 +191,9 @@ test.describe('Library Tabs Journey', () => {
       const emptyState = page.getByText(/no.*scenario|create.*first|get started/i).first();
       const scenarioCards = page.locator('[class*="card"]').first();
 
-      const hasCreate = await createButton.isVisible().catch(() => false);
-      const hasEmpty = await emptyState.isVisible().catch(() => false);
-      const hasCards = await scenarioCards.isVisible().catch(() => false);
+      const hasCreate = await createButton.isVisible();
+      const hasEmpty = await emptyState.isVisible();
+      const hasCards = await scenarioCards.isVisible();
 
       expect(hasCreate || hasEmpty || hasCards).toBe(true);
     });
@@ -207,9 +210,9 @@ test.describe('Library Tabs Journey', () => {
       const patternGrid = page.locator('[class*="grid"]').first();
       const emptyState = page.getByText(/upload|no.*pattern|learn.*winner/i).first();
 
-      const hasUpload = await uploadZone.isVisible().catch(() => false);
-      const hasGrid = await patternGrid.isVisible().catch(() => false);
-      const hasEmpty = await emptyState.isVisible().catch(() => false);
+      const hasUpload = await uploadZone.isVisible();
+      const hasGrid = await patternGrid.isVisible();
+      const hasEmpty = await emptyState.isVisible();
 
       expect(hasUpload || hasGrid || hasEmpty).toBe(true);
     });

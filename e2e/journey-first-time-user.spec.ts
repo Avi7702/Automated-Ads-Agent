@@ -28,7 +28,7 @@ test.describe('First-Time User Journey', () => {
       // Click Library in nav
       const nav = page.locator('nav[aria-label="Main navigation"]');
       await nav.getByText('Library').click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       await expect(page).toHaveURL(/\/library/);
       await expect(page.locator('h1').filter({ hasText: 'Library' })).toBeVisible();
@@ -48,7 +48,7 @@ test.describe('First-Time User Journey', () => {
 
         // No error boundary should be visible (use specific ErrorBoundary component text)
         const errorBoundary = page.locator('[data-testid="error-boundary"]').first();
-        const hasError = await errorBoundary.isVisible().catch(() => false);
+        const hasError = await errorBoundary.isVisible();
         expect(hasError).toBe(false);
       }
     });
@@ -111,23 +111,27 @@ test.describe('First-Time User Journey', () => {
   });
 
   test.describe('Cross-Page Navigation', () => {
-    test('full navigation loop: Studio -> Gallery -> Pipeline -> Library -> Settings -> Studio', { timeout: 120000 }, async ({ page }) => {
-      const routes = [
-        { path: '/', name: 'Studio' },
-        { path: '/gallery', name: 'Gallery' },
-        { path: '/pipeline', name: 'Pipeline' },
-        { path: '/library', name: 'Library' },
-        { path: '/settings', name: 'Settings' },
-        { path: '/', name: 'Studio' },
-      ];
+    test(
+      'full navigation loop: Studio -> Gallery -> Pipeline -> Library -> Settings -> Studio',
+      { timeout: 120000 },
+      async ({ page }) => {
+        const routes = [
+          { path: '/', name: 'Studio' },
+          { path: '/gallery', name: 'Gallery' },
+          { path: '/pipeline', name: 'Pipeline' },
+          { path: '/library', name: 'Library' },
+          { path: '/settings', name: 'Settings' },
+          { path: '/', name: 'Studio' },
+        ];
 
-      for (const route of routes) {
-        await gotoWithAuth(page, route.path);
+        for (const route of routes) {
+          await gotoWithAuth(page, route.path);
 
-        // Page loaded without error
-        const heading = page.locator('h1').first();
-        await expect(heading).toBeVisible({ timeout: 10000 });
-      }
-    });
+          // Page loaded without error
+          const heading = page.locator('h1').first();
+          await expect(heading).toBeVisible({ timeout: 10000 });
+        }
+      },
+    );
   });
 });

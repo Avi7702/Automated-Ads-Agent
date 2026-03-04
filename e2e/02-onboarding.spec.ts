@@ -24,11 +24,11 @@ test.describe('Onboarding Wizard', { tag: '@onboarding' }, () => {
 
     // Authenticate via demo endpoint (creates a fresh session)
     await page.goto('/api/auth/demo');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Navigate to home
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const onboarding = new OnboardingPage(page);
 
@@ -48,9 +48,9 @@ test.describe('Onboarding Wizard', { tag: '@onboarding' }, () => {
     const page = await context.newPage();
 
     await page.goto('/api/auth/demo');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(3000);
 
     const onboarding = new OnboardingPage(page);
@@ -67,9 +67,9 @@ test.describe('Onboarding Wizard', { tag: '@onboarding' }, () => {
     const page = await context.newPage();
 
     await page.goto('/api/auth/demo');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(3000);
 
     const onboarding = new OnboardingPage(page);
@@ -87,9 +87,9 @@ test.describe('Onboarding Wizard', { tag: '@onboarding' }, () => {
     const page = await context.newPage();
 
     await page.goto('/api/auth/demo');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(3000);
 
     const onboarding = new OnboardingPage(page);
@@ -108,9 +108,9 @@ test.describe('Onboarding Wizard', { tag: '@onboarding' }, () => {
     const page = await context.newPage();
 
     await page.goto('/api/auth/demo');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(3000);
 
     const onboarding = new OnboardingPage(page);
@@ -128,9 +128,9 @@ test.describe('Onboarding Wizard', { tag: '@onboarding' }, () => {
     const page = await context.newPage();
 
     await page.goto('/api/auth/demo');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(3000);
 
     const onboarding = new OnboardingPage(page);
@@ -153,9 +153,9 @@ test.describe('Onboarding Wizard', { tag: '@onboarding' }, () => {
     const page = await context.newPage();
 
     await page.goto('/api/auth/demo');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(3000);
 
     const onboarding = new OnboardingPage(page);
@@ -178,9 +178,9 @@ test.describe('Onboarding Wizard', { tag: '@onboarding' }, () => {
     const page = await context.newPage();
 
     await page.goto('/api/auth/demo');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(3000);
 
     const onboarding = new OnboardingPage(page);

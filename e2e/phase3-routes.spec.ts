@@ -191,7 +191,7 @@ test.describe('Phase 3: Route Consolidation', () => {
   test.describe('Navigation Highlighting', () => {
     test('Studio nav item is highlighted on root path', async ({ page }) => {
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // The active nav item has bg-primary/10 class for highlighting
       const studioNav = page.locator('nav span').filter({ hasText: 'Studio' });
@@ -200,7 +200,7 @@ test.describe('Phase 3: Route Consolidation', () => {
 
     test('Library nav item is highlighted on /library', async ({ page }) => {
       await page.goto('/library');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       const libraryNav = page.locator('nav span').filter({ hasText: 'Library' });
       await expect(libraryNav).toHaveClass(/bg-primary/);
@@ -208,7 +208,7 @@ test.describe('Phase 3: Route Consolidation', () => {
 
     test('Settings nav item is highlighted on /settings', async ({ page }) => {
       await page.goto('/settings');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       const settingsNav = page.locator('nav span').filter({ hasText: 'Settings' });
       await expect(settingsNav).toHaveClass(/bg-primary/);

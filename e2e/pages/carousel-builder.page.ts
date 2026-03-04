@@ -59,7 +59,10 @@ export class CarouselBuilderPage {
     this.carouselDescription = page.locator('[class*="CardHeader"] p');
     this.slideCountBadge = page.locator('text=/\\d+ slides/');
     this.imagesCountBadge = page.locator('text=/\\d+\\/\\d+ images/');
-    this.closeButton = page.locator('button').filter({ has: page.locator('[class*="X"]') }).first();
+    this.closeButton = page
+      .locator('button')
+      .filter({ has: page.locator('[class*="X"]') })
+      .first();
 
     // Mode toggle
     this.editModeButton = page.getByRole('button', { name: /Edit Mode/i });
@@ -76,15 +79,21 @@ export class CarouselBuilderPage {
     // Slide editor
     this.headlineInput = page.locator('input').filter({ has: page.locator('..').filter({ hasText: 'Headline' }) });
     this.bodyTextarea = page.locator('textarea').filter({ has: page.locator('..').filter({ hasText: 'Body' }) });
-    this.imagePromptTextarea = page.locator('textarea').filter({ has: page.locator('..').filter({ hasText: 'Image Prompt' }) });
+    this.imagePromptTextarea = page
+      .locator('textarea')
+      .filter({ has: page.locator('..').filter({ hasText: 'Image Prompt' }) });
     this.generateImageButton = page.getByRole('button', { name: /Generate Image/i });
     this.regenerateImageButton = page.locator('button').filter({ has: page.locator('[class*="RefreshCw"]') });
     this.downloadSlideButton = page.locator('button').filter({ has: page.locator('[class*="Download"]') });
 
     // Preview carousel
     this.carouselPreview = page.locator('[class*="CarouselContent"]');
-    this.carouselPrevButton = page.locator('button[class*="CarouselPrevious"], button').filter({ has: page.locator('[class*="ChevronLeft"]') });
-    this.carouselNextButton = page.locator('button[class*="CarouselNext"], button').filter({ has: page.locator('[class*="ChevronRight"]') });
+    this.carouselPrevButton = page
+      .locator('button[class*="CarouselPrevious"], button')
+      .filter({ has: page.locator('[class*="ChevronLeft"]') });
+    this.carouselNextButton = page
+      .locator('button[class*="CarouselNext"], button')
+      .filter({ has: page.locator('[class*="ChevronRight"]') });
 
     // Caption section
     this.captionSection = page.locator('[class*="Collapsible"]').filter({ hasText: 'Caption & Hashtags' });
@@ -104,7 +113,7 @@ export class CarouselBuilderPage {
   async gotoStudioWithCarousel() {
     // Navigate to studio with a Content Planner template that supports carousel
     await this.page.goto('/?cpTemplateId=technical_guides');
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   /**
@@ -280,7 +289,10 @@ export class CarouselBuilderPage {
     if (sourceBounding && targetBounding) {
       await sourceSlide.hover();
       await this.page.mouse.down();
-      await this.page.mouse.move(targetBounding.x + targetBounding.width / 2, targetBounding.y + targetBounding.height / 2);
+      await this.page.mouse.move(
+        targetBounding.x + targetBounding.width / 2,
+        targetBounding.y + targetBounding.height / 2,
+      );
       await this.page.mouse.up();
     }
   }
@@ -360,7 +372,7 @@ export class CarouselBuilderPage {
   async getSlidePurpose(index: number): Promise<string> {
     const slide = this.slideThumbnails.nth(index);
     const badge = slide.locator('[class*="Badge"]').first();
-    return await badge.textContent() || '';
+    return (await badge.textContent()) || '';
   }
 
   /**

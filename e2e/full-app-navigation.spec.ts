@@ -15,7 +15,7 @@ test.describe('Full App Navigation', { tag: '@navigation' }, () => {
       const logoLink = page.locator('header a[href="/"]').first();
       await expect(logoLink).toBeVisible();
       await logoLink.click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       await expect(page).toHaveURL(/^http:\/\/localhost:\d+\/$/);
     });
@@ -25,7 +25,7 @@ test.describe('Full App Navigation', { tag: '@navigation' }, () => {
 
       const nav = page.locator('nav[aria-label="Main navigation"]');
       await nav.getByText('Studio').click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       await expect(page).toHaveURL(/^http:\/\/localhost:\d+\/$/);
 
@@ -39,7 +39,7 @@ test.describe('Full App Navigation', { tag: '@navigation' }, () => {
 
       const nav = page.locator('nav[aria-label="Main navigation"]');
       await nav.getByText('Gallery').click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       await expect(page).toHaveURL(/\/gallery/);
 
@@ -52,7 +52,7 @@ test.describe('Full App Navigation', { tag: '@navigation' }, () => {
 
       const nav = page.locator('nav[aria-label="Main navigation"]');
       await nav.getByText('Pipeline').click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       await expect(page).toHaveURL(/\/pipeline/);
 
@@ -65,7 +65,7 @@ test.describe('Full App Navigation', { tag: '@navigation' }, () => {
 
       const nav = page.locator('nav[aria-label="Main navigation"]');
       await nav.getByText('Library').click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       await expect(page).toHaveURL(/\/library/);
 
@@ -78,7 +78,7 @@ test.describe('Full App Navigation', { tag: '@navigation' }, () => {
 
       const nav = page.locator('nav[aria-label="Main navigation"]');
       await nav.getByText('Settings').click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       await expect(page).toHaveURL(/\/settings/);
 
@@ -246,17 +246,17 @@ test.describe('Full App Navigation', { tag: '@navigation' }, () => {
 
         // Click target nav item
         await sheet.getByText(target.label).click();
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // Handle potential auth redirect
         if (page.url().includes('/login')) {
           await page.goto('/api/auth/demo');
-          await page.waitForLoadState('networkidle');
+          await page.waitForLoadState('domcontentloaded');
           await page.goto('/');
-          await page.waitForLoadState('networkidle');
+          await page.waitForLoadState('domcontentloaded');
           await page.getByRole('button', { name: 'Open navigation menu' }).first().click();
           await page.locator('[role="dialog"]').getByText(target.label).click();
-          await page.waitForLoadState('networkidle');
+          await page.waitForLoadState('domcontentloaded');
         }
 
         await expect(page).toHaveURL(target.url);

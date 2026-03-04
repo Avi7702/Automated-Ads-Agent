@@ -8,7 +8,7 @@ test.describe('Cross-Page Flow Journey', () => {
 
       const backButton = page.getByRole('button', { name: /studio/i });
       await backButton.click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       await expect(page).toHaveURL(/^http:\/\/localhost:\d+\/$/);
     });
@@ -22,7 +22,7 @@ test.describe('Cross-Page Flow Journey', () => {
 
       if (cardCount > 0) {
         await cards.first().click();
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
         await expect(page).toHaveURL(/\/\?generation=/);
       }
     });
@@ -38,7 +38,7 @@ test.describe('Cross-Page Flow Journey', () => {
 
       // Check if we're actually on the KB section
       const kbContent = page.getByText(/knowledge base|product.*count|image.*count/i).first();
-      const isOnKB = await kbContent.isVisible().catch(() => false);
+      const isOnKB = await kbContent.isVisible();
 
       // Settings page loaded without crash — that's the main assertion
       expect(await heading.isVisible()).toBe(true);
@@ -67,43 +67,43 @@ test.describe('Cross-Page Flow Journey', () => {
 
       // Gallery
       await nav.getByText('Gallery').click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       await expect(page.locator('h1').filter({ hasText: 'Gallery' })).toBeVisible();
 
       // Pipeline
       await nav.getByText('Pipeline').click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       if (page.url().includes('/login')) {
         await page.goto('/api/auth/demo');
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
         await page.goto('/pipeline');
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
       }
       const pipelineTabs = page.locator('[role="tab"]');
       await expect(pipelineTabs).toHaveCount(3);
 
       // Library
       await nav.getByText('Library').click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       await expect(page.locator('h1').filter({ hasText: 'Library' })).toBeVisible();
       const libraryTabs = page.locator('[role="tab"]');
       await expect(libraryTabs).toHaveCount(6);
 
       // Settings
       await nav.getByText('Settings').click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       if (page.url().includes('/login')) {
         await page.goto('/api/auth/demo');
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
         await page.goto('/settings');
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
       }
       const settingsContent = page.getByText(/brand|company|profile|settings/i).first();
       await expect(settingsContent).toBeVisible({ timeout: 10000 });
 
       // Back to Studio
       await nav.getByText('Studio').click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       await expect(page).toHaveURL(/^http:\/\/localhost:\d+\/$/);
     });
   });
@@ -119,11 +119,11 @@ test.describe('Cross-Page Flow Journey', () => {
 
       // Navigate to Gallery
       await page.goto('/gallery');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Navigate back to Library with templates tab
       await page.goto('/library?tab=templates');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Templates tab should still be active
       const activeTabAfter = page.locator('[role="tab"][data-state="active"]');
@@ -173,15 +173,33 @@ test.describe('Cross-Page Flow Journey', () => {
 
       // Filter out known non-critical errors (network failures, React dev warnings, dev-mode noise)
       const criticalErrors = consoleErrors.filter(
-        (e) => !e.includes('favicon') && !e.includes('net::') && !e.includes('ERR_CONNECTION')
-          && !e.includes('Failed to fetch') && !e.includes('ERR_CERT') && !e.includes('React')
-          && !e.includes('warning') && !e.includes('deprecated') && !e.includes('hydrat')
-          && !e.includes('TypeError') && !e.includes('NetworkError') && !e.includes('AbortError')
-          && !e.includes('chunk') && !e.includes('module') && !e.includes('Suspense')
-          && !e.includes('CORS') && !e.includes('api/') && !e.includes('403')
-          && !e.includes('401') && !e.includes('500') && !e.includes('fetch')
-          && !e.includes('Vite') && !e.includes('HMR') && !e.includes('WebSocket')
-          && !e.includes('ERR_') && !e.includes('the server responded with a status')
+        (e) =>
+          !e.includes('favicon') &&
+          !e.includes('net::') &&
+          !e.includes('ERR_CONNECTION') &&
+          !e.includes('Failed to fetch') &&
+          !e.includes('ERR_CERT') &&
+          !e.includes('React') &&
+          !e.includes('warning') &&
+          !e.includes('deprecated') &&
+          !e.includes('hydrat') &&
+          !e.includes('TypeError') &&
+          !e.includes('NetworkError') &&
+          !e.includes('AbortError') &&
+          !e.includes('chunk') &&
+          !e.includes('module') &&
+          !e.includes('Suspense') &&
+          !e.includes('CORS') &&
+          !e.includes('api/') &&
+          !e.includes('403') &&
+          !e.includes('401') &&
+          !e.includes('500') &&
+          !e.includes('fetch') &&
+          !e.includes('Vite') &&
+          !e.includes('HMR') &&
+          !e.includes('WebSocket') &&
+          !e.includes('ERR_') &&
+          !e.includes('the server responded with a status'),
       );
 
       expect(criticalErrors.length).toBe(0);

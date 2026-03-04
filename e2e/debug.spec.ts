@@ -15,7 +15,7 @@ test('page should load without errors', async ({ page }) => {
 
   // Check for runtime error overlay
   const errorOverlay = page.locator('text=Cannot read properties of null');
-  const hasError = await errorOverlay.isVisible().catch(() => false);
+  const hasError = await errorOverlay.isVisible();
 
   if (hasError) {
     console.log('ERROR: React useEffect error detected');

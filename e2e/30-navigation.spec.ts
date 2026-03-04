@@ -19,7 +19,7 @@ test.describe('Navigation', { tag: '@navigation' }, () => {
       const logoLink = page.locator('header a[href="/"]').first();
       await expect(logoLink).toBeVisible();
       await logoLink.click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       await expect(page).toHaveURL('/');
     });
@@ -38,7 +38,7 @@ test.describe('Navigation', { tag: '@navigation' }, () => {
 
       const nav = page.locator('nav[aria-label="Main navigation"]');
       await nav.getByText('Gallery').click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       await expect(page).toHaveURL(/\/gallery/);
 
@@ -52,7 +52,7 @@ test.describe('Navigation', { tag: '@navigation' }, () => {
 
       const nav = page.locator('nav[aria-label="Main navigation"]');
       await nav.getByText('Pipeline').click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       await expect(page).toHaveURL(/\/pipeline/);
 
@@ -65,7 +65,7 @@ test.describe('Navigation', { tag: '@navigation' }, () => {
 
       const nav = page.locator('nav[aria-label="Main navigation"]');
       await nav.getByText('Library').click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       await expect(page).toHaveURL(/\/library/);
 
@@ -78,7 +78,7 @@ test.describe('Navigation', { tag: '@navigation' }, () => {
 
       const nav = page.locator('nav[aria-label="Main navigation"]');
       await nav.getByText('Settings').click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       await expect(page).toHaveURL(/\/settings/);
 
@@ -208,7 +208,7 @@ test.describe('Navigation', { tag: '@navigation' }, () => {
 
       // Click Gallery in sheet
       await sheet.getByText('Gallery').click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       await expect(page).toHaveURL(/\/gallery/);
     });
@@ -224,7 +224,7 @@ test.describe('Navigation', { tag: '@navigation' }, () => {
 
       // Navigate via sheet
       await sheet.getByText('Settings').click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Sheet should close after clicking a nav item
       await expect(sheet).toBeHidden({ timeout: 5000 });

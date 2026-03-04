@@ -739,10 +739,12 @@ export const handlers = [
 
   // ============ Social Accounts Endpoints ============
   http.get('/api/social/accounts', () => {
-    return HttpResponse.json([
-      { id: 'sa-1', platform: 'instagram', username: '@testbrand', connected: true },
-      { id: 'sa-2', platform: 'facebook', username: 'Test Brand Page', connected: true },
-    ]);
+    return HttpResponse.json({
+      accounts: [
+        { id: 'sa-1', platform: 'instagram', username: '@testbrand', connected: true, isActive: true },
+        { id: 'sa-2', platform: 'facebook', username: 'Test Brand Page', connected: true, isActive: true },
+      ],
+    });
   }),
 
   http.delete('/api/social/accounts/:id', () => {

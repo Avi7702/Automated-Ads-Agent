@@ -473,11 +473,12 @@ export const productsRouter: RouterFactory = (ctx: RouterContext): Router => {
           return res.status(400).json({ error: 'Product URL is required' });
         }
 
-        // Validate URL format
+        // SSRF guard: validate URL before fetching (blocks private IPs, metadata endpoints, etc.)
+        const { assertUrlSafe } = await import('../lib/ssrfGuard');
         try {
-          new URL(productUrl);
+          assertUrlSafe(productUrl, 'enrich-from-url', ['http:', 'https:']);
         } catch {
-          return res.status(400).json({ error: 'Invalid URL format' });
+          return res.status(400).json({ error: 'Invalid URL' });
         }
 
         const { enrichFromUrl, saveEnrichmentDraft } = await import('../services/enrichmentServiceWithUrl');
