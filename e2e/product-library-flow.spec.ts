@@ -33,15 +33,76 @@ test.describe('Product Library Workflow', () => {
     if (!fs.existsSync(TEST_IMAGE_PATH)) {
       // Create a minimal valid PNG (1x1 pixel red image)
       const minimalPng = Buffer.from([
-        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, // PNG signature
-        0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52, // IHDR chunk
-        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-        0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53,
-        0xde, 0x00, 0x00, 0x00, 0x0c, 0x49, 0x44, 0x41, // IDAT chunk
-        0x54, 0x08, 0xd7, 0x63, 0xf8, 0xcf, 0xc0, 0x00,
-        0x00, 0x00, 0x03, 0x00, 0x01, 0x00, 0x05, 0xfe,
-        0xd4, 0xef, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, // IEND chunk
-        0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+        0x89,
+        0x50,
+        0x4e,
+        0x47,
+        0x0d,
+        0x0a,
+        0x1a,
+        0x0a, // PNG signature
+        0x00,
+        0x00,
+        0x00,
+        0x0d,
+        0x49,
+        0x48,
+        0x44,
+        0x52, // IHDR chunk
+        0x00,
+        0x00,
+        0x00,
+        0x01,
+        0x00,
+        0x00,
+        0x00,
+        0x01,
+        0x08,
+        0x02,
+        0x00,
+        0x00,
+        0x00,
+        0x90,
+        0x77,
+        0x53,
+        0xde,
+        0x00,
+        0x00,
+        0x00,
+        0x0c,
+        0x49,
+        0x44,
+        0x41, // IDAT chunk
+        0x54,
+        0x08,
+        0xd7,
+        0x63,
+        0xf8,
+        0xcf,
+        0xc0,
+        0x00,
+        0x00,
+        0x00,
+        0x03,
+        0x00,
+        0x01,
+        0x00,
+        0x05,
+        0xfe,
+        0xd4,
+        0xef,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x49,
+        0x45, // IEND chunk
+        0x4e,
+        0x44,
+        0xae,
+        0x42,
+        0x60,
+        0x82,
       ]);
       fs.writeFileSync(TEST_IMAGE_PATH, minimalPng);
     }
@@ -81,7 +142,7 @@ test.describe('Product Library Workflow', () => {
           !err.includes('404') &&
           !err.includes('401') &&
           !err.includes('net::ERR') &&
-          !err.includes('Failed to load resource')
+          !err.includes('Failed to load resource'),
       );
 
       expect(criticalErrors).toHaveLength(0);
@@ -146,7 +207,7 @@ test.describe('Product Library Workflow', () => {
       await page.waitForTimeout(500);
 
       // Should show "No results" or fewer products
-      const resultsText = await page.locator('text=/No results|Showing 0/i').isVisible().catch(() => false);
+      const resultsText = await page.locator('text=/No results|Showing 0/i').isVisible();
       const filteredCount = await productLibraryPage.getProductCount();
 
       expect(filteredCount <= initialCount || resultsText).toBeTruthy();
@@ -236,7 +297,7 @@ test.describe('Product Library Workflow', () => {
 
       // Verify toast notification
       const toast = page.locator('text=/Product created|added to your library/i');
-      await expect(toast).toBeVisible({ timeout: 5000 }).catch(() => {});
+      await expect(toast).toBeVisible({ timeout: 5000 });
 
       // Verify product appears in list
       await productLibraryPage.waitForProductsLoaded();
@@ -320,9 +381,9 @@ test.describe('Product Library Workflow', () => {
 
       // Should see enrichment form elements
       const enrichmentVisible =
-        (await productLibraryPage.generateDraftButton.isVisible().catch(() => false)) ||
-        (await productLibraryPage.descriptionTextarea.isVisible().catch(() => false)) ||
-        (await productLibraryPage.saveVerifyButton.isVisible().catch(() => false));
+        (await productLibraryPage.generateDraftButton.isVisible()) ||
+        (await productLibraryPage.descriptionTextarea.isVisible()) ||
+        (await productLibraryPage.saveVerifyButton.isVisible());
 
       expect(enrichmentVisible).toBe(true);
     });
@@ -344,7 +405,8 @@ test.describe('Product Library Workflow', () => {
 
       // Should show loading state
       const loadingSpinner = page.locator('[class*="animate-spin"]');
-      await expect(loadingSpinner).toBeVisible({ timeout: 5000 }).catch(() => {});
+      // Optional: loading spinner may not appear if enrichment is fast
+      await loadingSpinner.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
 
       // Wait for enrichment to complete (can take time)
       await page.waitForTimeout(10000);
@@ -415,9 +477,12 @@ test.describe('Product Library Workflow', () => {
       // Hover over product card to show delete button
       await productLibraryPage.productCards.first().hover();
 
-      const deleteButton = productLibraryPage.productCards.first().locator('button').filter({
-        has: page.locator('[class*="Trash"], [class*="trash"]'),
-      });
+      const deleteButton = productLibraryPage.productCards
+        .first()
+        .locator('button')
+        .filter({
+          has: page.locator('[class*="Trash"], [class*="trash"]'),
+        });
 
       const deleteVisible = await deleteButton.isVisible();
       test.skip(!deleteVisible, 'Delete button not visible');
@@ -434,9 +499,12 @@ test.describe('Product Library Workflow', () => {
 
       await productLibraryPage.productCards.first().hover();
 
-      const deleteButton = productLibraryPage.productCards.first().locator('button').filter({
-        has: page.locator('[class*="Trash"], [class*="trash"]'),
-      });
+      const deleteButton = productLibraryPage.productCards
+        .first()
+        .locator('button')
+        .filter({
+          has: page.locator('[class*="Trash"], [class*="trash"]'),
+        });
 
       const deleteVisible = await deleteButton.isVisible();
       test.skip(!deleteVisible, 'Delete button not visible');

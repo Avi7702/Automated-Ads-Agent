@@ -49,7 +49,7 @@ test.describe('Gallery', { tag: '@gallery' }, () => {
     const emptyState = page.getByText(/no generations yet/i);
 
     const cardCount = await cards.count();
-    const hasEmpty = await emptyState.isVisible().catch(() => false);
+    const hasEmpty = await emptyState.isVisible();
 
     // With a nonsense query we expect either 0 cards or the empty state
     expect(cardCount === 0 || hasEmpty).toBe(true);
@@ -69,7 +69,7 @@ test.describe('Gallery', { tag: '@gallery' }, () => {
 
     // Select "Oldest first" (Radix Select renders options in a portal)
     const oldestOption = page.getByRole('option', { name: /oldest/i });
-    const hasOldestOption = await oldestOption.isVisible().catch(() => false);
+    const hasOldestOption = await oldestOption.isVisible();
 
     if (hasOldestOption) {
       await oldestOption.click();
@@ -247,10 +247,10 @@ test.describe('Gallery', { tag: '@gallery' }, () => {
     // (a) A confirmation dialog appears, OR
     // (b) The item is removed and the selection is cleared
     const confirmDialog = page.getByRole('dialog');
-    const hasDialog = await confirmDialog.isVisible().catch(() => false);
+    const hasDialog = await confirmDialog.isVisible();
 
     const selectedText = page.getByText(/selected/i);
-    const hasSelected = await selectedText.isVisible().catch(() => false);
+    const hasSelected = await selectedText.isVisible();
 
     // At least one outcome should occur — dialog appeared or selection cleared
     expect(hasDialog || !hasSelected).toBe(true);
@@ -260,7 +260,7 @@ test.describe('Gallery', { tag: '@gallery' }, () => {
 
   test('empty state shows "No generations yet" and Go to Studio CTA', async ({ page }) => {
     const emptyState = page.getByText(/no generations yet/i);
-    const hasEmpty = await emptyState.isVisible().catch(() => false);
+    const hasEmpty = await emptyState.isVisible();
 
     if (!hasEmpty) {
       // Gallery has items — verify we see the grid instead
@@ -295,16 +295,16 @@ test.describe('Gallery - Mobile', { tag: '@gallery' }, () => {
 
     // The grid should use a 2-column layout on mobile (grid-cols-2)
     const grid = page.locator('.grid.grid-cols-2');
-    const hasGrid = await grid.isVisible().catch(() => false);
+    const hasGrid = await grid.isVisible();
 
     // Alternatively check the loading skeleton grid
     const skeletonGrid = page.locator('[role="status"][aria-label="Loading gallery"]');
-    const hasSkeletonGrid = await skeletonGrid.isVisible().catch(() => false);
+    const hasSkeletonGrid = await skeletonGrid.isVisible();
 
     // Either the gallery grid or loading skeleton should be present
     // (both use grid-cols-2 at mobile width)
     const emptyState = page.getByText(/no generations yet/i);
-    const hasEmpty = await emptyState.isVisible().catch(() => false);
+    const hasEmpty = await emptyState.isVisible();
 
     // One of: grid visible, skeleton loading, or empty state
     expect(hasGrid || hasSkeletonGrid || hasEmpty).toBe(true);

@@ -44,7 +44,8 @@ test.describe('Library — Patterns Tab', { tag: '@library' }, () => {
     await expect(heading.or(emptyText).first()).toBeVisible({ timeout: 10000 });
   });
 
-  // Requires pattern cards to exist; production has empty state (no patterns uploaded yet)
+  // SKIPPED: Requires pattern cards to exist; production has empty state (no patterns uploaded yet).
+  // Unskip once seed data or test fixtures provide pattern cards. — audit S3-4
   test.skip('3 — Pattern cards show category and platform badges', async ({ page }) => {
     const patternCards = page.locator('[class*="Card"]').filter({
       has: page.locator('[class*="CardTitle"]'),
@@ -59,7 +60,8 @@ test.describe('Library — Patterns Tab', { tag: '@library' }, () => {
     expect(badgeCount).toBeGreaterThan(0);
   });
 
-  // Requires pattern cards to exist; production has empty state (no patterns uploaded yet)
+  // SKIPPED: Requires pattern cards to exist; production has empty state (no patterns uploaded yet).
+  // Unskip once seed data or test fixtures provide pattern cards. — audit S3-4
   test.skip('4 — Pattern cards show usage count and completeness indicator', async ({ page }) => {
     const patternCards = page.locator('[class*="Card"]').filter({
       has: page.locator('[class*="CardTitle"]'),
@@ -76,7 +78,8 @@ test.describe('Library — Patterns Tab', { tag: '@library' }, () => {
     await expect(usageText.or(progressBar)).toBeVisible({ timeout: 5000 });
   });
 
-  // Search input only appears when patterns exist; production has empty state
+  // SKIPPED: Search input only appears when patterns exist; production has empty state.
+  // Unskip once seed data or test fixtures provide pattern cards. — audit S3-4
   test.skip('5 — Search input filters patterns', async ({ page }) => {
     const searchInput = page.locator('input[placeholder*="Search patterns"]');
     await expect(searchInput).toBeVisible({ timeout: 10000 });
@@ -91,7 +94,8 @@ test.describe('Library — Patterns Tab', { tag: '@library' }, () => {
     expect(text).toContain('0 patterns');
   });
 
-  // Filter dropdowns only appear when patterns exist; production has empty state
+  // SKIPPED: Filter dropdowns only appear when patterns exist; production has empty state.
+  // Unskip once seed data or test fixtures provide pattern cards. — audit S3-4
   test.skip('6 — Category filter dropdown works', async ({ page }) => {
     // Category filter select
     const categorySelect = page.locator('button[role="combobox"]').filter({
@@ -113,7 +117,8 @@ test.describe('Library — Patterns Tab', { tag: '@library' }, () => {
     await page.keyboard.press('Escape');
   });
 
-  // Filter dropdowns only appear when patterns exist; production has empty state
+  // SKIPPED: Filter dropdowns only appear when patterns exist; production has empty state.
+  // Unskip once seed data or test fixtures provide pattern cards. — audit S3-4
   test.skip('7 — Platform filter dropdown works', async ({ page }) => {
     const platformSelect = page.locator('button[role="combobox"]').filter({
       hasText: /All Platforms|Platform/i,
@@ -133,7 +138,8 @@ test.describe('Library — Patterns Tab', { tag: '@library' }, () => {
     await page.keyboard.press('Escape');
   });
 
-  // View toggle only appears when patterns exist; production has empty state
+  // SKIPPED: View toggle only appears when patterns exist; production has empty state.
+  // Unskip once seed data or test fixtures provide pattern cards. — audit S3-4
   test.skip('8 — Grid/List view toggle buttons exist and switch layout', async ({ page }) => {
     // The toggle is inside a bordered container with two buttons
     const viewToggle = page.locator('.flex.items-center.border.rounded-lg');

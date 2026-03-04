@@ -38,7 +38,7 @@ test.describe('Cross-Page Flow Journey', () => {
 
       // Check if we're actually on the KB section
       const kbContent = page.getByText(/knowledge base|product.*count|image.*count/i).first();
-      const isOnKB = await kbContent.isVisible().catch(() => false);
+      const isOnKB = await kbContent.isVisible();
 
       // Settings page loaded without crash — that's the main assertion
       expect(await heading.isVisible()).toBe(true);
@@ -173,15 +173,33 @@ test.describe('Cross-Page Flow Journey', () => {
 
       // Filter out known non-critical errors (network failures, React dev warnings, dev-mode noise)
       const criticalErrors = consoleErrors.filter(
-        (e) => !e.includes('favicon') && !e.includes('net::') && !e.includes('ERR_CONNECTION')
-          && !e.includes('Failed to fetch') && !e.includes('ERR_CERT') && !e.includes('React')
-          && !e.includes('warning') && !e.includes('deprecated') && !e.includes('hydrat')
-          && !e.includes('TypeError') && !e.includes('NetworkError') && !e.includes('AbortError')
-          && !e.includes('chunk') && !e.includes('module') && !e.includes('Suspense')
-          && !e.includes('CORS') && !e.includes('api/') && !e.includes('403')
-          && !e.includes('401') && !e.includes('500') && !e.includes('fetch')
-          && !e.includes('Vite') && !e.includes('HMR') && !e.includes('WebSocket')
-          && !e.includes('ERR_') && !e.includes('the server responded with a status')
+        (e) =>
+          !e.includes('favicon') &&
+          !e.includes('net::') &&
+          !e.includes('ERR_CONNECTION') &&
+          !e.includes('Failed to fetch') &&
+          !e.includes('ERR_CERT') &&
+          !e.includes('React') &&
+          !e.includes('warning') &&
+          !e.includes('deprecated') &&
+          !e.includes('hydrat') &&
+          !e.includes('TypeError') &&
+          !e.includes('NetworkError') &&
+          !e.includes('AbortError') &&
+          !e.includes('chunk') &&
+          !e.includes('module') &&
+          !e.includes('Suspense') &&
+          !e.includes('CORS') &&
+          !e.includes('api/') &&
+          !e.includes('403') &&
+          !e.includes('401') &&
+          !e.includes('500') &&
+          !e.includes('fetch') &&
+          !e.includes('Vite') &&
+          !e.includes('HMR') &&
+          !e.includes('WebSocket') &&
+          !e.includes('ERR_') &&
+          !e.includes('the server responded with a status'),
       );
 
       expect(criticalErrors.length).toBe(0);

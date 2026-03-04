@@ -80,18 +80,9 @@ test.describe('Settings - Brand Profile', { tag: '@settings' }, () => {
 
   test('renders brand profile content area', async ({ page }) => {
     // Should show either brand profile data or the "No brand profile found" empty state
-    const hasProfile = await page
-      .getByText(/Edit Profile/i)
-      .isVisible()
-      .catch(() => false);
-    const hasEmpty = await page
-      .getByText(/No brand profile found|Create Brand Profile/i)
-      .isVisible()
-      .catch(() => false);
-    const hasLoading = await page
-      .getByText(/Loading brand profile/i)
-      .isVisible()
-      .catch(() => false);
+    const hasProfile = await page.getByText(/Edit Profile/i).isVisible();
+    const hasEmpty = await page.getByText(/No brand profile found|Create Brand Profile/i).isVisible();
+    const hasLoading = await page.getByText(/Loading brand profile/i).isVisible();
 
     expect(hasProfile || hasEmpty || hasLoading).toBe(true);
   });
@@ -101,18 +92,14 @@ test.describe('Settings - Brand Profile', { tag: '@settings' }, () => {
     await page.waitForTimeout(2000);
 
     const editBtn = page.getByRole('button', { name: /Edit Profile|Create Brand Profile/i }).first();
-    const isVisible = await editBtn.isVisible().catch(() => false);
+    const isVisible = await editBtn.isVisible();
 
     if (isVisible) {
       await editBtn.click();
       await page.waitForTimeout(500);
 
       // BrandProfileForm dialog should open — look for form elements or dialog overlay
-      const formVisible = await page
-        .locator('[role="dialog"], form, [data-state="open"]')
-        .first()
-        .isVisible()
-        .catch(() => false);
+      const formVisible = await page.locator('[role="dialog"], form, [data-state="open"]').first().isVisible();
       expect(formVisible).toBe(true);
     } else {
       test.skip();
@@ -124,7 +111,7 @@ test.describe('Settings - Brand Profile', { tag: '@settings' }, () => {
 
     // If a profile is loaded, it should show the brand name in an h2 and industry text
     const brandName = page.locator('h2').first();
-    const hasBrandName = await brandName.isVisible().catch(() => false);
+    const hasBrandName = await brandName.isVisible();
 
     if (hasBrandName) {
       const text = await brandName.textContent();
@@ -137,14 +124,11 @@ test.describe('Settings - Brand Profile', { tag: '@settings' }, () => {
     await page.waitForTimeout(2000);
 
     const brandValues = page.getByText('Brand Values');
-    const hasBrandValues = await brandValues.isVisible().catch(() => false);
+    const hasBrandValues = await brandValues.isVisible();
 
     // This is data-dependent — pass if visible, skip if no profile exists
     if (!hasBrandValues) {
-      const hasEmpty = await page
-        .getByText(/No brand profile found/i)
-        .isVisible()
-        .catch(() => false);
+      const hasEmpty = await page.getByText(/No brand profile found/i).isVisible();
       if (hasEmpty) {
         test.skip();
       }
@@ -155,7 +139,7 @@ test.describe('Settings - Brand Profile', { tag: '@settings' }, () => {
     await page.waitForTimeout(2000);
 
     const voiceTone = page.getByText('Voice & Tone');
-    const hasVoiceTone = await voiceTone.isVisible().catch(() => false);
+    const hasVoiceTone = await voiceTone.isVisible();
 
     if (!hasVoiceTone) {
       // If no profile or voice data, this is expected — just verify page loaded
@@ -167,7 +151,7 @@ test.describe('Settings - Brand Profile', { tag: '@settings' }, () => {
     await page.waitForTimeout(2000);
 
     const editBtn = page.getByRole('button', { name: /Edit Profile|Create Brand Profile/i }).first();
-    const isVisible = await editBtn.isVisible().catch(() => false);
+    const isVisible = await editBtn.isVisible();
 
     if (isVisible) {
       await editBtn.click();
@@ -175,17 +159,14 @@ test.describe('Settings - Brand Profile', { tag: '@settings' }, () => {
 
       // Look for Cancel or Close button inside the dialog
       const cancelBtn = page.getByRole('button', { name: /Cancel|Close/i }).first();
-      const hasCancelBtn = await cancelBtn.isVisible().catch(() => false);
+      const hasCancelBtn = await cancelBtn.isVisible();
 
       if (hasCancelBtn) {
         await cancelBtn.click();
         await page.waitForTimeout(500);
 
         // Dialog should be closed
-        const dialogOpen = await page
-          .locator('[role="dialog"][data-state="open"]')
-          .isVisible()
-          .catch(() => false);
+        const dialogOpen = await page.locator('[role="dialog"][data-state="open"]').isVisible();
         expect(dialogOpen).toBe(false);
       }
     } else {
@@ -227,7 +208,7 @@ test.describe('Settings - Knowledge Base', { tag: '@settings' }, () => {
 
     // The stat card is wrapped in a Link to /library?tab=products
     const productsLink = page.locator('a[href="/library?tab=products"]').first();
-    const isVisible = await productsLink.isVisible().catch(() => false);
+    const isVisible = await productsLink.isVisible();
 
     if (isVisible) {
       await productsLink.click();

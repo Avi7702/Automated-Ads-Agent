@@ -53,8 +53,8 @@ test.describe('Settings Journey', () => {
       const editButton = page.getByRole('button', { name: /Edit Profile/i });
       const brandContent = page.getByText(/Brand Values|Visual Style|Next Day Steel/i).first();
 
-      const hasEdit = await editButton.isVisible().catch(() => false);
-      const hasBrand = await brandContent.isVisible().catch(() => false);
+      const hasEdit = await editButton.isVisible();
+      const hasBrand = await brandContent.isVisible();
 
       // At minimum, Settings page loaded with Brand Profile content
       expect(hasEdit || hasBrand).toBe(true);

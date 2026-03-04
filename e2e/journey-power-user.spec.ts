@@ -19,7 +19,7 @@ test.describe('Power User Journey', () => {
 
       // Find product cards (if any exist)
       const productCards = page.locator('[class*="cursor-pointer"][class*="border"]').first();
-      const hasProducts = await productCards.isVisible().catch(() => false);
+      const hasProducts = await productCards.isVisible();
 
       if (hasProducts) {
         // Click to select
@@ -52,7 +52,7 @@ test.describe('Power User Journey', () => {
 
       // Idea Bank may appear as bottom bar or section
       const ideaBank = page.getByText(/idea|suggest|inspiration/i).first();
-      const hasIdeaBank = await ideaBank.isVisible().catch(() => false);
+      const hasIdeaBank = await ideaBank.isVisible();
 
       // Idea Bank may not be visible without product selection
       expect(true).toBe(true);
@@ -66,7 +66,7 @@ test.describe('Power User Journey', () => {
       // Inspector panel tabs (Edit, Copy, Ask AI, Details)
       // These may only appear after generation
       const inspectorTabs = page.getByRole('tab', { name: /edit|copy|ask ai|details/i }).first();
-      const hasInspector = await inspectorTabs.isVisible().catch(() => false);
+      const hasInspector = await inspectorTabs.isVisible();
 
       // Inspector may only show after generation — that's expected
       expect(true).toBe(true);
@@ -79,7 +79,7 @@ test.describe('Power User Journey', () => {
 
       // Look for template/style section, or advanced options, or any Studio content
       const templateSection = page.getByText(/template|style|scene|advanced/i).first();
-      const hasTemplate = await templateSection.isVisible().catch(() => false);
+      const hasTemplate = await templateSection.isVisible();
 
       // Template section may be hidden behind advanced options or require product selection
       // The page should at minimum have loaded without crashing
@@ -94,7 +94,7 @@ test.describe('Power User Journey', () => {
 
       // Look for history toggle button
       const historyButton = page.getByRole('button', { name: /history|recent|past/i }).first();
-      const hasHistory = await historyButton.isVisible().catch(() => false);
+      const hasHistory = await historyButton.isVisible();
 
       if (hasHistory) {
         await historyButton.click();
@@ -102,7 +102,7 @@ test.describe('Power User Journey', () => {
 
         // History panel should open
         const historyPanel = page.getByText(/recent.*generation|history|past/i).first();
-        const hasPanel = await historyPanel.isVisible().catch(() => false);
+        const hasPanel = await historyPanel.isVisible();
         expect(hasPanel).toBe(true);
       }
     });
@@ -133,7 +133,7 @@ test.describe('Power User Journey', () => {
 
       // Look for platform selection (LinkedIn, Instagram, etc.)
       const platformSelector = page.getByText(/platform|linkedin|instagram|facebook/i).first();
-      const hasPlatform = await platformSelector.isVisible().catch(() => false);
+      const hasPlatform = await platformSelector.isVisible();
 
       // Platform selector may be in advanced options
       expect(true).toBe(true);
@@ -154,15 +154,33 @@ test.describe('Power User Journey', () => {
 
       // Filter out known non-critical errors (network failures for optional APIs, React dev warnings, dev-mode noise)
       const criticalErrors = consoleErrors.filter(
-        (e) => !e.includes('favicon') && !e.includes('net::') && !e.includes('ERR_CONNECTION')
-          && !e.includes('Failed to fetch') && !e.includes('ERR_CERT') && !e.includes('React')
-          && !e.includes('warning') && !e.includes('deprecated') && !e.includes('hydrat')
-          && !e.includes('TypeError') && !e.includes('NetworkError') && !e.includes('AbortError')
-          && !e.includes('chunk') && !e.includes('module') && !e.includes('Suspense')
-          && !e.includes('CORS') && !e.includes('api/') && !e.includes('403')
-          && !e.includes('401') && !e.includes('500') && !e.includes('fetch')
-          && !e.includes('Vite') && !e.includes('HMR') && !e.includes('WebSocket')
-          && !e.includes('ERR_') && !e.includes('the server responded with a status')
+        (e) =>
+          !e.includes('favicon') &&
+          !e.includes('net::') &&
+          !e.includes('ERR_CONNECTION') &&
+          !e.includes('Failed to fetch') &&
+          !e.includes('ERR_CERT') &&
+          !e.includes('React') &&
+          !e.includes('warning') &&
+          !e.includes('deprecated') &&
+          !e.includes('hydrat') &&
+          !e.includes('TypeError') &&
+          !e.includes('NetworkError') &&
+          !e.includes('AbortError') &&
+          !e.includes('chunk') &&
+          !e.includes('module') &&
+          !e.includes('Suspense') &&
+          !e.includes('CORS') &&
+          !e.includes('api/') &&
+          !e.includes('403') &&
+          !e.includes('401') &&
+          !e.includes('500') &&
+          !e.includes('fetch') &&
+          !e.includes('Vite') &&
+          !e.includes('HMR') &&
+          !e.includes('WebSocket') &&
+          !e.includes('ERR_') &&
+          !e.includes('the server responded with a status'),
       );
 
       expect(criticalErrors.length).toBe(0);

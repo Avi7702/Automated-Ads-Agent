@@ -131,16 +131,23 @@ You must verify information before responding. Never make assumptions about code
 - ❌ Implicit returns in functions (always explicit)
 - ❌ Array access without null checks: `arr[0]` → `arr[0] ?? fallback`
 
-### Test Coverage Requirements (80%+ MANDATORY)
+### Test Coverage Requirements
+
+**Current enforced thresholds** (in `vitest.config.ts`):
+
+- Statements: 33%
+- Branches: 26%
+- Functions: 32%
+- Lines: 33%
+
+**Target** (not yet achieved): 80% statements, 75% branches, 80% functions, 80% lines.
+
+These thresholds act as a **regression floor** — any PR that lowers coverage below the current baseline will fail CI. As coverage improves, raise the thresholds in `vitest.config.ts`.
 
 **Before committing ANY feature/fix:**
 
 1. ✅ Write tests FIRST (TDD: Red → Green → Refactor)
-2. ✅ Run `npm run test:coverage` and verify:
-   - Statements: ≥80%
-   - Branches: ≥75%
-   - Functions: ≥80%
-   - Lines: ≥80%
+2. ✅ Run `npm run test:coverage` and verify coverage does not drop below the enforced thresholds
 3. ✅ All tests must pass: `npm test`
 4. ✅ E2E tests for user-facing features: `npm run test:e2e`
 
@@ -151,7 +158,7 @@ You must verify information before responding. Never make assumptions about code
 - **Refactor** → All existing tests still pass
 - **API Endpoint** → Integration tests with supertest
 
-**Coverage will FAIL the build if below 80%** - this is enforced in `vitest.config.ts`.
+**Coverage will FAIL the build if below the enforced thresholds** — see `vitest.config.ts`.
 
 ---
 

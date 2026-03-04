@@ -89,12 +89,14 @@ test.describe('LinkedIn Post Preview - Always Visible', () => {
     const generateCopyButton = page.locator('[data-testid="generate-copy-button-linkedin"]');
 
     // If visible, click it to generate copy
-    if (await generateCopyButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await generateCopyButton.isVisible({ timeout: 5000 })) {
       await generateCopyButton.click();
 
       // Wait for copy generation
-      await expect(page.locator('text=Generating...'))
-        .toBeVisible({ timeout: 5000 })
+      // Optional: generating indicator may not appear if copy is fast
+      await page
+        .locator('text=Generating...')
+        .waitFor({ state: 'visible', timeout: 5000 })
         .catch(() => {});
 
       // After generation, the placeholder should be replaced with actual text

@@ -41,7 +41,8 @@ test.describe('Library — Ad References Tab', { tag: '@library' }, () => {
     await expect(addButton).toBeVisible({ timeout: 10000 });
   });
 
-  // Requires ad reference cards to exist; production has empty state (no references uploaded yet)
+  // SKIPPED: Requires ad reference cards to exist; production has empty state (no references uploaded yet).
+  // Unskip once seed data or test fixtures provide ad reference cards. — audit S3-4
   test.skip('3 — Clicking a template card opens detail dialog', async ({ page }) => {
     // Find any template card
     const cards = page.locator('[class*="rounded-2xl"][class*="border"]').filter({
@@ -61,7 +62,8 @@ test.describe('Library — Ad References Tab', { tag: '@library' }, () => {
     await expect(performanceSection.or(styleSection).first()).toBeVisible({ timeout: 5000 });
   });
 
-  // Requires ad reference cards to exist; production has empty state (no references uploaded yet)
+  // SKIPPED: Requires ad reference cards to exist; production has empty state (no references uploaded yet).
+  // Unskip once seed data or test fixtures provide ad reference cards. — audit S3-4
   test.skip('4 — Detail dialog has Use This Template button', async ({ page }) => {
     const cards = page.locator('[class*="rounded-2xl"][class*="border"]').filter({
       has: page.locator('[class*="aspect-"]'),
@@ -139,7 +141,8 @@ test.describe('Library — Ad References Tab', { tag: '@library' }, () => {
     await page.keyboard.press('Escape');
   });
 
-  // Requires ad reference cards to exist; production has empty state (no references uploaded yet)
+  // SKIPPED: Requires ad reference cards to exist; production has empty state (no references uploaded yet).
+  // Unskip once seed data or test fixtures provide ad reference cards. — audit S3-4
   test.skip('8 — Template cards show platform icons', async ({ page }) => {
     const cards = page.locator('[class*="rounded-2xl"][class*="border"]').filter({
       has: page.locator('[class*="aspect-"]'),

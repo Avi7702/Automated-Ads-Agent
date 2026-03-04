@@ -165,9 +165,10 @@ test.describe('Studio — Asset Drawer', { tag: '@studio' }, () => {
     expect(count).toBeGreaterThanOrEqual(0);
   });
 
+  // SKIPPED: Brand Assets tab is in AssetDrawer component which is not rendered in production Studio.
+  // Studio uses ComposerView with inline product sections instead.
+  // Unskip if AssetDrawer is re-introduced to Studio layout. — audit S3-4
   test.skip('15. clicking Brand Assets tab does not crash', async ({ page }) => {
-    // Skip: Brand Assets tab is in AssetDrawer component which is not rendered in production Studio.
-    // Studio uses ComposerView with inline product sections instead.
     const brandTab = studio.assetDrawerBrandAssets;
     await expect(brandTab.first()).toBeVisible({ timeout: 10000 });
     await brandTab.first().click();
@@ -184,9 +185,10 @@ test.describe('Studio — Asset Drawer', { tag: '@studio' }, () => {
     expect(count).toBeGreaterThanOrEqual(0);
   });
 
+  // SKIPPED: Scenarios tab is in AssetDrawer component which is not rendered in production Studio.
+  // Studio uses ComposerView with inline product sections instead.
+  // Unskip if AssetDrawer is re-introduced to Studio layout. — audit S3-4
   test.skip('17. clicking Scenarios tab does not crash', async ({ page }) => {
-    // Skip: Scenarios tab is in AssetDrawer component which is not rendered in production Studio.
-    // Studio uses ComposerView with inline product sections instead.
     const scenariosTab = studio.assetDrawerScenarios;
     await expect(scenariosTab.first()).toBeVisible({ timeout: 10000 });
     await scenariosTab.first().click();
@@ -202,9 +204,10 @@ test.describe('Studio — Asset Drawer', { tag: '@studio' }, () => {
     expect(count).toBeGreaterThanOrEqual(0);
   });
 
+  // SKIPPED: Patterns tab is in AssetDrawer component which is not rendered in production Studio.
+  // Studio uses ComposerView with inline product sections instead.
+  // Unskip if AssetDrawer is re-introduced to Studio layout. — audit S3-4
   test.skip('19. clicking Patterns tab does not crash', async ({ page }) => {
-    // Skip: Patterns tab is in AssetDrawer component which is not rendered in production Studio.
-    // Studio uses ComposerView with inline product sections instead.
     const patternsTab = studio.assetDrawerPatterns;
     await expect(patternsTab.first()).toBeVisible({ timeout: 10000 });
     await patternsTab.first().click();

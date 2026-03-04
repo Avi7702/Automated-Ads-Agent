@@ -111,7 +111,7 @@ test.describe('Library Page', { tag: '@library' }, () => {
       await productPage.waitForProductsLoaded();
 
       const searchInput = page.locator('input[placeholder*="Search products"]').first();
-      const searchVisible = await searchInput.isVisible().catch(() => false);
+      const searchVisible = await searchInput.isVisible();
       test.skip(!searchVisible, 'Search input not visible');
 
       await searchInput.fill('nonexistent-product-xyz-999');
@@ -176,7 +176,7 @@ test.describe('Library Page', { tag: '@library' }, () => {
         .filter({
           has: page.locator('[class*="Trash"], [class*="trash"]'),
         });
-      const deleteVisible = await deleteButton.isVisible().catch(() => false);
+      const deleteVisible = await deleteButton.isVisible();
       test.skip(!deleteVisible, 'Delete button not visible on hover');
 
       await deleteButton.click();
@@ -196,10 +196,10 @@ test.describe('Library Page', { tag: '@library' }, () => {
       await productPage.switchToTab('enrich');
 
       // Should show enrichment form elements
-      const hasGenerate = await productPage.generateDraftButton.isVisible().catch(() => false);
-      const hasDescription = await productPage.descriptionTextarea.isVisible().catch(() => false);
-      const hasSave = await productPage.saveVerifyButton.isVisible().catch(() => false);
-      const hasUrl = await productPage.urlEnrichInput.isVisible().catch(() => false);
+      const hasGenerate = await productPage.generateDraftButton.isVisible();
+      const hasDescription = await productPage.descriptionTextarea.isVisible();
+      const hasSave = await productPage.saveVerifyButton.isVisible();
+      const hasUrl = await productPage.urlEnrichInput.isVisible();
 
       expect(hasGenerate || hasDescription || hasSave || hasUrl).toBe(true);
     });
@@ -239,8 +239,8 @@ test.describe('Library Page', { tag: '@library' }, () => {
         .first();
       const filterButton = page.getByRole('button', { name: /filter|category/i }).first();
 
-      const hasSelect = await categoryFilter.isVisible().catch(() => false);
-      const hasButton = await filterButton.isVisible().catch(() => false);
+      const hasSelect = await categoryFilter.isVisible();
+      const hasButton = await filterButton.isVisible();
 
       // Category filter may not exist if no products — pass gracefully
       if (hasSelect) {
@@ -274,8 +274,8 @@ test.describe('Library Page', { tag: '@library' }, () => {
       const dropzone = page.locator('[class*="border-dashed"], [class*="dropzone"]').first();
       const fileInput = page.locator('input[type="file"]').first();
 
-      const hasUploadBtn = await uploadButton.isVisible().catch(() => false);
-      const hasDropzone = await dropzone.isVisible().catch(() => false);
+      const hasUploadBtn = await uploadButton.isVisible();
+      const hasDropzone = await dropzone.isVisible();
       const hasFileInput = (await fileInput.count()) > 0;
 
       // At least one upload mechanism should be present
@@ -288,9 +288,9 @@ test.describe('Library Page', { tag: '@library' }, () => {
       const emptyState = page.getByText(/upload|no.*image|get started|add.*brand/i).first();
       const imageCards = page.locator('img').first();
 
-      const hasGrid = await imageGrid.isVisible().catch(() => false);
-      const hasEmpty = await emptyState.isVisible().catch(() => false);
-      const hasImages = await imageCards.isVisible().catch(() => false);
+      const hasGrid = await imageGrid.isVisible();
+      const hasEmpty = await emptyState.isVisible();
+      const hasImages = await imageCards.isVisible();
 
       expect(hasGrid || hasEmpty || hasImages).toBe(true);
     });
@@ -311,8 +311,8 @@ test.describe('Library Page', { tag: '@library' }, () => {
       const previewImage = page
         .locator('img')
         .filter({ has: page.locator('[class*="max-w"], [class*="object-contain"]') });
-      const hasDialog = await dialog.isVisible().catch(() => false);
-      const hasPreview = await previewImage.isVisible().catch(() => false);
+      const hasDialog = await dialog.isVisible();
+      const hasPreview = await previewImage.isVisible();
 
       // Click may open dialog or expand image — either is valid
       expect(hasDialog || hasPreview || true).toBe(true);
@@ -334,14 +334,14 @@ test.describe('Library Page', { tag: '@library' }, () => {
           has: page.locator('[class*="Trash"], [class*="trash"], [class*="X"]'),
         })
         .first();
-      const deleteVisible = await deleteButton.isVisible().catch(() => false);
+      const deleteVisible = await deleteButton.isVisible();
       test.skip(!deleteVisible, 'Delete button not visible on hover');
 
       await deleteButton.click();
 
       // Should show confirmation or remove directly
       const alertDialog = page.locator('[role="alertdialog"]');
-      const hasAlert = await alertDialog.isVisible().catch(() => false);
+      const hasAlert = await alertDialog.isVisible();
       if (hasAlert) {
         // Cancel to avoid actual deletion
         const cancelBtn = alertDialog.getByRole('button', { name: /cancel/i });
@@ -369,8 +369,8 @@ test.describe('Library Page', { tag: '@library' }, () => {
       const templateCards = page.locator('[class*="Card"], [class*="card"]').first();
       const emptyState = page.getByText(/no.*template|add.*template|get started/i).first();
 
-      const hasCards = await templateCards.isVisible().catch(() => false);
-      const hasEmpty = await emptyState.isVisible().catch(() => false);
+      const hasCards = await templateCards.isVisible();
+      const hasEmpty = await emptyState.isVisible();
 
       expect(hasCards || hasEmpty).toBe(true);
     });
@@ -387,7 +387,7 @@ test.describe('Library Page', { tag: '@library' }, () => {
 
       // Should show detail dialog or expanded view
       const dialog = page.locator('[role="dialog"]');
-      const hasDialog = await dialog.isVisible().catch(() => false);
+      const hasDialog = await dialog.isVisible();
 
       // Some templates expand inline, others open dialog
       expect(hasDialog || true).toBe(true);
@@ -404,7 +404,7 @@ test.describe('Library Page', { tag: '@library' }, () => {
       await page.waitForTimeout(500);
 
       const useButton = page.getByRole('button', { name: /use.*template|use.*studio|apply/i }).first();
-      const hasUseBtn = await useButton.isVisible().catch(() => false);
+      const hasUseBtn = await useButton.isVisible();
       test.skip(!hasUseBtn, 'Use Template button not visible');
 
       await useButton.click();
@@ -421,9 +421,9 @@ test.describe('Library Page', { tag: '@library' }, () => {
       const filterSelect = page.locator('select, [role="combobox"]').first();
       const filterButton = page.getByRole('button', { name: /filter|platform|category/i }).first();
 
-      const hasSearch = await searchInput.isVisible().catch(() => false);
-      const hasSelect = await filterSelect.isVisible().catch(() => false);
-      const hasButton = await filterButton.isVisible().catch(() => false);
+      const hasSearch = await searchInput.isVisible();
+      const hasSelect = await filterSelect.isVisible();
+      const hasButton = await filterButton.isVisible();
 
       // Filter/search may not render when no templates exist — pass gracefully
       expect(hasSearch || hasSelect || hasButton || true).toBe(true);
@@ -465,9 +465,9 @@ test.describe('Library Page', { tag: '@library' }, () => {
       const exactInsert = page.locator('button:has-text("Exact Insert"), [data-testid="mode-exact-insert"]').first();
       const inspiration = page.locator('button:has-text("Inspiration"), [data-testid="mode-inspiration"]').first();
 
-      const hasPreview = await selectedPreview.isVisible().catch(() => false);
-      const hasExact = await exactInsert.isVisible().catch(() => false);
-      const hasInspiration = await inspiration.isVisible().catch(() => false);
+      const hasPreview = await selectedPreview.isVisible();
+      const hasExact = await exactInsert.isVisible();
+      const hasInspiration = await inspiration.isVisible();
 
       // Either mode toggles or a detail view should be shown
       expect(hasPreview || hasExact || hasInspiration || true).toBe(true);
@@ -485,7 +485,7 @@ test.describe('Library Page', { tag: '@library' }, () => {
 
       // Look for Use Template / Generate button
       const useButton = page.getByRole('button', { name: /use.*template|generate|use.*scene|apply/i }).first();
-      const hasBtn = await useButton.isVisible().catch(() => false);
+      const hasBtn = await useButton.isVisible();
       test.skip(!hasBtn, 'Use Scene button not visible');
 
       await useButton.click();
@@ -516,9 +516,9 @@ test.describe('Library Page', { tag: '@library' }, () => {
       const emptyState = page.getByText(/no.*scenario|create.*first|get started/i).first();
       const createButton = page.getByRole('button', { name: /new.*scenario|create|add/i }).first();
 
-      const hasCards = await scenarioCards.isVisible().catch(() => false);
-      const hasEmpty = await emptyState.isVisible().catch(() => false);
-      const hasCreate = await createButton.isVisible().catch(() => false);
+      const hasCards = await scenarioCards.isVisible();
+      const hasEmpty = await emptyState.isVisible();
+      const hasCreate = await createButton.isVisible();
 
       expect(hasCards || hasEmpty || hasCreate).toBe(true);
     });
@@ -535,7 +535,7 @@ test.describe('Library Page', { tag: '@library' }, () => {
 
       // Should open a dialog, expand details, or highlight card
       const dialog = page.locator('[role="dialog"]');
-      const hasDialog = await dialog.isVisible().catch(() => false);
+      const hasDialog = await dialog.isVisible();
 
       // Clicking may open a dialog, show inline details, or do nothing
       expect(hasDialog || true).toBe(true);
@@ -561,9 +561,9 @@ test.describe('Library Page', { tag: '@library' }, () => {
       const patternCards = page.locator('[class*="Card"], [class*="card"]').first();
       const emptyState = page.getByText(/upload|no.*pattern|learn.*winner|drag.*drop/i).first();
 
-      const hasUpload = await uploadZone.isVisible().catch(() => false);
-      const hasCards = await patternCards.isVisible().catch(() => false);
-      const hasEmpty = await emptyState.isVisible().catch(() => false);
+      const hasUpload = await uploadZone.isVisible();
+      const hasCards = await patternCards.isVisible();
+      const hasEmpty = await emptyState.isVisible();
 
       expect(hasUpload || hasCards || hasEmpty).toBe(true);
     });
@@ -585,8 +585,8 @@ test.describe('Library Page', { tag: '@library' }, () => {
         })
         .first();
 
-      const hasAnalyze = await analyzeButton.isVisible().catch(() => false);
-      const hasEye = await eyeIcon.isVisible().catch(() => false);
+      const hasAnalyze = await analyzeButton.isVisible();
+      const hasEye = await eyeIcon.isVisible();
 
       if (hasAnalyze) {
         await analyzeButton.click();
@@ -603,8 +603,8 @@ test.describe('Library Page', { tag: '@library' }, () => {
       const dialog = page.locator('[role="dialog"]');
       const analysisContent = page.getByText(/pattern|composition|color|layout|score|confidence/i).first();
 
-      const hasDialog = await dialog.isVisible().catch(() => false);
-      const hasAnalysis = await analysisContent.isVisible().catch(() => false);
+      const hasDialog = await dialog.isVisible();
+      const hasAnalysis = await analysisContent.isVisible();
 
       expect(hasDialog || hasAnalysis || true).toBe(true);
     });

@@ -8,10 +8,7 @@ const testTimeout = isCI ? 20000 : 15000;
 const hookTimeout = isCI ? 30000 : 20000;
 
 // Tests that require database or full app context
-const integrationTests = [
-  '**/*.integration.test.ts',
-  '**/auth.test.ts', // Dead test: routes not registered, CSRF blocks POSTs, uses non-existent storage methods
-];
+const integrationTests = ['**/*.integration.test.ts'];
 
 const sharedExclude =
   isCI || !hasDatabase
@@ -84,6 +81,8 @@ export default defineConfig({
       reporter: ['text', 'json', 'html', 'lcov'],
       exclude: ['node_modules/', 'dist/', '**/*.d.ts', '**/*.config.*', '**/mockData', 'e2e/**', 'scripts/**'],
       thresholds: {
+        // Coverage thresholds: current baseline. Raise as coverage improves.
+        // Target: 80% statements, 75% branches, 80% functions, 80% lines
         // Actual (CI 2026-02-26): stmts 38.74, branches 31.28, funcs 37.56, lines 38.91
         // Set ~5% below actual to allow normal fluctuation
         statements: 33,
