@@ -121,7 +121,8 @@ export function SchedulePostDialog({ open, onOpenChange, defaultDate, prefill }:
     queryFn: async () => {
       const res = await fetch('/api/social/accounts', { credentials: 'include' });
       if (!res.ok) return [];
-      return res.json();
+      const data: { accounts?: SocialAccount[] } = await res.json();
+      return data.accounts ?? [];
     },
     staleTime: 60_000,
   });
