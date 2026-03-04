@@ -508,14 +508,15 @@ describe('Studio Component - Integration', () => {
       });
     });
 
-    it('switches to agent mode and updates heading', async () => {
+    it('switches to agent mode and shows full chat workspace', async () => {
       render(<Studio />, { wrapper: createWrapper() });
 
       const agentModeButton = await screen.findByRole('button', { name: 'Agent Mode' });
       fireEvent.click(agentModeButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/Plan, ask, and execute with the assistant/i)).toBeInTheDocument();
+        expect(screen.getByTestId('mock-agent-chat')).toBeInTheDocument();
+        expect(screen.queryByText(/Plan, ask, and execute with the assistant/i)).not.toBeInTheDocument();
       });
     });
 

@@ -19,7 +19,7 @@ import { CarouselBuilder } from '@/components/CarouselBuilder';
 import { BeforeAfterBuilder } from '@/components/BeforeAfterBuilder';
 import { TextOnlyMode } from '@/components/TextOnlyMode';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { Sparkles, ChevronDown, ChevronUp, Check, X, Search, Package, Mic, MicOff, Bot, Loader2 } from 'lucide-react';
+import { Sparkles, ChevronDown, ChevronUp, Check, X, Search, Package, Mic, MicOff } from 'lucide-react';
 import { useRipple } from '@/hooks/useRipple';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { useStudioState } from '@/hooks/useStudioState';
@@ -71,10 +71,7 @@ function Section({
 }
 
 interface ComposerViewProps {
-  ideaBankContext?: IdeaBankContextSnapshot | null;
-  ideaBankBridgeState?: 'idle' | 'waiting' | 'ready' | 'error' | 'sent';
   onIdeaBankContextChange?: (context: IdeaBankContextSnapshot) => void;
-  onSendIdeasToAgent?: () => void;
   handlePromptChange: (value: string) => void;
   handleSelectSuggestion: (prompt: string, id?: string, reasoning?: string) => void;
   handleGenerate: () => void;
@@ -85,10 +82,7 @@ interface ComposerViewProps {
 }
 
 export const ComposerView = memo(function ComposerView({
-  ideaBankContext = null,
-  ideaBankBridgeState = 'idle',
   onIdeaBankContextChange,
-  onSendIdeasToAgent,
   handlePromptChange,
   handleSelectSuggestion,
   handleGenerate,
@@ -148,7 +142,8 @@ export const ComposerView = memo(function ComposerView({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                Creating from Weekly Plan - {state.planContext.dayOfWeek} {state.planContext.category.replace(/_/g, ' ')}
+                Creating from Weekly Plan - {state.planContext.dayOfWeek}{' '}
+                {state.planContext.category.replace(/_/g, ' ')}
               </p>
               <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 line-clamp-2">{state.planContext.briefing}</p>
             </div>
@@ -395,55 +390,6 @@ export const ComposerView = memo(function ComposerView({
           />
         </ErrorBoundary>
 
-        {(ideaBankContext || onSendIdeasToAgent) && (
-          <div className="rounded-xl border border-border/70 bg-muted/20 px-4 py-3">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
-                <p className="text-sm font-medium flex items-center gap-2">
-                  <Bot className="w-4 h-4 text-primary" />
-                  Agent + Idea Bank sync
-                </p>
-                {ideaBankBridgeState === 'waiting' && (
-                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                    Waiting for Idea Bank suggestions. They will be sent to the agent when ready.
-                  </p>
-                )}
-                {ideaBankBridgeState !== 'waiting' && ideaBankContext?.status === 'ready' && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {ideaBankContext.suggestionCount} idea
-                    {ideaBankContext.suggestionCount === 1 ? '' : 's'} ready. Send them to the agent for planning.
-                  </p>
-                )}
-                {ideaBankBridgeState === 'sent' && (
-                  <p className="text-xs text-green-600 dark:text-green-400 mt-1">Ideas sent to agent chat.</p>
-                )}
-                {(ideaBankBridgeState === 'error' || ideaBankContext?.status === 'error') && (
-                  <p className="text-xs text-red-500 mt-1">{ideaBankContext?.error || 'Failed to load ideas.'}</p>
-                )}
-                {ideaBankBridgeState === 'idle' &&
-                  (!ideaBankContext || ideaBankContext.status === 'idle' || ideaBankContext.suggestionCount === 0) && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Select products or uploads to generate ideas first.
-                    </p>
-                  )}
-              </div>
-
-              {onSendIdeasToAgent && (
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={onSendIdeasToAgent}
-                  disabled={ideaBankBridgeState === 'waiting'}
-                  className="sm:shrink-0"
-                >
-                  {ideaBankBridgeState === 'waiting' ? 'Waiting for ideas...' : 'Send Ideas To Agent'}
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
-
         <div className="flex flex-col sm:flex-row flex-wrap gap-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Platform:</span>
@@ -519,7 +465,12 @@ export const ComposerView = memo(function ComposerView({
       )}
 
       <motion.div ref={generateButtonRef} id="generate" className="py-4">
-        <Button size="lg" onClick={handleGenerate} disabled={!canGenerate} className="w-full h-16 text-lg">
+        <Button
+          size="lg"
+          onClick={handleGenerate}
+          disabled={!canGenerate || state.generationState === 'generating'}
+          className="w-full h-16 text-lg"
+        >
           <Sparkles className="w-5 h-5 mr-2" />
           Generate Image
         </Button>

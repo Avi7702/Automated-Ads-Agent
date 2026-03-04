@@ -26,7 +26,7 @@ export class StudioWorkflowPage {
   // Prompt/Generation section
   readonly promptTextarea: Locator;
   readonly quickStartInput: Locator;
-  readonly generateNowButton: Locator;
+  readonly generateButton: Locator;
   readonly generateImageButton: Locator;
 
   // Platform & settings
@@ -168,7 +168,7 @@ export class StudioWorkflowPage {
     // Prompt
     this.promptTextarea = page.locator('textarea[placeholder*="Describe your ideal ad creative"]');
     this.quickStartInput = page.locator('textarea[placeholder*="Describe what you want to create"]');
-    this.generateNowButton = page.getByRole('button', { name: /Generate Now/i });
+    this.generateButton = page.getByRole('button', { name: /^Generate$/i });
     this.generateImageButton = page.getByRole('button', { name: /Generate Image/i });
 
     // Platform & settings
@@ -451,7 +451,7 @@ export class StudioWorkflowPage {
    */
   async startQuickGeneration(prompt: string) {
     await this.enterQuickStartPrompt(prompt);
-    await this.generateNowButton.click();
+    await this.generateButton.click();
   }
 
   /**

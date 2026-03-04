@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { StudioWorkflowPage } from './pages/studio-workflow.page';
 import * as path from 'path';
 
@@ -30,7 +30,7 @@ function filterCriticalErrors(errors: string[]): string[] {
       !err.includes('net::ERR') &&
       !err.includes('Failed to load resource') &&
       !err.includes('ResizeObserver') &&
-      !err.includes('hydrat')
+      !err.includes('hydrat'),
   );
 }
 
@@ -45,7 +45,7 @@ test.describe('GROUP 1: Core Generation Paths', () => {
     await studio.goto();
   });
 
-  test('1. Quick Start — text-only generation', async ({ page }) => {
+  test('1. Quick Start — text-only generation', async () => {
     test.slow(); // 3x timeout for AI generation
 
     const errors = await studio.monitorConsoleErrors();
@@ -73,7 +73,7 @@ test.describe('GROUP 1: Core Generation Paths', () => {
     expect(filterCriticalErrors(errors)).toHaveLength(0);
   });
 
-  test('2. Single product + prompt generation', async ({ page }) => {
+  test('2. Single product + prompt generation', async () => {
     test.slow();
 
     const hasProds = await studio.hasProducts();
@@ -95,7 +95,7 @@ test.describe('GROUP 1: Core Generation Paths', () => {
     }
   });
 
-  test('3. Multi-product generation (3 products)', async ({ page }) => {
+  test('3. Multi-product generation (3 products)', async () => {
     test.slow();
 
     const hasProds = await studio.hasProducts();
@@ -160,7 +160,10 @@ test.describe('GROUP 1: Core Generation Paths', () => {
     test.skip(templateCount === 0, 'No templates available');
 
     // "Template Inspiration" link opens a browsing dialog for performing templates
-    const inspirationLink = page.locator('button, a').filter({ hasText: /Template Inspiration|Inspiration/i }).first();
+    const inspirationLink = page
+      .locator('button, a')
+      .filter({ hasText: /Template Inspiration|Inspiration/i })
+      .first();
     if (await inspirationLink.isVisible().catch(() => false)) {
       await inspirationLink.click();
       await page.waitForTimeout(500);
@@ -191,14 +194,19 @@ test.describe('GROUP 1: Core Generation Paths', () => {
     }
   });
 
-  test('6. Upload-only generation', async ({ page }) => {
+  test('6. Upload-only generation', async () => {
     test.slow();
 
     await studio.uploadFile(TEST_UPLOAD);
     await studio.enterPrompt('Enhance this product image with professional studio lighting');
 
-    const genBtn = studio.generateImageButton.or(studio.generateNowButton);
-    if (await genBtn.first().isEnabled().catch(() => false)) {
+    const genBtn = studio.generateImageButton.or(studio.generateButton);
+    if (
+      await genBtn
+        .first()
+        .isEnabled()
+        .catch(() => false)
+    ) {
       await genBtn.first().click();
       const success = await studio.waitForGenerationComplete();
 
@@ -209,7 +217,7 @@ test.describe('GROUP 1: Core Generation Paths', () => {
     }
   });
 
-  test('7. Product + upload mixed', async ({ page }) => {
+  test('7. Product + upload mixed', async () => {
     test.slow();
 
     const hasProds = await studio.hasProducts();
@@ -229,7 +237,6 @@ test.describe('GROUP 1: Core Generation Paths', () => {
   });
 });
 
-
 // ═══════════════════════════════════════════════════════════
 // GROUP 2: Idea Bank Flows
 // ═══════════════════════════════════════════════════════════
@@ -241,7 +248,7 @@ test.describe('GROUP 2: Idea Bank Flows', () => {
     await studio.goto();
   });
 
-  test('8. IdeaBankBar chip click fills prompt', async ({ page }) => {
+  test('8. IdeaBankBar chip click fills prompt', async () => {
     const hasProds = await studio.hasProducts();
     test.skip(!hasProds, 'No products in database');
 
@@ -249,7 +256,8 @@ test.describe('GROUP 2: Idea Bank Flows', () => {
     await studio.selectProduct(0);
 
     // Wait for IdeaBankBar to load chips (may take time for API)
-    const chipVisible = await studio.ideaBankBarChips.first()
+    const chipVisible = await studio.ideaBankBarChips
+      .first()
       .waitFor({ state: 'visible', timeout: 20000 })
       .then(() => true)
       .catch(() => false);
@@ -278,7 +286,8 @@ test.describe('GROUP 2: Idea Bank Flows', () => {
     await studio.selectProduct(0);
 
     // Wait for chips
-    const chipVisible = await studio.ideaBankBarChips.first()
+    const chipVisible = await studio.ideaBankBarChips
+      .first()
       .waitFor({ state: 'visible', timeout: 20000 })
       .then(() => true)
       .catch(() => false);
@@ -303,11 +312,10 @@ test.describe('GROUP 2: Idea Bank Flows', () => {
     await studio.selectProduct(0);
 
     // Wait for initial load
-    await studio.ideaBankBarChips.first()
+    await studio.ideaBankBarChips
+      .first()
       .waitFor({ state: 'visible', timeout: 20000 })
       .catch(() => {});
-
-    const initialCount = await studio.ideaBankBarChips.count();
 
     // Refresh
     await studio.refreshIdeaBank();
@@ -320,17 +328,16 @@ test.describe('GROUP 2: Idea Bank Flows', () => {
     expect(newCount).toBeGreaterThanOrEqual(0);
   });
 
-  test('11. Idea Bank empty state (no products)', async ({ page }) => {
+  test('11. Idea Bank empty state (no products)', async () => {
     // Without selecting any product, IdeaBankBar should not appear
     // or should show the "Get AI suggestions" dashed chip after product select
-    const barVisible = await studio.ideaBankBar.isVisible().catch(() => false);
+    await studio.ideaBankBar.isVisible().catch(() => false);
 
     // The bar might be in DOM but with no chips
     const chipCount = await studio.ideaBankBarChips.count();
     expect(chipCount).toBe(0);
   });
 });
-
 
 // ═══════════════════════════════════════════════════════════
 // GROUP 3: Post-Generation Actions
@@ -349,7 +356,7 @@ test.describe('GROUP 3: Post-Generation Actions', () => {
     return await studio.waitForGenerationComplete();
   }
 
-  test('12. Download generated image', async ({ page }) => {
+  test('12. Download generated image', async () => {
     test.slow();
 
     const ok = await generateFirst(studio);
@@ -379,7 +386,10 @@ test.describe('GROUP 3: Post-Generation Actions', () => {
     // Should start editing (loading or new generation)
     await page.waitForTimeout(2000);
     // The edit may trigger a new generation or inline update
-    const spinning = await studio.loadingSpinner.first().isVisible().catch(() => false);
+    const spinning = await studio.loadingSpinner
+      .first()
+      .isVisible()
+      .catch(() => false);
     const stillHasImage = await studio.generatedImage.isVisible().catch(() => false);
     expect(spinning || stillHasImage).toBeTruthy();
   });
@@ -480,7 +490,6 @@ test.describe('GROUP 3: Post-Generation Actions', () => {
   });
 });
 
-
 // ═══════════════════════════════════════════════════════════
 // GROUP 4: InspectorPanel Tabs
 // ═══════════════════════════════════════════════════════════
@@ -516,7 +525,10 @@ test.describe('GROUP 4: InspectorPanel Tabs', () => {
       await page.waitForTimeout(5000);
 
       // Textarea should have content
-      const textarea = page.locator('textarea').filter({ has: page.locator('..') }).last();
+      const textarea = page
+        .locator('textarea')
+        .filter({ has: page.locator('..') })
+        .last();
       const value = await textarea.inputValue().catch(() => '');
       // Copy may or may not appear depending on API availability
       expect(value !== undefined).toBeTruthy();
@@ -550,7 +562,9 @@ test.describe('GROUP 4: InspectorPanel Tabs', () => {
 
           // Platform selector should appear
           const platformSelector = page.locator('[data-testid="select-platform"]');
-          await expect(platformSelector).toBeVisible({ timeout: 5000 }).catch(() => {});
+          await expect(platformSelector)
+            .toBeVisible({ timeout: 5000 })
+            .catch(() => {});
         }
       }
     }
@@ -572,7 +586,10 @@ test.describe('GROUP 4: InspectorPanel Tabs', () => {
       await input.fill('What makes this image effective for marketing?');
 
       // Click send
-      const sendBtn = page.getByRole('button').filter({ has: page.locator('svg') }).last();
+      const sendBtn = page
+        .getByRole('button')
+        .filter({ has: page.locator('svg') })
+        .last();
       await sendBtn.click();
 
       // Wait for response (may take a while)
@@ -604,7 +621,9 @@ test.describe('GROUP 4: InspectorPanel Tabs', () => {
     // Metadata should be visible
     // Check for prompt text
     const promptLabel = page.locator('text=/Prompt/i');
-    await expect(promptLabel.first()).toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(promptLabel.first())
+      .toBeVisible({ timeout: 5000 })
+      .catch(() => {});
 
     // Check for metadata badges (platform, aspect ratio, resolution)
     const badges = studio.detailsMetadataBadges;
@@ -629,7 +648,6 @@ test.describe('GROUP 4: InspectorPanel Tabs', () => {
     expect(previewVisible !== undefined).toBeTruthy();
   });
 });
-
 
 // ═══════════════════════════════════════════════════════════
 // GROUP 5: Platform & Settings Variations
@@ -725,7 +743,6 @@ test.describe('GROUP 5: Platform & Settings Variations', () => {
   });
 });
 
-
 // ═══════════════════════════════════════════════════════════
 // GROUP 6: Error Handling & Edge Cases
 // ═══════════════════════════════════════════════════════════
@@ -769,7 +786,7 @@ test.describe('GROUP 6: Error Handling & Edge Cases', () => {
     }
   });
 
-  test('26. No products + non-quick-start blocks generation', async ({ page }) => {
+  test('26. No products + non-quick-start blocks generation', async () => {
     // Don't select any products, don't use quick start
     // The page should show the Quick Start textarea or the detailed prompt textarea
     const quickStartVisible = await studio.quickStartInput.isVisible().catch(() => false);

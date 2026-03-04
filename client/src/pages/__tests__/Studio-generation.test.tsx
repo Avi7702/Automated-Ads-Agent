@@ -400,8 +400,8 @@ describe('Studio Component - Generation Flow', () => {
       const quickStartTextarea = screen.getByPlaceholderText(/Describe your ideal ad creative/i);
       fireEvent.change(quickStartTextarea, { target: { value: 'A beautiful product shot' } });
 
-      const generateNowButton = screen.getByRole('button', { name: /Generate Image/i });
-      expect(generateNowButton).not.toBeDisabled();
+      const generateImageButton = screen.getByRole('button', { name: /Generate Image/i });
+      expect(generateImageButton).not.toBeDisabled();
     });
 
     it('shows platform and size selectors', async () => {
@@ -445,8 +445,8 @@ describe('Studio Component - Generation Flow', () => {
 
       // Generating text appears during generation
       // Note: This test verifies the UI is ready for generation
-      const generateNowButton = screen.getByRole('button', { name: /Generate Image/i });
-      expect(generateNowButton).toBeInTheDocument();
+      const generateImageButton = screen.getByRole('button', { name: /Generate Image/i });
+      expect(generateImageButton).toBeInTheDocument();
     });
 
     it('displays character count for prompt', async () => {
@@ -661,8 +661,8 @@ describe('Studio Component - Generation Flow', () => {
       fireEvent.change(quickStartTextarea, { target: { value: 'Test prompt' } });
 
       // The generate button should be ready
-      const generateNowButton = screen.getByRole('button', { name: /Generate Image/i });
-      expect(generateNowButton).not.toBeDisabled();
+      const generateImageButton = screen.getByRole('button', { name: /Generate Image/i });
+      expect(generateImageButton).not.toBeDisabled();
     });
 
     it('shows result state after successful generation', async () => {
@@ -720,13 +720,13 @@ describe('Studio Component - Generation Flow', () => {
       fireEvent.change(quickStartTextarea, { target: { value: 'Test prompt' } });
 
       // The generate button should be ready for quick start
-      const generateNowButton = screen.getByRole('button', { name: /Generate Image/i });
-      expect(generateNowButton).toBeInTheDocument();
+      const generateImageButton = screen.getByRole('button', { name: /Generate Image/i });
+      expect(generateImageButton).toBeInTheDocument();
 
       // In quick start mode, the transform API will be called when generation runs
       // Note: The actual call happens asynchronously after state updates
       await act(async () => {
-        fireEvent.click(generateNowButton);
+        fireEvent.click(generateImageButton);
         // Allow async operations to complete
         await new Promise((resolve) => setTimeout(resolve, 500));
       });

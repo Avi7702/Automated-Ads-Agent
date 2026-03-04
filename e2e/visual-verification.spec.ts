@@ -79,7 +79,7 @@ test.describe.serial('Visual Verification', { tag: '@visual-verification' }, () 
   // Desktop nav is hidden on mobile (hidden md:flex).
   // Studio h1 = "Create stunning product visuals"
   // Quick Start textarea has id="prompt-textarea"
-  // Generate button text = "Generate Now"
+  // Generate button text = "Generate"
   // ---------------------------------------------------------------
   test('Studio page', async ({ page }) => {
     await gotoWithAuth(page, '/');
@@ -117,8 +117,8 @@ test.describe.serial('Visual Verification', { tag: '@visual-verification' }, () 
         locator: page.getByPlaceholder('Describe what you want to create...'),
       },
       {
-        label: '"Generate Now" button',
-        locator: page.getByRole('button', { name: 'Generate Now', exact: true }),
+        label: '"Generate" button',
+        locator: page.getByRole('button', { name: 'Generate', exact: true }),
       },
       {
         label: '"Your Products" section',

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { test, expect } from '@playwright/test';
 import { gotoWithAuth } from './helpers/ensureAuth';
 import { StudioWorkflowPage } from './pages/studio-workflow.page';
@@ -82,7 +81,7 @@ test.describe('Studio — Inspector Panel', { tag: '@studio' }, () => {
   test('9. Edit tab has textarea for edit prompt (after generation)', async ({ page }) => {
     // Attempt a generation
     await studio.enterQuickStartPrompt('Inspector edit test');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
     if (completed) {
       const editTextarea = page.locator('textarea[placeholder*="Describe what changes"]').first();
@@ -92,7 +91,7 @@ test.describe('Studio — Inspector Panel', { tag: '@studio' }, () => {
 
   test('10. Edit tab has preset chips (after generation)', async ({ page }) => {
     await studio.enterQuickStartPrompt('Preset chips test');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
     if (completed) {
       const presetChips = page.locator('button').filter({ hasText: /Warmer lighting|Cooler tones|More contrast/i });
@@ -103,7 +102,7 @@ test.describe('Studio — Inspector Panel', { tag: '@studio' }, () => {
 
   test('11. clicking a preset fills the edit textarea', async ({ page }) => {
     await studio.enterQuickStartPrompt('Preset fill test');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
     if (completed) {
       const presetBtn = page
@@ -120,7 +119,7 @@ test.describe('Studio — Inspector Panel', { tag: '@studio' }, () => {
 
   test('12. Apply Changes button is disabled with empty edit prompt', async ({ page }) => {
     await studio.enterQuickStartPrompt('Apply disabled test');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
     if (completed) {
       const applyBtn = page.getByRole('button', { name: /Apply Changes/i }).first();
@@ -140,9 +139,9 @@ test.describe('Studio — Inspector Panel', { tag: '@studio' }, () => {
     await expect(placeholder).toBeVisible({ timeout: 5000 });
   });
 
-  test('14. Copy tab has Generate Quick Copy button (after generation)', async ({ page }) => {
+  test('14. Copy tab has Generate Quick Copy button (after generation)', async () => {
     await studio.enterQuickStartPrompt('Copy tab test');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
     if (completed) {
       await studio.switchInspectorTab('copy');
@@ -151,9 +150,9 @@ test.describe('Studio — Inspector Panel', { tag: '@studio' }, () => {
     }
   });
 
-  test('15. Copy to Clipboard button appears after generating copy', async ({ page }) => {
+  test('15. Copy to Clipboard button appears after generating copy', async () => {
     await studio.enterQuickStartPrompt('Clipboard test');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
     if (completed) {
       await studio.generateQuickCopy();
@@ -162,9 +161,9 @@ test.describe('Studio — Inspector Panel', { tag: '@studio' }, () => {
     }
   });
 
-  test('16. Advanced Copy Studio toggle exists', async ({ page }) => {
+  test('16. Advanced Copy Studio toggle exists', async () => {
     await studio.enterQuickStartPrompt('Advanced toggle test');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
     if (completed) {
       await studio.switchInspectorTab('copy');
@@ -184,9 +183,9 @@ test.describe('Studio — Inspector Panel', { tag: '@studio' }, () => {
     await expect(placeholder).toBeVisible({ timeout: 5000 });
   });
 
-  test('18. Ask AI tab has input and quick question chips (after generation)', async ({ page }) => {
+  test('18. Ask AI tab has input and quick question chips (after generation)', async () => {
     await studio.enterQuickStartPrompt('Ask AI test');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
     if (completed) {
       await studio.switchInspectorTab('ask-ai');
@@ -198,9 +197,9 @@ test.describe('Studio — Inspector Panel', { tag: '@studio' }, () => {
     }
   });
 
-  test('19. typing in Ask AI input and clicking send', async ({ page }) => {
+  test('19. typing in Ask AI input and clicking send', async () => {
     await studio.enterQuickStartPrompt('Ask AI send test');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
     if (completed) {
       await studio.switchInspectorTab('ask-ai');
@@ -222,9 +221,9 @@ test.describe('Studio — Inspector Panel', { tag: '@studio' }, () => {
     await expect(placeholder).toBeVisible({ timeout: 5000 });
   });
 
-  test('21. Details tab shows metadata badges after generation', async ({ page }) => {
+  test('21. Details tab shows metadata badges after generation', async () => {
     await studio.enterQuickStartPrompt('Details test');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
     if (completed) {
       await studio.switchInspectorTab('details');
@@ -236,7 +235,7 @@ test.describe('Studio — Inspector Panel', { tag: '@studio' }, () => {
 
   test('22. Details tab has Copy prompt button after generation', async ({ page }) => {
     await studio.enterQuickStartPrompt('Copy prompt test');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
     if (completed) {
       await studio.switchInspectorTab('details');

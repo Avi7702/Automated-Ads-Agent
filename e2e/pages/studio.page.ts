@@ -9,7 +9,7 @@ export class StudioPage {
   readonly header: Locator;
   readonly pageTitle: Locator;
   readonly quickStartInput: Locator;
-  readonly generateNowButton: Locator;
+  readonly generateButton: Locator;
   readonly productsSection: Locator;
   readonly templatesSection: Locator;
   readonly promptTextarea: Locator;
@@ -21,7 +21,7 @@ export class StudioPage {
     this.header = page.locator('header').first();
     this.pageTitle = page.locator('h1').filter({ hasText: 'Create stunning product visuals' });
     this.quickStartInput = page.locator('input[placeholder*="Just describe what you want"]');
-    this.generateNowButton = page.getByRole('button', { name: /Generate Now/i });
+    this.generateButton = page.getByRole('button', { name: /^Generate$/i });
     this.productsSection = page.locator('text=Your Products');
     this.templatesSection = page.locator('text=Style & Template');
     this.promptTextarea = page.locator('textarea[placeholder*="Professional construction"]');
@@ -67,7 +67,7 @@ export class StudioPage {
    */
   async quickStartGenerate(prompt: string) {
     await this.quickStartInput.fill(prompt);
-    await this.generateNowButton.click();
+    await this.generateButton.click();
   }
 
   /**
@@ -89,7 +89,10 @@ export class StudioPage {
    * Check if we're in the generating state
    */
   async isGenerating(): Promise<boolean> {
-    return await this.page.locator('text=Generating content').isVisible().catch(() => false);
+    return await this.page
+      .locator('text=Generating content')
+      .isVisible()
+      .catch(() => false);
   }
 
   /**

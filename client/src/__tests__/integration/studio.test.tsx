@@ -416,8 +416,8 @@ describe('Studio Page Integration Tests', () => {
 
       // Wait for debounce and state update
       await waitFor(() => {
-        const generateNowButton = screen.getByRole('button', { name: /Generate Image/i });
-        expect(generateNowButton).not.toBeDisabled();
+        const generateImageButton = screen.getByRole('button', { name: /Generate Image/i });
+        expect(generateImageButton).not.toBeDisabled();
       });
     });
 
@@ -439,7 +439,7 @@ describe('Studio Page Integration Tests', () => {
       });
     });
 
-    it('enables Generate Now button when product selected and prompt entered', async () => {
+    it('enables Generate button when product selected and prompt entered', async () => {
       render(<Studio />, { wrapper: createWrapper() });
 
       await waitFor(() => {
@@ -455,10 +455,10 @@ describe('Studio Page Integration Tests', () => {
         fireEvent.change(quickStartTextarea, { target: { value: 'Create a stunning product photo' } });
       });
 
-      // Generate Now should be enabled
+      // Generate should be enabled
       await waitFor(() => {
-        const generateNowButton = screen.getByRole('button', { name: /Generate Image/i });
-        expect(generateNowButton).toBeEnabled();
+        const generateImageButton = screen.getByRole('button', { name: /Generate Image/i });
+        expect(generateImageButton).toBeEnabled();
       });
     });
   });
@@ -496,14 +496,14 @@ describe('Studio Page Integration Tests', () => {
 
       // Click generate
       await waitFor(() => {
-        const generateNowButton = screen.getByRole('button', { name: /Generate Image/i });
-        expect(generateNowButton).toBeEnabled();
+        const generateImageButton = screen.getByRole('button', { name: /Generate Image/i });
+        expect(generateImageButton).toBeEnabled();
       });
 
-      const generateNowButton = screen.getByRole('button', { name: /Generate Image/i });
+      const generateImageButton = screen.getByRole('button', { name: /Generate Image/i });
 
       await act(async () => {
-        fireEvent.click(generateNowButton);
+        fireEvent.click(generateImageButton);
         // Allow state transitions
         await new Promise((resolve) => setTimeout(resolve, 200));
       });
@@ -539,11 +539,11 @@ describe('Studio Page Integration Tests', () => {
       const quickStartTextarea = screen.getByPlaceholderText(/Describe your ideal ad creative/i);
       fireEvent.change(quickStartTextarea, { target: { value: 'Test generation prompt' } });
 
-      const generateNowButton = screen.getByRole('button', { name: /Generate Image/i });
-      await waitFor(() => expect(generateNowButton).toBeEnabled());
+      const generateImageButton = screen.getByRole('button', { name: /Generate Image/i });
+      await waitFor(() => expect(generateImageButton).toBeEnabled());
 
       await act(async () => {
-        fireEvent.click(generateNowButton);
+        fireEvent.click(generateImageButton);
         await new Promise((resolve) => setTimeout(resolve, 300));
       });
 
@@ -570,11 +570,11 @@ describe('Studio Page Integration Tests', () => {
       const quickStartTextarea = screen.getByPlaceholderText(/Describe your ideal ad creative/i);
       fireEvent.change(quickStartTextarea, { target: { value: 'Test prompt' } });
 
-      const generateNowButton = screen.getByRole('button', { name: /Generate Image/i });
-      await waitFor(() => expect(generateNowButton).toBeEnabled());
+      const generateImageButton = screen.getByRole('button', { name: /Generate Image/i });
+      await waitFor(() => expect(generateImageButton).toBeEnabled());
 
       await act(async () => {
-        fireEvent.click(generateNowButton);
+        fireEvent.click(generateImageButton);
         await new Promise((resolve) => setTimeout(resolve, 300));
       });
 
@@ -799,8 +799,8 @@ describe('Studio Page Integration Tests', () => {
 
       // Component should handle the long input without crashing
       await waitFor(() => {
-        const generateNowButton = screen.getByRole('button', { name: /Generate Image/i });
-        expect(generateNowButton).toBeEnabled();
+        const generateImageButton = screen.getByRole('button', { name: /Generate Image/i });
+        expect(generateImageButton).toBeEnabled();
       });
     });
 
@@ -866,11 +866,11 @@ describe('Studio Page Integration Tests', () => {
       const quickStartTextarea = screen.getByPlaceholderText(/Describe your ideal ad creative/i);
       fireEvent.change(quickStartTextarea, { target: { value: 'Test prompt' } });
 
-      const generateNowButton = screen.getByRole('button', { name: /Generate Image/i });
-      await waitFor(() => expect(generateNowButton).toBeEnabled());
+      const generateImageButton = screen.getByRole('button', { name: /Generate Image/i });
+      await waitFor(() => expect(generateImageButton).toBeEnabled());
 
       await act(async () => {
-        fireEvent.click(generateNowButton);
+        fireEvent.click(generateImageButton);
       });
 
       // Immediately try to select from history while generation is in progress
@@ -905,11 +905,11 @@ describe('Studio Page Integration Tests', () => {
       const quickStartTextarea = screen.getByPlaceholderText(/Describe your ideal ad creative/i);
       fireEvent.change(quickStartTextarea, { target: { value: 'Test prompt' } });
 
-      const generateNowButton = screen.getByRole('button', { name: /Generate Image/i });
-      await waitFor(() => expect(generateNowButton).toBeEnabled());
+      const generateImageButton = screen.getByRole('button', { name: /Generate Image/i });
+      await waitFor(() => expect(generateImageButton).toBeEnabled());
 
       await act(async () => {
-        fireEvent.click(generateNowButton);
+        fireEvent.click(generateImageButton);
         await new Promise((resolve) => setTimeout(resolve, 200));
       });
 

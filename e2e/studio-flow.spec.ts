@@ -47,7 +47,7 @@ test.describe('Studio Workflow', () => {
           !err.includes('404') &&
           !err.includes('401') &&
           !err.includes('net::ERR') &&
-          !err.includes('Failed to load resource')
+          !err.includes('Failed to load resource'),
       );
 
       expect(criticalErrors).toHaveLength(0);
@@ -69,7 +69,7 @@ test.describe('Studio Workflow', () => {
   });
 
   test.describe('Product Selection', () => {
-    test('products section displays available products', async ({ page }) => {
+    test('products section displays available products', async () => {
       await studioPage.waitForProductsLoaded();
 
       // Should show product cards or empty state
@@ -78,7 +78,7 @@ test.describe('Studio Workflow', () => {
       expect(productCount).toBeGreaterThanOrEqual(0);
     });
 
-    test('clicking a product selects it', async ({ page }) => {
+    test('clicking a product selects it', async () => {
       await studioPage.waitForProductsLoaded();
 
       const productCount = await studioPage.productCards.count();
@@ -89,17 +89,18 @@ test.describe('Studio Workflow', () => {
 
       // Verify selection (look for selection indicator)
       const firstProduct = studioPage.productCards.first();
-      const hasSelectionClass = await firstProduct.evaluate((el) =>
-        el.classList.contains('border-primary') ||
-        el.classList.contains('ring-primary') ||
-        el.parentElement?.classList.contains('selected')
+      const hasSelectionClass = await firstProduct.evaluate(
+        (el) =>
+          el.classList.contains('border-primary') ||
+          el.classList.contains('ring-primary') ||
+          el.parentElement?.classList.contains('selected'),
       );
 
       // Selection should be indicated visually
-      expect(hasSelectionClass || await studioPage.getSelectedProductCount() > 0).toBeTruthy();
+      expect(hasSelectionClass || (await studioPage.getSelectedProductCount()) > 0).toBeTruthy();
     });
 
-    test('can select multiple products', async ({ page }) => {
+    test('can select multiple products', async () => {
       await studioPage.waitForProductsLoaded();
 
       const productCount = await studioPage.productCards.count();
@@ -113,7 +114,7 @@ test.describe('Studio Workflow', () => {
       expect(selectedCount).toBeGreaterThanOrEqual(1);
     });
 
-    test('clicking selected product deselects it', async ({ page }) => {
+    test('clicking selected product deselects it', async () => {
       await studioPage.waitForProductsLoaded();
 
       const productCount = await studioPage.productCards.count();
@@ -131,7 +132,7 @@ test.describe('Studio Workflow', () => {
   });
 
   test.describe('Prompt Input', () => {
-    test('quick start input accepts text', async ({ page }) => {
+    test('quick start input accepts text', async () => {
       const testPrompt = 'Professional product photo on white background';
       await studioPage.enterQuickStartPrompt(testPrompt);
 
@@ -139,8 +140,8 @@ test.describe('Studio Workflow', () => {
       expect(value).toBe(testPrompt);
     });
 
-    test('generate now button is visible', async ({ page }) => {
-      await expect(studioPage.generateNowButton).toBeVisible();
+    test('generate now button is visible', async () => {
+      await expect(studioPage.generateButton).toBeVisible();
     });
   });
 
@@ -171,7 +172,10 @@ test.describe('Studio Workflow', () => {
       await studioPage.selectProduct(0);
       await page.waitForTimeout(2000);
 
-      const suggestionVisible = await studioPage.useSuggestionButton.first().isVisible().catch(() => false);
+      const suggestionVisible = await studioPage.useSuggestionButton
+        .first()
+        .isVisible()
+        .catch(() => false);
       test.skip(!suggestionVisible, 'No Idea Bank suggestions available');
 
       await studioPage.useIdeaBankSuggestion(0);
@@ -193,7 +197,7 @@ test.describe('Studio Workflow', () => {
 
       // Start generation with a prompt
       await studioPage.enterQuickStartPrompt('Professional product showcase');
-      await studioPage.generateNowButton.click();
+      await studioPage.generateButton.click();
 
       // Should show generating state or result
       await page.waitForTimeout(2000);
@@ -201,7 +205,7 @@ test.describe('Studio Workflow', () => {
       expect(['generating', 'result', 'idle']).toContain(state);
     });
 
-    test.skip('full generation completes with result', async ({ page }) => {
+    test.skip('full generation completes with result', async () => {
       // This test requires actual AI generation - skip by default
       // Enable for integration testing with real backend
       await studioPage.waitForProductsLoaded();
@@ -222,12 +226,12 @@ test.describe('Studio Workflow', () => {
   });
 
   test.describe('Result Actions', () => {
-    test.beforeEach(async ({ page }) => {
+    test.beforeEach(async () => {
       // Navigate with view=history to potentially see existing generations
       await studioPage.gotoWithParams({ view: 'history' });
     });
 
-    test('download button functionality exists', async ({ page }) => {
+    test('download button functionality exists', async () => {
       // Check if there's an existing result or history item
       const hasResult = await studioPage.generatedImage.isVisible().catch(() => false);
 
@@ -236,7 +240,7 @@ test.describe('Studio Workflow', () => {
       }
     });
 
-    test('edit button functionality exists', async ({ page }) => {
+    test('edit button functionality exists', async () => {
       const hasResult = await studioPage.generatedImage.isVisible().catch(() => false);
 
       if (hasResult) {
@@ -272,7 +276,7 @@ test.describe('Studio Workflow', () => {
   });
 
   test.describe('Platform Selection', () => {
-    test('platform selector is available', async ({ page }) => {
+    test('platform selector is available', async () => {
       const platformVisible = await studioPage.platformSelect.isVisible().catch(() => false);
       // Platform selection may be in a collapsed section
       expect(platformVisible).toBeDefined();
@@ -311,7 +315,7 @@ test.describe('Studio Workflow', () => {
       await studioPage.enterQuickStartPrompt('Test prompt');
 
       // Attempt generation - should handle error gracefully
-      await studioPage.generateNowButton.click();
+      await studioPage.generateButton.click();
       await page.waitForTimeout(3000);
 
       // Page should still be functional

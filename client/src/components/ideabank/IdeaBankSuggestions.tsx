@@ -170,7 +170,9 @@ function IdeaBankSuggestionsComponent({
             {response.suggestions.length} AI-generated {response.suggestions.length === 1 ? 'idea' : 'ideas'}
           </span>
           {onQuickGenerate && (
-            <span className="text-xs text-green-600 dark:text-green-400">Click "Generate" to start immediately</span>
+            <span className="text-xs text-green-600 dark:text-green-400">
+              Click "Generate" on any card to start immediately
+            </span>
           )}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { test, expect } from '@playwright/test';
 import { gotoWithAuth } from './helpers/ensureAuth';
 import { StudioWorkflowPage } from './pages/studio-workflow.page';
-import { StudioUXPage } from './pages/studio-ux.page';
+
 import { DESKTOP } from './helpers/viewport';
 
 /**
@@ -17,12 +16,10 @@ import { DESKTOP } from './helpers/viewport';
 
 test.describe('Studio — Keyboard Shortcuts', { tag: '@studio' }, () => {
   let studio: StudioWorkflowPage;
-  let ux: StudioUXPage;
 
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize(DESKTOP);
     studio = new StudioWorkflowPage(page);
-    ux = new StudioUXPage(page);
     await gotoWithAuth(page, '/');
   });
 
@@ -100,7 +97,7 @@ test.describe('Studio — Keyboard Shortcuts', { tag: '@studio' }, () => {
 
   test('7. Ctrl+D triggers download when result exists', async ({ page }) => {
     await studio.enterQuickStartPrompt('Download shortcut test');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
     if (completed) {
       // Ctrl+D should trigger download

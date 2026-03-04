@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { test, expect } from '@playwright/test';
 import { gotoWithAuth } from './helpers/ensureAuth';
 import { StudioWorkflowPage } from './pages/studio-workflow.page';
@@ -173,7 +172,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
   // ─── Quick Start Section ───────────────────────────────
 
   test.describe('Quick Start Section', () => {
-    test('7. quick start textarea accepts text', async ({ page }) => {
+    test('7. quick start textarea accepts text', async () => {
       const testPrompt = 'Professional product photo on marble background';
       await studio.enterQuickStartPrompt(testPrompt);
 
@@ -181,7 +180,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
       expect(value).toBe(testPrompt);
     });
 
-    test('8. Generate Now button with prompt — generation starts', async ({ page }) => {
+    test('8. Generate button with prompt — generation starts', async ({ page }) => {
       test.slow();
       await studio.waitForProductsLoaded();
       const productCount = await studio.productCards.count();
@@ -189,20 +188,20 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
 
       await studio.selectProduct(0);
       await studio.enterQuickStartPrompt('Professional showcase with dramatic lighting');
-      await studio.generateNowButton.click();
+      await studio.generateButton.click();
 
       await page.waitForTimeout(2000);
       const state = await studio.getGenerationState();
       expect(['generating', 'result', 'idle']).toContain(state);
     });
 
-    test('9. Generate Now button without prompt — disabled', async ({ page }) => {
+    test('9. Generate button without prompt — disabled', async ({ page }) => {
       // Ensure quick start prompt is empty
       await studio.quickStartInput.fill('');
       await page.waitForTimeout(200);
 
-      // The Generate Now button should be disabled when prompt is empty
-      const isDisabled = await studio.generateNowButton.isDisabled();
+      // The Generate button should be disabled when prompt is empty
+      const isDisabled = await studio.generateButton.isDisabled();
       expect(isDisabled).toBe(true);
     });
 
@@ -239,7 +238,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
       }
     });
 
-    test('12. product card — click selects (checkmark, ring)', async ({ page }) => {
+    test('12. product card — click selects (checkmark, ring)', async () => {
       await studio.waitForProductsLoaded();
       const productCount = await studio.productCards.count();
       test.skip(productCount === 0, 'No products available');
@@ -257,7 +256,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
       expect(hasSelectionRing || hasCheckmark || (await studio.getSelectedProductCount()) > 0).toBeTruthy();
     });
 
-    test('13. product card (selected) — click deselects', async ({ page }) => {
+    test('13. product card (selected) — click deselects', async () => {
       await studio.waitForProductsLoaded();
       const productCount = await studio.productCards.count();
       test.skip(productCount === 0, 'No products available');
@@ -534,7 +533,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
 
       await studio.selectProduct(0);
       await studio.enterQuickStartPrompt('Modern product photography with clean lines');
-      await studio.generateNowButton.click();
+      await studio.generateButton.click();
 
       await page.waitForTimeout(3000);
       const state = await studio.getGenerationState();
@@ -549,7 +548,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
 
       await studio.selectProduct(0);
       await studio.enterQuickStartPrompt('Quick test generation');
-      await studio.generateNowButton.click();
+      await studio.generateButton.click();
 
       // Wait for generating state
       await page.waitForTimeout(1000);
@@ -568,7 +567,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
       }
     });
 
-    test('30. download button on result — exists when result visible', async ({ page }) => {
+    test('30. download button on result — exists when result visible', async () => {
       // Check via history to see if we have a prior result
       const hasResult = await studio.generatedImage.isVisible().catch(() => false);
       if (hasResult) {
@@ -964,7 +963,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
 
       await studio.selectProduct(0);
       await studio.enterQuickStartPrompt('Error test prompt');
-      await studio.generateNowButton.click();
+      await studio.generateButton.click();
 
       await page.waitForTimeout(5000);
 

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { test, expect } from '@playwright/test';
 import { gotoWithAuth } from './helpers/ensureAuth';
 import { StudioWorkflowPage } from './pages/studio-workflow.page';
@@ -23,16 +22,16 @@ test.describe('Studio — Generation Flow', { tag: '@studio' }, () => {
 
   // ─── Generate Button States ───────────────────────────
 
-  test('1. Generate Now button disabled with empty prompt', async ({ page }) => {
-    await expect(studio.generateNowButton).toBeDisabled();
+  test('1. Generate button disabled with empty prompt', async () => {
+    await expect(studio.generateButton).toBeDisabled();
   });
 
-  test('2. Generate Now button enabled with prompt text', async ({ page }) => {
+  test('2. Generate button enabled with prompt text', async () => {
     await studio.enterQuickStartPrompt('A beautiful sunset product shot');
-    await expect(studio.generateNowButton).toBeEnabled();
+    await expect(studio.generateButton).toBeEnabled();
   });
 
-  test('3. Generate Image button exists (for full workflow)', async ({ page }) => {
+  test('3. Generate Image button exists (for full workflow)', async () => {
     // Generate Image is the alternative button after selecting products
     const genImageBtn = studio.generateImageButton;
     const count = await genImageBtn.count();
@@ -40,9 +39,9 @@ test.describe('Studio — Generation Flow', { tag: '@studio' }, () => {
     expect(count).toBeGreaterThanOrEqual(0);
   });
 
-  test('4. clicking Generate Now triggers generation state', async ({ page }) => {
+  test('4. clicking Generate triggers generation state', async ({ page }) => {
     await studio.enterQuickStartPrompt('Test product lifestyle photo');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
     // Should transition to generating state — look for generating indicator or state change
     await page.waitForTimeout(1000);
     const state = await studio.getGenerationState();
@@ -52,16 +51,16 @@ test.describe('Studio — Generation Flow', { tag: '@studio' }, () => {
 
   // ─── Generating State ─────────────────────────────────
 
-  test('5. generating indicator appears during generation', async ({ page }) => {
+  test('5. generating indicator appears during generation', async () => {
     await studio.enterQuickStartPrompt('Professional product photo');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
     // Check for generating indicator within a short window
     await expect(studio.generatingIndicator).toBeVisible({ timeout: 5000 });
   });
 
   test('6. progress bar may appear during generation', async ({ page }) => {
     await studio.enterQuickStartPrompt('Elegant product display');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
     await page.waitForTimeout(1000);
     const progressBar = studio.progressBar;
     const count = await progressBar.count();
@@ -71,7 +70,7 @@ test.describe('Studio — Generation Flow', { tag: '@studio' }, () => {
 
   test('7. page does not crash during generation attempt', async ({ page }) => {
     await studio.enterQuickStartPrompt('Quick test generation');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
     await page.waitForTimeout(2000);
     // Page should still be functional
     await expect(page.locator('body')).toBeVisible();
@@ -79,28 +78,28 @@ test.describe('Studio — Generation Flow', { tag: '@studio' }, () => {
 
   // ─── Result View ──────────────────────────────────────
 
-  test('8. result view contains Start New button after generation', async ({ page }) => {
+  test('8. result view contains Start New button after generation', async () => {
     // Navigate directly to a state with a result — use the page object
     await studio.enterQuickStartPrompt('Product showcase');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
     if (completed) {
       await expect(studio.startNewButton).toBeVisible({ timeout: 5000 });
     }
   });
 
-  test('9. result view contains Download button after generation', async ({ page }) => {
+  test('9. result view contains Download button after generation', async () => {
     await studio.enterQuickStartPrompt('Marketing banner');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
     if (completed) {
       await expect(studio.downloadButton).toBeVisible({ timeout: 5000 });
     }
   });
 
-  test('10. generated image is displayed in result view', async ({ page }) => {
+  test('10. generated image is displayed in result view', async () => {
     await studio.enterQuickStartPrompt('Product ad creative');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
     if (completed) {
       const imgUrl = await studio.getGeneratedImageUrl();
@@ -110,7 +109,7 @@ test.describe('Studio — Generation Flow', { tag: '@studio' }, () => {
 
   test('11. Start New button resets to composer view', async ({ page }) => {
     await studio.enterQuickStartPrompt('Simple product shot');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
     if (completed) {
       await studio.startNew();
@@ -122,7 +121,7 @@ test.describe('Studio — Generation Flow', { tag: '@studio' }, () => {
 
   test('12. View Details link navigates to generation detail', async ({ page }) => {
     await studio.enterQuickStartPrompt('Detail test');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
     if (completed) {
       const viewDetailsBtn = page.getByRole('button', { name: /View Details/i });
@@ -134,7 +133,7 @@ test.describe('Studio — Generation Flow', { tag: '@studio' }, () => {
 
   test('13. generated image container supports zoom interaction', async ({ page }) => {
     await studio.enterQuickStartPrompt('Zoom test product');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
     if (completed) {
       // The image container has touch-none select-none classes for zoom
@@ -145,7 +144,7 @@ test.describe('Studio — Generation Flow', { tag: '@studio' }, () => {
 
   test('14. double-click on image resets zoom', async ({ page }) => {
     await studio.enterQuickStartPrompt('Double click test');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
     if (completed) {
       const resultImg = page.locator('#result img').first();
@@ -161,7 +160,7 @@ test.describe('Studio — Generation Flow', { tag: '@studio' }, () => {
 
   test('15. Save to Catalog dialog can be opened', async ({ page }) => {
     await studio.enterQuickStartPrompt('Save test');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
     if (completed) {
       const saveBtn = page.getByRole('button', { name: /Save/i }).first();

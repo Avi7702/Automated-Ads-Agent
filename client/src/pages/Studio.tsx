@@ -1,14 +1,13 @@
 /**
  * Studio - Unified creative workspace
  *
- * Includes three workspace modes:
- * - Agent Mode: full-screen assistant
- * - Studio Mode: composer-first with inline assistant
- * - Split View: assistant + composer side by side
+ * Includes two workspace modes:
+ * - Agent Mode: full-screen assistant chat workspace
+ * - Studio Mode: manual composer-first workflow
  */
 
 import { AnimatePresence, motion } from 'motion/react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'wouter';
 import { cn } from '@/lib/utils';
 import { MOTION, useReducedMotion, motionSafe } from '@/lib/motion';
@@ -20,7 +19,6 @@ import { InspectorPanel } from '@/components/studio/InspectorPanel';
 import { IdeaBankBar } from '@/components/studio/IdeaBankBar';
 import { HistoryPanel } from '@/components/studio/HistoryPanel';
 import { AgentChatPanel } from '@/components/studio/AgentChat';
-import { AgentModePanel } from '@/components/studio/AgentMode';
 import { SaveToCatalogDialog } from '@/components/SaveToCatalogDialog';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Button } from '@/components/ui/button';
@@ -815,45 +813,9 @@ function StudioContent() {
     }
   }, [ideaBankBridgeState, ideaBankContext, queueIdeaBankMessageToAgent]);
 
-  const handleSendIdeasToAgent = useCallback(() => {
-    if (!ideaBankContext) {
-      setIdeaBankBridgeState('waiting');
-      return;
-    }
-
-    if (ideaBankContext.status === 'loading') {
-      setIdeaBankBridgeState('waiting');
-      return;
-    }
-
-    if (ideaBankContext.status === 'error') {
-      setIdeaBankBridgeState('error');
-      return;
-    }
-
-    if (ideaBankContext.status === 'ready' && ideaBankContext.suggestionCount > 0) {
-      queueIdeaBankMessageToAgent(ideaBankContext);
-      return;
-    }
-
-    setIdeaBankBridgeState('idle');
-  }, [ideaBankContext, queueIdeaBankMessageToAgent]);
-
   const handleExternalMessageConsumed = useCallback((id: string) => {
     setAgentExternalMessage((prev) => (prev?.id === id ? null : prev));
   }, []);
-
-  const workspaceHeadline = useMemo(() => {
-    if (workspaceMode === 'agent') return 'Plan, ask, and execute with the assistant';
-    return 'Create stunning product visuals';
-  }, [workspaceMode]);
-
-  const workspaceSubheading = useMemo(() => {
-    if (workspaceMode === 'agent') {
-      return 'Use one focused chat workspace for strategy, content planning, and generation commands.';
-    }
-    return 'Add products and references, and generate professional marketing visuals in minutes.';
-  }, [workspaceMode]);
 
   const renderStudioCanvas = () => (
     <>
@@ -868,10 +830,7 @@ function StudioContent() {
             {orch.state === 'idle' && (
               <ComposerView
                 key="composer"
-                ideaBankContext={ideaBankContext}
-                ideaBankBridgeState={ideaBankBridgeState}
                 onIdeaBankContextChange={handleIdeaBankContextChange}
-                onSendIdeasToAgent={handleSendIdeasToAgent}
                 handlePromptChange={orch.handlePromptChange}
                 handleSelectSuggestion={orch.handleSelectSuggestion}
                 handleGenerate={orch.handleGenerate}
@@ -966,20 +925,24 @@ function StudioContent() {
           initial="hidden"
           animate="visible"
           variants={motionSafe(MOTION.presets.staggerChildren, reduced)}
-          className="text-center space-y-4 py-12 hero-glow"
+          className="text-center space-y-4 py-6"
         >
-          <motion.h1
-            variants={motionSafe(MOTION.presets.fadeUp, reduced)}
-            className="font-display text-4xl md:text-5xl font-bold tracking-tight bg-gradient-to-b from-zinc-900 to-zinc-900/60 dark:from-white dark:to-white/60 bg-clip-text text-transparent"
-          >
-            {workspaceHeadline}
-          </motion.h1>
-          <motion.p
-            variants={motionSafe(MOTION.presets.fadeUp, reduced)}
-            className="text-lg text-muted-foreground max-w-2xl mx-auto"
-          >
-            {workspaceSubheading}
-          </motion.p>
+          {workspaceMode === 'studio' && (
+            <>
+              <motion.h1
+                variants={motionSafe(MOTION.presets.fadeUp, reduced)}
+                className="font-display text-4xl md:text-5xl font-bold tracking-tight bg-gradient-to-b from-zinc-900 to-zinc-900/60 dark:from-white dark:to-white/60 bg-clip-text text-transparent"
+              >
+                Create stunning product visuals
+              </motion.h1>
+              <motion.p
+                variants={motionSafe(MOTION.presets.fadeUp, reduced)}
+                className="text-lg text-muted-foreground max-w-2xl mx-auto"
+              >
+                Add products and references, and generate professional marketing visuals in minutes.
+              </motion.p>
+            </>
+          )}
 
           <motion.div variants={motionSafe(MOTION.presets.fadeUp, reduced)} className="flex justify-center pt-1">
             <div className="inline-flex gap-3">
@@ -1008,25 +971,19 @@ function StudioContent() {
         </motion.div>
 
         {workspaceMode === 'agent' && (
-          <div className="mx-auto max-w-5xl grid gap-8 xl:grid-cols-[1fr_380px]">
-            <div className="min-w-0 order-2 xl:order-1">
-              <AgentModePanel />
-            </div>
-            <div className="min-w-0 order-1 xl:order-2">
-              <div className="xl:sticky xl:top-24">
-                <AgentChatPanel
-                  products={orch.selectedProducts}
-                  title="Ad Assistant"
-                  forceExpanded
-                  showCollapseToggle={false}
-                  bodyMaxHeightClassName="max-h-[60vh] xl:max-h-[calc(100vh-320px)]"
-                  ideaBankContext={ideaBankContext}
-                  ideaBankBridgeState={ideaBankBridgeState}
-                  externalMessage={agentExternalMessage}
-                  onExternalMessageConsumed={handleExternalMessageConsumed}
-                />
-              </div>
-            </div>
+          <div className="mx-auto w-full max-w-6xl">
+            <AgentChatPanel
+              products={orch.selectedProducts}
+              title="Ad Assistant"
+              forceExpanded
+              showCollapseToggle={false}
+              className="mb-0"
+              bodyMaxHeightClassName="h-[58vh] min-h-[420px] lg:h-[68vh] lg:min-h-[560px]"
+              ideaBankContext={ideaBankContext}
+              ideaBankBridgeState={ideaBankBridgeState}
+              externalMessage={agentExternalMessage}
+              onExternalMessageConsumed={handleExternalMessageConsumed}
+            />
           </div>
         )}
 

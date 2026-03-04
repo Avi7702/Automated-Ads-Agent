@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { test, expect } from '@playwright/test';
 import { gotoWithAuth } from './helpers/ensureAuth';
 import { StudioWorkflowPage } from './pages/studio-workflow.page';
@@ -25,7 +24,7 @@ test.describe('Studio — Canvas Editor', { tag: '@studio' }, () => {
 
   test('1. AI Canvas button exists in result view', async ({ page }) => {
     await studio.enterQuickStartPrompt('Canvas editor test');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
     if (completed) {
       // AI Canvas button uses Wand2 icon
@@ -36,7 +35,7 @@ test.describe('Studio — Canvas Editor', { tag: '@studio' }, () => {
 
   test('2. clicking AI Canvas button opens the editor overlay', async ({ page }) => {
     await studio.enterQuickStartPrompt('Open canvas test');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
     if (completed) {
       const canvasBtn = page.getByRole('button', { name: /AI Canvas|Canvas/i }).first();
@@ -51,7 +50,7 @@ test.describe('Studio — Canvas Editor', { tag: '@studio' }, () => {
 
   test('3. canvas editor has toolbar buttons', async ({ page }) => {
     await studio.enterQuickStartPrompt('Toolbar test');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
     if (completed) {
       const canvasBtn = page.getByRole('button', { name: /AI Canvas|Canvas/i }).first();
@@ -68,7 +67,7 @@ test.describe('Studio — Canvas Editor', { tag: '@studio' }, () => {
 
   test('4. undo and redo buttons exist in canvas editor', async ({ page }) => {
     await studio.enterQuickStartPrompt('Undo redo test');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
     if (completed) {
       const canvasBtn = page.getByRole('button', { name: /AI Canvas|Canvas/i }).first();
@@ -87,7 +86,7 @@ test.describe('Studio — Canvas Editor', { tag: '@studio' }, () => {
 
   test('5. close button closes the canvas editor', async ({ page }) => {
     await studio.enterQuickStartPrompt('Close canvas test');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
     if (completed) {
       const canvasBtn = page.getByRole('button', { name: /AI Canvas|Canvas/i }).first();
@@ -108,7 +107,7 @@ test.describe('Studio — Canvas Editor', { tag: '@studio' }, () => {
 
   test('6. canvas editor does not crash the page', async ({ page }) => {
     await studio.enterQuickStartPrompt('Stability test');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
     if (completed) {
       const canvasBtn = page.getByRole('button', { name: /AI Canvas|Canvas/i }).first();
