@@ -100,7 +100,7 @@ export const productRelationshipsRouter: RouterFactory = (ctx: RouterContext): R
 
 export const relationshipsRAGRouter: RouterFactory = (ctx: RouterContext): Router => {
   const router = createRouter();
-  const { logger } = ctx.services;
+  const { storage, logger } = ctx.services;
   const { requireAuth } = ctx.middleware;
 
   /**
@@ -117,8 +117,21 @@ export const relationshipsRAGRouter: RouterFactory = (ctx: RouterContext): Route
           return res.status(400).json({ error: 'sourceProductId and targetProductId are required' });
         }
 
+        // Fetch full Product objects — the service expects Product, not string IDs
+        const [sourceProduct, targetProduct] = await Promise.all([
+          storage.getProductById(sourceProductId),
+          storage.getProductById(targetProductId),
+        ]);
+
+        if (!sourceProduct) {
+          return res.status(404).json({ error: `Source product not found: ${sourceProductId}` });
+        }
+        if (!targetProduct) {
+          return res.status(404).json({ error: `Target product not found: ${targetProductId}` });
+        }
+
         const { analyzeRelationshipType } = await import('../services/relationshipDiscoveryRAG');
-        const analysis = await analyzeRelationshipType(sourceProductId, targetProductId);
+        const analysis = await analyzeRelationshipType(sourceProduct, targetProduct);
         res.json(analysis);
       } catch (err: unknown) {
         logger.error({ module: 'RelationshipRAG', err }, 'Error analyzing relationship');
@@ -147,7 +160,8 @@ export const relationshipsRAGRouter: RouterFactory = (ctx: RouterContext): Route
 
         const { batchSuggestRelationships } = await import('../services/relationshipDiscoveryRAG');
         const suggestions = await batchSuggestRelationships(productIds, userId);
-        res.json(suggestions);
+        // Convert Map to plain object for JSON serialization (Map serializes to {})
+        res.json(Object.fromEntries(suggestions));
       } catch (err: unknown) {
         logger.error({ module: 'RelationshipRAG', err }, 'Error batch suggesting');
         res.status(500).json({ error: 'Failed to batch suggest relationships' });
