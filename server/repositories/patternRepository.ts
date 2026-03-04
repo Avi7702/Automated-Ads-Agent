@@ -29,6 +29,8 @@ export async function getLearnedPatterns(
     industry?: string;
     isActive?: boolean;
   },
+  limit: number = 50,
+  offset: number = 0,
 ): Promise<LearnedAdPattern[]> {
   const conditions = [eq(learnedAdPatterns.userId, userId)];
 
@@ -49,7 +51,9 @@ export async function getLearnedPatterns(
     .select()
     .from(learnedAdPatterns)
     .where(and(...conditions))
-    .orderBy(desc(learnedAdPatterns.createdAt));
+    .orderBy(desc(learnedAdPatterns.createdAt))
+    .limit(limit)
+    .offset(offset);
 }
 
 export async function getLearnedPatternById(id: string): Promise<LearnedAdPattern | undefined> {
@@ -144,7 +148,8 @@ export async function getExpiredUploads(): Promise<AdAnalysisUpload[]> {
   return await db
     .select()
     .from(adAnalysisUploads)
-    .where(and(lte(adAnalysisUploads.expiresAt, new Date()), sql`${adAnalysisUploads.status} != 'expired'`));
+    .where(and(lte(adAnalysisUploads.expiresAt, new Date()), sql`${adAnalysisUploads.status} != 'expired'`))
+    .limit(50);
 }
 
 export async function deleteUpload(id: string): Promise<void> {
@@ -162,12 +167,18 @@ export async function createApplicationHistory(
   return result!;
 }
 
-export async function getPatternApplicationHistory(patternId: string): Promise<PatternApplicationHistory[]> {
+export async function getPatternApplicationHistory(
+  patternId: string,
+  limit: number = 50,
+  offset: number = 0,
+): Promise<PatternApplicationHistory[]> {
   return await db
     .select()
     .from(patternApplicationHistory)
     .where(eq(patternApplicationHistory.patternId, patternId))
-    .orderBy(desc(patternApplicationHistory.createdAt));
+    .orderBy(desc(patternApplicationHistory.createdAt))
+    .limit(limit)
+    .offset(offset);
 }
 
 export async function updateApplicationFeedback(

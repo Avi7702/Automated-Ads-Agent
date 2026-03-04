@@ -882,9 +882,13 @@ export const transformRouter: RouterFactory = (ctx: RouterContext): Router => {
         }> = [];
 
         if (parsedProductIds.length > 0 && imageInputs.length < 6) {
+          // Batch-fetch all products in one query instead of N+1 individual queries
+          const fetchedProducts = await storage.getProductsByIds(parsedProductIds);
+          const productMap = new Map(fetchedProducts.map((p) => [String(p.id), p]));
+
           for (const productId of parsedProductIds) {
             if (imageInputs.length >= 6) break;
-            const product = await storage.getProductById(productId);
+            const product = productMap.get(productId);
             if (!product) continue;
 
             recipeProductsFromIds.push({

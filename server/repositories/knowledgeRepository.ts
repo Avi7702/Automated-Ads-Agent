@@ -28,15 +28,25 @@ export async function getInstallationScenarioById(id: string): Promise<Installat
   return scenario;
 }
 
-export async function getInstallationScenariosByUser(userId: string): Promise<InstallationScenario[]> {
+export async function getInstallationScenariosByUser(
+  userId: string,
+  limit: number = 100,
+  offset: number = 0,
+): Promise<InstallationScenario[]> {
   return await db
     .select()
     .from(installationScenarios)
     .where(eq(installationScenarios.userId, userId))
-    .orderBy(desc(installationScenarios.createdAt));
+    .orderBy(desc(installationScenarios.createdAt))
+    .limit(limit)
+    .offset(offset);
 }
 
-export async function getInstallationScenariosForProducts(productIds: string[]): Promise<InstallationScenario[]> {
+export async function getInstallationScenariosForProducts(
+  productIds: string[],
+  limit: number = 100,
+  offset: number = 0,
+): Promise<InstallationScenario[]> {
   if (productIds.length === 0) return [];
 
   return await db
@@ -54,15 +64,23 @@ export async function getInstallationScenariosForProducts(productIds: string[]):
         ),
       ),
     )
-    .orderBy(desc(installationScenarios.createdAt));
+    .orderBy(desc(installationScenarios.createdAt))
+    .limit(limit)
+    .offset(offset);
 }
 
-export async function getScenariosByRoomType(roomType: string): Promise<InstallationScenario[]> {
+export async function getScenariosByRoomType(
+  roomType: string,
+  limit: number = 100,
+  offset: number = 0,
+): Promise<InstallationScenario[]> {
   return await db
     .select()
     .from(installationScenarios)
     .where(and(eq(installationScenarios.isActive, true), arrayContains(installationScenarios.roomTypes, [roomType])))
-    .orderBy(desc(installationScenarios.createdAt));
+    .orderBy(desc(installationScenarios.createdAt))
+    .limit(limit)
+    .offset(offset);
 }
 
 export async function updateInstallationScenario(
@@ -92,7 +110,11 @@ export async function createProductRelationship(
   return relationship!;
 }
 
-export async function getProductRelationships(productIds: string[]): Promise<ProductRelationship[]> {
+export async function getProductRelationships(
+  productIds: string[],
+  limit: number = 100,
+  offset: number = 0,
+): Promise<ProductRelationship[]> {
   if (productIds.length === 0) return [];
   return await db
     .select()
@@ -103,12 +125,16 @@ export async function getProductRelationships(productIds: string[]): Promise<Pro
         inArray(productRelationships.targetProductId, productIds),
       ),
     )
-    .orderBy(productRelationships.displayOrder);
+    .orderBy(productRelationships.displayOrder)
+    .limit(limit)
+    .offset(offset);
 }
 
 export async function getProductRelationshipsByType(
   productId: string,
   relationshipType: string,
+  limit: number = 100,
+  offset: number = 0,
 ): Promise<ProductRelationship[]> {
   return await db
     .select()
@@ -119,7 +145,9 @@ export async function getProductRelationshipsByType(
         eq(productRelationships.relationshipType, relationshipType),
       ),
     )
-    .orderBy(productRelationships.displayOrder);
+    .orderBy(productRelationships.displayOrder)
+    .limit(limit)
+    .offset(offset);
 }
 
 export async function deleteProductRelationship(id: string): Promise<void> {
@@ -149,7 +177,12 @@ export async function getBrandImagesByUser(
     .offset(offset);
 }
 
-export async function getBrandImagesForProducts(productIds: string[], userId: string): Promise<BrandImage[]> {
+export async function getBrandImagesForProducts(
+  productIds: string[],
+  userId: string,
+  limit: number = 100,
+  offset: number = 0,
+): Promise<BrandImage[]> {
   if (productIds.length === 0) return [];
 
   // Refactored to perform database-side filtering using PostgreSQL array overlap operator (&&)
@@ -166,15 +199,24 @@ export async function getBrandImagesForProducts(productIds: string[], userId: st
         )}]::text[]`,
       ),
     )
-    .orderBy(desc(brandImages.createdAt));
+    .orderBy(desc(brandImages.createdAt))
+    .limit(limit)
+    .offset(offset);
 }
 
-export async function getBrandImagesByCategory(userId: string, category: string): Promise<BrandImage[]> {
+export async function getBrandImagesByCategory(
+  userId: string,
+  category: string,
+  limit: number = 100,
+  offset: number = 0,
+): Promise<BrandImage[]> {
   return await db
     .select()
     .from(brandImages)
     .where(and(eq(brandImages.userId, userId), eq(brandImages.category, category)))
-    .orderBy(desc(brandImages.createdAt));
+    .orderBy(desc(brandImages.createdAt))
+    .limit(limit)
+    .offset(offset);
 }
 
 export async function updateBrandImage(id: string, updates: Partial<InsertBrandImage>): Promise<BrandImage> {
