@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 // @vitest-environment jsdom
 /**
  * IdeaBankPanel Component Tests
@@ -497,8 +496,10 @@ describe('IdeaBankPanel - User Interactions', () => {
       expect(screen.getByText(/AI-generated/i)).toBeInTheDocument();
     });
 
-    // The selected suggestion should show "Selected" button text
-    expect(screen.getByText('Selected')).toBeInTheDocument();
+    // The selected suggestion card should have selected styling (border-primary ring-2)
+    const generateBtn = screen.getByTestId('button-generate-suggestion-sug-1');
+    const selectedCard = generateBtn.closest('[class*="border-primary"]');
+    expect(selectedCard).toBeInTheDocument();
   });
 
   it('disables generate button when isGenerating is true', async () => {

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { test, expect } from '@playwright/test';
 import { gotoWithAuth } from './helpers/ensureAuth';
 import { StudioWorkflowPage } from './pages/studio-workflow.page';
