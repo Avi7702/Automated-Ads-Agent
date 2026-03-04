@@ -86,9 +86,7 @@ export function useApprovalQueue() {
     queryFn: async () => {
       const res = await fetch('/api/social/accounts', { credentials: 'include' });
       if (!res.ok) return [];
-      const data: { accounts?: { id: string; platform: string; accountName: string; isActive: boolean }[] } =
-        await res.json();
-      return data.accounts ?? [];
+      return res.json();
     },
     staleTime: 60_000,
   });
