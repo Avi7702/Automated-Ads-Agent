@@ -454,9 +454,9 @@ describe('IdeaBankPanel - User Interactions', () => {
       expect(screen.getByText(/AI-generated/i)).toBeInTheDocument();
     });
 
-    // Click "Use This Idea" button on first suggestion
-    const useButtons = screen.getAllByText('Use This Idea');
-    fireEvent.click(useButtons[0] as HTMLElement);
+    // Click the first suggestion card to select the idea (card click calls onUse)
+    const suggestionCards = screen.getAllByText(/Professional product showcase/i);
+    fireEvent.click(suggestionCards[0] as HTMLElement);
 
     expect(onSelectPrompt).toHaveBeenCalledWith(
       expect.any(String), // prompt
@@ -481,8 +481,8 @@ describe('IdeaBankPanel - User Interactions', () => {
       expect(screen.getByText(/AI-generated/i)).toBeInTheDocument();
     });
 
-    // Click "Generate Now" button
-    const generateButtons = screen.getAllByText('Generate Now');
+    // Click "Generate" button
+    const generateButtons = screen.getAllByText('Generate');
     fireEvent.click(generateButtons[0] as HTMLElement);
 
     expect(onQuickGenerate).toHaveBeenCalledWith(expect.any(String));
@@ -594,9 +594,9 @@ describe('IdeaBankPanel - Platform Recommendations', () => {
       expect(screen.getByText('linkedin')).toBeInTheDocument();
     });
 
-    // Click "Use This Idea" button
-    const useButton = screen.getByText('Use This Idea');
-    fireEvent.click(useButton);
+    // Click the suggestion card to select the idea (card click calls onUse)
+    const suggestionCard = screen.getByText(/Professional product showcase/i);
+    fireEvent.click(suggestionCard);
 
     expect(onSetPlatform).toHaveBeenCalledWith('linkedin');
   });
@@ -621,9 +621,9 @@ describe('IdeaBankPanel - Platform Recommendations', () => {
       expect(screen.getByText('4:5')).toBeInTheDocument();
     });
 
-    // Click "Use This Idea" button
-    const useButton = screen.getByText('Use This Idea');
-    fireEvent.click(useButton);
+    // Click the suggestion card to select the idea (card click calls onUse)
+    const suggestionCard = screen.getByText(/Professional product showcase/i);
+    fireEvent.click(suggestionCard);
 
     expect(onSetAspectRatio).toHaveBeenCalledWith('4:5');
   });

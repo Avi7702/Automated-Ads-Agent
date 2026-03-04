@@ -32,20 +32,20 @@ test.describe('Studio — Composer View', { tag: '@studio' }, () => {
     await expect(quickStart).toHaveValue('A professional product shot on white background');
   });
 
-  test('3. Generate Now button is visible', async ({ page }) => {
-    await expect(studio.generateNowButton).toBeVisible({ timeout: 10000 });
+  test('3. Generate button is visible', async ({ page }) => {
+    await expect(studio.generateButton).toBeVisible({ timeout: 10000 });
   });
 
-  test('4. Generate Now button is disabled when prompt is empty', async ({ page }) => {
+  test('4. Generate button is disabled when prompt is empty', async ({ page }) => {
     const quickStart = page.locator('textarea[placeholder*="Describe what you want to create"]');
     await quickStart.fill('');
-    await expect(studio.generateNowButton).toBeDisabled();
+    await expect(studio.generateButton).toBeDisabled();
   });
 
-  test('5. Generate Now button becomes enabled when prompt is entered', async ({ page }) => {
+  test('5. Generate button becomes enabled when prompt is entered', async ({ page }) => {
     const quickStart = page.locator('textarea[placeholder*="Describe what you want to create"]');
     await quickStart.fill('Product lifestyle photo');
-    await expect(studio.generateNowButton).toBeEnabled();
+    await expect(studio.generateButton).toBeEnabled();
   });
 
   // ─── Path Selection ───────────────────────────────────

@@ -30,7 +30,7 @@ function filterCriticalErrors(errors: string[]): string[] {
       !err.includes('net::ERR') &&
       !err.includes('Failed to load resource') &&
       !err.includes('ResizeObserver') &&
-      !err.includes('hydrat')
+      !err.includes('hydrat'),
   );
 }
 
@@ -160,7 +160,10 @@ test.describe('GROUP 1: Core Generation Paths', () => {
     test.skip(templateCount === 0, 'No templates available');
 
     // "Template Inspiration" link opens a browsing dialog for performing templates
-    const inspirationLink = page.locator('button, a').filter({ hasText: /Template Inspiration|Inspiration/i }).first();
+    const inspirationLink = page
+      .locator('button, a')
+      .filter({ hasText: /Template Inspiration|Inspiration/i })
+      .first();
     if (await inspirationLink.isVisible().catch(() => false)) {
       await inspirationLink.click();
       await page.waitForTimeout(500);
@@ -197,8 +200,13 @@ test.describe('GROUP 1: Core Generation Paths', () => {
     await studio.uploadFile(TEST_UPLOAD);
     await studio.enterPrompt('Enhance this product image with professional studio lighting');
 
-    const genBtn = studio.generateImageButton.or(studio.generateNowButton);
-    if (await genBtn.first().isEnabled().catch(() => false)) {
+    const genBtn = studio.generateImageButton.or(studio.generateButton);
+    if (
+      await genBtn
+        .first()
+        .isEnabled()
+        .catch(() => false)
+    ) {
       await genBtn.first().click();
       const success = await studio.waitForGenerationComplete();
 
@@ -229,7 +237,6 @@ test.describe('GROUP 1: Core Generation Paths', () => {
   });
 });
 
-
 // ═══════════════════════════════════════════════════════════
 // GROUP 2: Idea Bank Flows
 // ═══════════════════════════════════════════════════════════
@@ -249,7 +256,8 @@ test.describe('GROUP 2: Idea Bank Flows', () => {
     await studio.selectProduct(0);
 
     // Wait for IdeaBankBar to load chips (may take time for API)
-    const chipVisible = await studio.ideaBankBarChips.first()
+    const chipVisible = await studio.ideaBankBarChips
+      .first()
       .waitFor({ state: 'visible', timeout: 20000 })
       .then(() => true)
       .catch(() => false);
@@ -278,7 +286,8 @@ test.describe('GROUP 2: Idea Bank Flows', () => {
     await studio.selectProduct(0);
 
     // Wait for chips
-    const chipVisible = await studio.ideaBankBarChips.first()
+    const chipVisible = await studio.ideaBankBarChips
+      .first()
       .waitFor({ state: 'visible', timeout: 20000 })
       .then(() => true)
       .catch(() => false);
@@ -303,7 +312,8 @@ test.describe('GROUP 2: Idea Bank Flows', () => {
     await studio.selectProduct(0);
 
     // Wait for initial load
-    await studio.ideaBankBarChips.first()
+    await studio.ideaBankBarChips
+      .first()
       .waitFor({ state: 'visible', timeout: 20000 })
       .catch(() => {});
 
@@ -330,7 +340,6 @@ test.describe('GROUP 2: Idea Bank Flows', () => {
     expect(chipCount).toBe(0);
   });
 });
-
 
 // ═══════════════════════════════════════════════════════════
 // GROUP 3: Post-Generation Actions
@@ -379,7 +388,10 @@ test.describe('GROUP 3: Post-Generation Actions', () => {
     // Should start editing (loading or new generation)
     await page.waitForTimeout(2000);
     // The edit may trigger a new generation or inline update
-    const spinning = await studio.loadingSpinner.first().isVisible().catch(() => false);
+    const spinning = await studio.loadingSpinner
+      .first()
+      .isVisible()
+      .catch(() => false);
     const stillHasImage = await studio.generatedImage.isVisible().catch(() => false);
     expect(spinning || stillHasImage).toBeTruthy();
   });
@@ -480,7 +492,6 @@ test.describe('GROUP 3: Post-Generation Actions', () => {
   });
 });
 
-
 // ═══════════════════════════════════════════════════════════
 // GROUP 4: InspectorPanel Tabs
 // ═══════════════════════════════════════════════════════════
@@ -516,7 +527,10 @@ test.describe('GROUP 4: InspectorPanel Tabs', () => {
       await page.waitForTimeout(5000);
 
       // Textarea should have content
-      const textarea = page.locator('textarea').filter({ has: page.locator('..') }).last();
+      const textarea = page
+        .locator('textarea')
+        .filter({ has: page.locator('..') })
+        .last();
       const value = await textarea.inputValue().catch(() => '');
       // Copy may or may not appear depending on API availability
       expect(value !== undefined).toBeTruthy();
@@ -550,7 +564,9 @@ test.describe('GROUP 4: InspectorPanel Tabs', () => {
 
           // Platform selector should appear
           const platformSelector = page.locator('[data-testid="select-platform"]');
-          await expect(platformSelector).toBeVisible({ timeout: 5000 }).catch(() => {});
+          await expect(platformSelector)
+            .toBeVisible({ timeout: 5000 })
+            .catch(() => {});
         }
       }
     }
@@ -572,7 +588,10 @@ test.describe('GROUP 4: InspectorPanel Tabs', () => {
       await input.fill('What makes this image effective for marketing?');
 
       // Click send
-      const sendBtn = page.getByRole('button').filter({ has: page.locator('svg') }).last();
+      const sendBtn = page
+        .getByRole('button')
+        .filter({ has: page.locator('svg') })
+        .last();
       await sendBtn.click();
 
       // Wait for response (may take a while)
@@ -604,7 +623,9 @@ test.describe('GROUP 4: InspectorPanel Tabs', () => {
     // Metadata should be visible
     // Check for prompt text
     const promptLabel = page.locator('text=/Prompt/i');
-    await expect(promptLabel.first()).toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(promptLabel.first())
+      .toBeVisible({ timeout: 5000 })
+      .catch(() => {});
 
     // Check for metadata badges (platform, aspect ratio, resolution)
     const badges = studio.detailsMetadataBadges;
@@ -629,7 +650,6 @@ test.describe('GROUP 4: InspectorPanel Tabs', () => {
     expect(previewVisible !== undefined).toBeTruthy();
   });
 });
-
 
 // ═══════════════════════════════════════════════════════════
 // GROUP 5: Platform & Settings Variations
@@ -724,7 +744,6 @@ test.describe('GROUP 5: Platform & Settings Variations', () => {
     expect(visible !== undefined).toBeTruthy();
   });
 });
-
 
 // ═══════════════════════════════════════════════════════════
 // GROUP 6: Error Handling & Edge Cases

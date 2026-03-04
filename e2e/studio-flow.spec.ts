@@ -47,7 +47,7 @@ test.describe('Studio Workflow', () => {
           !err.includes('404') &&
           !err.includes('401') &&
           !err.includes('net::ERR') &&
-          !err.includes('Failed to load resource')
+          !err.includes('Failed to load resource'),
       );
 
       expect(criticalErrors).toHaveLength(0);
@@ -89,14 +89,15 @@ test.describe('Studio Workflow', () => {
 
       // Verify selection (look for selection indicator)
       const firstProduct = studioPage.productCards.first();
-      const hasSelectionClass = await firstProduct.evaluate((el) =>
-        el.classList.contains('border-primary') ||
-        el.classList.contains('ring-primary') ||
-        el.parentElement?.classList.contains('selected')
+      const hasSelectionClass = await firstProduct.evaluate(
+        (el) =>
+          el.classList.contains('border-primary') ||
+          el.classList.contains('ring-primary') ||
+          el.parentElement?.classList.contains('selected'),
       );
 
       // Selection should be indicated visually
-      expect(hasSelectionClass || await studioPage.getSelectedProductCount() > 0).toBeTruthy();
+      expect(hasSelectionClass || (await studioPage.getSelectedProductCount()) > 0).toBeTruthy();
     });
 
     test('can select multiple products', async ({ page }) => {
@@ -140,7 +141,7 @@ test.describe('Studio Workflow', () => {
     });
 
     test('generate now button is visible', async ({ page }) => {
-      await expect(studioPage.generateNowButton).toBeVisible();
+      await expect(studioPage.generateButton).toBeVisible();
     });
   });
 
@@ -171,7 +172,10 @@ test.describe('Studio Workflow', () => {
       await studioPage.selectProduct(0);
       await page.waitForTimeout(2000);
 
-      const suggestionVisible = await studioPage.useSuggestionButton.first().isVisible().catch(() => false);
+      const suggestionVisible = await studioPage.useSuggestionButton
+        .first()
+        .isVisible()
+        .catch(() => false);
       test.skip(!suggestionVisible, 'No Idea Bank suggestions available');
 
       await studioPage.useIdeaBankSuggestion(0);
@@ -193,7 +197,7 @@ test.describe('Studio Workflow', () => {
 
       // Start generation with a prompt
       await studioPage.enterQuickStartPrompt('Professional product showcase');
-      await studioPage.generateNowButton.click();
+      await studioPage.generateButton.click();
 
       // Should show generating state or result
       await page.waitForTimeout(2000);
@@ -311,7 +315,7 @@ test.describe('Studio Workflow', () => {
       await studioPage.enterQuickStartPrompt('Test prompt');
 
       // Attempt generation - should handle error gracefully
-      await studioPage.generateNowButton.click();
+      await studioPage.generateButton.click();
       await page.waitForTimeout(3000);
 
       // Page should still be functional

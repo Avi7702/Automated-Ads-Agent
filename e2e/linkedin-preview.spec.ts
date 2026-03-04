@@ -45,7 +45,7 @@ test.describe('LinkedIn Post Preview - Always Visible', () => {
 
     // Select a product if available
     const productButtons = page.locator('button[class*="aspect-square"]');
-    if (await productButtons.count() > 0) {
+    if ((await productButtons.count()) > 0) {
       await productButtons.first().click();
     }
 
@@ -58,8 +58,8 @@ test.describe('LinkedIn Post Preview - Always Visible', () => {
     const quickStartInput = page.locator('input[placeholder*="Just describe what you want"]');
     await quickStartInput.fill('Professional product shot of drainage system');
 
-    // Click Generate Now
-    await page.getByRole('button', { name: /Generate Now/i }).click();
+    // Click Generate
+    await page.getByRole('button', { name: /^Generate$/i }).click();
 
     // Wait for generation to start
     await expect(page.locator('text=Generating content')).toBeVisible({ timeout: 10000 });
@@ -79,7 +79,7 @@ test.describe('LinkedIn Post Preview - Always Visible', () => {
     // Quick generate
     const quickStartInput = page.locator('input[placeholder*="Just describe what you want"]');
     await quickStartInput.fill('NDS drainage product marketing image');
-    await page.getByRole('button', { name: /Generate Now/i }).click();
+    await page.getByRole('button', { name: /^Generate$/i }).click();
 
     // Wait for image generation to complete
     await expect(page.locator('text=Start New')).toBeVisible({ timeout: 90000 });
@@ -93,7 +93,9 @@ test.describe('LinkedIn Post Preview - Always Visible', () => {
       await generateCopyButton.click();
 
       // Wait for copy generation
-      await expect(page.locator('text=Generating...')).toBeVisible({ timeout: 5000 }).catch(() => {});
+      await expect(page.locator('text=Generating...'))
+        .toBeVisible({ timeout: 5000 })
+        .catch(() => {});
 
       // After generation, the placeholder should be replaced with actual text
       await expect(page.locator('text=Your ad copy will appear here')).not.toBeVisible({ timeout: 30000 });
@@ -131,7 +133,7 @@ test.describe('LinkedIn Post Preview - Always Visible', () => {
     // Quick generate
     const quickStartInput = page.locator('input[placeholder*="Just describe what you want"]');
     await quickStartInput.fill('Product showcase image');
-    await page.getByRole('button', { name: /Generate Now/i }).click();
+    await page.getByRole('button', { name: /^Generate$/i }).click();
 
     // Wait for result
     await expect(page.locator('text=Start New')).toBeVisible({ timeout: 90000 });

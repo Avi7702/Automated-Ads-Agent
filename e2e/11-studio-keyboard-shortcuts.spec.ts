@@ -100,7 +100,7 @@ test.describe('Studio — Keyboard Shortcuts', { tag: '@studio' }, () => {
 
   test('7. Ctrl+D triggers download when result exists', async ({ page }) => {
     await studio.enterQuickStartPrompt('Download shortcut test');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
     if (completed) {
       // Ctrl+D should trigger download

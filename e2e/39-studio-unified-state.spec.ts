@@ -32,8 +32,8 @@ test.describe('Studio — Unified State: Generation Flow', { tag: '@studio' }, (
     const quickStart = page.locator('textarea[placeholder*="Describe what you want to create"]');
     await expect(quickStart).toBeVisible({ timeout: 10000 });
 
-    // Generate Now button should also be present
-    await expect(studio.generateNowButton).toBeVisible({ timeout: 10000 });
+    // Generate button should also be present
+    await expect(studio.generateButton).toBeVisible({ timeout: 10000 });
 
     // Should be in idle state — no generating indicator or result image
     const state = await studio.getGenerationState();
@@ -65,16 +65,16 @@ test.describe('Studio — Unified State: Generation Flow', { tag: '@studio' }, (
 
   test('3. entering prompt in composer enables Generate button', async ({ page }) => {
     // Start with empty prompt — button should be disabled
-    await expect(studio.generateNowButton).toBeDisabled();
+    await expect(studio.generateButton).toBeDisabled();
 
     // Enter a prompt
     await studio.enterQuickStartPrompt('Professional product showcase on marble background');
-    await expect(studio.generateNowButton).toBeEnabled();
+    await expect(studio.generateButton).toBeEnabled();
   });
 
   test('4. clicking Generate transitions to generating state', async ({ page }) => {
     await studio.enterQuickStartPrompt('E2E unified state generation test');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
 
     // Wait briefly for state transition
     await page.waitForTimeout(1000);
@@ -86,7 +86,7 @@ test.describe('Studio — Unified State: Generation Flow', { tag: '@studio' }, (
 
   test('5. generating view shows progress indicator', async ({ page }) => {
     await studio.enterQuickStartPrompt('Progress indicator test for unified state');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
 
     // Generating indicator should appear
     await expect(studio.generatingIndicator).toBeVisible({ timeout: 10000 });
@@ -94,7 +94,7 @@ test.describe('Studio — Unified State: Generation Flow', { tag: '@studio' }, (
 
   test('6. generation completes and result view shows image', async ({ page }) => {
     await studio.enterQuickStartPrompt('Product lifestyle photo for result view test');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
 
     const completed = await studio.waitForGenerationComplete(60000);
     if (completed) {
@@ -126,7 +126,7 @@ test.describe('Studio — Unified State: Generation Flow', { tag: '@studio' }, (
 
   test('7. generation appears in history after completion', async ({ page }) => {
     await studio.enterQuickStartPrompt('History tracking test for unified state');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
 
     const completed = await studio.waitForGenerationComplete(60000);
     if (completed) {
@@ -147,7 +147,7 @@ test.describe('Studio — Unified State: Generation Flow', { tag: '@studio' }, (
 
   test('8. Start New resets back to idle/composer state', async ({ page }) => {
     await studio.enterQuickStartPrompt('Reset state test for unified state');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
 
     const completed = await studio.waitForGenerationComplete(60000);
     if (completed) {
@@ -166,7 +166,7 @@ test.describe('Studio — Unified State: Generation Flow', { tag: '@studio' }, (
 
   test('9. page remains stable during generation (no crash)', async ({ page }) => {
     await studio.enterQuickStartPrompt('Stability test — no crash');
-    await studio.generateNowButton.click();
+    await studio.generateButton.click();
 
     // Wait for some time during generation
     await page.waitForTimeout(3000);
@@ -233,9 +233,7 @@ test.describe('Studio — Unified State: History Navigation', { tag: '@studio' }
     }
 
     // Look for clickable history items with images
-    const historyButtons = page
-      .locator('.grid.grid-cols-2 button')
-      .filter({ has: page.locator('img') });
+    const historyButtons = page.locator('.grid.grid-cols-2 button').filter({ has: page.locator('img') });
     const count = await historyButtons.count();
 
     if (count > 0) {
@@ -270,9 +268,7 @@ test.describe('Studio — Unified State: History Navigation', { tag: '@studio' }
       await page.waitForTimeout(500);
     }
 
-    const historyButtons = page
-      .locator('.grid.grid-cols-2 button')
-      .filter({ has: page.locator('img') });
+    const historyButtons = page.locator('.grid.grid-cols-2 button').filter({ has: page.locator('img') });
     const count = await historyButtons.count();
 
     if (count > 0) {
@@ -312,7 +308,10 @@ test.describe('Studio — Unified State: History Navigation', { tag: '@studio' }
     }
 
     // Try to find and interact with Recent/All tabs
-    const recentTab = page.locator('[role="tab"]').filter({ hasText: /Recent/i }).first();
+    const recentTab = page
+      .locator('[role="tab"]')
+      .filter({ hasText: /Recent/i })
+      .first();
     const allTab = page.locator('[role="tab"]').filter({ hasText: /All/i }).first();
 
     const recentVisible = await recentTab.isVisible();
@@ -499,8 +498,11 @@ test.describe('Studio — Unified State: Visual Verification', { tag: '@studio' 
     const results = await verifyAndAnnotate(
       page,
       [
-        { label: 'Quick start textarea', locator: page.locator('textarea[placeholder*="Describe what you want to create"]') },
-        { label: 'Generate Now button', locator: studio.generateNowButton },
+        {
+          label: 'Quick start textarea',
+          locator: page.locator('textarea[placeholder*="Describe what you want to create"]'),
+        },
+        { label: 'Generate button', locator: studio.generateButton },
         { label: 'Freestyle button', locator: page.locator('button').filter({ hasText: /Freestyle/i }) },
         { label: 'Use Template button', locator: page.locator('button').filter({ hasText: /Use Template/i }) },
         { label: 'Products section', locator: page.locator('text=Your Products'), soft: true },
@@ -514,7 +516,7 @@ test.describe('Studio — Unified State: Visual Verification', { tag: '@studio' 
     const quickStartResult = results.find((r) => r.label === 'Quick start textarea');
     expect(quickStartResult?.passed).toBeTruthy();
 
-    const generateResult = results.find((r) => r.label === 'Generate Now button');
+    const generateResult = results.find((r) => r.label === 'Generate button');
     expect(generateResult?.passed).toBeTruthy();
   });
 });

@@ -181,7 +181,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
       expect(value).toBe(testPrompt);
     });
 
-    test('8. Generate Now button with prompt — generation starts', async ({ page }) => {
+    test('8. Generate button with prompt — generation starts', async ({ page }) => {
       test.slow();
       await studio.waitForProductsLoaded();
       const productCount = await studio.productCards.count();
@@ -189,20 +189,20 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
 
       await studio.selectProduct(0);
       await studio.enterQuickStartPrompt('Professional showcase with dramatic lighting');
-      await studio.generateNowButton.click();
+      await studio.generateButton.click();
 
       await page.waitForTimeout(2000);
       const state = await studio.getGenerationState();
       expect(['generating', 'result', 'idle']).toContain(state);
     });
 
-    test('9. Generate Now button without prompt — disabled', async ({ page }) => {
+    test('9. Generate button without prompt — disabled', async ({ page }) => {
       // Ensure quick start prompt is empty
       await studio.quickStartInput.fill('');
       await page.waitForTimeout(200);
 
-      // The Generate Now button should be disabled when prompt is empty
-      const isDisabled = await studio.generateNowButton.isDisabled();
+      // The Generate button should be disabled when prompt is empty
+      const isDisabled = await studio.generateButton.isDisabled();
       expect(isDisabled).toBe(true);
     });
 
@@ -534,7 +534,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
 
       await studio.selectProduct(0);
       await studio.enterQuickStartPrompt('Modern product photography with clean lines');
-      await studio.generateNowButton.click();
+      await studio.generateButton.click();
 
       await page.waitForTimeout(3000);
       const state = await studio.getGenerationState();
@@ -549,7 +549,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
 
       await studio.selectProduct(0);
       await studio.enterQuickStartPrompt('Quick test generation');
-      await studio.generateNowButton.click();
+      await studio.generateButton.click();
 
       // Wait for generating state
       await page.waitForTimeout(1000);
@@ -964,7 +964,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
 
       await studio.selectProduct(0);
       await studio.enterQuickStartPrompt('Error test prompt');
-      await studio.generateNowButton.click();
+      await studio.generateButton.click();
 
       await page.waitForTimeout(5000);
 

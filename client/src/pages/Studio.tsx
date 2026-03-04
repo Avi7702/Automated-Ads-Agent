@@ -813,30 +813,6 @@ function StudioContent() {
     }
   }, [ideaBankBridgeState, ideaBankContext, queueIdeaBankMessageToAgent]);
 
-  const handleSendIdeasToAgent = useCallback(() => {
-    if (!ideaBankContext) {
-      setIdeaBankBridgeState('waiting');
-      return;
-    }
-
-    if (ideaBankContext.status === 'loading') {
-      setIdeaBankBridgeState('waiting');
-      return;
-    }
-
-    if (ideaBankContext.status === 'error') {
-      setIdeaBankBridgeState('error');
-      return;
-    }
-
-    if (ideaBankContext.status === 'ready' && ideaBankContext.suggestionCount > 0) {
-      queueIdeaBankMessageToAgent(ideaBankContext);
-      return;
-    }
-
-    setIdeaBankBridgeState('idle');
-  }, [ideaBankContext, queueIdeaBankMessageToAgent]);
-
   const handleExternalMessageConsumed = useCallback((id: string) => {
     setAgentExternalMessage((prev) => (prev?.id === id ? null : prev));
   }, []);
@@ -854,10 +830,7 @@ function StudioContent() {
             {orch.state === 'idle' && (
               <ComposerView
                 key="composer"
-                ideaBankContext={ideaBankContext}
-                ideaBankBridgeState={ideaBankBridgeState}
                 onIdeaBankContextChange={handleIdeaBankContextChange}
-                onSendIdeasToAgent={handleSendIdeasToAgent}
                 handlePromptChange={orch.handlePromptChange}
                 handleSelectSuggestion={orch.handleSelectSuggestion}
                 handleGenerate={orch.handleGenerate}
