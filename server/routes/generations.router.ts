@@ -313,7 +313,16 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
           try {
             const isUrl = imagePath.startsWith('http://') || imagePath.startsWith('https://');
             if (isUrl) {
-              // Fetch image from URL and convert to base64
+              // SSRF guard: validate URL before fetching
+              const { validateUrlSafe } = await import('../lib/ssrfGuard');
+              const ssrfResult = validateUrlSafe(imagePath, ['http:', 'https:']);
+              if (!ssrfResult.safe) {
+                logger.warn(
+                  { module: 'Analyze', imagePath, reason: ssrfResult.reason },
+                  'SSRF: skipped unsafe image URL',
+                );
+                continue;
+              }
               const response = await fetch(imagePath);
               const arrayBuffer = await response.arrayBuffer();
               const base64 = Buffer.from(arrayBuffer).toString('base64');
@@ -338,11 +347,21 @@ export const generationsRouter: RouterFactory = (ctx: RouterContext): Router => 
           try {
             const isUrl = genPath.startsWith('http://') || genPath.startsWith('https://');
             if (isUrl) {
-              const response = await fetch(genPath);
-              const arrayBuffer = await response.arrayBuffer();
-              const base64 = Buffer.from(arrayBuffer).toString('base64');
-              const mimeType = response.headers.get('content-type') || getMimeType(genPath);
-              generatedImage = { data: base64, mimeType };
+              // SSRF guard: validate URL before fetching
+              const { validateUrlSafe: validateGenUrl } = await import('../lib/ssrfGuard');
+              const ssrfCheck = validateGenUrl(genPath, ['http:', 'https:']);
+              if (!ssrfCheck.safe) {
+                logger.warn(
+                  { module: 'Analyze', genPath, reason: ssrfCheck.reason },
+                  'SSRF: skipped unsafe generated image URL',
+                );
+              } else {
+                const response = await fetch(genPath);
+                const arrayBuffer = await response.arrayBuffer();
+                const base64 = Buffer.from(arrayBuffer).toString('base64');
+                const mimeType = response.headers.get('content-type') || getMimeType(genPath);
+                generatedImage = { data: base64, mimeType };
+              }
             } else {
               const fullPath = pathModule.join(process.cwd(), genPath);
               const buffer = await fs.readFile(fullPath);
