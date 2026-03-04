@@ -7,3 +7,8 @@
 
 **Learning:** Found a major performance anti-pattern where multiple repositories were fetching entire tables and filtering them in Node.js memory. This causes O(n) memory and CPU usage that could be O(1) or O(log n) with proper database indexes.
 **Action:** Always favor PostgreSQL array operators (`&&`, `array_contains`) and Drizzle `where` clauses over JavaScript `.filter()`. Ensure frequently queried array columns have GIN indexes.
+
+## 2026-02-26 - [Atomic UPSERT with onConflictDoUpdate]
+
+**Learning:** The "SELECT-then-UPDATE/INSERT" pattern is a performance and concurrency bottleneck. It requires multiple database round-trips and is susceptible to race conditions. PostgreSQL's `onConflictDoUpdate` allows for atomic increments and JSONB merges in a single operation.
+**Action:** Refactor multi-step repository upserts to use Drizzle's `.onConflictDoUpdate()` combined with `sql` fragments for field increments and the JSONB `||` operator for metadata merging.

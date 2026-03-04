@@ -2,11 +2,13 @@ import { vi, describe, it, expect, beforeEach, type Mock } from 'vitest';
 import { getBrandImagesForProducts } from '../repositories/knowledgeRepository';
 import { getPerformingAdTemplatesByPlatform, searchPerformingAdTemplates } from '../repositories/templateRepository';
 import { db } from '../db';
+import { upsertQuotaMetrics } from '../repositories/quotaRepository';
 
 // Mock Drizzle db
 vi.mock('../db', () => ({
   db: {
     select: vi.fn(),
+    insert: vi.fn(),
   },
 }));
 
@@ -119,6 +121,45 @@ describe('Performance Optimizations - Repository Layer', () => {
 
       expect(db.select).toHaveBeenCalled();
       expect(mockSelectChain.where).toHaveBeenCalled();
+    });
+  });
+
+  describe('quotaRepository.upsertQuotaMetrics', () => {
+    it('should use atomic UPSERT with onConflictDoUpdate', async () => {
+      const metrics = {
+        windowType: 'minute',
+        windowStart: new Date(),
+        windowEnd: new Date(),
+        brandId: 'brand-1',
+        requestCount: 1,
+        successCount: 1,
+        errorCount: 0,
+        rateLimitCount: 0,
+        inputTokensTotal: 100,
+        outputTokensTotal: 50,
+        estimatedCostMicros: 10,
+        generateCount: 1,
+        editCount: 0,
+        analyzeCount: 0,
+        modelBreakdown: { 'model-1': 1 },
+      };
+
+      // We need to mock db.insert().values().onConflictDoUpdate().returning()
+      const mockReturning = vi.fn().mockResolvedValue([metrics]);
+      const mockOnConflict = vi.fn().mockReturnValue({ returning: mockReturning });
+      const mockValues = vi.fn().mockReturnValue({ onConflictDoUpdate: mockOnConflict });
+
+      vi.mocked(db.insert).mockReturnValue({ values: mockValues } as any);
+
+      await upsertQuotaMetrics(metrics as any);
+
+      expect(db.insert).toHaveBeenCalled();
+      expect(mockValues).toHaveBeenCalledWith(metrics);
+      expect(mockOnConflict).toHaveBeenCalled();
+      const conflictConfig = mockOnConflict.mock.calls[0][0];
+      expect(conflictConfig.target).toBeDefined();
+      expect(conflictConfig.set).toBeDefined();
+      expect(mockReturning).toHaveBeenCalled();
     });
   });
 });
