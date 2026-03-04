@@ -1,7 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { gotoWithAuth } from './helpers/ensureAuth';
 import { StudioWorkflowPage } from './pages/studio-workflow.page';
-import { MOBILE, DESKTOP } from './helpers/viewport';
 
 /**
  * 03 — Studio Composer View
@@ -31,7 +30,7 @@ test.describe('Studio — Composer View', { tag: '@studio' }, () => {
     await expect(quickStart).toHaveValue('A professional product shot on white background');
   });
 
-  test('3. Generate button is visible', async ({ page }) => {
+  test('3. Generate button is visible', async () => {
     await expect(studio.generateButton).toBeVisible({ timeout: 10000 });
   });
 
@@ -114,7 +113,7 @@ test.describe('Studio — Composer View', { tag: '@studio' }, () => {
     expect(await platformSelector.count()).toBeGreaterThanOrEqual(0);
   });
 
-  test('13. aspect ratio selector is available', async ({ page }) => {
+  test('13. aspect ratio selector is available', async () => {
     // Aspect ratio select may be inside Output Settings
     const aspectSelect = studio.aspectRatioSelect;
     expect(await aspectSelect.count()).toBeGreaterThanOrEqual(0);

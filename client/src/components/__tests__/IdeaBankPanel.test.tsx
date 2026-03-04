@@ -496,10 +496,10 @@ describe('IdeaBankPanel - User Interactions', () => {
       expect(screen.getByText(/AI-generated/i)).toBeInTheDocument();
     });
 
-    // The selected suggestion card should have selected styling (border-primary ring-2)
-    const generateBtn = screen.getByTestId('button-generate-suggestion-sug-1');
-    const selectedCard = generateBtn.closest('[class*="border-primary"]');
-    expect(selectedCard).toBeInTheDocument();
+    // The selected suggestion card should have selected styling (border-primary)
+    const summaryEl = screen.getAllByText(/Professional product showcase/i)[0];
+    const selectedCard = summaryEl?.closest('[class*="border-primary"]');
+    expect(selectedCard).toBeTruthy();
   });
 
   it('disables generate button when isGenerating is true', async () => {

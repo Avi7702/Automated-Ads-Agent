@@ -172,7 +172,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
   // ─── Quick Start Section ───────────────────────────────
 
   test.describe('Quick Start Section', () => {
-    test('7. quick start textarea accepts text', async ({ page }) => {
+    test('7. quick start textarea accepts text', async () => {
       const testPrompt = 'Professional product photo on marble background';
       await studio.enterQuickStartPrompt(testPrompt);
 
@@ -238,7 +238,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
       }
     });
 
-    test('12. product card — click selects (checkmark, ring)', async ({ page }) => {
+    test('12. product card — click selects (checkmark, ring)', async () => {
       await studio.waitForProductsLoaded();
       const productCount = await studio.productCards.count();
       test.skip(productCount === 0, 'No products available');
@@ -256,7 +256,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
       expect(hasSelectionRing || hasCheckmark || (await studio.getSelectedProductCount()) > 0).toBeTruthy();
     });
 
-    test('13. product card (selected) — click deselects', async ({ page }) => {
+    test('13. product card (selected) — click deselects', async () => {
       await studio.waitForProductsLoaded();
       const productCount = await studio.productCards.count();
       test.skip(productCount === 0, 'No products available');
@@ -567,7 +567,7 @@ test.describe('Studio — Full App Tests', { tag: '@studio' }, () => {
       }
     });
 
-    test('30. download button on result — exists when result visible', async ({ page }) => {
+    test('30. download button on result — exists when result visible', async () => {
       // Check via history to see if we have a prior result
       const hasResult = await studio.generatedImage.isVisible().catch(() => false);
       if (hasResult) {

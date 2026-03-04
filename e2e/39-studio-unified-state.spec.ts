@@ -62,7 +62,7 @@ test.describe('Studio — Unified State: Generation Flow', { tag: '@studio' }, (
     }
   });
 
-  test('3. entering prompt in composer enables Generate button', async ({ page }) => {
+  test('3. entering prompt in composer enables Generate button', async () => {
     // Start with empty prompt — button should be disabled
     await expect(studio.generateButton).toBeDisabled();
 
@@ -83,7 +83,7 @@ test.describe('Studio — Unified State: Generation Flow', { tag: '@studio' }, (
     expect(['generating', 'result']).toContain(state);
   });
 
-  test('5. generating view shows progress indicator', async ({ page }) => {
+  test('5. generating view shows progress indicator', async () => {
     await studio.enterQuickStartPrompt('Progress indicator test for unified state');
     await studio.generateButton.click();
 

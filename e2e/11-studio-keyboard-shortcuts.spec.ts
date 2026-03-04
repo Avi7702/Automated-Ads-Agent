@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { gotoWithAuth } from './helpers/ensureAuth';
 import { StudioWorkflowPage } from './pages/studio-workflow.page';
-import { StudioUXPage } from './pages/studio-ux.page';
+
 import { DESKTOP } from './helpers/viewport';
 
 /**
@@ -16,12 +16,10 @@ import { DESKTOP } from './helpers/viewport';
 
 test.describe('Studio — Keyboard Shortcuts', { tag: '@studio' }, () => {
   let studio: StudioWorkflowPage;
-  let ux: StudioUXPage;
 
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize(DESKTOP);
     studio = new StudioWorkflowPage(page);
-    ux = new StudioUXPage(page);
     await gotoWithAuth(page, '/');
   });
 

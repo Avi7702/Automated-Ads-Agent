@@ -139,7 +139,7 @@ test.describe('Studio — Inspector Panel', { tag: '@studio' }, () => {
     await expect(placeholder).toBeVisible({ timeout: 5000 });
   });
 
-  test('14. Copy tab has Generate Quick Copy button (after generation)', async ({ page }) => {
+  test('14. Copy tab has Generate Quick Copy button (after generation)', async () => {
     await studio.enterQuickStartPrompt('Copy tab test');
     await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
@@ -150,7 +150,7 @@ test.describe('Studio — Inspector Panel', { tag: '@studio' }, () => {
     }
   });
 
-  test('15. Copy to Clipboard button appears after generating copy', async ({ page }) => {
+  test('15. Copy to Clipboard button appears after generating copy', async () => {
     await studio.enterQuickStartPrompt('Clipboard test');
     await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
@@ -161,7 +161,7 @@ test.describe('Studio — Inspector Panel', { tag: '@studio' }, () => {
     }
   });
 
-  test('16. Advanced Copy Studio toggle exists', async ({ page }) => {
+  test('16. Advanced Copy Studio toggle exists', async () => {
     await studio.enterQuickStartPrompt('Advanced toggle test');
     await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
@@ -183,7 +183,7 @@ test.describe('Studio — Inspector Panel', { tag: '@studio' }, () => {
     await expect(placeholder).toBeVisible({ timeout: 5000 });
   });
 
-  test('18. Ask AI tab has input and quick question chips (after generation)', async ({ page }) => {
+  test('18. Ask AI tab has input and quick question chips (after generation)', async () => {
     await studio.enterQuickStartPrompt('Ask AI test');
     await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
@@ -197,7 +197,7 @@ test.describe('Studio — Inspector Panel', { tag: '@studio' }, () => {
     }
   });
 
-  test('19. typing in Ask AI input and clicking send', async ({ page }) => {
+  test('19. typing in Ask AI input and clicking send', async () => {
     await studio.enterQuickStartPrompt('Ask AI send test');
     await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
@@ -221,7 +221,7 @@ test.describe('Studio — Inspector Panel', { tag: '@studio' }, () => {
     await expect(placeholder).toBeVisible({ timeout: 5000 });
   });
 
-  test('21. Details tab shows metadata badges after generation', async ({ page }) => {
+  test('21. Details tab shows metadata badges after generation', async () => {
     await studio.enterQuickStartPrompt('Details test');
     await studio.generateButton.click();
     const completed = await studio.waitForGenerationComplete(30000);
