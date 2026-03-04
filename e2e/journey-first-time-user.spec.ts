@@ -28,7 +28,7 @@ test.describe('First-Time User Journey', () => {
       // Click Library in nav
       const nav = page.locator('nav[aria-label="Main navigation"]');
       await nav.getByText('Library').click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       await expect(page).toHaveURL(/\/library/);
       await expect(page.locator('h1').filter({ hasText: 'Library' })).toBeVisible();

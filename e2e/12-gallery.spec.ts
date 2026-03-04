@@ -135,7 +135,7 @@ test.describe('Gallery Page', { tag: '@gallery' }, () => {
     }
 
     await cards.first().click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await expect(page).toHaveURL(/\/\?generation=/);
   });
 

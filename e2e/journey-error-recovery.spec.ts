@@ -68,7 +68,7 @@ test.describe('Error Recovery Journey', () => {
   test.describe('404 Page', () => {
     test('invalid route shows Not Found page', async ({ page }) => {
       await page.goto('/this-route-does-not-exist-xyz');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Should show 404 or redirect to a known page
       const notFound = page.getByText(/not found|404|page.*exist/i).first();

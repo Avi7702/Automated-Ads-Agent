@@ -154,7 +154,7 @@ test.describe('Library Page', { tag: '@library' }, () => {
       await expect(productPage.useInStudioButton).toBeVisible({ timeout: 5000 });
 
       await productPage.useInStudioButton.click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Should navigate to Studio (root) or stay with studio params
       const url = page.url();
@@ -408,7 +408,7 @@ test.describe('Library Page', { tag: '@library' }, () => {
       test.skip(!hasUseBtn, 'Use Template button not visible');
 
       await useButton.click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Should navigate away from library
       const url = page.url();
@@ -489,7 +489,7 @@ test.describe('Library Page', { tag: '@library' }, () => {
       test.skip(!hasBtn, 'Use Scene button not visible');
 
       await useButton.click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Should navigate with templateId and mode params
       const url = page.url();

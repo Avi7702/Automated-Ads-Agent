@@ -86,7 +86,7 @@ export class GalleryPage {
    */
   async goto() {
     await this.page.goto('/gallery');
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   /**
@@ -141,7 +141,7 @@ export class GalleryPage {
    */
   async clickCard(index: number) {
     await this.generationCards.nth(index).click();
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   /**
@@ -177,6 +177,6 @@ export class GalleryPage {
    */
   async goBackToStudio() {
     await this.backToStudioButton.click();
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 }

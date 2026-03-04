@@ -34,7 +34,7 @@ export class NotFoundPage {
    */
   async goto(invalidPath: string = '/this-page-does-not-exist') {
     await this.page.goto(invalidPath);
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   /**
@@ -54,7 +54,7 @@ export class NotFoundPage {
    */
   async clickGoToStudio() {
     await this.goToStudioButton.click();
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   /**
@@ -62,6 +62,6 @@ export class NotFoundPage {
    */
   async clickGoHome() {
     await this.goHomeButton.click();
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 }

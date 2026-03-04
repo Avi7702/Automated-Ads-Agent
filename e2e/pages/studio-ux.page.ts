@@ -68,7 +68,7 @@ export class StudioUXPage {
    */
   async goto() {
     await this.page.goto('/');
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   /**
@@ -157,7 +157,7 @@ export class StudioUXPage {
     if (!(await this.featuredProduct.isVisible().catch(() => false))) {
       return false;
     }
-    const classes = await this.featuredProduct.getAttribute('class') || '';
+    const classes = (await this.featuredProduct.getAttribute('class')) || '';
     return classes.includes('col-span-2') && classes.includes('row-span-2');
   }
 
@@ -235,7 +235,7 @@ export class StudioUXPage {
   }> {
     const title = await this.helpButton.getAttribute('title');
     const isVisible = await this.helpButton.isVisible();
-    const classes = await this.helpButton.getAttribute('class') || '';
+    const classes = (await this.helpButton.getAttribute('class')) || '';
 
     return {
       hasTitle: title !== null && title.includes('Keyboard'),
@@ -248,7 +248,7 @@ export class StudioUXPage {
    * Wait for page to be ready
    */
   async waitForReady() {
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
     await this.page.waitForTimeout(500);
   }
 }

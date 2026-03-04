@@ -461,7 +461,7 @@ test.describe('Product Library Workflow', () => {
       }
 
       await productLibraryPage.saveVerifyButton.click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Should show success or status change
     });

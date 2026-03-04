@@ -34,7 +34,7 @@ test.describe('404 Not Found Page', { tag: '@404' }, () => {
     await expect(notFoundPage.goToStudioButton).toBeVisible({ timeout: 10000 });
 
     await notFoundPage.clickGoToStudio();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Should navigate to Studio /
     await expect(page).toHaveURL('/');
@@ -47,7 +47,7 @@ test.describe('404 Not Found Page', { tag: '@404' }, () => {
     await expect(notFoundPage.goHomeButton).toBeVisible({ timeout: 10000 });
 
     await notFoundPage.clickGoHome();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Both buttons link to /
     await expect(page).toHaveURL('/');

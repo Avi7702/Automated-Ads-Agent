@@ -325,7 +325,7 @@ export class StudioWorkflowPage {
    */
   async goto() {
     await this.page.goto('/');
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   /**
@@ -339,7 +339,7 @@ export class StudioWorkflowPage {
 
     const url = `/?${searchParams.toString()}`;
     await this.page.goto(url);
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   /**
@@ -573,7 +573,7 @@ export class StudioWorkflowPage {
    */
   async startNew() {
     await this.startNewButton.click();
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   /**
@@ -631,7 +631,7 @@ export class StudioWorkflowPage {
    */
   async generateLinkedInCopy() {
     await this.generateCopyButton.click();
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   /**

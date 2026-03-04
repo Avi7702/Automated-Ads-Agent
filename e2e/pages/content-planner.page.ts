@@ -53,8 +53,8 @@ export class ContentPlannerPage {
     this.pageDescription = page.locator('text=Strategic guide');
 
     // Balance card elements
-    this.balanceCard = page.locator('text=This Week\'s Balance').locator('..');
-    this.balanceCardTitle = page.locator('text=This Week\'s Balance');
+    this.balanceCard = page.locator("text=This Week's Balance").locator('..');
+    this.balanceCardTitle = page.locator("text=This Week's Balance");
     this.totalPostsText = page.locator('text=Total Posts This Week');
 
     // Suggestion card elements
@@ -96,7 +96,7 @@ export class ContentPlannerPage {
    */
   async goto(): Promise<void> {
     await this.page.goto('/content-planner');
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   /**
@@ -104,7 +104,7 @@ export class ContentPlannerPage {
    */
   async gotoStudioWithTemplate(templateId: string): Promise<void> {
     await this.page.goto(`/?cpTemplateId=${templateId}`);
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   /**
@@ -302,9 +302,12 @@ export class ContentPlannerPage {
    * Delete a post by index
    */
   async deletePost(index: number): Promise<void> {
-    const deleteButton = this.recentPostItems.nth(index).locator('button').filter({
-      has: this.page.locator('svg.lucide-trash-2'),
-    });
+    const deleteButton = this.recentPostItems
+      .nth(index)
+      .locator('button')
+      .filter({
+        has: this.page.locator('svg.lucide-trash-2'),
+      });
     await deleteButton.click();
     // Wait for deletion to complete
     await this.page.waitForTimeout(1000);
@@ -322,7 +325,7 @@ export class ContentPlannerPage {
 
     const categoryText = await postItem.locator('span.font-medium').first().textContent();
     const platformBadge = postItem.locator('[class*="Badge"]').first();
-    const platform = await platformBadge.isVisible() ? await platformBadge.textContent() : null;
+    const platform = (await platformBadge.isVisible()) ? await platformBadge.textContent() : null;
     const dateText = await postItem.locator('span.text-xs.text-muted-foreground').first().textContent();
 
     return {

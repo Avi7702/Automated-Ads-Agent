@@ -6,7 +6,7 @@ test.describe('Studio Features', () => {
     await page.goto('/');
 
     // Wait for page to load
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test.describe('History Timeline', () => {
@@ -85,15 +85,16 @@ test.describe('Studio Features', () => {
       });
 
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       await page.waitForTimeout(2000);
 
       // Filter out known non-critical errors
-      const criticalErrors = consoleErrors.filter(err =>
-        !err.includes('favicon') &&
-        !err.includes('404') &&
-        !err.includes('401') && // Auth errors expected when not logged in
-        !err.includes('net::ERR')
+      const criticalErrors = consoleErrors.filter(
+        (err) =>
+          !err.includes('favicon') &&
+          !err.includes('404') &&
+          !err.includes('401') && // Auth errors expected when not logged in
+          !err.includes('net::ERR'),
       );
 
       expect(criticalErrors).toHaveLength(0);

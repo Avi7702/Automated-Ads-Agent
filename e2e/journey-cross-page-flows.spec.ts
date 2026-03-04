@@ -8,7 +8,7 @@ test.describe('Cross-Page Flow Journey', () => {
 
       const backButton = page.getByRole('button', { name: /studio/i });
       await backButton.click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       await expect(page).toHaveURL(/^http:\/\/localhost:\d+\/$/);
     });
@@ -22,7 +22,7 @@ test.describe('Cross-Page Flow Journey', () => {
 
       if (cardCount > 0) {
         await cards.first().click();
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
         await expect(page).toHaveURL(/\/\?generation=/);
       }
     });
@@ -67,43 +67,43 @@ test.describe('Cross-Page Flow Journey', () => {
 
       // Gallery
       await nav.getByText('Gallery').click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       await expect(page.locator('h1').filter({ hasText: 'Gallery' })).toBeVisible();
 
       // Pipeline
       await nav.getByText('Pipeline').click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       if (page.url().includes('/login')) {
         await page.goto('/api/auth/demo');
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
         await page.goto('/pipeline');
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
       }
       const pipelineTabs = page.locator('[role="tab"]');
       await expect(pipelineTabs).toHaveCount(3);
 
       // Library
       await nav.getByText('Library').click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       await expect(page.locator('h1').filter({ hasText: 'Library' })).toBeVisible();
       const libraryTabs = page.locator('[role="tab"]');
       await expect(libraryTabs).toHaveCount(6);
 
       // Settings
       await nav.getByText('Settings').click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       if (page.url().includes('/login')) {
         await page.goto('/api/auth/demo');
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
         await page.goto('/settings');
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
       }
       const settingsContent = page.getByText(/brand|company|profile|settings/i).first();
       await expect(settingsContent).toBeVisible({ timeout: 10000 });
 
       // Back to Studio
       await nav.getByText('Studio').click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       await expect(page).toHaveURL(/^http:\/\/localhost:\d+\/$/);
     });
   });
@@ -119,11 +119,11 @@ test.describe('Cross-Page Flow Journey', () => {
 
       // Navigate to Gallery
       await page.goto('/gallery');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Navigate back to Library with templates tab
       await page.goto('/library?tab=templates');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Templates tab should still be active
       const activeTabAfter = page.locator('[role="tab"][data-state="active"]');

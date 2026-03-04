@@ -69,18 +69,18 @@ test.describe('Mobile Experience Journey', () => {
 
         // Click target
         await sheet.getByText(target.label).click();
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // Handle potential auth redirect
         if (page.url().includes('/login')) {
           await page.goto('/api/auth/demo');
-          await page.waitForLoadState('networkidle');
+          await page.waitForLoadState('domcontentloaded');
           // Re-navigate to target from Studio
           await page.goto('/');
-          await page.waitForLoadState('networkidle');
+          await page.waitForLoadState('domcontentloaded');
           await page.getByRole('button', { name: 'Open navigation menu' }).click();
           await page.locator('[role="dialog"]').getByText(target.label).click();
-          await page.waitForLoadState('networkidle');
+          await page.waitForLoadState('domcontentloaded');
         }
 
         // Should navigate

@@ -156,7 +156,7 @@ test.describe('Learn from Winners Page', () => {
     test('can navigate to Learn from Winners from header', async ({ page }) => {
       // Start at home page
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Find and click the Patterns link in header
       const patternsLink = page.locator('nav a, header a').filter({ hasText: /Patterns/i });

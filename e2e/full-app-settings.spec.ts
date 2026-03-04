@@ -212,7 +212,7 @@ test.describe('Settings - Knowledge Base', { tag: '@settings' }, () => {
 
     if (isVisible) {
       await productsLink.click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       expect(page.url()).toContain('/library');
     }
   });

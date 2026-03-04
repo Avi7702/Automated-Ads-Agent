@@ -20,7 +20,7 @@ test.describe.serial('Visual Verification', { tag: '@visual-verification' }, () 
     const page = await context.newPage();
 
     await page.goto(`${BASE}/login`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const checks: VerificationCheck[] = [
       {
@@ -83,7 +83,7 @@ test.describe.serial('Visual Verification', { tag: '@visual-verification' }, () 
   // ---------------------------------------------------------------
   test('Studio page', async ({ page }) => {
     await gotoWithAuth(page, '/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     // Studio page has many animations and lazy-loaded sections; wait for the Quick Start textarea
     await page.getByPlaceholder('Describe what you want to create...').waitFor({ state: 'visible', timeout: 15000 });
 
@@ -157,7 +157,7 @@ test.describe.serial('Visual Verification', { tag: '@visual-verification' }, () 
   // ---------------------------------------------------------------
   test('Gallery page', async ({ page }) => {
     await gotoWithAuth(page, '/gallery');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const checks: VerificationCheck[] = [
       {
@@ -204,7 +204,7 @@ test.describe.serial('Visual Verification', { tag: '@visual-verification' }, () 
   // ---------------------------------------------------------------
   test('Pipeline page', async ({ page }) => {
     await gotoWithAuth(page, '/pipeline');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const checks: VerificationCheck[] = [
       {
@@ -261,7 +261,7 @@ test.describe.serial('Visual Verification', { tag: '@visual-verification' }, () 
   // ---------------------------------------------------------------
   test('Library page', async ({ page }) => {
     await gotoWithAuth(page, '/library');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const checks: VerificationCheck[] = [
       {
@@ -330,7 +330,7 @@ test.describe.serial('Visual Verification', { tag: '@visual-verification' }, () 
   // ---------------------------------------------------------------
   test('Settings page', async ({ page }) => {
     await gotoWithAuth(page, '/settings');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const checks: VerificationCheck[] = [
       {
@@ -391,7 +391,7 @@ test.describe.serial('Visual Verification', { tag: '@visual-verification' }, () 
   // ---------------------------------------------------------------
   test('404 Not Found page', async ({ page }) => {
     await gotoWithAuth(page, '/this-page-does-not-exist-12345');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const checks: VerificationCheck[] = [
       {

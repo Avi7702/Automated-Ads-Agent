@@ -27,7 +27,7 @@ test.describe('Carousel Builder Workflow', () => {
     test('can navigate to Studio with Content Planner template', async ({ page }) => {
       // Navigate to Studio with a template that supports carousel
       await page.goto('/?cpTemplateId=technical_guides');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Verify Content Planner guidance appears
       const guidanceVisible = await page.locator('text=Content Planner Template').isVisible();
@@ -192,7 +192,7 @@ test.describe('Carousel Builder Workflow', () => {
       // This test requires the CarouselBuilder component to be visible
       // Navigate to a page that shows the carousel builder
       await studioPage.gotoWithParams({ cpTemplateId: 'technical_guides' });
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Look for carousel-related UI elements
       const carouselElements = page.locator('text=Carousel Builder, text=carousel, text=slides');
@@ -205,7 +205,7 @@ test.describe('Carousel Builder Workflow', () => {
 
     test('Content Planner template info displays', async ({ page }) => {
       await page.goto('/?cpTemplateId=technical_guides');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Should show template guidance
       const templateInfo = page.locator('text=Content Planner Template');
@@ -237,7 +237,7 @@ test.describe('Carousel Builder Workflow', () => {
     test('embla carousel component handles slides', async ({ page }) => {
       // Navigate to a page that might show carousel preview
       await page.goto('/content-planner');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Look for carousel-related UI components
       const carouselContent = page.locator('[class*="CarouselContent"], [class*="embla"]');
@@ -376,7 +376,7 @@ test.describe('Carousel Builder Integration', () => {
   test('studio accepts carousel-generated images', async ({ page }) => {
     // Navigate to studio and verify it can display carousel content
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // The studio should be functional
     const studioVisible = await page.locator('h1').isVisible();
@@ -398,7 +398,7 @@ test.describe('Carousel Responsive Design', () => {
   test('Content Planner page renders on mobile', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/content-planner');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     await expect(page.locator('h1')).toContainText('Content Planner');
   });
@@ -406,7 +406,7 @@ test.describe('Carousel Responsive Design', () => {
   test('Content Planner page renders on tablet', async ({ page }) => {
     await page.setViewportSize({ width: 768, height: 1024 });
     await page.goto('/content-planner');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     await expect(page.locator('h1')).toContainText('Content Planner');
   });
@@ -428,7 +428,7 @@ test.describe('Carousel Error Handling', () => {
 
     // Navigate and verify page handles error
     await page.goto('/content-planner');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Page should still be functional
     await expect(page.locator('h1')).toContainText('Content Planner');

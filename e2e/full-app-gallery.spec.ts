@@ -27,7 +27,7 @@ test.describe('Gallery', { tag: '@gallery' }, () => {
     await expect(backButton).toBeVisible();
 
     await backButton.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     await expect(page).toHaveURL(/^http:\/\/localhost:\d+\/$/);
   });
@@ -118,7 +118,7 @@ test.describe('Gallery', { tag: '@gallery' }, () => {
 
     // Click the first card (not the select button)
     await cards.first().click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Should navigate to Studio with ?generation= param
     await expect(page).toHaveURL(/\/\?generation=/);
@@ -279,7 +279,7 @@ test.describe('Gallery', { tag: '@gallery' }, () => {
     await expect(ctaButton).toBeVisible();
 
     await ctaButton.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await expect(page).toHaveURL(/^http:\/\/localhost:\d+\/$/);
   });
 });

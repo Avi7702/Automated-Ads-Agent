@@ -19,7 +19,7 @@ test.describe('2026 UX Modernization - Visual Regression', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to Studio page
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('should capture Studio page baseline screenshot', async ({ page }) => {
@@ -91,7 +91,7 @@ test.describe('2026 UX Modernization - Visual Regression', () => {
 test.describe('2026 UX Modernization - Phase 1: Visual Polish', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('should have AI sparkle animation class defined', async ({ page }) => {
@@ -161,7 +161,7 @@ test.describe('2026 UX Modernization - Phase 1: Visual Polish', () => {
 test.describe('2026 UX Modernization - Phase 2: Interactions', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('should have ripple CSS animation defined', async ({ page }) => {
@@ -213,7 +213,7 @@ test.describe('2026 UX Modernization - Phase 2: Interactions', () => {
 test.describe('2026 UX Modernization - Keyboard Shortcuts', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('should show keyboard shortcuts help dialog with Shift+?', async ({ page }) => {
@@ -317,7 +317,7 @@ test.describe('2026 UX Modernization - Keyboard Shortcuts', () => {
 test.describe('2026 UX Modernization - Floating Action Button', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('should display floating ? button in bottom-right corner', async ({ page }) => {
@@ -380,7 +380,7 @@ test.describe('2026 UX Modernization - Floating Action Button', () => {
 test.describe('2026 UX Modernization - Phase 3: Bento Grid Layout', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('should display products in bento grid layout', async ({ page }) => {
@@ -434,7 +434,7 @@ test.describe('2026 UX Modernization - Pinch-to-Zoom on Generated Images', () =>
 
   test('should display zoom hint text when result is shown', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // This test would need a generated image
     // For now, verify the zoom instruction text is in the codebase
@@ -448,7 +448,6 @@ test.describe('2026 UX Modernization - Pinch-to-Zoom on Generated Images', () =>
   test('scroll wheel should be captured on result image', async ({ page }) => {
     // Test that scroll events are properly handled on result images
     // This requires generating an image first, which is a longer test
-
     // Placeholder: Verify the motion.div with onWheel is configured
     // The actual zoom functionality is tested when there's an image
   });
@@ -457,7 +456,7 @@ test.describe('2026 UX Modernization - Pinch-to-Zoom on Generated Images', () =>
 test.describe('2026 UX Modernization - Orbital Loader', () => {
   test('should display orbital loader during generation', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // To test the orbital loader, we would need to trigger a generation
     // For now, verify the CSS classes exist
@@ -499,19 +498,20 @@ test.describe('2026 UX Modernization - No Console Errors', () => {
     });
 
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Wait for any async operations
     await page.waitForTimeout(2000);
 
     // Filter out known non-critical errors
-    const criticalErrors = consoleErrors.filter(err =>
-      !err.includes('favicon') &&
-      !err.includes('404') &&
-      !err.includes('401') && // Auth errors expected
-      !err.includes('net::ERR') &&
-      !err.includes('Failed to load resource') &&
-      !err.includes('Refused to execute') // CSP warnings
+    const criticalErrors = consoleErrors.filter(
+      (err) =>
+        !err.includes('favicon') &&
+        !err.includes('404') &&
+        !err.includes('401') && // Auth errors expected
+        !err.includes('net::ERR') &&
+        !err.includes('Failed to load resource') &&
+        !err.includes('Refused to execute'), // CSP warnings
     );
 
     expect(criticalErrors).toHaveLength(0);
@@ -525,7 +525,7 @@ test.describe('2026 UX Modernization - No Console Errors', () => {
     });
 
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(2000);
 
     // Page should function despite any errors
@@ -547,7 +547,7 @@ test.describe('2026 UX Modernization - Performance', () => {
 
     const domLoadTime = Date.now() - startTime;
 
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const fullLoadTime = Date.now() - startTime;
 
@@ -562,7 +562,7 @@ test.describe('2026 UX Modernization - Performance', () => {
 
   test('should render animations without layout shift', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Get initial layout metrics
     const initialViewport = await page.evaluate(() => ({
@@ -588,7 +588,7 @@ test.describe('2026 UX Modernization - Performance', () => {
 test.describe('2026 UX Modernization - Accessibility', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('keyboard shortcuts should not interfere with input fields', async ({ page }) => {
@@ -633,7 +633,7 @@ test.describe('2026 UX Modernization - Accessibility', () => {
 test.describe('2026 UX Modernization - Dark Mode Support', () => {
   test('should support dark mode for neumorphic shadows', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Check if dark mode toggle exists and test dark mode styles
     const darkModeNeomorphShadow = await page.evaluate(() => {
@@ -658,7 +658,7 @@ test.describe('2026 UX Modernization - Dark Mode Support', () => {
 
   test('should support dark mode for glass morphism', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const darkModeGlassBackground = await page.evaluate(() => {
       document.documentElement.classList.add('dark');
@@ -681,11 +681,11 @@ test.describe('2026 UX Modernization - Dark Mode Support', () => {
 
 // Production-specific tests
 test.describe('2026 UX Modernization - Production Validation', () => {
-  test.skip(({ }, testInfo) => !testInfo.project.name.includes('production'), 'Production only');
+  test.skip(({}, testInfo) => !testInfo.project.name.includes('production'), 'Production only');
 
   test('should load production site with all UX features', async ({ page }) => {
     await page.goto(PRODUCTION_URL);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Verify page loads
     await expect(page).toHaveTitle(/Product Content Studio|Automated Ads/i);

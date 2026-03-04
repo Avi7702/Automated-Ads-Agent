@@ -15,7 +15,7 @@ const authFile = path.join(__dirname, '.auth', 'user.json');
 setup('authenticate as demo user', async ({ page }) => {
   // Navigate to login page and sign in via the real browser form
   await page.goto('/login');
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 
   // Fill login form
   await page.locator('input#email').fill('demo@company.com');

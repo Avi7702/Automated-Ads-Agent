@@ -289,7 +289,7 @@ test.describe('Content Planner API', () => {
 test.describe('Content Planner UI', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/content-planner');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('Content Planner page loads successfully', async ({ page }) => {
@@ -300,8 +300,8 @@ test.describe('Content Planner UI', () => {
     await expect(page.locator('text=Strategic guide')).toBeVisible();
   });
 
-  test('displays This Week\'s Balance card', async ({ page }) => {
-    await expect(page.locator('text=This Week\'s Balance')).toBeVisible();
+  test("displays This Week's Balance card", async ({ page }) => {
+    await expect(page.locator("text=This Week's Balance")).toBeVisible();
     await expect(page.locator('text=Track your posting distribution')).toBeVisible();
   });
 
@@ -434,7 +434,7 @@ test.describe('Content Planner Guidance Component', () => {
   test('guidance panel appears when navigating from Content Planner to Studio', async ({ page }) => {
     // Navigate to studio with cpTemplateId query param
     await page.goto('/?cpTemplateId=questions_polls');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Should see Content Planner Template banner
     await expect(page.locator('text=Content Planner Template')).toBeVisible({ timeout: 10000 });
@@ -442,7 +442,7 @@ test.describe('Content Planner Guidance Component', () => {
 
   test('guidance panel shows template title and description', async ({ page }) => {
     await page.goto('/?cpTemplateId=questions_polls');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Should show the template title
     await expect(page.locator('text=Questions & Polls')).toBeVisible({ timeout: 10000 });
@@ -453,13 +453,16 @@ test.describe('Content Planner Guidance Component', () => {
 
   test('guidance panel can be dismissed', async ({ page }) => {
     await page.goto('/?cpTemplateId=questions_polls');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Wait for guidance panel
     await expect(page.locator('text=Content Planner Template')).toBeVisible({ timeout: 10000 });
 
     // Find and click dismiss button (X)
-    const dismissButton = page.locator('button').filter({ has: page.locator('svg.lucide-x') }).first();
+    const dismissButton = page
+      .locator('button')
+      .filter({ has: page.locator('svg.lucide-x') })
+      .first();
     if (await dismissButton.isVisible()) {
       await dismissButton.click();
 
@@ -470,7 +473,7 @@ test.describe('Content Planner Guidance Component', () => {
 
   test('guidance panel shows hook formulas section', async ({ page }) => {
     await page.goto('/?cpTemplateId=questions_polls');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Wait for panel
     await expect(page.locator('text=Content Planner Template')).toBeVisible({ timeout: 10000 });
@@ -488,7 +491,7 @@ test.describe('Content Planner Guidance Component', () => {
 
   test('Generate Complete Post button exists in guidance panel', async ({ page }) => {
     await page.goto('/?cpTemplateId=questions_polls');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Wait for guidance panel
     await expect(page.locator('text=Content Planner Template')).toBeVisible({ timeout: 10000 });
@@ -499,7 +502,7 @@ test.describe('Content Planner Guidance Component', () => {
 
   test('Generate Complete Post shows loading state', async ({ page }) => {
     await page.goto('/?cpTemplateId=questions_polls');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Wait for guidance panel
     await expect(page.locator('text=Content Planner Template')).toBeVisible({ timeout: 10000 });
@@ -528,7 +531,7 @@ test.describe('Content Planner Console Errors', () => {
     });
 
     await page.goto('/content-planner');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(2000);
 
     // Filter out known non-critical errors
@@ -538,7 +541,7 @@ test.describe('Content Planner Console Errors', () => {
         !err.includes('404') &&
         !err.includes('401') &&
         !err.includes('net::ERR') &&
-        !err.includes('Failed to load resource')
+        !err.includes('Failed to load resource'),
     );
 
     expect(criticalErrors).toHaveLength(0);
@@ -554,7 +557,7 @@ test.describe('Content Planner Console Errors', () => {
     });
 
     await page.goto('/?cpTemplateId=questions_polls');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(2000);
 
     // Filter out known non-critical errors
@@ -564,7 +567,7 @@ test.describe('Content Planner Console Errors', () => {
         !err.includes('404') &&
         !err.includes('401') &&
         !err.includes('net::ERR') &&
-        !err.includes('Failed to load resource')
+        !err.includes('Failed to load resource'),
     );
 
     expect(criticalErrors).toHaveLength(0);
@@ -580,7 +583,7 @@ test.describe('Content Planner Console Errors', () => {
     });
 
     await page.goto('/content-planner');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Expand all categories
     const categoryHeaders = page.locator('[class*="CardHeader"]');
@@ -600,7 +603,7 @@ test.describe('Content Planner Console Errors', () => {
         !err.includes('404') &&
         !err.includes('401') &&
         !err.includes('net::ERR') &&
-        !err.includes('Failed to load resource')
+        !err.includes('Failed to load resource'),
     );
 
     expect(criticalErrors).toHaveLength(0);
@@ -614,7 +617,7 @@ test.describe('Content Planner Console Errors', () => {
 test.describe('Content Planner Navigation', () => {
   test('can navigate to Content Planner from header', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Look for navigation link to Content Planner
     const contentPlannerLink = page.locator('a[href="/content-planner"]');
@@ -627,7 +630,7 @@ test.describe('Content Planner Navigation', () => {
 
   test('Create in Studio link navigates correctly', async ({ page }) => {
     await page.goto('/content-planner');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Expand a category and open a template
     await page.locator('text=Engagement Content').first().click();
@@ -658,18 +661,18 @@ test.describe('Content Planner Responsive', () => {
   test('renders correctly on mobile viewport', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/content-planner');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Page should still show main elements
     await expect(page.locator('h1')).toContainText('Content Planner');
-    await expect(page.locator('text=This Week\'s Balance')).toBeVisible();
+    await expect(page.locator("text=This Week's Balance")).toBeVisible();
     await expect(page.locator('text=Suggested Next Post')).toBeVisible();
   });
 
   test('renders correctly on tablet viewport', async ({ page }) => {
     await page.setViewportSize({ width: 768, height: 1024 });
     await page.goto('/content-planner');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Page should show all main elements
     await expect(page.locator('h1')).toContainText('Content Planner');
@@ -684,7 +687,7 @@ test.describe('Content Planner Responsive', () => {
 test.describe('Recent Posts Section', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/content-planner');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('displays Recent Posts section when posts exist', async ({ page, request }) => {
@@ -700,11 +703,11 @@ test.describe('Recent Posts Section', () => {
 
     // Reload page to see the post
     await page.reload();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Verify Recent Posts section is visible
     await expect(page.locator('text=Recent Posts (Last 7 Days)')).toBeVisible();
-    await expect(page.locator('text=Posts you\'ve marked as completed')).toBeVisible();
+    await expect(page.locator("text=Posts you've marked as completed")).toBeVisible();
   });
 
   test('shows post details correctly', async ({ page, request }) => {
@@ -719,7 +722,7 @@ test.describe('Recent Posts Section', () => {
     });
 
     await page.reload();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Find the recent post items
     const recentPostItems = page.locator('[class*="border rounded-lg"]').filter({
@@ -733,7 +736,9 @@ test.describe('Recent Posts Section', () => {
     await expect(recentPostItems.first().locator('text=linkedin')).toBeVisible();
 
     // Verify date format (should show month abbreviation)
-    await expect(recentPostItems.first().locator('text=/Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec/')).toBeVisible();
+    await expect(
+      recentPostItems.first().locator('text=/Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec/'),
+    ).toBeVisible();
   });
 
   test('delete button removes post', async ({ page, request }) => {
@@ -749,7 +754,7 @@ test.describe('Recent Posts Section', () => {
     expect(response.ok()).toBeTruthy();
 
     await page.reload();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Get initial post count
     const recentPostItems = page.locator('[class*="border rounded-lg"]').filter({
@@ -759,9 +764,12 @@ test.describe('Recent Posts Section', () => {
     expect(initialCount).toBeGreaterThan(0);
 
     // Click delete button on first post
-    const deleteButton = recentPostItems.first().locator('button').filter({
-      has: page.locator('svg.lucide-trash-2'),
-    });
+    const deleteButton = recentPostItems
+      .first()
+      .locator('button')
+      .filter({
+        has: page.locator('svg.lucide-trash-2'),
+      });
     await deleteButton.click();
 
     // Verify toast notification
@@ -786,7 +794,7 @@ test.describe('Recent Posts Section', () => {
     });
 
     await page.reload();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Get initial total posts count
     const totalPostsElement = page.locator('text=Total Posts This Week').locator('..');
@@ -794,9 +802,12 @@ test.describe('Recent Posts Section', () => {
     const initialTotal = parseInt(initialTotalText?.match(/(\d+)/)?.[1] || '0');
 
     // Delete the post
-    const deleteButton = page.locator('button').filter({
-      has: page.locator('svg.lucide-trash-2'),
-    }).first();
+    const deleteButton = page
+      .locator('button')
+      .filter({
+        has: page.locator('svg.lucide-trash-2'),
+      })
+      .first();
     await deleteButton.click();
 
     // Wait for deletion
@@ -822,7 +833,7 @@ test.describe('Recent Posts Section', () => {
     }
 
     await page.reload();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Verify multiple posts are visible
     const recentPostItems = page.locator('[class*="border rounded-lg"]').filter({
@@ -842,7 +853,7 @@ test.describe('Recent Posts Section', () => {
     });
 
     await page.reload();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Verify post has a colored icon container
     const recentPostItems = page.locator('[class*="border rounded-lg"]').filter({

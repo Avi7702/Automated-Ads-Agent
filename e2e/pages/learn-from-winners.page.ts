@@ -44,7 +44,7 @@ export class LearnFromWinnersPage {
    */
   async goto() {
     await this.page.goto('/learn-from-winners');
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   /**
@@ -63,12 +63,18 @@ export class LearnFromWinnersPage {
    * Wait for patterns to load (either show patterns, empty state, or error)
    */
   async waitForPatternsLoad() {
-    await this.page.waitForSelector('[class*="skeleton"], [class*="card"], text=Learn from Your Winners, text=Failed to load patterns', {
-      state: 'visible',
-      timeout: 15000
-    });
+    await this.page.waitForSelector(
+      '[class*="skeleton"], [class*="card"], text=Learn from Your Winners, text=Failed to load patterns',
+      {
+        state: 'visible',
+        timeout: 15000,
+      },
+    );
     // Wait for skeletons to disappear
-    await this.loadingSkeletons.first().waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
+    await this.loadingSkeletons
+      .first()
+      .waitFor({ state: 'hidden', timeout: 10000 })
+      .catch(() => {});
   }
 
   /**

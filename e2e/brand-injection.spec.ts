@@ -12,7 +12,7 @@ test.describe('Brand Profile Injection', () => {
     test('Settings page shows brand profile form', async ({ page }) => {
       // Navigate to settings page
       await page.goto('/settings');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Verify Brand Profile heading is visible
       await expect(page.locator('h1').filter({ hasText: 'Brand Profile' })).toBeVisible();
@@ -32,7 +32,7 @@ test.describe('Brand Profile Injection', () => {
 
       // Navigate to settings
       await page.goto('/settings');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Fill in brand name
       const brandNameInput = page.locator('input#brandName');
@@ -76,7 +76,7 @@ test.describe('Brand Profile Injection', () => {
 
       // Navigate to settings
       await page.goto('/settings');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Verify the brand name is pre-filled
       const brandNameInput = page.locator('input#brandName');
@@ -105,7 +105,7 @@ test.describe('Brand Profile Injection', () => {
 
       // Navigate to settings
       await page.goto('/settings');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Verify delete button is visible
       await expect(page.getByRole('button', { name: /Delete Profile/i })).toBeVisible();
@@ -225,7 +225,7 @@ test.describe('Brand Profile Injection', () => {
 
       // Navigate to settings
       await page.goto('/settings');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Expand the Brand Voice section
       await page.locator('button').filter({ hasText: 'Brand Voice' }).click();
@@ -252,7 +252,7 @@ test.describe('Brand Profile Injection', () => {
 
       // Navigate to settings
       await page.goto('/settings');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Expand the Target Audience section
       await page.locator('button').filter({ hasText: 'Target Audience' }).click();

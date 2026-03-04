@@ -108,7 +108,7 @@ export class ProductLibraryPage {
    */
   async goto() {
     await this.page.goto('/library?tab=products');
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   /**
@@ -116,7 +116,7 @@ export class ProductLibraryPage {
    */
   async gotoStandalone() {
     await this.page.goto('/products');
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   /**
@@ -189,11 +189,7 @@ export class ProductLibraryPage {
   /**
    * Fill in the product details in the Add Product modal
    */
-  async fillProductDetails(details: {
-    name: string;
-    category?: string;
-    description?: string;
-  }) {
+  async fillProductDetails(details: { name: string; category?: string; description?: string }) {
     await this.productNameInput.fill(details.name);
     if (details.category) {
       await this.categoryInput.fill(details.category);
@@ -221,11 +217,14 @@ export class ProductLibraryPage {
   /**
    * Complete the full add product flow
    */
-  async addProduct(imagePath: string, details: {
-    name: string;
-    category?: string;
-    description?: string;
-  }) {
+  async addProduct(
+    imagePath: string,
+    details: {
+      name: string;
+      category?: string;
+      description?: string;
+    },
+  ) {
     await this.openAddProductModal();
     await this.uploadProductImage(imagePath);
     await this.fillProductDetails(details);
@@ -233,7 +232,7 @@ export class ProductLibraryPage {
 
     // Wait for modal to close and products to refresh
     await expect(this.addProductModal).not.toBeVisible({ timeout: 15000 });
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   /**
@@ -294,7 +293,7 @@ export class ProductLibraryPage {
     await this.fetchUrlButton.click();
 
     // Wait for fetch to complete
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   /**
@@ -302,7 +301,7 @@ export class ProductLibraryPage {
    */
   async verifyEnrichment() {
     await this.saveVerifyButton.click();
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('domcontentloaded');
   }
 
   /**
@@ -334,7 +333,7 @@ export class ProductLibraryPage {
    */
   async getEnrichmentStatus(): Promise<string> {
     const statusBadge = this.page.locator('[class*="rounded-full"][class*="text-xs"]').first();
-    return await statusBadge.textContent() || '';
+    return (await statusBadge.textContent()) || '';
   }
 
   /**
@@ -353,7 +352,10 @@ export class ProductLibraryPage {
    * Delete a product
    */
   async deleteProduct(index: number = 0) {
-    const deleteButton = this.productCards.nth(index).locator('button').filter({ has: this.page.locator('[class*="Trash"]') });
+    const deleteButton = this.productCards
+      .nth(index)
+      .locator('button')
+      .filter({ has: this.page.locator('[class*="Trash"]') });
     await deleteButton.click();
 
     // Confirm deletion
@@ -370,7 +372,7 @@ export class ProductLibraryPage {
   async productExists(name: string): Promise<boolean> {
     await this.waitForProductsLoaded();
     const product = this.productCards.filter({ hasText: name });
-    return await product.count() > 0;
+    return (await product.count()) > 0;
   }
 
   /**

@@ -56,7 +56,7 @@ test.describe('Studio Workflow', () => {
     test('navigation to Studio from other pages works', async ({ page }) => {
       // Navigate to library first
       await page.goto('/library');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Navigate back to Studio via header
       const studioNavLink = page.locator('nav a[href="/"], nav button').filter({ hasText: 'Studio' });
@@ -253,7 +253,7 @@ test.describe('Studio Workflow', () => {
     test('history can be accessed', async ({ page }) => {
       // Navigate to history view
       await studioPage.gotoWithParams({ view: 'history' });
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Page should load without errors
       expect(page.url()).toContain('view=history');
@@ -261,7 +261,7 @@ test.describe('Studio Workflow', () => {
 
     test('history items are clickable', async ({ page }) => {
       await studioPage.gotoWithParams({ view: 'history' });
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       const historyCount = await studioPage.historyItems.count();
       if (historyCount > 0) {

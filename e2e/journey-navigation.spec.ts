@@ -44,7 +44,7 @@ test.describe('Navigation Journey', () => {
 
       // Click Library in nav
       await page.locator('nav[aria-label="Main navigation"]').getByText('Library').click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Verify we're on the Library page
       await expect(page).toHaveURL(/\/library/);
@@ -124,14 +124,14 @@ test.describe('Navigation Journey', () => {
       await page.waitForTimeout(300);
 
       // Verify html has dark class
-      const htmlAfterDark = await page.locator('html').getAttribute('class') || '';
+      const htmlAfterDark = (await page.locator('html').getAttribute('class')) || '';
       expect(htmlAfterDark).toContain('dark');
 
       // Navigate to another page
       await gotoWithAuth(page, '/gallery');
 
       // Theme should persist
-      const htmlOnGallery = await page.locator('html').getAttribute('class') || '';
+      const htmlOnGallery = (await page.locator('html').getAttribute('class')) || '';
       expect(htmlOnGallery).toContain('dark');
 
       // Restore light theme for other tests
@@ -168,7 +168,7 @@ test.describe('Navigation Journey', () => {
       // Navigate using nav links (not page.goto) to keep history clean
       const nav = page.locator('nav[aria-label="Main navigation"]');
       await nav.getByText('Library').click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       // Handle auth redirect gracefully
       if (page.url().includes('/login')) {
         await gotoWithAuth(page, '/library');
@@ -176,7 +176,7 @@ test.describe('Navigation Journey', () => {
       await expect(page).toHaveURL(/\/library/, { timeout: 10000 });
 
       await nav.getByText('Gallery').click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       if (page.url().includes('/login')) {
         await gotoWithAuth(page, '/gallery');
       }
@@ -184,7 +184,7 @@ test.describe('Navigation Journey', () => {
 
       // Go back to Library
       await page.goBack();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       if (page.url().includes('/login')) {
         // Auth redirect polluted history — just verify we can navigate back
         expect(true).toBe(true);
@@ -194,7 +194,7 @@ test.describe('Navigation Journey', () => {
 
       // Go forward to Gallery
       await page.goForward();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       await expect(page).toHaveURL(/\/gallery/, { timeout: 10000 });
     });
   });

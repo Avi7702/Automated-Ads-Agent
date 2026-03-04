@@ -96,7 +96,7 @@ test.describe('Gallery Journey', () => {
       const ctaButton = page.getByRole('button', { name: /go to studio/i });
       if (await ctaButton.isVisible()) {
         await ctaButton.click();
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
         await expect(page).toHaveURL(/^http:\/\/localhost:\d+\/$/);
       }
     });
@@ -135,7 +135,7 @@ test.describe('Gallery Journey', () => {
 
       if (cardCount > 0) {
         await cards.first().click();
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // Should navigate to Studio with generation param
         await expect(page).toHaveURL(/\/\?generation=/);
@@ -149,7 +149,7 @@ test.describe('Gallery Journey', () => {
 
       const backButton = page.getByRole('button', { name: /studio/i });
       await backButton.click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       await expect(page).toHaveURL(/^http:\/\/localhost:\d+\/$/);
     });
