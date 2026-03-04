@@ -409,10 +409,13 @@ Please analyze the transformation and answer the user's question.`,
           parts.push({ text: '[Generated/transformed image]' });
         }
 
-        const result = await getGlobalGeminiClient().models.generateContent({
-          model: 'gemini-3-flash',
-          contents: [{ role: 'user', parts }],
-        });
+        const { withGeminiResilience } = await import('../lib/geminiResilience');
+        const result = await withGeminiResilience('analyze', () =>
+          getGlobalGeminiClient().models.generateContent({
+            model: 'gemini-3-flash',
+            contents: [{ role: 'user', parts }],
+          }),
+        );
         const answer = result.candidates?.[0]?.content?.parts?.[0]?.text;
         if (!answer) {
           return res.status(200).json({
@@ -565,6 +568,7 @@ export const jobsRouter: RouterFactory = (ctx: RouterContext): Router => {
    */
   router.get(
     '/:jobId',
+    requireAuth,
     asyncHandler(async (req: Request, res: Response) => {
       try {
         const jobId = req.params['jobId'];
@@ -581,6 +585,15 @@ export const jobsRouter: RouterFactory = (ctx: RouterContext): Router => {
           return res.status(404).json({
             success: false,
             error: 'Job not found',
+          });
+        }
+
+        // Ownership check: verify the job belongs to the authenticated user
+        // Allow access if old jobs have no userId (backwards compat)
+        if (job.data.userId && job.data.userId !== req.user!.id) {
+          return res.status(403).json({
+            success: false,
+            error: 'Access denied',
           });
         }
 
@@ -1075,7 +1088,6 @@ export const transformRouter: RouterFactory = (ctx: RouterContext): Router => {
 
         res.status(500).json({
           error: 'Failed to transform image',
-          details: errMessage,
         });
       } finally {
         const durationMs = Date.now() - startTime;

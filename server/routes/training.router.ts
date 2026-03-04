@@ -239,7 +239,7 @@ export const trainingRouter: RouterFactory = (ctx: RouterContext): Router => {
         });
       } catch (error: unknown) {
         logger.error({ module: 'Training', err: error }, 'Start tuning error');
-        res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to start tuning job' });
+        res.status(500).json({ error: 'Failed to start tuning job' });
       }
     }),
   );

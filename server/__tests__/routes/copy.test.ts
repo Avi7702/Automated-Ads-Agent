@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import type { Express } from 'express';
-import { createTestAppForRouter, type ContextOverrides } from './_testHelpers';
+import { createTestAppForRouter, loginAs, type ContextOverrides } from './_testHelpers';
 import { copyRouter } from '../../routes/copy.router';
 
 const { mockGenerateCopy } = vi.hoisted(() => ({
@@ -77,7 +77,8 @@ describe('Copy Router - /api/copy', () => {
   });
 
   it('returns variations in response for studio clients', async () => {
-    const res = await request(app).post('/api/copy/generate').send(validPayload);
+    const cookie = await loginAs(app);
+    const res = await request(app).post('/api/copy/generate').set('Cookie', cookie).send(validPayload);
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -89,7 +90,8 @@ describe('Copy Router - /api/copy', () => {
   it('returns deterministic fallback copy when Gemini fails', async () => {
     mockGenerateCopy.mockRejectedValue(new Error('Gemini API unavailable'));
 
-    const res = await request(app).post('/api/copy/generate').send(validPayload);
+    const cookie = await loginAs(app);
+    const res = await request(app).post('/api/copy/generate').set('Cookie', cookie).send(validPayload);
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);

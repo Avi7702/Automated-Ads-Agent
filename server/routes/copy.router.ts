@@ -20,6 +20,10 @@ import { isLikelyGeminiError } from '../lib/geminiResilience';
 export const copyRouter: RouterFactory = (ctx: RouterContext): Router => {
   const router = createRouter();
   const { storage, logger } = ctx.services;
+  const { requireAuth } = ctx.middleware;
+
+  // All copy endpoints require authentication
+  router.use(requireAuth);
 
   /**
    * POST /generate - Generate ad copy with multiple variations
@@ -28,7 +32,7 @@ export const copyRouter: RouterFactory = (ctx: RouterContext): Router => {
     '/generate',
     promptInjectionGuard,
     asyncHandler(async (req: Request, res: Response) => {
-      const userId = req.session?.userId || 'demo-user';
+      const userId = req.user!.id;
       let validatedData: GenerateCopyInput | undefined;
 
       const toClientVariation = (variation: {
@@ -205,9 +209,7 @@ export const copyRouter: RouterFactory = (ctx: RouterContext): Router => {
           });
         }
 
-        res
-          .status(500)
-          .json({ error: 'Failed to generate copy', details: err instanceof Error ? err.message : String(err) });
+        res.status(500).json({ error: 'Failed to generate copy' });
       }
     }),
   );
@@ -271,6 +273,6 @@ export const copyRouterModule: RouterModule = {
   factory: copyRouter,
   description: 'Ad copy generation and CRUD for copy variations',
   endpointCount: 4,
-  requiresAuth: false, // Mixed - generate uses session, reads are public
+  requiresAuth: true,
   tags: ['copywriting', 'ai', 'content'],
 };
