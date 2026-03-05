@@ -1,18 +1,20 @@
 import { vi, describe, it, expect, beforeEach, type Mock } from 'vitest';
 import { getBrandImagesForProducts } from '../repositories/knowledgeRepository';
 import { getPerformingAdTemplatesByPlatform, searchPerformingAdTemplates } from '../repositories/templateRepository';
+import { upsertQuotaMetrics } from '../repositories/quotaRepository';
 import { db } from '../db';
 
 // Mock Drizzle db
 vi.mock('../db', () => ({
   db: {
     select: vi.fn(),
+    insert: vi.fn(),
   },
 }));
 
 /**
  * Typed mock matching Drizzle's fluent query builder chain.
- * Terminal methods (where, orderBy, limit, offset) resolve to an empty array
+ * Terminal methods (where, orderBy, limit, offset, onConflictDoUpdate) resolve to an empty array
  * so the chain is awaitable without a `then` property (which Biome forbids
  * on plain objects via lint/suspicious/noThenProperty).
  */
@@ -22,10 +24,13 @@ interface DrizzleMockChain {
   orderBy: Mock;
   limit: Mock;
   offset: Mock;
+  values: Mock;
+  onConflictDoUpdate: Mock;
+  returning: Mock;
 }
 
 describe('Performance Optimizations - Repository Layer', () => {
-  let mockSelectChain: DrizzleMockChain;
+  let mockChain: DrizzleMockChain;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -34,21 +39,34 @@ describe('Performance Optimizations - Repository Layer', () => {
 
     // Setup a mock chain for Drizzle — each method returns the chain,
     // but also acts as a thenable via the resolved promise prototype
-    mockSelectChain = Object.assign(resolved, {
+    mockChain = Object.assign(resolved, {
       from: vi.fn().mockReturnValue(resolved),
       where: vi.fn().mockReturnValue(resolved),
       orderBy: vi.fn().mockReturnValue(resolved),
       limit: vi.fn().mockReturnValue(resolved),
       offset: vi.fn().mockReturnValue(resolved),
+      values: vi.fn().mockReturnValue(resolved),
+      onConflictDoUpdate: vi.fn().mockReturnValue(resolved),
+      returning: vi.fn().mockReturnValue(resolved),
     });
 
     // Re-wire chaining: each method returns the full mock so intermediate
     // calls still expose .from/.where/.orderBy etc.
-    for (const method of ['from', 'where', 'orderBy', 'limit', 'offset'] as const) {
-      mockSelectChain[method].mockReturnValue(mockSelectChain);
+    for (const method of [
+      'from',
+      'where',
+      'orderBy',
+      'limit',
+      'offset',
+      'values',
+      'onConflictDoUpdate',
+      'returning',
+    ] as const) {
+      mockChain[method].mockReturnValue(mockChain);
     }
 
-    vi.mocked(db.select).mockReturnValue(mockSelectChain as unknown as ReturnType<typeof db.select>);
+    vi.mocked(db.select).mockReturnValue(mockChain as unknown as ReturnType<typeof db.select>);
+    vi.mocked(db.insert).mockReturnValue(mockChain as unknown as ReturnType<typeof db.insert>);
   });
 
   describe('knowledgeRepository.getBrandImagesForProducts', () => {
@@ -59,11 +77,11 @@ describe('Performance Optimizations - Repository Layer', () => {
       await getBrandImagesForProducts(productIds, userId);
 
       expect(db.select).toHaveBeenCalled();
-      expect(mockSelectChain.from).toHaveBeenCalled();
-      expect(mockSelectChain.where).toHaveBeenCalled();
+      expect(mockChain.from).toHaveBeenCalled();
+      expect(mockChain.where).toHaveBeenCalled();
 
       // Verify that SQL operator was used (implicitly by checking mock calls)
-      const whereCall = mockSelectChain.where.mock.calls[0][0];
+      const whereCall = mockChain.where.mock.calls[0][0];
       // Drizzle SQL objects are complex, but we can check if it's defined
       expect(whereCall).toBeDefined();
     });
@@ -83,7 +101,39 @@ describe('Performance Optimizations - Repository Layer', () => {
       await getPerformingAdTemplatesByPlatform(userId, platform);
 
       expect(db.select).toHaveBeenCalled();
-      expect(mockSelectChain.where).toHaveBeenCalled();
+      expect(mockChain.where).toHaveBeenCalled();
+    });
+  });
+
+  describe('quotaRepository.upsertQuotaMetrics', () => {
+    it('should use atomic PostgreSQL UPSERT with onConflictDoUpdate', async () => {
+      const metrics = {
+        windowType: 'minute',
+        windowStart: new Date(),
+        windowEnd: new Date(),
+        brandId: 'brand-123',
+        requestCount: 1,
+        successCount: 1,
+        errorCount: 0,
+        rateLimitCount: 0,
+        inputTokensTotal: 100,
+        outputTokensTotal: 50,
+        estimatedCostMicros: 500,
+        generateCount: 1,
+        editCount: 0,
+        analyzeCount: 0,
+        modelBreakdown: { 'gemini-3-flash': 1 },
+      };
+
+      await upsertQuotaMetrics(metrics as any);
+
+      expect(db.insert).toHaveBeenCalled();
+      expect(mockChain.values).toHaveBeenCalledWith(metrics);
+      expect(mockChain.onConflictDoUpdate).toHaveBeenCalled();
+
+      const onConflictCall = mockChain.onConflictDoUpdate.mock.calls[0][0];
+      expect(onConflictCall.target).toBeDefined();
+      expect(onConflictCall.set).toBeDefined();
     });
   });
 
@@ -103,10 +153,10 @@ describe('Performance Optimizations - Repository Layer', () => {
       await searchPerformingAdTemplates(userId, filters);
 
       expect(db.select).toHaveBeenCalled();
-      expect(mockSelectChain.where).toHaveBeenCalled();
+      expect(mockChain.where).toHaveBeenCalled();
 
       // The chain should include orderBy and potentially other calls
-      expect(mockSelectChain.orderBy).toHaveBeenCalled();
+      expect(mockChain.orderBy).toHaveBeenCalled();
     });
 
     it('should handle partial filters', async () => {
@@ -118,7 +168,7 @@ describe('Performance Optimizations - Repository Layer', () => {
       await searchPerformingAdTemplates(userId, filters);
 
       expect(db.select).toHaveBeenCalled();
-      expect(mockSelectChain.where).toHaveBeenCalled();
+      expect(mockChain.where).toHaveBeenCalled();
     });
   });
 });
