@@ -253,6 +253,11 @@ export const adSceneTemplates = pgTable(
     createdByIdx: index('ad_scene_templates_created_by_idx').on(table.createdBy),
     isGlobalIdx: index('ad_scene_templates_is_global_idx').on(table.isGlobal),
     createdAtIdx: index('ad_scene_templates_created_at_idx').on(table.createdAt),
+    platformHintsGinIdx: index('ad_scene_templates_platform_hints_gin_idx').using('gin', table.platformHints),
+    aspectRatioHintsGinIdx: index('ad_scene_templates_aspect_ratio_hints_gin_idx').using(
+      'gin',
+      table.aspectRatioHints,
+    ),
   }),
 );
 

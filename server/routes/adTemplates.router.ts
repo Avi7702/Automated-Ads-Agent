@@ -50,7 +50,7 @@ export const adTemplatesRouter: RouterFactory = (ctx: RouterContext): Router => 
     '/',
     asyncHandler(async (req: Request, res: Response) => {
       try {
-        const { category, search, platform, aspectRatio } = req.query;
+        const { category, search, platform, aspectRatio, limit, offset } = req.query;
 
         // If search query provided, use search function
         if (search && typeof search === 'string') {
@@ -58,22 +58,32 @@ export const adTemplatesRouter: RouterFactory = (ctx: RouterContext): Router => 
           return res.json(templates);
         }
 
-        // Otherwise use filters
-        const filters: { category?: string; isGlobal?: boolean } = {};
+        // Use database-side filtering and pagination for better performance
+        const filters: {
+          category?: string;
+          isGlobal?: boolean;
+          platform?: string;
+          aspectRatio?: string;
+          limit?: number;
+          offset?: number;
+        } = {};
+
         if (category && typeof category === 'string') {
           filters.category = category;
         }
-        filters.isGlobal = true; // Only return global templates by default
-
-        let templates = await storage.getAdSceneTemplates(filters);
-
-        // Additional filtering for platform and aspect ratio
         if (platform && typeof platform === 'string') {
-          templates = templates.filter((t) => t.platformHints?.includes(platform));
+          filters.platform = platform;
         }
         if (aspectRatio && typeof aspectRatio === 'string') {
-          templates = templates.filter((t) => t.aspectRatioHints?.includes(aspectRatio));
+          filters.aspectRatio = aspectRatio;
         }
+
+        filters.isGlobal = true; // Only return global templates by default
+
+        if (limit) filters.limit = parseInt(limit as string);
+        if (offset) filters.offset = parseInt(offset as string);
+
+        const templates = await storage.getAdSceneTemplates(filters);
 
         res.json(templates);
       } catch (err: unknown) {
