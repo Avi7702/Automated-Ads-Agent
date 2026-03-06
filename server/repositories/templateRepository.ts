@@ -54,6 +54,8 @@ export async function getAdSceneTemplates(filters?: {
   category?: string;
   isGlobal?: boolean;
   createdBy?: string;
+  platform?: string;
+  aspectRatio?: string;
   limit?: number;
   offset?: number;
 }): Promise<AdSceneTemplate[]> {
@@ -69,6 +71,12 @@ export async function getAdSceneTemplates(filters?: {
   }
   if (filters?.createdBy) {
     conditions.push(eq(adSceneTemplates.createdBy, filters.createdBy));
+  }
+  if (filters?.platform) {
+    conditions.push(arrayContains(adSceneTemplates.platformHints, [filters.platform]));
+  }
+  if (filters?.aspectRatio) {
+    conditions.push(arrayContains(adSceneTemplates.aspectRatioHints, [filters.aspectRatio]));
   }
 
   if (conditions.length > 0) {

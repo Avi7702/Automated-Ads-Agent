@@ -1,6 +1,10 @@
 import { vi, describe, it, expect, beforeEach, type Mock } from 'vitest';
 import { getBrandImagesForProducts } from '../repositories/knowledgeRepository';
-import { getPerformingAdTemplatesByPlatform, searchPerformingAdTemplates } from '../repositories/templateRepository';
+import {
+  getPerformingAdTemplatesByPlatform,
+  searchPerformingAdTemplates,
+  getAdSceneTemplates,
+} from '../repositories/templateRepository';
 import { db } from '../db';
 
 // Mock Drizzle db
@@ -119,6 +123,32 @@ describe('Performance Optimizations - Repository Layer', () => {
 
       expect(db.select).toHaveBeenCalled();
       expect(mockSelectChain.where).toHaveBeenCalled();
+    });
+  });
+
+  describe('templateRepository.getAdSceneTemplates', () => {
+    it('should use database-level filtering for platform and aspectRatio', async () => {
+      const filters = {
+        platform: 'instagram',
+        aspectRatio: '9:16',
+        limit: 10,
+        offset: 5,
+      };
+
+      await getAdSceneTemplates(filters);
+
+      expect(db.select).toHaveBeenCalled();
+      expect(mockSelectChain.where).toHaveBeenCalled();
+      expect(mockSelectChain.limit).toHaveBeenCalledWith(10);
+      expect(mockSelectChain.offset).toHaveBeenCalledWith(5);
+    });
+
+    it('should handle missing filters and use defaults', async () => {
+      await getAdSceneTemplates();
+
+      expect(db.select).toHaveBeenCalled();
+      expect(mockSelectChain.limit).toHaveBeenCalledWith(50);
+      expect(mockSelectChain.offset).toHaveBeenCalledWith(0);
     });
   });
 });
