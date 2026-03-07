@@ -18,7 +18,7 @@ async function runMigration() {
   }
 
   const pool = new Pool({ connectionString: DATABASE_URL });
-  const db = drizzle(pool);
+  const db = drizzle({ client: pool });
 
   try {
     // Add brandVoice column to users table

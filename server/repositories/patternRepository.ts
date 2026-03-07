@@ -17,7 +17,7 @@ import { and, eq, desc, lte, sql } from 'drizzle-orm';
 // ============================================
 
 export async function createLearnedPattern(pattern: InsertLearnedAdPattern): Promise<LearnedAdPattern> {
-  const [result] = await db.insert(learnedAdPatterns).values(pattern).returning();
+  const [result] = await db.insert(learnedAdPatterns).values(pattern as typeof learnedAdPatterns.$inferInsert).returning();
   return result!;
 }
 
@@ -74,7 +74,7 @@ export async function updateLearnedPattern(
 ): Promise<LearnedAdPattern> {
   const [result] = await db
     .update(learnedAdPatterns)
-    .set({ ...updates, updatedAt: new Date() })
+    .set({ ...updates, updatedAt: new Date() } as Partial<typeof learnedAdPatterns.$inferInsert>)
     .where(eq(learnedAdPatterns.id, id))
     .returning();
   return result!;
@@ -100,7 +100,7 @@ export async function incrementPatternUsage(id: string): Promise<void> {
 // ============================================
 
 export async function createUploadRecord(upload: InsertAdAnalysisUpload): Promise<AdAnalysisUpload> {
-  const [result] = await db.insert(adAnalysisUploads).values(upload).returning();
+  const [result] = await db.insert(adAnalysisUploads).values(upload as typeof adAnalysisUploads.$inferInsert).returning();
   return result!;
 }
 

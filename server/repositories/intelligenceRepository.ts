@@ -34,16 +34,16 @@ export async function getProductPriority(userId: string, productId: string): Pro
 export async function upsertProductPriority(data: InsertProductPriority): Promise<ProductPriority> {
   const rows = await db
     .insert(productPriorities)
-    .values(data)
+    .values(data as typeof productPriorities.$inferInsert)
     .onConflictDoUpdate({
       target: [productPriorities.userId, productPriorities.productId],
       set: {
         revenueTier: data.revenueTier,
         revenueWeight: data.revenueWeight,
         competitiveAngle: data.competitiveAngle,
-        keySellingPoints: data.keySellingPoints,
+        keySellingPoints: data.keySellingPoints as typeof productPriorities.$inferInsert.keySellingPoints,
         monthlyTarget: data.monthlyTarget,
-        seasonalRelevance: data.seasonalRelevance,
+        seasonalRelevance: data.seasonalRelevance as typeof productPriorities.$inferInsert.seasonalRelevance,
         updatedAt: new Date(),
       },
     })
@@ -113,13 +113,13 @@ export async function upsertBusinessIntelligence(
 ): Promise<BusinessIntelligence> {
   const rows = await db
     .insert(businessIntelligence)
-    .values({ ...data, userId })
+    .values({ ...data, userId } as typeof businessIntelligence.$inferInsert)
     .onConflictDoUpdate({
       target: [businessIntelligence.userId],
       set: {
         ...data,
         updatedAt: new Date(),
-      },
+      } as Partial<typeof businessIntelligence.$inferInsert>,
     })
     .returning();
   const result = rows[0];

@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 import 'dotenv/config';
 import { db } from '../db';
-import { performingAdTemplates } from '@shared/schema';
+import { performingAdTemplates, users } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 
 /**
@@ -502,7 +502,7 @@ export async function seedPerformingTemplates() {
   console.log('🌱 Seeding NDS Performing Ad Templates...');
 
   // Get first user
-  const user = await db.query.users.findFirst();
+  const [user] = await db.select().from(users).limit(1);
   if (!user) {
     console.log('⚠️ No users found. Create a user first.');
     return { created: 0, updated: 0, errors: 0 };
@@ -515,9 +515,7 @@ export async function seedPerformingTemplates() {
   for (const template of PERFORMING_TEMPLATES) {
     try {
       // Check if template exists by name
-      const existing = await db.query.performingAdTemplates.findFirst({
-        where: eq(performingAdTemplates.name, template.name),
-      });
+      const [existing] = await db.select().from(performingAdTemplates).where(eq(performingAdTemplates.name, template.name)).limit(1);
 
       const templateRecord = {
         userId: user.id,

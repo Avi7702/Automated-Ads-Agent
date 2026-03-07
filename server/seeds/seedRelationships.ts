@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 import 'dotenv/config';
 import { db } from '../db';
-import { productRelationships } from '@shared/schema';
+import { productRelationships, products, users } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 
 /**
@@ -322,14 +322,14 @@ export async function seedProductRelationships() {
   console.log('🌱 Seeding NDS Product Relationships...');
 
   // Get first user (single-tenant for now)
-  const user = await db.query.users.findFirst();
+  const [user] = await db.select().from(users).limit(1);
   if (!user) {
     console.log('⚠️ No users found. Create a user first.');
     return { created: 0, skipped: 0, errors: 0 };
   }
 
   // Build SKU to product ID map
-  const allProducts = await db.query.products.findMany();
+  const allProducts = await db.select().from(products);
   const skuToId = new Map<string, string>();
   for (const p of allProducts) {
     if (p.sku) {
@@ -365,13 +365,13 @@ export async function seedProductRelationships() {
       }
 
       // Check if relationship already exists
-      const existing = await db.query.productRelationships.findFirst({
-        where: and(
+      const [existing] = await db.select().from(productRelationships).where(
+        and(
           eq(productRelationships.sourceProductId, sourceId),
           eq(productRelationships.targetProductId, targetId),
           eq(productRelationships.relationshipType, rel.type),
         ),
-      });
+      ).limit(1);
 
       if (existing) {
         console.log(`  ⏭️  Skipped (exists): ${rel.sourceSku} -> ${rel.targetSku}`);

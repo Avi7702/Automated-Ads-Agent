@@ -2,7 +2,7 @@
 import 'dotenv/config';
 import { v2 as cloudinary } from 'cloudinary';
 import { db } from '../db';
-import { brandImages } from '@shared/schema';
+import { brandImages, users } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 
 /**
@@ -277,7 +277,7 @@ export async function seedBrandImagesFromSampleData() {
   console.log('🌱 Seeding NDS Brand Images from sample data...');
 
   // Get first user
-  const user = await db.query.users.findFirst();
+  const [user] = await db.select().from(users).limit(1);
   if (!user) {
     console.log('⚠️ No users found. Create a user first.');
     return { created: 0, updated: 0, errors: 0 };
@@ -292,9 +292,7 @@ export async function seedBrandImagesFromSampleData() {
       const { url, publicId } = getPlaceholderUrl(imageData.category, imageData.name);
 
       // Check if image exists by publicId
-      const existing = await db.query.brandImages.findFirst({
-        where: eq(brandImages.cloudinaryPublicId, publicId),
-      });
+      const [existing] = await db.select().from(brandImages).where(eq(brandImages.cloudinaryPublicId, publicId)).limit(1);
 
       const imageRecord = {
         userId: user.id,
@@ -343,7 +341,7 @@ export async function seedBrandImagesFromCloudinary(folder: string = 'brand-imag
   }
 
   // Get first user
-  const user = await db.query.users.findFirst();
+  const [user] = await db.select().from(users).limit(1);
   if (!user) {
     console.log('⚠️ No users found. Create a user first.');
     return { created: 0, skipped: 0, errors: 0 };
@@ -365,9 +363,7 @@ export async function seedBrandImagesFromCloudinary(folder: string = 'brand-imag
     for (const resource of result.resources) {
       try {
         // Check if already exists
-        const existing = await db.query.brandImages.findFirst({
-          where: eq(brandImages.cloudinaryPublicId, resource.public_id),
-        });
+        const [existing] = await db.select().from(brandImages).where(eq(brandImages.cloudinaryPublicId, resource.public_id)).limit(1);
 
         if (existing) {
           skipped++;
