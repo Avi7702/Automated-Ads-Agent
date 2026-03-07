@@ -39,8 +39,12 @@ export async function analyzeBrandDNA(userId: string, storage: IStorage): Promis
   const brandProfile = await storage.getBrandProfileByUserId(userId);
 
   // 2. Fetch recent successful generations (last 20)
-  const recentGenerations = await storage.getGenerations(20, 0);
-  const userGenerations = recentGenerations.filter((g) => g.userId === userId && g.status === 'completed');
+  // OPTIMIZATION: Filter by userId and status in the database instead of in-memory.
+  // Note: getGenerationsByUserId only filters by userId, we still filter by status in memory
+  // but on a much smaller dataset (only the user's generations instead of everyone's).
+  const userGenerations = (await storage.getGenerationsByUserId(userId, 50, 0))
+    .filter((g) => g.status === 'completed')
+    .slice(0, 20);
 
   // 3. Fetch brand images
   const brandImages = await storage.getBrandImagesByCategory(userId, 'historical_ad');
