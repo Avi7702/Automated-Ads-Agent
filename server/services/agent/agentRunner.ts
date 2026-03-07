@@ -2,6 +2,11 @@
  * Agent Runner
  * Streaming runner with manual tool loop using @google/genai SDK directly.
  * Replaces the ADK InMemoryRunner with a lightweight Chat-based approach.
+ *
+ * @deprecated Use `phoenixOrchestrator.ts` instead. This file is preserved for
+ * backward compatibility with the existing `/api/agent/chat` SSE endpoint.
+ * It will be removed once the Phoenix orchestrator is fully integrated and
+ * the old agent routes are retired (Phase 4, Task 4.02).
  */
 
 import { GoogleGenAI, FunctionCallingConfigMode } from '@google/genai';
