@@ -115,6 +115,7 @@ export function createRateLimiter(options: RateLimiterOptions = {}) {
     }
 
     // Use user ID for authenticated requests (per-user limiting), fall back to IP
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const userId = (req.session as any)?.userId;
     const key = userId ? `user:${userId}` : (req.ip ?? req.socket.remoteAddress ?? 'unknown');
 

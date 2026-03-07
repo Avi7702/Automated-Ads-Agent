@@ -343,7 +343,7 @@ export async function fetchGoogleQuotaSnapshot(): Promise<GoogleQuotaSnapshot> {
           percentage: limit > 0 ? (usage / limit) * 100 : 0,
           unit: metric.unit,
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error(
           { module: 'GoogleCloudMonitoring', metric: metric.displayName, err: error },
           'Failed to fetch metric',
@@ -387,7 +387,7 @@ export async function fetchGoogleQuotaSnapshot(): Promise<GoogleQuotaSnapshot> {
     );
 
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ module: 'GoogleCloudMonitoring', err: error }, 'Sync failed');
 
     const result: GoogleQuotaSnapshot = {

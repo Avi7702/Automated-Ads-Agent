@@ -921,6 +921,7 @@ test.describe('Recent Posts API', () => {
       // Verify it's gone
       const getResponse = await request.get('/api/content-planner/posts');
       const posts = await getResponse.json();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const stillExists = posts.some((p: any) => p.id === postId);
       expect(stillExists).toBe(false);
     }

@@ -264,6 +264,7 @@ describe('OAuth Service', () => {
       vi.mocked(socialRepo.getSocialConnectionByPlatform).mockResolvedValue(null);
       vi.mocked(socialRepo.createSocialConnection).mockResolvedValue({
         id: 'conn-new',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
       vi.mocked(storeTokens).mockResolvedValue(undefined);
 
@@ -337,7 +338,9 @@ describe('OAuth Service', () => {
       // Existing connection
       vi.mocked(socialRepo.getSocialConnectionByPlatform).mockResolvedValue({
         id: 'existing-conn',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       vi.mocked(socialRepo.updateSocialConnection).mockResolvedValue({} as any);
       vi.mocked(storeTokens).mockResolvedValue(undefined);
 
@@ -390,6 +393,7 @@ describe('OAuth Service', () => {
       vi.mocked(socialRepo.getSocialConnectionByPlatform).mockResolvedValue(null);
       vi.mocked(socialRepo.createSocialConnection).mockResolvedValue({
         id: 'tw-conn',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
       vi.mocked(storeTokens).mockResolvedValue(undefined);
 

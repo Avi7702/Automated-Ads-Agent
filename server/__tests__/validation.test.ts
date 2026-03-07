@@ -1,4 +1,3 @@
-
 import { registerSchema, loginSchema, productSchema, transformSchema } from '../validation/schemas';
 import { validate } from '../middleware/validate';
 import { Request, Response } from 'express';
@@ -8,14 +7,14 @@ describe('Validation Schemas', () => {
     it('accepts valid registration data', () => {
       const result = registerSchema.safeParse({
         email: 'test@example.com',
-        password: 'ValidPassword123!'
+        password: 'ValidPassword123!',
       });
       expect(result.success).toBe(true);
     });
 
     it('rejects missing email', () => {
       const result = registerSchema.safeParse({
-        password: 'ValidPassword123!'
+        password: 'ValidPassword123!',
       });
       expect(result.success).toBe(false);
     });
@@ -23,7 +22,7 @@ describe('Validation Schemas', () => {
     it('rejects invalid email format', () => {
       const result = registerSchema.safeParse({
         email: 'invalid-email',
-        password: 'ValidPassword123!'
+        password: 'ValidPassword123!',
       });
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -34,7 +33,7 @@ describe('Validation Schemas', () => {
     it('rejects password under 8 chars', () => {
       const result = registerSchema.safeParse({
         email: 'test@example.com',
-        password: 'short'
+        password: 'short',
       });
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -47,7 +46,7 @@ describe('Validation Schemas', () => {
     it('accepts valid login data', () => {
       const result = loginSchema.safeParse({
         email: 'test@example.com',
-        password: 'anypassword'
+        password: 'anypassword',
       });
       expect(result.success).toBe(true);
     });
@@ -55,7 +54,7 @@ describe('Validation Schemas', () => {
     it('rejects empty email', () => {
       const result = loginSchema.safeParse({
         email: '',
-        password: 'anypassword'
+        password: 'anypassword',
       });
       expect(result.success).toBe(false);
     });
@@ -63,7 +62,7 @@ describe('Validation Schemas', () => {
     it('rejects empty password', () => {
       const result = loginSchema.safeParse({
         email: 'test@example.com',
-        password: ''
+        password: '',
       });
       expect(result.success).toBe(false);
     });
@@ -72,7 +71,7 @@ describe('Validation Schemas', () => {
   describe('productSchema', () => {
     it('accepts valid product with name only', () => {
       const result = productSchema.safeParse({
-        name: 'Test Product'
+        name: 'Test Product',
       });
       expect(result.success).toBe(true);
     });
@@ -85,7 +84,7 @@ describe('Validation Schemas', () => {
     it('accepts optional description', () => {
       const result = productSchema.safeParse({
         name: 'Test Product',
-        description: 'A test product description'
+        description: 'A test product description',
       });
       expect(result.success).toBe(true);
       if (result.success) {
@@ -97,7 +96,7 @@ describe('Validation Schemas', () => {
   describe('transformSchema', () => {
     it('accepts valid transform request', () => {
       const result = transformSchema.safeParse({
-        prompt: 'Generate a beautiful sunset image'
+        prompt: 'Generate a beautiful sunset image',
       });
       expect(result.success).toBe(true);
       if (result.success) {
@@ -116,7 +115,7 @@ describe('Validation Schemas', () => {
     it('accepts optional referenceImages', () => {
       const result = transformSchema.safeParse({
         prompt: 'Generate similar image',
-        referenceImages: ['base64image1', 'base64image2']
+        referenceImages: ['base64image1', 'base64image2'],
       });
       expect(result.success).toBe(true);
       if (result.success) {
@@ -127,7 +126,7 @@ describe('Validation Schemas', () => {
     it('validates aspectRatio enum', () => {
       const result = transformSchema.safeParse({
         prompt: 'Generate landscape image',
-        aspectRatio: '16:9'
+        aspectRatio: '16:9',
       });
       expect(result.success).toBe(true);
       if (result.success) {
@@ -138,7 +137,7 @@ describe('Validation Schemas', () => {
     it('rejects invalid aspectRatio', () => {
       const result = transformSchema.safeParse({
         prompt: 'Generate image',
-        aspectRatio: '2:1'
+        aspectRatio: '2:1',
       });
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -154,13 +153,14 @@ describe('Validation Middleware', () => {
     const mockJson = vi.fn();
     const mockStatus = vi.fn().mockReturnValue({ json: mockJson });
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const createMockReq = (body: any): Partial<Request> => ({
-      body
+      body,
     });
 
     const createMockRes = (): Partial<Response> => ({
       status: mockStatus,
-      json: mockJson
+      json: mockJson,
     });
 
     beforeEach(() => {
@@ -198,10 +198,8 @@ describe('Validation Middleware', () => {
 
       expect(mockJson).toHaveBeenCalledWith(
         expect.objectContaining({
-          details: expect.arrayContaining([
-            expect.objectContaining({ field: 'email' })
-          ])
-        })
+          details: expect.arrayContaining([expect.objectContaining({ field: 'email' })]),
+        }),
       );
     });
 
@@ -215,10 +213,8 @@ describe('Validation Middleware', () => {
       expect(mockJson).toHaveBeenCalledWith(
         expect.objectContaining({
           error: 'Validation failed',
-          details: expect.arrayContaining([
-            expect.objectContaining({ message: expect.any(String) })
-          ])
-        })
+          details: expect.arrayContaining([expect.objectContaining({ message: expect.any(String) })]),
+        }),
       );
     });
 

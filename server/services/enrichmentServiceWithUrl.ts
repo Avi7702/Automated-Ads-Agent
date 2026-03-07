@@ -86,7 +86,7 @@ Return the extracted content as plain text with clear sections.`,
     }
 
     return text;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ module: 'UrlEnrichment', err: error }, 'Failed to fetch URL content');
     throw new Error(`Failed to fetch URL: ${error.message}`);
   }
@@ -184,7 +184,7 @@ Only include fields you can confidently extract from the content. Return valid J
       benefits: Array.isArray(parsed.benefits) ? parsed.benefits : [],
       tags: Array.isArray(parsed.tags) ? parsed.tags : [],
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ module: 'UrlEnrichment', err: error }, 'AI extraction failed');
 
     // Fallback: use existing extraction methods
@@ -299,7 +299,7 @@ export async function enrichFromUrl(input: UrlEnrichmentInput): Promise<UrlEnric
       productId,
       enrichmentDraft,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ module: 'UrlEnrichment', err: error }, 'Enrichment error');
     return {
       success: false,
@@ -317,11 +317,12 @@ export async function enrichFromUrl(input: UrlEnrichmentInput): Promise<UrlEnric
 export async function saveEnrichmentDraft(productId: string, draft: EnrichmentDraft): Promise<boolean> {
   try {
     await storage.updateProduct(productId, {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       enrichmentDraft: draft as any,
       enrichmentStatus: 'draft',
     });
     return true;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ module: 'UrlEnrichment', err: error }, 'Failed to save draft');
     return false;
   }

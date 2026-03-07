@@ -56,7 +56,7 @@ export function SimplifiedCopyPanel({
         setCopy(generatedCopy);
         onCopyGenerated?.(generatedCopy);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.message || 'Failed to generate copy');
     } finally {
       setIsGenerating(false);
@@ -101,27 +101,14 @@ export function SimplifiedCopyPanel({
         )}
       </Button>
 
-      {error && (
-        <div className="p-3 bg-destructive/10 text-destructive rounded-md text-sm">
-          {error}
-        </div>
-      )}
+      {error && <div className="p-3 bg-destructive/10 text-destructive rounded-md text-sm">{error}</div>}
 
       {copy && (
         <div className="p-3 bg-muted rounded-md text-sm space-y-2">
           <div className="flex items-center justify-between">
             <p className="font-medium">Generated Ad Copy:</p>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCopyToClipboard}
-              className="h-8 px-2"
-            >
-              {copied ? (
-                <Check className="w-4 h-4 text-green-500" />
-              ) : (
-                <Copy className="w-4 h-4" />
-              )}
+            <Button variant="ghost" size="sm" onClick={handleCopyToClipboard} className="h-8 px-2">
+              {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
             </Button>
           </div>
           <p className="whitespace-pre-wrap text-muted-foreground">{copy}</p>

@@ -236,8 +236,11 @@ async function generateCopy(
   // Build brand voice from profile
   const brandVoice = brandProfile?.voice
     ? {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         principles: (brandProfile.voice as any).principles || ['Professional', 'Trustworthy'],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         wordsToAvoid: (brandProfile.voice as any).wordsToAvoid || [],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         wordsToUse: (brandProfile.voice as any).wordsToUse || [],
       }
     : undefined;
@@ -245,9 +248,12 @@ async function generateCopy(
   // Add template hooks to the request
   const input: GenerateCopyInput = {
     generationId: `content-planner-${Date.now()}`,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     platform: platform as any,
     tone: 'authentic',
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     framework: framework as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     campaignObjective: campaignObjective as any,
     productName,
     productDescription,

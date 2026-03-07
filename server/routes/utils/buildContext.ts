@@ -93,6 +93,7 @@ function createUploader(): multer.Multer {
 }
 
 // Lazy-load Google Cloud Monitoring to prevent any import-time errors
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let googleCloudMonitoringService: any = null;
 async function getGoogleCloudService() {
   if (!googleCloudMonitoringService) {

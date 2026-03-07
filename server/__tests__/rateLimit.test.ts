@@ -1,11 +1,11 @@
-
 import request from 'supertest';
 import express, { Express } from 'express';
 import rateLimit from 'express-rate-limit';
 
 // Helper to create a fresh test app with a limiter for each test
 function createFreshTestApp(
-  limiterOptions: { windowMs: number; max: number; handler?: any }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  limiterOptions: { windowMs: number; max: number; handler?: any },
 ): Express {
   const limiter = rateLimit({
     windowMs: limiterOptions.windowMs,
@@ -55,6 +55,8 @@ describe('Rate Limiting Middleware', () => {
       const app = createFreshTestApp({
         windowMs: 60000,
         max: 1,
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         handler: (req: any, res: any) => {
           res.status(429).json({ error: 'Too many requests', retryAfter: 60 });
         },
@@ -98,6 +100,8 @@ describe('Rate Limiting Middleware', () => {
       const app = createFreshTestApp({
         windowMs: 60000,
         max: 3,
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         handler: (req: any, res: any) => {
           res.status(429).json({ error: 'Too many login attempts', retryAfter: 60 });
         },

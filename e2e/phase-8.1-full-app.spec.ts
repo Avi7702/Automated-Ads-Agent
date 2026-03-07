@@ -245,7 +245,9 @@ test.describe('Phase 8.1: Social Accounts Page', () => {
   });
 
   test('should fetch /api/social/accounts successfully', async ({ page }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let apiResponse: any = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let apiError: any = null;
 
     // Listen for API response
@@ -373,8 +375,10 @@ test.describe('Phase 8.1: Navigation Performance', () => {
     await page.evaluate(() => {
       const header = document.querySelector('header');
       if (header) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (header as any).__renderCount = 0;
         const observer = new MutationObserver(() => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (header as any).__renderCount++;
         });
         observer.observe(header, { childList: true, subtree: true });
@@ -392,6 +396,7 @@ test.describe('Phase 8.1: Navigation Performance', () => {
     // Check render count
     const renderCount = await page.evaluate(() => {
       const header = document.querySelector('header');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (header as any).__renderCount || 0;
     });
 
@@ -500,6 +505,7 @@ test.describe('Phase 8.1: Performance Optimizations - Cache Headers', () => {
   });
 
   test('should NOT cache HTML files', async ({ page }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let htmlResponse: any = null;
 
     page.on('response', async (response) => {
@@ -630,6 +636,7 @@ test.describe('Phase 8.1: Performance Optimizations - Overall Page Performance',
 test.describe('Phase 8.1: Database Migration - Social Connections', () => {
   test('should have social_connections table created', async ({ page }) => {
     // This test verifies the migration was applied by checking API response
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let apiResponse: any = null;
 
     page.on('response', async (response) => {

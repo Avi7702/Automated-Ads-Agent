@@ -88,6 +88,7 @@ export async function saveGeneratedImage(base64Data: string, format: string = 'p
   // Use Cloudinary if configured (persistent storage)
   if (isCloudinaryConfigured) {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const uploadResult = await new Promise<any>((resolve, reject) => {
         cloudinary.uploader.upload(
           `data:image/${format};base64,${base64Image}`,

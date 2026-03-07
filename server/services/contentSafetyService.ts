@@ -247,7 +247,7 @@ async function checkGeminiSafety(
     }
 
     return { hateSpeech, violence, sexualContent, harassment };
-  } catch (error: any) {
+  } catch (error: unknown) {
     // FAIL-CLOSED: If Gemini Safety API fails, default to BLOCK (all flags false = unsafe).
     // This prevents unsafe content from passing through on API failures.
     // Set SAFETY_FAIL_OPEN=true in non-production environments to bypass this.
@@ -353,7 +353,7 @@ export async function checkContentSafety(params: CheckSafetyParams): Promise<Saf
       const voice = brandProfile.voice as { wordsToAvoid?: string[] };
       prohibitedWords = voice.wordsToAvoid || [];
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.warn(
       {
         err: error,

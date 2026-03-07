@@ -102,15 +102,18 @@ export enum FileCategory {
  * Note: File Search is not supported by Replit AI integrations
  * Returns null if not available
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function initializeFileSearchStore(): Promise<any | null> {
   try {
     // Check if store already exists
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const stores = await (getGlobalGeminiClient() as any).fileSearchStores?.list?.();
     if (!stores || !Array.isArray(stores)) {
       logger.info({ module: 'FileSearch' }, 'File Search Store API not available');
       return null;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const existingStore = stores.find((store: any) => store.config?.displayName === FILE_SEARCH_STORE_NAME);
 
     if (existingStore) {
@@ -120,6 +123,7 @@ export async function initializeFileSearchStore(): Promise<any | null> {
 
     // Create new store
     logger.info({ module: 'FileSearch' }, 'Creating new File Search Store');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const newStore = await (getGlobalGeminiClient() as any).fileSearchStores.create({
       config: {
         displayName: FILE_SEARCH_STORE_NAME,
@@ -176,6 +180,7 @@ export async function uploadReferenceFile(params: {
 
     // Upload file to File Search Store
     logger.info({ module: 'FileSearch', fileName }, 'Uploading file to File Search Store');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const operation = await (getGlobalGeminiClient() as any).fileSearchStores.uploadToFileSearchStore({
       file: filePath,
       fileSearchStoreName: store.name,
@@ -227,12 +232,15 @@ export async function uploadReferenceFile(params: {
 export async function listReferenceFiles(category?: FileCategory) {
   try {
     const store = await initializeFileSearchStore();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const files = await (getGlobalGeminiClient() as any).fileSearchStores.listFiles({
       fileSearchStoreName: store.name,
     });
 
     if (category) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return files.filter((file: any) =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         file.config?.customMetadata?.find((m: any) => m.key === 'category' && m.stringValue === category),
       );
     }
@@ -250,6 +258,7 @@ export async function listReferenceFiles(category?: FileCategory) {
 export async function deleteReferenceFile(fileId: string) {
   try {
     const store = await initializeFileSearchStore();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (getGlobalGeminiClient() as any).fileSearchStores.deleteFile({
       fileSearchStoreName: store.name,
       fileName: fileId,
@@ -271,7 +280,7 @@ export async function queryFileSearchStore(params: {
   query: string;
   category?: FileCategory;
   maxResults?: number;
-}): Promise<{ context: string; citations: any[] } | null> {
+}): Promise<{ context: string; citations: unknown[] } | null> {
   const { query, category, maxResults: _maxResults = 5 } = params;
   const startTime = Date.now();
   let success = false;
@@ -292,6 +301,7 @@ export async function queryFileSearchStore(params: {
     // Use Gemini's File Search tool with new SDK pattern
     // Note: File Search tools may not be fully typed in the SDK yet
     // MODEL RECENCY RULE: Before changing any model ID, verify today's date and confirm the model is current within the last 3-4 weeks.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const response = await (generateContentWithRetry as any)(
       {
         model: 'gemini-3-flash-preview',
@@ -308,6 +318,7 @@ export async function queryFileSearchStore(params: {
       { operation: 'rag_query' },
     );
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const citations = (response as any).citations || [];
     resultsCount = citations.length;
     success = true;

@@ -2,8 +2,6 @@
  * URL Enrichment Service Tests
  */
 
-
-
 // Mock storage
 vi.mock('../storage', () => ({
   storage: {
@@ -60,6 +58,7 @@ describe('URL Enrichment Service', () => {
     });
 
     it('returns error for invalid URL', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       vi.mocked(storage.getProductById).mockResolvedValue(mockProduct as any);
 
       const result = await enrichFromUrl({
@@ -75,6 +74,7 @@ describe('URL Enrichment Service', () => {
     it('returns success with enrichment draft for valid request', async () => {
       // This would normally require mocking the Gemini API, but since we're
       // testing the service structure, we'll verify the basic flow works
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       vi.mocked(storage.getProductById).mockResolvedValue(mockProduct as any);
 
       // The actual API call would fail in tests, so we expect an error
@@ -90,6 +90,7 @@ describe('URL Enrichment Service', () => {
     });
 
     it('includes correct productId in response', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       vi.mocked(storage.getProductById).mockResolvedValue(mockProduct as any);
 
       const result = await enrichFromUrl({
@@ -103,6 +104,7 @@ describe('URL Enrichment Service', () => {
 
   describe('saveEnrichmentDraft', () => {
     it('updates product with draft and sets status to draft', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       vi.mocked(storage.updateProduct).mockResolvedValue({} as any);
 
       const draft: EnrichmentDraft = {
@@ -150,6 +152,7 @@ describe('URL Enrichment Service', () => {
     // but we verify it's applied through the enrichFromUrl function
 
     it('uses higher trust for known manufacturer domains', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       vi.mocked(storage.getProductById).mockResolvedValue(mockProduct as any);
 
       // Test with known domain - the trust level affects confidence
@@ -162,6 +165,7 @@ describe('URL Enrichment Service', () => {
     });
 
     it('uses default trust for unknown domains', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       vi.mocked(storage.getProductById).mockResolvedValue(mockProduct as any);
 
       const result = await enrichFromUrl({
@@ -179,14 +183,10 @@ describe('URL Validation', () => {
     vi.mocked(storage.getProductById).mockResolvedValue({
       id: 'prod-123',
       name: 'Test',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
 
-    const testCases = [
-      'not-a-url',
-      'ftp://not-http.com',
-      '',
-      '   ',
-    ];
+    const testCases = ['not-a-url', 'ftp://not-http.com', '', '   '];
 
     for (const url of testCases) {
       const result = await enrichFromUrl({
@@ -202,6 +202,7 @@ describe('URL Validation', () => {
     vi.mocked(storage.getProductById).mockResolvedValue({
       id: 'prod-123',
       name: 'Test',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
 
     const validUrls = [

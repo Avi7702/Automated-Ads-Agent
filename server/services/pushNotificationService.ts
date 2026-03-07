@@ -29,12 +29,14 @@ interface NotificationPayload {
   tag?: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let webpush: any = null;
 let vapidConfigured = false;
 
 /**
  * Lazily initialize web-push with VAPID keys.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function getWebPush(): Promise<any> {
   if (vapidConfigured) return webpush;
   vapidConfigured = true;
@@ -127,7 +129,7 @@ export async function sendNotification(
         }),
       );
       sent++;
-    } catch (error: any) {
+    } catch (error: unknown) {
       failed++;
       // If subscription expired (410 Gone), deactivate it
       if (error?.statusCode === 410) {

@@ -75,7 +75,7 @@ async function uploadToCloudinary(
 async function processGenerateJob(
   job: Job<GenerationJobData, GenerationJobResult>,
   data: GenerationJobData & { jobType: JobType.GENERATE },
-): Promise<{ imageBase64: string; conversationHistory: any[] }> {
+): Promise<{ imageBase64: string; conversationHistory: unknown[] }> {
   await reportProgress(job, 'processing', 30, 'Generating image with AI...');
 
   const result = await geminiService.generateImage(
@@ -98,8 +98,8 @@ async function processGenerateJob(
 async function processEditJob(
   job: Job<GenerationJobData, GenerationJobResult>,
   data: GenerationJobData & { jobType: JobType.EDIT },
-  existingGeneration: { conversationHistory: any[] | null; editCount?: number },
-): Promise<{ imageBase64: string; conversationHistory: any[]; editCount: number }> {
+  existingGeneration: { conversationHistory: unknown[] | null; editCount?: number },
+): Promise<{ imageBase64: string; conversationHistory: unknown[]; editCount: number }> {
   await reportProgress(job, 'processing', 30, 'Editing image with AI...');
 
   if (!existingGeneration.conversationHistory) {
@@ -125,8 +125,8 @@ async function processEditJob(
 async function processVariationJob(
   job: Job<GenerationJobData, GenerationJobResult>,
   data: GenerationJobData & { jobType: JobType.VARIATION },
-  existingGeneration: { conversationHistory: any[] | null; prompt?: string },
-): Promise<{ imageBase64: string; conversationHistory: any[] }> {
+  existingGeneration: { conversationHistory: unknown[] | null; prompt?: string },
+): Promise<{ imageBase64: string; conversationHistory: unknown[] }> {
   await reportProgress(job, 'processing', 30, 'Creating image variation...');
 
   // Extract the original image data from conversation history
@@ -282,7 +282,7 @@ export async function processGenerationJob(
     // ──── IMAGE GENERATION PATH ────
     let processResult: {
       imageBase64: string;
-      conversationHistory: any[];
+      conversationHistory: unknown[];
       editCount?: number;
     };
 
@@ -290,11 +290,13 @@ export async function processGenerationJob(
       processResult = await processGenerateJob(job, data);
     } else if (isEditJob(data)) {
       processResult = await processEditJob(job, data, {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         conversationHistory: existingGeneration.conversationHistory as any[] | null,
         ...(existingGeneration['editCount'] !== undefined && { editCount: existingGeneration['editCount'] as number }),
       });
     } else if (isVariationJob(data)) {
       processResult = await processVariationJob(job, data, {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         conversationHistory: existingGeneration.conversationHistory as any[] | null,
         ...(existingGeneration.prompt !== undefined && { prompt: existingGeneration.prompt }),
       });
@@ -309,7 +311,7 @@ export async function processGenerationJob(
     // Stage 5: Update generation record
     await reportProgress(job, 'finalizing', 90, 'Saving results...');
 
-    const updateData: Record<string, any> = {
+    const updateData: Record<string, unknown> = {
       status: 'completed',
       generatedImagePath: cloudinaryResult.secure_url,
       conversationHistory: processResult.conversationHistory,

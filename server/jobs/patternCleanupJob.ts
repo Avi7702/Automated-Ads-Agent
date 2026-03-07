@@ -25,7 +25,7 @@ async function cleanupUpload(upload: { id: string; cloudinaryPublicId: string })
     try {
       await cloudinary.uploader.destroy(upload.cloudinaryPublicId);
       logger.debug({ uploadId: upload.id, publicId: upload.cloudinaryPublicId }, 'Deleted image from Cloudinary');
-    } catch (cloudinaryError: any) {
+    } catch (cloudinaryError: unknown) {
       // If image doesn't exist in Cloudinary, continue with DB cleanup
       if (cloudinaryError.http_code !== 404) {
         logger.error({ err: cloudinaryError, uploadId: upload.id }, 'Failed to delete from Cloudinary');
@@ -93,13 +93,13 @@ export function startPatternCleanupScheduler(): void {
   }
 
   // Run immediately on startup
-  runPatternCleanup().catch(err => {
+  runPatternCleanup().catch((err) => {
     logger.error({ module: 'PatternCleanup', err }, 'Initial cleanup failed');
   });
 
   // Schedule periodic cleanup
   cleanupInterval = setInterval(() => {
-    runPatternCleanup().catch(err => {
+    runPatternCleanup().catch((err) => {
       logger.error({ module: 'PatternCleanup', err }, 'Scheduled cleanup failed');
     });
   }, CLEANUP_INTERVAL_MS);

@@ -357,6 +357,7 @@ test.describe('Carousel Content Templates', () => {
 
     // Find templates that work well with carousels
     const carouselFriendlyTemplates = data.templates.filter(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (t: any) =>
         t.id.includes('guide') || t.id.includes('tips') || t.id.includes('educational') || t.category === 'educational',
     );

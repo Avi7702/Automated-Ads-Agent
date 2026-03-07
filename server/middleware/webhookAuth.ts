@@ -70,7 +70,7 @@ export function validateN8nWebhook(req: Request, res: Response, next: NextFuncti
     // Signature is valid, proceed to next middleware
     logger.info({ module: 'WebhookAuth', endpoint: req.path }, 'Webhook signature validated successfully');
     next();
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error(
       {
         module: 'WebhookAuth',
