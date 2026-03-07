@@ -157,6 +157,8 @@ export interface IStorage {
     category?: string;
     isGlobal?: boolean;
     createdBy?: string;
+    platform?: string;
+    aspectRatio?: string;
   }): Promise<AdSceneTemplate[]>;
   getAdSceneTemplateById(id: string): Promise<AdSceneTemplate | undefined>;
   updateAdSceneTemplate(id: string, updates: Partial<InsertAdSceneTemplate>): Promise<AdSceneTemplate>;
@@ -589,6 +591,8 @@ export class DbStorage implements IStorage {
     category?: string;
     isGlobal?: boolean;
     createdBy?: string;
+    platform?: string;
+    aspectRatio?: string;
   }): Promise<AdSceneTemplate[]> {
     return templateRepo.getAdSceneTemplates(filters);
   }

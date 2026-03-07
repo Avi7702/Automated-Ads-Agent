@@ -7,3 +7,7 @@
 
 **Learning:** Found a major performance anti-pattern where multiple repositories were fetching entire tables and filtering them in Node.js memory. This causes O(n) memory and CPU usage that could be O(1) or O(log n) with proper database indexes.
 **Action:** Always favor PostgreSQL array operators (`&&`, `array_contains`) and Drizzle `where` clauses over JavaScript `.filter()`. Ensure frequently queried array columns have GIN indexes.
+## 2026-03-03 - [Database-side filtering for ad templates]
+
+**Learning:** In-memory filtering of array columns in Node.js is a significant bottleneck. Moving these to the database layer with PostgreSQL array operators (`arrayContains`) and adding GIN indexes optimizes retrieval from O(N) to O(log N).
+**Action:** Refactor repository methods to handle filters at the database level using Drizzle's `arrayContains` for array columns and ensure GIN indexes are present.

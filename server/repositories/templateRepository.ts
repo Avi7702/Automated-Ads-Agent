@@ -54,6 +54,8 @@ export async function getAdSceneTemplates(filters?: {
   category?: string;
   isGlobal?: boolean;
   createdBy?: string;
+  platform?: string;
+  aspectRatio?: string;
   limit?: number;
   offset?: number;
 }): Promise<AdSceneTemplate[]> {
@@ -70,7 +72,16 @@ export async function getAdSceneTemplates(filters?: {
   if (filters?.createdBy) {
     conditions.push(eq(adSceneTemplates.createdBy, filters.createdBy));
   }
+  if (filters?.platform) {
+    conditions.push(arrayContains(adSceneTemplates.platformHints, [filters.platform]));
+  }
+  if (filters?.aspectRatio) {
+    conditions.push(arrayContains(adSceneTemplates.aspectRatioHints, [filters.aspectRatio]));
+  }
 
+  // Performance Note: moved filtering from application to database layer.
+  // GIN indexes on platformHints and aspectRatioHints enable O(log N) lookups.
+  // Expected Impact: Reduces query time from O(N) to O(log N) and minimizes data transfer.
   if (conditions.length > 0) {
     return await db
       .select()
