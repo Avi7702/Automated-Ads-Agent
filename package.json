@@ -12,7 +12,7 @@
     "build": "vite build && esbuild server/index-prod.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/index.mjs",
     "start": "node dist/index.mjs",
     "check": "tsc",
-    "lint": "eslint . --max-warnings 549",
+    "lint": "eslint . --max-warnings 215",
     "lint:strict": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.{ts,tsx,json,css,md}\"",
