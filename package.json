@@ -185,5 +185,8 @@
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"
+  },
+  "overrides": {
+    "serialize-javascript": ">=7.0.3"
   }
 }
