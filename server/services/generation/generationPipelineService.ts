@@ -1,36 +1,23 @@
 /**
- * Generation Pipeline Service
+ * Generation Pipeline Service — Refactored for Project Phoenix v2
  *
- * Systematic orchestrator for image generation that connects ALL context sources.
+ * Now delegates context assembly to the UnifiedContextQualityPipeline,
+ * while retaining ownership of:
+ *   - Prompt Assembly (buildPrompt + buildImageParts)
+ *   - Pre-Gen Gate (block/warn behavior with throw semantics)
+ *   - Image Generation (Gemini API call)
+ *   - Critic Stage (auto-quality evaluation + silent retry)
+ *   - Persistence (save to storage + cost tracking)
  *
- * Pipeline stages (in order):
- * 1. Input (already parsed)
- * 2. Product Context — productKnowledgeService
- * 3. Brand Context — storage.getBrandProfileByUserId
- * 4. Style References — styleAnalysisService (KEY FIX: was 100% disconnected)
- * 5. Vision Analysis — visionAnalysisService
- * 6. KB/RAG Enrichment — fileSearchService
- * 7. Learned Patterns — patternExtractionService
- * 8. Template Resolution — storage.getAdSceneTemplateById
- * 9. Prompt Assembly — promptBuilder
- * 9.5. Pre-Generation Quality Gate — preGenGate (blocks score<40, warns 40-60)
- * 10. Generation — Gemini API
- * 10.5. Critic — auto-quality evaluation + silent retry (PaperBanana pattern)
- * 11. Persistence — storage.saveGeneration
- *
- * Each stage is fault-tolerant: if any context source fails, the pipeline
- * continues with what it has (same pattern as IdeaBank).
+ * This refactor eliminates duplicated context-gathering code (stages 2-7)
+ * and ensures every generation request benefits from the unified pipeline's
+ * parallel context assembly and fault tolerance.
  */
 
 import { logger } from '../../lib/logger';
 import { storage } from '../../storage';
 import { genAI, createGeminiClient } from '../../lib/gemini';
-// telemetry import reserved for future usage tracking integration
 import { buildStyleDirective } from '../styleAnalysisService';
-import { buildEnhancedContext } from '../productKnowledgeService';
-import { analyzeProductImage } from '../visionAnalysisService';
-import { queryFileSearchStore } from '../fileSearchService';
-import { getRelevantPatterns, formatPatternsForPrompt } from '../patternExtractionService';
 import { saveOriginalFile, saveGeneratedImage } from '../../fileStorage';
 import { estimateGenerationCostMicros } from '../pricingEstimator';
 import { buildPrompt } from './promptBuilder';
@@ -39,15 +26,12 @@ import { evaluatePreGenGate, BLOCK_THRESHOLD, WARN_THRESHOLD } from './preGenGat
 import type { PreGenGateResult } from './preGenGate';
 import { captureException } from '../../lib/sentry';
 import { notify } from '../notificationService';
-import { getBrandDNAContext } from '../brandDNAService';
 import { generateContentWithRetry } from '../../lib/geminiClient';
 
-import type {
-  GenerationContext,
-  GenerationInput,
-  GenerationResult,
-  ProductContext,
-} from '../../types/generationPipeline';
+// ── Unified Pipeline ────────────────────────────────────────────────
+import { assembleContext, toGenerationContext, type AssembledContext } from '../unifiedContextQualityPipeline';
+
+import type { GenerationContext, GenerationInput, GenerationResult } from '../../types/generationPipeline';
 
 // ============================================
 // MAIN PIPELINE
@@ -56,15 +40,19 @@ import type {
 /**
  * Execute the full generation pipeline.
  *
- * Takes a GenerationInput, runs all context-gathering stages,
- * assembles the prompt, calls Gemini, and persists the result.
+ * Takes a GenerationInput, delegates context gathering to the
+ * UnifiedContextQualityPipeline, assembles the prompt, calls Gemini,
+ * runs the critic loop, and persists the result.
+ *
+ * Optionally accepts a pre-assembled context to skip the assembly stage
+ * (used by the Orchestrator when it has already assembled context).
  */
-export async function executeGenerationPipeline(input: GenerationInput): Promise<GenerationResult> {
+export async function executeGenerationPipeline(
+  input: GenerationInput,
+  preAssembledContext?: AssembledContext,
+): Promise<GenerationResult> {
   const startTime = Date.now();
   const stagesCompleted: string[] = [];
-
-  // Initialize context with input
-  const ctx: GenerationContext = { input };
 
   logger.info(
     {
@@ -74,53 +62,35 @@ export async function executeGenerationPipeline(input: GenerationInput): Promise
       hasTemplate: !!input.templateId,
       hasRecipe: !!input.recipe,
       hasStyleRefs: !!input.styleReferenceIds?.length,
+      hasPreAssembledContext: !!preAssembledContext,
     },
     'Pipeline started',
   );
 
-  // Stage 2: Product Context
-  await runStage('product', stagesCompleted, async () => {
-    const result = await stageProductContext(ctx);
-    if (result) ctx.product = result;
-  });
+  // ── Stage 1: Context Assembly (via Unified Pipeline) ──────────
+  let assembled: AssembledContext;
+  if (preAssembledContext) {
+    assembled = preAssembledContext;
+    stagesCompleted.push('contextAssembly(pre-assembled)');
+  } else {
+    assembled = await assembleContext({
+      outputType: 'image',
+      generationInput: input,
+    });
+    stagesCompleted.push('contextAssembly');
+  }
 
-  // Stage 3: Brand Context
-  await runStage('brand', stagesCompleted, async () => {
-    const result = await stageBrandContext(ctx);
-    if (result) ctx.brand = result;
-  });
+  // Convert to GenerationContext for downstream compatibility
+  const ctx: GenerationContext = toGenerationContext(input, assembled);
 
-  // Stage 4: Style References (was completely disconnected)
-  await runStage('style', stagesCompleted, async () => {
-    const result = await stageStyleReferences(ctx);
-    if (result) ctx.style = result;
-  });
-
-  // Stage 5: Vision Analysis
-  await runStage('vision', stagesCompleted, async () => {
-    const result = await stageVisionAnalysis(ctx);
-    if (result) ctx.vision = result;
-  });
-
-  // Stage 6: KB/RAG Enrichment
-  await runStage('kb', stagesCompleted, async () => {
-    const result = await stageKBEnrichment(ctx);
-    if (result) ctx.kb = result;
-  });
-
-  // Stage 7: Learned Patterns
-  await runStage('patterns', stagesCompleted, async () => {
-    const result = await stageLearnedPatterns(ctx);
-    if (result) ctx.patterns = result;
-  });
-
-  // Stage 8: Template Resolution
+  // ── Stage 8: Template Resolution ──────────────────────────────
+  // Template resolution is image-pipeline-specific, so it stays here.
   await runStage('template', stagesCompleted, async () => {
     const result = await stageTemplateResolution(ctx);
     if (result) ctx.template = result;
   });
 
-  // Stage 9: Prompt Assembly (not try/catch — must succeed)
+  // ── Stage 9: Prompt Assembly (must succeed) ───────────────────
   const finalPrompt = buildPrompt(ctx);
   const imageParts = await buildImageParts(ctx);
   ctx.assembled = { finalPrompt, imageParts };
@@ -132,14 +102,14 @@ export async function executeGenerationPipeline(input: GenerationInput): Promise
       stagesCompleted,
       promptLength: finalPrompt.length,
       imagePartsCount: imageParts.length,
+      contextSourcesLoaded: assembled.sourcesLoaded,
     },
     'Prompt assembled',
   );
 
-  // Stage 9.5: Pre-Generation Quality Gate
+  // ── Stage 9.5: Pre-Generation Quality Gate ────────────────────
   // Evaluates prompt + context completeness before expensive image generation.
   // Score < 40 blocks (throws), 40-60 warns (continues), > 60 passes.
-  // NOTE: Unlike other stages, a BLOCK result must propagate — not be swallowed by runStage.
   let preGenGateResult: PreGenGateResult | undefined;
   try {
     preGenGateResult = await evaluatePreGenGate({
@@ -154,7 +124,6 @@ export async function executeGenerationPipeline(input: GenerationInput): Promise
     stagesCompleted.push('preGenGate');
 
     if (preGenGateResult.score < BLOCK_THRESHOLD) {
-      // Block generation — throw with suggestions so the caller can return a 400
       const suggestionsText =
         preGenGateResult.suggestions.length > 0
           ? `\nSuggestions:\n${preGenGateResult.suggestions.map((s) => `  - ${s}`).join('\n')}`
@@ -185,18 +154,16 @@ export async function executeGenerationPipeline(input: GenerationInput): Promise
       logger.info({ module: 'GenerationPipeline', score: preGenGateResult.score }, 'Pre-gen gate passed');
     }
   } catch (err: unknown) {
-    // If it's a PreGenGateError, re-throw — caller should handle it
     if (err instanceof Error && err.name === 'PreGenGateError') {
       throw err;
     }
-    // For any other error (LLM failure, network issue), log and continue
     logger.warn(
       { module: 'GenerationPipeline', stage: 'preGenGate', err },
       'Pre-gen gate failed — continuing without it',
     );
   }
 
-  // Stage 10: Generation (must succeed — alert on failure)
+  // ── Stage 10: Generation (must succeed — alert on failure) ────
   let genResult;
   try {
     genResult = await stageGeneration(ctx);
@@ -219,17 +186,16 @@ export async function executeGenerationPipeline(input: GenerationInput): Promise
     }).catch((notifyErr) => {
       logger.debug({ module: 'GenerationPipeline', err: notifyErr }, 'Notification delivery failed');
     });
-    throw err; // Re-throw — caller handles the error response
+    throw err;
   }
   ctx.result = genResult;
   stagesCompleted.push('generation');
 
-  // Stage 10.5: Critic — silent auto-quality evaluation + retry
+  // ── Stage 10.5: Critic — silent auto-quality evaluation + retry ─
   await runStage('critic', stagesCompleted, async () => {
     const geminiClient = await resolveGeminiClient(ctx.input.userId);
 
     const { retriesUsed, finalCritique } = await runCriticLoop(ctx, geminiClient, async (revisedPrompt: string) => {
-      // Re-generate with revised prompt — keep same images, swap prompt text
       const revisedCtx = { ...ctx };
       revisedCtx.assembled = {
         finalPrompt: revisedPrompt,
@@ -250,7 +216,7 @@ export async function executeGenerationPipeline(input: GenerationInput): Promise
     }
   });
 
-  // Stage 11: Persistence
+  // ── Stage 11: Persistence ─────────────────────────────────────
   const persistResult = await stagePersistence(ctx, startTime);
   stagesCompleted.push('persistence');
 
@@ -290,197 +256,18 @@ async function runStage(name: string, stagesCompleted: string[], fn: () => Promi
 }
 
 // ============================================
-// STAGE IMPLEMENTATIONS
+// STAGE IMPLEMENTATIONS (Pipeline-specific)
 // ============================================
-
-/**
- * Stage 2: Product Context
- * Fetch product data and enhanced context (relationships, scenarios, brand images).
- */
-async function stageProductContext(ctx: GenerationContext) {
-  // Extract product IDs from recipe (validate structure defensively)
-  const productIds = Array.isArray(ctx.input.recipe?.products)
-    ? ctx.input.recipe.products.map((p) => (typeof p?.id === 'string' ? p.id : '')).filter(Boolean)
-    : [];
-  const primaryId = productIds[0];
-  if (!primaryId) return undefined;
-
-  const enhanced = await buildEnhancedContext(primaryId, ctx.input.userId);
-  if (!enhanced) return undefined;
-
-  const result: ProductContext = {
-    primaryId,
-    primaryName: enhanced.product.name,
-    relationships: enhanced.relatedProducts.map((rp) => ({
-      targetProductName: rp.product.name,
-      relationshipType: rp.relationshipType,
-      ...(rp.relationshipDescription ? { description: rp.relationshipDescription } : {}),
-    })),
-    scenarios: enhanced.installationScenarios.map((s) => ({
-      title: s.title,
-      description: s.description,
-      ...(s.installationSteps ? { steps: s.installationSteps } : {}),
-      isActive: true,
-    })),
-    brandImages: enhanced.brandImages.map((bi) => ({
-      imageUrl: bi.cloudinaryUrl,
-      category: bi.category,
-    })),
-    formattedContext: enhanced.formattedContext,
-  };
-  if (enhanced.product.category) result.category = enhanced.product.category;
-  if (enhanced.product.description) result.description = enhanced.product.description;
-  return result;
-}
-
-/**
- * Stage 3: Brand Context
- * Fetch brand profile for the current user.
- * Also fetches Brand DNA context for enrichment.
- */
-async function stageBrandContext(ctx: GenerationContext) {
-  const brandProfile = await storage.getBrandProfileByUserId(ctx.input.userId);
-
-  // Fetch Brand DNA context (Phase 5) — runs in parallel, fault-tolerant
-  try {
-    const dnaContext = await getBrandDNAContext(ctx.input.userId, storage);
-    if (dnaContext) {
-      ctx.brandDNA = {
-        contentRules: dnaContext,
-      };
-    }
-  } catch (err) {
-    logger.warn({ module: 'GenerationPipeline', err }, 'Brand DNA fetch failed — continuing without it');
-  }
-
-  if (!brandProfile) return undefined;
-
-  return {
-    name: brandProfile.brandName || 'Unknown',
-    styles: brandProfile.preferredStyles || [],
-    values: brandProfile.brandValues || [],
-    colors: brandProfile.colorPreferences || [],
-    voicePrinciples:
-      ((brandProfile.voice as Record<string, unknown> | null)?.['principles'] as string[] | undefined) ?? [],
-  };
-}
-
-/**
- * Stage 4: Style References (KEY FIX — was completely disconnected)
- * Fetch user's selected style references and build a style directive.
- */
-async function stageStyleReferences(ctx: GenerationContext) {
-  const ids = ctx.input.styleReferenceIds;
-  if (!ids || ids.length === 0) return undefined;
-
-  const directives: string[] = [];
-
-  for (const id of ids.slice(0, 3)) {
-    const ref = await storage.getStyleReferenceById(id);
-    if (!ref) continue;
-
-    // Use cached analysis if available
-    if (ref.styleDescription && ref.extractedElements) {
-      const directive = buildStyleDirective(
-        ref.styleDescription,
-        ref.extractedElements as Parameters<typeof buildStyleDirective>[1],
-      );
-      directives.push(directive);
-    }
-  }
-
-  if (directives.length === 0) return undefined;
-
-  return {
-    directive: directives.join('\n'),
-    referenceCount: directives.length,
-  };
-}
-
-/**
- * Stage 5: Vision Analysis
- * Analyze the product image to extract visual characteristics.
- */
-async function stageVisionAnalysis(ctx: GenerationContext) {
-  // Need a product with an image to analyze
-  const productIds = ctx.input.recipe?.products?.map((p) => p.id) || [];
-  const firstProductId = productIds[0];
-  if (!firstProductId) return undefined;
-
-  const product = await storage.getProductById(firstProductId);
-  if (!product || !product.cloudinaryUrl) return undefined;
-
-  const result = await analyzeProductImage(product, ctx.input.userId);
-  if (!result.success || !result.analysis) return undefined;
-
-  const analysis = result.analysis;
-  return {
-    category: analysis.category,
-    materials: analysis.materials,
-    colors: analysis.colors,
-    style: analysis.style,
-    usageContext: analysis.usageContext,
-  };
-}
-
-/**
- * Stage 6: KB/RAG Enrichment
- * Query the knowledge base for relevant brand guidelines and context.
- */
-async function stageKBEnrichment(ctx: GenerationContext) {
-  // Build a query from the prompt + product context
-  const queryParts = [ctx.input.prompt];
-  if (ctx.product?.primaryName) {
-    queryParts.push(ctx.product.primaryName);
-  }
-  if (ctx.product?.category) {
-    queryParts.push(ctx.product.category);
-  }
-
-  const result = await queryFileSearchStore({
-    query: queryParts.join(' '),
-    maxResults: 3,
-  });
-
-  if (!result) return undefined;
-
-  return {
-    context: result.context,
-    citations: result.citations?.map((c) => String(c)) || [],
-  };
-}
-
-/**
- * Stage 7: Learned Patterns
- * Fetch relevant patterns from the user's pattern library.
- */
-async function stageLearnedPatterns(ctx: GenerationContext) {
-  const categoryVal = ctx.vision?.category || ctx.product?.category;
-  const patterns = await getRelevantPatterns({
-    userId: ctx.input.userId,
-    ...(categoryVal ? { category: categoryVal } : {}),
-    maxPatterns: 3,
-  });
-
-  if (patterns.length === 0) return undefined;
-
-  const directive = formatPatternsForPrompt(patterns);
-  return {
-    directive,
-    patternCount: patterns.length,
-  };
-}
 
 /**
  * Stage 8: Template Resolution
  * Fetch template details if a templateId was provided.
+ * This is image-pipeline-specific and stays in this service.
  */
 async function stageTemplateResolution(ctx: GenerationContext) {
   if (!ctx.input.templateId) return undefined;
-
   const template = await storage.getAdSceneTemplateById(ctx.input.templateId);
   if (!template) return undefined;
-
   return {
     id: template.id,
     title: template.title,
