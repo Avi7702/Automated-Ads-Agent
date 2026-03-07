@@ -5,7 +5,7 @@
 
 import { db } from '../db';
 import { styleReferences, type StyleReference, type InsertStyleReference } from '@shared/schema';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, and, desc, sql, inArray } from 'drizzle-orm';
 
 export async function createStyleReference(data: InsertStyleReference): Promise<StyleReference> {
   const [ref] = await db.insert(styleReferences).values(data).returning();
@@ -71,10 +71,10 @@ export async function incrementUsageCount(id: string): Promise<void> {
 
 export async function getStyleReferencesByIds(ids: string[]): Promise<StyleReference[]> {
   if (ids.length === 0) return [];
-  const results: StyleReference[] = [];
-  for (const id of ids) {
-    const ref = await getStyleReferenceById(id);
-    if (ref && ref.isActive) results.push(ref);
-  }
-  return results;
+
+  // Optimized: Use a single query with inArray to avoid N+1 database round-trips
+  return await db
+    .select()
+    .from(styleReferences)
+    .where(and(inArray(styleReferences.id, ids), eq(styleReferences.isActive, true)));
 }

@@ -1,3 +1,8 @@
+## 2026-02-23 - [N+1 Query in Batch Fetching]
+
+**Learning:** Found an $O(N)$ bottleneck in `getStyleReferencesByIds` where sequential queries were being made for each ID. This is a classic anti-pattern that multiplies database round-trip latency.
+**Action:** Always use Drizzle's `inArray` operator for batch lookups by ID to ensure $O(1)$ round-trips.
+
 ## 2026-02-22 - [Database-side Aggregation]
 
 **Learning:** In-memory filtering and aggregation are recurring anti-patterns in this codebase. Offloading these to PostgreSQL using `groupBy`, `count`, and array operators (`&&`) significantly reduces memory footprint and data transfer.
