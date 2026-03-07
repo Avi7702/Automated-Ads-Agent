@@ -20,7 +20,7 @@ test('page should load without errors', async ({ page }) => {
   if (hasError) {
     console.log('ERROR: React useEffect error detected');
     // Log page content for debugging
-    const content = await page.content();
+    const _content = await page.content();
     console.log('Page has error overlay');
   }
 

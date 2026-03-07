@@ -201,7 +201,7 @@ describe('OAuth Service', () => {
       const verifier = values['codeVerifier'] as string;
 
       // Compute expected challenge
-      const expectedChallenge = crypto.createHash('sha256').update(verifier).digest('base64url');
+      const _expectedChallenge = crypto.createHash('sha256').update(verifier).digest('base64url');
 
       // Extract challenge from the URL
       // The URL is the return value, but we need to get it differently

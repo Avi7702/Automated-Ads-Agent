@@ -63,13 +63,7 @@ vi.mock('../lib/logger', () => ({
 }));
 
 // Import after mocks are set up
-import {
-  CacheService,
-  createCacheService,
-  getCacheService,
-  closeCacheService,
-  CACHE_TTL,
-} from '../lib/cacheService';
+import { CacheService, createCacheService, getCacheService, closeCacheService, CACHE_TTL } from '../lib/cacheService';
 
 describe('CacheService', () => {
   let cacheService: CacheService;
@@ -141,12 +135,7 @@ describe('CacheService', () => {
 
       await cacheService.set('product:123', value, ttlSeconds);
 
-      expect(mockRedisInstance.set).toHaveBeenCalledWith(
-        'product:123',
-        JSON.stringify(value),
-        'EX',
-        ttlSeconds
-      );
+      expect(mockRedisInstance.set).toHaveBeenCalledWith('product:123', JSON.stringify(value), 'EX', ttlSeconds);
     });
 
     it('serializes/deserializes JSON correctly', async () => {
@@ -169,31 +158,19 @@ describe('CacheService', () => {
     it('throws error when Redis fails to set', async () => {
       mockRedisInstance.set.mockRejectedValue(new Error('Memory full'));
 
-      await expect(
-        cacheService.set('key', { value: 'test' }, 3600)
-      ).rejects.toThrow('Memory full');
+      await expect(cacheService.set('key', { value: 'test' }, 3600)).rejects.toThrow('Memory full');
     });
 
     it('handles empty objects', async () => {
       await cacheService.set('empty:object', {}, 3600);
 
-      expect(mockRedisInstance.set).toHaveBeenCalledWith(
-        'empty:object',
-        '{}',
-        'EX',
-        3600
-      );
+      expect(mockRedisInstance.set).toHaveBeenCalledWith('empty:object', '{}', 'EX', 3600);
     });
 
     it('handles null values', async () => {
       await cacheService.set('null:value', null as unknown, 3600);
 
-      expect(mockRedisInstance.set).toHaveBeenCalledWith(
-        'null:value',
-        'null',
-        'EX',
-        3600
-      );
+      expect(mockRedisInstance.set).toHaveBeenCalledWith('null:value', 'null', 'EX', 3600);
     });
   });
 
@@ -212,7 +189,7 @@ describe('CacheService', () => {
       expect(mockRedisInstance.del).toHaveBeenCalledWith(
         'vision:product1:hash1',
         'vision:product1:hash2',
-        'vision:product1:hash3'
+        'vision:product1:hash3',
       );
     });
 
@@ -257,11 +234,7 @@ describe('CacheService', () => {
       mockRedisInstance.get.mockResolvedValue(null);
       const expensiveFunction = vi.fn().mockResolvedValue({ data: 'computed' });
 
-      const result = await cacheService.wrap(
-        'compute:key',
-        3600,
-        expensiveFunction
-      );
+      const result = await cacheService.wrap('compute:key', 3600, expensiveFunction);
 
       expect(result).toEqual({ data: 'computed' });
       expect(expensiveFunction).toHaveBeenCalledTimes(1);
@@ -269,7 +242,7 @@ describe('CacheService', () => {
         'compute:key',
         JSON.stringify({ data: 'computed' }),
         'EX',
-        3600
+        3600,
       );
     });
 
@@ -278,11 +251,7 @@ describe('CacheService', () => {
       mockRedisInstance.get.mockResolvedValue(JSON.stringify(cachedData));
       const expensiveFunction = vi.fn().mockResolvedValue({ data: 'computed' });
 
-      const result = await cacheService.wrap(
-        'cached:key',
-        3600,
-        expensiveFunction
-      );
+      const result = await cacheService.wrap('cached:key', 3600, expensiveFunction);
 
       expect(result).toEqual({ data: 'cached' });
       expect(expensiveFunction).not.toHaveBeenCalled();
@@ -293,9 +262,7 @@ describe('CacheService', () => {
       mockRedisInstance.get.mockResolvedValue(null);
       const failingFunction = vi.fn().mockRejectedValue(new Error('Computation failed'));
 
-      await expect(
-        cacheService.wrap('failing:key', 3600, failingFunction)
-      ).rejects.toThrow('Computation failed');
+      await expect(cacheService.wrap('failing:key', 3600, failingFunction)).rejects.toThrow('Computation failed');
 
       expect(mockRedisInstance.set).not.toHaveBeenCalled();
     });
@@ -304,11 +271,7 @@ describe('CacheService', () => {
       mockRedisInstance.get.mockRejectedValue(new Error('Redis down'));
       const computeFunction = vi.fn().mockResolvedValue({ data: 'fallback' });
 
-      const result = await cacheService.wrap(
-        'fallback:key',
-        3600,
-        computeFunction
-      );
+      const result = await cacheService.wrap('fallback:key', 3600, computeFunction);
 
       expect(result).toEqual({ data: 'fallback' });
       expect(computeFunction).toHaveBeenCalledTimes(1);
@@ -332,12 +295,7 @@ describe('CacheService', () => {
       const result = await cacheService.wrap('number:key', 3600, computeNumber);
 
       expect(result).toBe(42);
-      expect(mockRedisInstance.set).toHaveBeenCalledWith(
-        'number:key',
-        '42',
-        'EX',
-        3600
-      );
+      expect(mockRedisInstance.set).toHaveBeenCalledWith('number:key', '42', 'EX', 3600);
     });
   });
 
@@ -504,7 +462,7 @@ describe('CacheService', () => {
     });
 
     it('closeCacheService closes the singleton and allows new instance', async () => {
-      const instance1 = getCacheService();
+      const _instance1 = getCacheService();
       await closeCacheService();
 
       // After closing, getting cache service should create new instance

@@ -15,7 +15,7 @@ import { StudioWorkflowPage } from './pages/studio-workflow.page';
  */
 
 test.describe('Carousel Builder Workflow', () => {
-  let carouselPage: CarouselBuilderPage;
+  let _carouselPage: CarouselBuilderPage;
   let studioPage: StudioWorkflowPage;
 
   test.beforeEach(async ({ page }) => {
@@ -30,8 +30,11 @@ test.describe('Carousel Builder Workflow', () => {
       await page.waitForLoadState('networkidle');
 
       // Verify Content Planner guidance appears
-      const guidanceVisible = await page.locator('text=Content Planner Template').isVisible().catch(() => false);
-      expect(guidanceVisible || await studioPage.isVisible()).toBe(true);
+      const guidanceVisible = await page
+        .locator('text=Content Planner Template')
+        .isVisible()
+        .catch(() => false);
+      expect(guidanceVisible || (await studioPage.isVisible())).toBe(true);
     });
 
     test('carousel endpoint is accessible', async ({ request }) => {
@@ -196,7 +199,7 @@ test.describe('Carousel Builder Workflow', () => {
 
       // Look for carousel-related UI elements
       const carouselElements = page.locator('text=Carousel Builder, text=carousel, text=slides');
-      const hasCarousel = await carouselElements.count() > 0;
+      const hasCarousel = (await carouselElements.count()) > 0;
 
       // If carousel builder isn't directly visible, this is expected
       // The builder opens from specific actions
@@ -241,7 +244,7 @@ test.describe('Carousel Builder Workflow', () => {
 
       // Look for carousel-related UI components
       const carouselContent = page.locator('[class*="CarouselContent"], [class*="embla"]');
-      const hasCarousel = await carouselContent.count() > 0;
+      const hasCarousel = (await carouselContent.count()) > 0;
 
       // Carousel components should be available in the codebase
       expect(hasCarousel).toBeDefined();
@@ -355,10 +358,7 @@ test.describe('Carousel Content Templates', () => {
     // Find templates that work well with carousels
     const carouselFriendlyTemplates = data.templates.filter(
       (t: any) =>
-        t.id.includes('guide') ||
-        t.id.includes('tips') ||
-        t.id.includes('educational') ||
-        t.category === 'educational'
+        t.id.includes('guide') || t.id.includes('tips') || t.id.includes('educational') || t.category === 'educational',
     );
 
     // Should have at least some educational templates

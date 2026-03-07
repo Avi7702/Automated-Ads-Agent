@@ -1,5 +1,3 @@
-
-
 // ============================================
 // MOCK SETUP
 // ============================================
@@ -20,7 +18,7 @@ const mockRedisInstance = {
 // Create a proper constructor mock for ioredis
 vi.mock('ioredis', () => {
   // Must be a class/constructor to work with `new Redis(...)`
-  const MockRedis = function(this: typeof mockRedisInstance) {
+  const MockRedis = function (this: typeof mockRedisInstance) {
     Object.assign(this, mockRedisInstance);
     return this;
   } as unknown as new () => typeof mockRedisInstance;
@@ -36,7 +34,7 @@ import {
   getSupportedServices,
   isValidService,
   type ServiceName,
-  type ValidationResult,
+  type _ValidationResult,
   type CloudinaryParams,
 } from '../services/apiKeyValidationService';
 
@@ -130,7 +128,7 @@ describe('API Key Format Validation', () => {
       it('should reject non-redis URL', () => {
         const result = validateKeyFormat('redis', INVALID_KEYS.redis);
         expect(result.valid).toBe(false);
-        expect(result.error).toContain("redis://");
+        expect(result.error).toContain('redis://');
       });
     });
 
@@ -450,7 +448,7 @@ describe('API Key Validation (with API calls)', () => {
       const result = await validateApiKey('redis', VALID_KEYS.redisTls);
       expect(result.valid).toBe(false);
       expect(result.errorCode).toBe('CONNECTION_FAILED');
-      expect(result.solution).toContain("rediss://");
+      expect(result.solution).toContain('rediss://');
     });
 
     it('should reject invalid URL format', async () => {
@@ -532,10 +530,7 @@ describe('Edge Cases', () => {
 
     expect(result.valid).toBe(true);
     // Verify the API was called with trimmed key
-    expect(mockFetch).toHaveBeenCalledWith(
-      expect.stringContaining(VALID_KEYS.gemini.trim()),
-      expect.any(Object)
-    );
+    expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining(VALID_KEYS.gemini.trim()), expect.any(Object));
   });
 
   it('should handle JSON parse errors in error response', async () => {

@@ -189,7 +189,7 @@ async function fetchProducts(_userId: string, productIds: string[]): Promise<Pro
       if (product) {
         products.push(product);
       }
-    } catch (e) {
+    } catch {
       logger.warn(
         {
           module: 'ContentPlannerService',
