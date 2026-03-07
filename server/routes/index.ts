@@ -103,6 +103,9 @@ import { copyRouterModule } from './copy.router';
 // Brand profile and user brand voice
 import { brandProfileRouterModule, userBrandVoiceRouterModule } from './brandProfile.router';
 
+// Phoenix Orchestrator (playbook-driven content generation)
+import { phoenixRouterModule } from './phoenix.router';
+
 // Admin (security-critical - must be last)
 import { adminRouterModule } from './admin.router';
 
@@ -209,6 +212,9 @@ export const routerModules: RouterModule[] = [
   // Brand profile and user voice
   brandProfileRouterModule,
   userBrandVoiceRouterModule,
+
+  // Phoenix Orchestrator (playbook-driven content generation)
+  phoenixRouterModule,
 
   // Admin (last - security critical)
   adminRouterModule,
