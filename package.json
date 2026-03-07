@@ -146,7 +146,7 @@
     "@types/pg": "^8.11.0",
     "@types/react": "^19.2.13",
     "@types/react-dom": "^19.2.3",
-    "@types/supertest": "^6.0.3",
+    "@types/supertest": "^7.2.0",
     "@types/ws": "^8.5.13",
     "@typescript-eslint/eslint-plugin": "^8.56.1",
     "@typescript-eslint/parser": "^8.55.0",
