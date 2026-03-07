@@ -5,6 +5,7 @@ import { getFileSearchStoreForGeneration, queryFileSearchStore, FileCategory } f
 import { sanitizeForPrompt } from '../lib/promptSanitizer';
 import { safeParseLLMResponse, generatedCopySchema } from '../validation/llmResponseSchemas';
 import { productKnowledgeService, type EnhancedProductContext } from './productKnowledgeService';
+import type { AssembledContext } from './unifiedContextQualityPipeline';
 
 /**
  * Look up platform limits, throwing if the platform is unknown.
@@ -136,18 +137,50 @@ class CopywritingService {
   // No constructor needed - uses shared client
 
   /**
-   * Generate ad copy with multiple variations using PTCF prompt framework
+   * Generate ad copy with multiple variations using PTCF prompt framework.
    *
    * @param request - The validated copy generation input
-   * @param options - Optional enrichment: productId + userId to auto-fetch product knowledge
+   * @param options - Optional enrichment: productId + userId to auto-fetch product knowledge,
+   *                  or preAssembledContext from the UnifiedContextQualityPipeline.
    */
   async generateCopy(
     request: GenerateCopyInput,
-    options?: { productId?: string; userId?: string },
+    options?: { productId?: string; userId?: string; preAssembledContext?: AssembledContext },
   ): Promise<GeneratedCopy[]> {
-    // Build enhanced product context if productId + userId are provided
+    // Build enhanced product context — prefer pre-assembled context from unified pipeline
     let enhancedContext: EnhancedProductContext | null = null;
-    if (options?.productId && options?.userId) {
+    let preAssembledRAGContext: string | undefined;
+    let preAssembledPatterns: string | undefined;
+
+    if (options?.preAssembledContext) {
+      // Use context from the unified pipeline — already gathered in parallel
+      const ctx = options.preAssembledContext;
+      logger.info(
+        { module: 'Copywriting', sourcesLoaded: ctx.sourcesLoaded },
+        'Using pre-assembled context from unified pipeline',
+      );
+
+      // Extract RAG context if available
+      if (ctx.kb?.context) {
+        preAssembledRAGContext = ctx.kb.context;
+      }
+
+      // Extract learned patterns if available
+      if (ctx.patterns?.directive) {
+        preAssembledPatterns = ctx.patterns.directive;
+      }
+
+      // Still need to fetch full EnhancedProductContext for the detailed prompt building
+      // (the unified pipeline's ProductContext is a summary; copywriting needs the full object)
+      if (options?.productId && options?.userId) {
+        try {
+          enhancedContext = await productKnowledgeService.buildEnhancedContext(options.productId, options.userId);
+        } catch (err) {
+          logger.warn({ module: 'Copywriting', err }, 'Failed to load enhanced product context, continuing without it');
+        }
+      }
+    } else if (options?.productId && options?.userId) {
+      // Fallback: self-fetch product context (backward compatibility)
       try {
         enhancedContext = await productKnowledgeService.buildEnhancedContext(options.productId, options.userId);
         if (enhancedContext) {
@@ -164,7 +197,13 @@ class CopywritingService {
     const variations: GeneratedCopy[] = [];
 
     for (let i = 0; i < request.variations; i++) {
-      const copy = await this.generateSingleCopy(request, i + 1, enhancedContext);
+      const copy = await this.generateSingleCopy(
+        request,
+        i + 1,
+        enhancedContext,
+        preAssembledRAGContext,
+        preAssembledPatterns,
+      );
       variations.push(copy);
     }
 
@@ -172,41 +211,57 @@ class CopywritingService {
   }
 
   /**
-   * Generate a single copy variation with RAG enhancement
+   * Generate a single copy variation with RAG enhancement.
+   * Accepts optional pre-assembled RAG context and patterns from the unified pipeline.
    */
   async generateSingleCopy(
     request: GenerateCopyInput,
     variationNumber: number,
     enhancedContext?: EnhancedProductContext | null,
+    preAssembledRAGContext?: string,
+    preAssembledPatterns?: string,
   ): Promise<GeneratedCopy> {
     // STEP 1: Retrieve relevant context from File Search Store (RAG)
-    let ragContext = '';
+    // If pre-assembled context is available, use it; otherwise self-fetch.
+    let ragContext = preAssembledRAGContext || '';
     let citations: string[] = [];
 
-    try {
-      await getFileSearchStoreForGeneration();
+    if (!preAssembledRAGContext) {
+      try {
+        await getFileSearchStoreForGeneration();
 
-      // Query for ad examples matching the product/platform
-      const contextQuery = `${request.platform} ad examples for ${request.productName} ${request.industry} ${request.productDescription}`;
-      const searchResult = await queryFileSearchStore({
-        query: contextQuery,
-        category: FileCategory.AD_EXAMPLES,
-        maxResults: 3,
-      });
+        const contextQuery = `${request.platform} ad examples for ${request.productName} ${request.industry} ${request.productDescription}`;
+        const searchResult = await queryFileSearchStore({
+          query: contextQuery,
+          category: FileCategory.AD_EXAMPLES,
+          maxResults: 3,
+        });
 
-      if (searchResult) {
-        ragContext = searchResult.context;
-        citations = searchResult.citations || [];
-        logger.info(
-          { module: 'Copywriting', contextLength: ragContext.length, citationCount: citations.length },
-          'Retrieved RAG context',
-        );
-      } else {
-        logger.info({ module: 'Copywriting' }, 'No RAG context found for this query');
+        if (searchResult) {
+          ragContext = searchResult.context;
+          citations = searchResult.citations || [];
+          logger.info(
+            { module: 'Copywriting', contextLength: ragContext.length, citationCount: citations.length },
+            'Retrieved RAG context',
+          );
+        } else {
+          logger.info({ module: 'Copywriting' }, 'No RAG context found for this query');
+        }
+      } catch (error) {
+        logger.warn({ module: 'Copywriting', err: error }, 'File Search not available, continuing without RAG context');
       }
-    } catch (error) {
-      logger.warn({ module: 'Copywriting', err: error }, 'File Search not available, continuing without RAG context');
-      // Continue without RAG if File Search fails - graceful degradation
+    } else {
+      logger.info(
+        { module: 'Copywriting', contextLength: ragContext.length },
+        'Using pre-assembled RAG context from unified pipeline',
+      );
+    }
+
+    // Append learned patterns to RAG context if available
+    if (preAssembledPatterns) {
+      ragContext = ragContext
+        ? `${ragContext}\n\nLEARNED WINNING PATTERNS:\n${preAssembledPatterns}`
+        : `LEARNED WINNING PATTERNS:\n${preAssembledPatterns}`;
     }
 
     // STEP 2: Build enhanced prompt with RAG context and product knowledge
