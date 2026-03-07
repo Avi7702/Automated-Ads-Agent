@@ -70,6 +70,7 @@ export async function getApprovalQueueForUser(
       .where(and(...conditions))
       .orderBy(desc(approvalQueue.createdAt));
   } catch (error: unknown) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const errorCode = (error as any)?.code;
     if (errorCode === '42P01') {
       logger.warn({ module: 'Storage' }, 'approval_queue table does not exist - returning empty array');

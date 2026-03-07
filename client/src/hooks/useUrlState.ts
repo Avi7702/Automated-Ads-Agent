@@ -30,6 +30,7 @@ export function useUrlState() {
     // Use window.location.search as the single source of truth
     // This ensures we always have the current query params even with hash routing
     return new URLSearchParams(window.location.search);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location, urlVersion]);
 
   /**

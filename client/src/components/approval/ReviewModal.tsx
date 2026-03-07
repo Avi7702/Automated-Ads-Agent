@@ -31,6 +31,7 @@ interface ReviewModalProps {
     aiConfidenceScore?: number;
     aiRecommendation?: 'auto_approve' | 'manual_review' | 'auto_reject';
     aiReasoning?: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     safetyChecksPassed?: any;
     complianceFlags?: string[];
     scheduledFor?: string;
@@ -41,6 +42,7 @@ interface ReviewModalProps {
       cta?: string;
       platform: string;
       framework?: string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       qualityScore?: any;
     };
     generation?: {

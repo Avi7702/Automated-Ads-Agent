@@ -76,10 +76,7 @@ class CarouselOutlineService {
       slideStructure,
     });
 
-    logger.info(
-      { templateId, topic, slideCount, platform },
-      '[CarouselOutline] Generating outline'
-    );
+    logger.info({ templateId, topic, slideCount, platform }, '[CarouselOutline] Generating outline');
 
     try {
       const response = await generateContentWithRetry(
@@ -98,17 +95,14 @@ class CarouselOutlineService {
             maxOutputTokens: 4000,
           },
         },
-        { operation: 'carousel_outline_generation' }
+        { operation: 'carousel_outline_generation' },
       );
 
       // Extract text from response
       const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
       const outline = this.parseOutlineResponse(responseText, slideCount, topic);
 
-      logger.info(
-        { slides: outline.slides.length },
-        '[CarouselOutline] Generated outline successfully'
-      );
+      logger.info({ slides: outline.slides.length }, '[CarouselOutline] Generated outline successfully');
 
       return outline;
     } catch (error) {
@@ -201,9 +195,10 @@ class CarouselOutlineService {
   }): string {
     const { template, topic, slideCount, platform, productNames, slideStructure } = params;
 
-    const productContext = productNames.length > 0
-      ? `Products to feature: ${productNames.join(', ')}`
-      : 'No specific products - focus on the topic itself';
+    const productContext =
+      productNames.length > 0
+        ? `Products to feature: ${productNames.join(', ')}`
+        : 'No specific products - focus on the topic itself';
 
     const hookFormulas = template.hookFormulas.slice(0, 3).join('\n  - ');
 
@@ -298,6 +293,7 @@ Respond in this exact JSON format:
       }
 
       // Ensure we have the right number of slides
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const slides: CarouselSlide[] = parsed.slides.slice(0, expectedSlides).map((slide: any, index: number) => ({
         slideNumber: index + 1,
         purpose: slide.purpose || 'point',
@@ -315,10 +311,7 @@ Respond in this exact JSON format:
         hashtags: Array.isArray(parsed.hashtags) ? parsed.hashtags.slice(0, 10) : [],
       };
     } catch (error) {
-      logger.error(
-        { err: error, response: response.slice(0, 500) },
-        '[CarouselOutline] Failed to parse response'
-      );
+      logger.error({ err: error, response: response.slice(0, 500) }, '[CarouselOutline] Failed to parse response');
 
       // Return a fallback structure
       return this.generateFallbackOutline(topic, expectedSlides);

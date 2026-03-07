@@ -72,7 +72,7 @@ function getDeploymentUrl(): string | null {
   return null;
 }
 
-function log(...args: any[]): void {
+function log(...args: unknown[]): void {
   if (process.env['NODE_ENV'] === 'production') {
     console.log(...args);
   }

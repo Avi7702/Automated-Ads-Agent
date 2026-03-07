@@ -60,7 +60,7 @@ import {
   extractTags,
 } from '../services/enrichment/dataExtraction';
 import {
-  DEFAULT_PIPELINE_CONFIG,
+  _DEFAULT_PIPELINE_CONFIG,
   type VisionResult,
   type SourceSearchResult,
   type ExtractedData,

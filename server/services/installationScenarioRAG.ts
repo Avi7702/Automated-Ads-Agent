@@ -823,6 +823,7 @@ function parseInstallationSuggestions(
     const parsed = JSON.parse(jsonMatch[0]);
 
     // Parse steps
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const steps: InstallationStep[] = (parsed.steps || []).map((step: any) => ({
       stepNumber: step.stepNumber || 1,
       title: step.title || 'Installation Step',
@@ -834,6 +835,7 @@ function parseInstallationSuggestions(
     }));
 
     // Parse accessories
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const accessories: AccessoryRecommendation[] = (parsed.accessories || []).map((acc: any) => ({
       name: acc.name || 'Accessory',
       category: acc.category || 'general',
@@ -843,6 +845,7 @@ function parseInstallationSuggestions(
     }));
 
     // Parse tips
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const tips: InstallationTip[] = (parsed.tips || []).map((tip: any) => ({
       tip: typeof tip === 'string' ? tip : tip.tip || '',
       category: tip.category || 'prep',
@@ -889,6 +892,7 @@ function parseAccessoryRecommendations(responseText: string): AccessoryRecommend
     }
 
     const parsed = JSON.parse(jsonMatch[0]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (parsed.accessories || []).map((acc: any) => ({
       name: acc.name || 'Accessory',
       category: acc.category || 'general',
@@ -923,8 +927,8 @@ function deduplicateScenarios(scenarios: InstallationScenario[]): InstallationSc
  */
 function mergeWithRelationships(
   aiAccessories: AccessoryRecommendation[],
-  requiredRelationships: any[],
-  pairsWithRelationships: any[],
+  requiredRelationships: unknown[],
+  pairsWithRelationships: unknown[],
 ): AccessoryRecommendation[] {
   const merged = [...aiAccessories];
   const existingNames = new Set(aiAccessories.map((a) => a.name.toLowerCase()));

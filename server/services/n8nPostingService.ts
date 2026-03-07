@@ -88,7 +88,7 @@ export interface N8nCallbackData {
   error?: string;
   errorCode?: string;
   postedAt?: string; // ISO 8601 timestamp
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**

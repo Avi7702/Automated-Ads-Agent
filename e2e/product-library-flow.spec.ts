@@ -33,15 +33,76 @@ test.describe('Product Library Workflow', () => {
     if (!fs.existsSync(TEST_IMAGE_PATH)) {
       // Create a minimal valid PNG (1x1 pixel red image)
       const minimalPng = Buffer.from([
-        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, // PNG signature
-        0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52, // IHDR chunk
-        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-        0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53,
-        0xde, 0x00, 0x00, 0x00, 0x0c, 0x49, 0x44, 0x41, // IDAT chunk
-        0x54, 0x08, 0xd7, 0x63, 0xf8, 0xcf, 0xc0, 0x00,
-        0x00, 0x00, 0x03, 0x00, 0x01, 0x00, 0x05, 0xfe,
-        0xd4, 0xef, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, // IEND chunk
-        0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+        0x89,
+        0x50,
+        0x4e,
+        0x47,
+        0x0d,
+        0x0a,
+        0x1a,
+        0x0a, // PNG signature
+        0x00,
+        0x00,
+        0x00,
+        0x0d,
+        0x49,
+        0x48,
+        0x44,
+        0x52, // IHDR chunk
+        0x00,
+        0x00,
+        0x00,
+        0x01,
+        0x00,
+        0x00,
+        0x00,
+        0x01,
+        0x08,
+        0x02,
+        0x00,
+        0x00,
+        0x00,
+        0x90,
+        0x77,
+        0x53,
+        0xde,
+        0x00,
+        0x00,
+        0x00,
+        0x0c,
+        0x49,
+        0x44,
+        0x41, // IDAT chunk
+        0x54,
+        0x08,
+        0xd7,
+        0x63,
+        0xf8,
+        0xcf,
+        0xc0,
+        0x00,
+        0x00,
+        0x00,
+        0x03,
+        0x00,
+        0x01,
+        0x00,
+        0x05,
+        0xfe,
+        0xd4,
+        0xef,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x49,
+        0x45, // IEND chunk
+        0x4e,
+        0x44,
+        0xae,
+        0x42,
+        0x60,
+        0x82,
       ]);
       fs.writeFileSync(TEST_IMAGE_PATH, minimalPng);
     }
@@ -81,13 +142,13 @@ test.describe('Product Library Workflow', () => {
           !err.includes('404') &&
           !err.includes('401') &&
           !err.includes('net::ERR') &&
-          !err.includes('Failed to load resource')
+          !err.includes('Failed to load resource'),
       );
 
       expect(criticalErrors).toHaveLength(0);
     });
 
-    test('shows loading state then products or empty state', async ({ page }) => {
+    test('shows loading state then products or empty state', async ({ _page }) => {
       await productLibraryPage.goto();
 
       // Either products load or empty state shows
@@ -97,7 +158,7 @@ test.describe('Product Library Workflow', () => {
   });
 
   test.describe('Product Grid Display', () => {
-    test('displays product cards in grid layout', async ({ page }) => {
+    test('displays product cards in grid layout', async ({ _page }) => {
       await productLibraryPage.waitForProductsLoaded();
 
       const productCount = await productLibraryPage.getProductCount();
@@ -119,7 +180,7 @@ test.describe('Product Library Workflow', () => {
       expect(badgeCount).toBeGreaterThanOrEqual(0);
     });
 
-    test('product cards are clickable', async ({ page }) => {
+    test('product cards are clickable', async ({ _page }) => {
       await productLibraryPage.waitForProductsLoaded();
 
       const productCount = await productLibraryPage.getProductCount();
@@ -131,7 +192,7 @@ test.describe('Product Library Workflow', () => {
   });
 
   test.describe('Search Functionality', () => {
-    test('search input is visible', async ({ page }) => {
+    test('search input is visible', async ({ _page }) => {
       await expect(productLibraryPage.searchInput).toBeVisible();
     });
 
@@ -146,7 +207,10 @@ test.describe('Product Library Workflow', () => {
       await page.waitForTimeout(500);
 
       // Should show "No results" or fewer products
-      const resultsText = await page.locator('text=/No results|Showing 0/i').isVisible().catch(() => false);
+      const resultsText = await page
+        .locator('text=/No results|Showing 0/i')
+        .isVisible()
+        .catch(() => false);
       const filteredCount = await productLibraryPage.getProductCount();
 
       expect(filteredCount <= initialCount || resultsText).toBeTruthy();
@@ -169,12 +233,12 @@ test.describe('Product Library Workflow', () => {
   });
 
   test.describe('Add Product Modal', () => {
-    test('Add Product button opens modal', async ({ page }) => {
+    test('Add Product button opens modal', async ({ _page }) => {
       await productLibraryPage.openAddProductModal();
       await expect(productLibraryPage.addProductModal).toBeVisible();
     });
 
-    test('modal has all required fields', async ({ page }) => {
+    test('modal has all required fields', async ({ _page }) => {
       await productLibraryPage.openAddProductModal();
 
       await expect(productLibraryPage.dropzone).toBeVisible();
@@ -183,7 +247,7 @@ test.describe('Product Library Workflow', () => {
       await expect(productLibraryPage.descriptionInput).toBeVisible();
     });
 
-    test('modal can be closed', async ({ page }) => {
+    test('modal can be closed', async ({ _page }) => {
       await productLibraryPage.openAddProductModal();
       await productLibraryPage.closeAddProductModal();
       await expect(productLibraryPage.addProductModal).not.toBeVisible();
@@ -200,7 +264,7 @@ test.describe('Product Library Workflow', () => {
       await expect(preview).toBeVisible({ timeout: 5000 });
     });
 
-    test('form validation requires name', async ({ page }) => {
+    test('form validation requires name', async ({ _page }) => {
       await productLibraryPage.openAddProductModal();
       await productLibraryPage.uploadProductImage(TEST_IMAGE_PATH);
 
@@ -236,7 +300,9 @@ test.describe('Product Library Workflow', () => {
 
       // Verify toast notification
       const toast = page.locator('text=/Product created|added to your library/i');
-      await expect(toast).toBeVisible({ timeout: 5000 }).catch(() => {});
+      await expect(toast)
+        .toBeVisible({ timeout: 5000 })
+        .catch(() => {});
 
       // Verify product appears in list
       await productLibraryPage.waitForProductsLoaded();
@@ -246,7 +312,7 @@ test.describe('Product Library Workflow', () => {
   });
 
   test.describe('Product Detail Modal', () => {
-    test('clicking product opens detail modal', async ({ page }) => {
+    test('clicking product opens detail modal', async ({ _page }) => {
       await productLibraryPage.waitForProductsLoaded();
 
       const productCount = await productLibraryPage.getProductCount();
@@ -256,7 +322,7 @@ test.describe('Product Library Workflow', () => {
       await expect(productLibraryPage.detailModal).toBeVisible();
     });
 
-    test('detail modal has tabs', async ({ page }) => {
+    test('detail modal has tabs', async ({ _page }) => {
       await productLibraryPage.waitForProductsLoaded();
 
       const productCount = await productLibraryPage.getProductCount();
@@ -269,7 +335,7 @@ test.describe('Product Library Workflow', () => {
       await expect(productLibraryPage.enrichTab).toBeVisible();
     });
 
-    test('can switch between tabs', async ({ page }) => {
+    test('can switch between tabs', async ({ _page }) => {
       await productLibraryPage.waitForProductsLoaded();
 
       const productCount = await productLibraryPage.getProductCount();
@@ -286,7 +352,7 @@ test.describe('Product Library Workflow', () => {
       await expect(productLibraryPage.enrichTab).toHaveAttribute('data-state', 'active');
     });
 
-    test('Use in Studio button exists', async ({ page }) => {
+    test('Use in Studio button exists', async ({ _page }) => {
       await productLibraryPage.waitForProductsLoaded();
 
       const productCount = await productLibraryPage.getProductCount();
@@ -296,7 +362,7 @@ test.describe('Product Library Workflow', () => {
       await expect(productLibraryPage.useInStudioButton).toBeVisible();
     });
 
-    test('detail modal can be closed', async ({ page }) => {
+    test('detail modal can be closed', async ({ _page }) => {
       await productLibraryPage.waitForProductsLoaded();
 
       const productCount = await productLibraryPage.getProductCount();
@@ -309,7 +375,7 @@ test.describe('Product Library Workflow', () => {
   });
 
   test.describe('Enrichment Flow', () => {
-    test('Enrich tab shows enrichment form', async ({ page }) => {
+    test('Enrich tab shows enrichment form', async ({ _page }) => {
       await productLibraryPage.waitForProductsLoaded();
 
       const productCount = await productLibraryPage.getProductCount();
@@ -344,13 +410,15 @@ test.describe('Product Library Workflow', () => {
 
       // Should show loading state
       const loadingSpinner = page.locator('[class*="animate-spin"]');
-      await expect(loadingSpinner).toBeVisible({ timeout: 5000 }).catch(() => {});
+      await expect(loadingSpinner)
+        .toBeVisible({ timeout: 5000 })
+        .catch(() => {});
 
       // Wait for enrichment to complete (can take time)
       await page.waitForTimeout(10000);
     });
 
-    test('URL enrichment input is available', async ({ page }) => {
+    test('URL enrichment input is available', async ({ _page }) => {
       await productLibraryPage.waitForProductsLoaded();
 
       const productCount = await productLibraryPage.getProductCount();
@@ -363,7 +431,7 @@ test.describe('Product Library Workflow', () => {
       await expect(productLibraryPage.fetchUrlButton).toBeVisible();
     });
 
-    test('can edit enrichment data', async ({ page }) => {
+    test('can edit enrichment data', async ({ _page }) => {
       await productLibraryPage.waitForProductsLoaded();
 
       const productCount = await productLibraryPage.getProductCount();
@@ -415,9 +483,12 @@ test.describe('Product Library Workflow', () => {
       // Hover over product card to show delete button
       await productLibraryPage.productCards.first().hover();
 
-      const deleteButton = productLibraryPage.productCards.first().locator('button').filter({
-        has: page.locator('[class*="Trash"], [class*="trash"]'),
-      });
+      const deleteButton = productLibraryPage.productCards
+        .first()
+        .locator('button')
+        .filter({
+          has: page.locator('[class*="Trash"], [class*="trash"]'),
+        });
 
       const deleteVisible = await deleteButton.isVisible();
       test.skip(!deleteVisible, 'Delete button not visible');
@@ -434,9 +505,12 @@ test.describe('Product Library Workflow', () => {
 
       await productLibraryPage.productCards.first().hover();
 
-      const deleteButton = productLibraryPage.productCards.first().locator('button').filter({
-        has: page.locator('[class*="Trash"], [class*="trash"]'),
-      });
+      const deleteButton = productLibraryPage.productCards
+        .first()
+        .locator('button')
+        .filter({
+          has: page.locator('[class*="Trash"], [class*="trash"]'),
+        });
 
       const deleteVisible = await deleteButton.isVisible();
       test.skip(!deleteVisible, 'Delete button not visible');

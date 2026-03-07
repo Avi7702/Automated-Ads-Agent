@@ -13,12 +13,7 @@ import { logger } from '../lib/logger';
  */
 
 // Allowed image MIME types for ad pattern uploads
-const ALLOWED_IMAGE_TYPES = [
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-  'image/gif',
-];
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
 
@@ -55,11 +50,7 @@ setInterval(cleanupExpiredEntries, CLEANUP_INTERVAL);
  * Validates file type using magic bytes (not just MIME type from header)
  * This prevents attackers from uploading executables renamed to .jpg
  */
-export async function validateFileType(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
+export async function validateFileType(req: Request, res: Response, next: NextFunction) {
   const file = req.file;
 
   if (!file) {
@@ -71,7 +62,7 @@ export async function validateFileType(
     return res.status(400).json({
       error: 'File too large',
       maxSize: '5MB',
-      actualSize: `${(file.size / (1024 * 1024)).toFixed(2)}MB`
+      actualSize: `${(file.size / (1024 * 1024)).toFixed(2)}MB`,
     });
   }
 
@@ -82,7 +73,7 @@ export async function validateFileType(
     if (!fileInfo) {
       return res.status(400).json({
         error: 'Could not determine file type',
-        message: 'The uploaded file does not appear to be a valid image'
+        message: 'The uploaded file does not appear to be a valid image',
       });
     }
 
@@ -90,11 +81,12 @@ export async function validateFileType(
       return res.status(400).json({
         error: 'Invalid file type',
         allowed: ALLOWED_EXTENSIONS,
-        detected: fileInfo.ext
+        detected: fileInfo.ext,
       });
     }
 
     // Attach validated file info to request
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (req as any).validatedFileType = fileInfo;
     next();
   } catch (error) {
@@ -107,11 +99,8 @@ export async function validateFileType(
  * User-based rate limiter for pattern uploads
  * Limits to 10 uploads per hour per user
  */
-export function uploadPatternLimiter(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
+export function uploadPatternLimiter(req: Request, res: Response, next: NextFunction) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const user = (req as any).user;
 
   if (!user?.id) {
@@ -153,11 +142,8 @@ export function uploadPatternLimiter(
  * Check user's pattern quota
  * Limits to 100 patterns per user
  */
-export async function checkPatternQuota(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
+export async function checkPatternQuota(req: Request, res: Response, next: NextFunction) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const user = (req as any).user;
 
   if (!user?.id) {
@@ -175,15 +161,16 @@ export async function checkPatternQuota(
         message: `Maximum ${MAX_PATTERNS_PER_USER} patterns allowed per user`,
         currentCount,
         maxAllowed: MAX_PATTERNS_PER_USER,
-        suggestion: 'Delete unused patterns to make room for new ones'
+        suggestion: 'Delete unused patterns to make room for new ones',
       });
     }
 
     // Attach quota info to request
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (req as any).patternQuota = {
       current: currentCount,
       max: MAX_PATTERNS_PER_USER,
-      remaining: MAX_PATTERNS_PER_USER - currentCount
+      remaining: MAX_PATTERNS_PER_USER - currentCount,
     };
 
     next();
@@ -197,11 +184,7 @@ export async function checkPatternQuota(
  * Combined middleware that runs all upload validations
  * Use this for the pattern upload endpoint
  */
-export const patternUploadValidation = [
-  uploadPatternLimiter,
-  checkPatternQuota,
-  validateFileType,
-];
+export const patternUploadValidation = [uploadPatternLimiter, checkPatternQuota, validateFileType];
 
 // Export constants for testing
 export const UPLOAD_LIMITS = {

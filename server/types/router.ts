@@ -87,6 +87,7 @@ export interface RouterDomainServices {
   pricingEstimator: typeof import('../services/pricingEstimator');
 
   /** Google Cloud Monitoring (optional, lazy loaded) */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getGoogleCloudService: () => Promise<any>;
 }
 

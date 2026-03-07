@@ -226,7 +226,7 @@ class CopywritingService {
           },
         ];
       }
-    } catch (error) {
+    } catch {
       // No File Search available, continue without tools
     }
 

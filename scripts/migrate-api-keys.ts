@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
-import "dotenv/config";
-import pg from "pg";
+import 'dotenv/config';
+import pg from 'pg';
 
 const { Client } = pg;
 
@@ -8,17 +8,17 @@ async function migrateApiKeysTables() {
   const databaseUrl = process.env.DATABASE_URL;
 
   if (!databaseUrl) {
-    console.error("DATABASE_URL environment variable is required");
+    console.error('DATABASE_URL environment variable is required');
     process.exit(1);
   }
 
   const client = new Client({ connectionString: databaseUrl });
 
-  console.log("Starting API Keys table migration...\n");
+  console.log('Starting API Keys table migration...\n');
 
   try {
     await client.connect();
-    console.log("Connected to database\n");
+    console.log('Connected to database\n');
 
     // Check if tables already exist
     const existingTablesResult = await client.query(`
@@ -27,11 +27,12 @@ async function migrateApiKeysTables() {
       AND table_name IN ('user_api_keys', 'api_key_audit_log')
     `);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const existingTableNames = existingTablesResult.rows.map((r: any) => r.table_name);
 
     // Create api_key_audit_log table if not exists
     if (!existingTableNames.includes('api_key_audit_log')) {
-      console.log("Creating api_key_audit_log table...");
+      console.log('Creating api_key_audit_log table...');
       await client.query(`
         CREATE TABLE "api_key_audit_log" (
           "id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -45,7 +46,7 @@ async function migrateApiKeysTables() {
           "created_at" timestamp DEFAULT now() NOT NULL
         )
       `);
-      console.log("✓ api_key_audit_log table created");
+      console.log('✓ api_key_audit_log table created');
 
       // Add foreign key constraint
       await client.query(`
@@ -54,14 +55,14 @@ async function migrateApiKeysTables() {
         FOREIGN KEY ("user_id") REFERENCES "public"."users"("id")
         ON DELETE cascade ON UPDATE no action
       `);
-      console.log("✓ api_key_audit_log foreign key added");
+      console.log('✓ api_key_audit_log foreign key added');
     } else {
-      console.log("⊘ api_key_audit_log table already exists, skipping");
+      console.log('⊘ api_key_audit_log table already exists, skipping');
     }
 
     // Create user_api_keys table if not exists
     if (!existingTableNames.includes('user_api_keys')) {
-      console.log("Creating user_api_keys table...");
+      console.log('Creating user_api_keys table...');
       await client.query(`
         CREATE TABLE "user_api_keys" (
           "id" varchar PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -78,7 +79,7 @@ async function migrateApiKeysTables() {
           CONSTRAINT "user_api_keys_user_id_service_unique" UNIQUE("user_id","service")
         )
       `);
-      console.log("✓ user_api_keys table created");
+      console.log('✓ user_api_keys table created');
 
       // Add foreign key constraint
       await client.query(`
@@ -87,14 +88,14 @@ async function migrateApiKeysTables() {
         FOREIGN KEY ("user_id") REFERENCES "public"."users"("id")
         ON DELETE cascade ON UPDATE no action
       `);
-      console.log("✓ user_api_keys foreign key added");
+      console.log('✓ user_api_keys foreign key added');
     } else {
-      console.log("⊘ user_api_keys table already exists, skipping");
+      console.log('⊘ user_api_keys table already exists, skipping');
     }
 
-    console.log("\n✅ Migration completed successfully!");
+    console.log('\n✅ Migration completed successfully!');
   } catch (error) {
-    console.error("\n❌ Migration failed:", error);
+    console.error('\n❌ Migration failed:', error);
     process.exit(1);
   } finally {
     await client.end();

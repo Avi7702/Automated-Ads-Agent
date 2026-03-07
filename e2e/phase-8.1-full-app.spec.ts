@@ -19,7 +19,7 @@ import { test, expect, Page } from '@playwright/test';
 const PRODUCTION_URL = 'https://automated-ads-agent-production.up.railway.app';
 
 // Helper function to measure navigation performance
-async function measureNavigationTime(page: Page, targetUrl: string): Promise<number> {
+async function _measureNavigationTime(page: Page, targetUrl: string): Promise<number> {
   const startTime = Date.now();
   await page.goto(targetUrl);
   await page.waitForLoadState('networkidle');
@@ -53,7 +53,7 @@ test.describe('Phase 8.1: Authentication & Session', () => {
 
     // If logged in, verify user menu exists
     const userMenu = page.locator('[data-testid="user-menu"]');
-    const hasUserMenu = await userMenu.count() > 0;
+    const hasUserMenu = (await userMenu.count()) > 0;
 
     if (hasUserMenu) {
       // Reload the page
@@ -131,7 +131,7 @@ test.describe('Phase 8.1: Studio Page - Core Functionality', () => {
       await expect(generateButton).toBeVisible();
 
       // Button should be enabled or disabled based on state
-      const isDisabled = await generateButton.isDisabled();
+      const _isDisabled = await generateButton.isDisabled();
       // We just verify the button exists, not necessarily enabled
     }
   });
@@ -245,7 +245,9 @@ test.describe('Phase 8.1: Social Accounts Page', () => {
   });
 
   test('should fetch /api/social/accounts successfully', async ({ page }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let apiResponse: any = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let apiError: any = null;
 
     // Listen for API response
@@ -373,8 +375,10 @@ test.describe('Phase 8.1: Navigation Performance', () => {
     await page.evaluate(() => {
       const header = document.querySelector('header');
       if (header) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (header as any).__renderCount = 0;
         const observer = new MutationObserver(() => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (header as any).__renderCount++;
         });
         observer.observe(header, { childList: true, subtree: true });
@@ -392,6 +396,7 @@ test.describe('Phase 8.1: Navigation Performance', () => {
     // Check render count
     const renderCount = await page.evaluate(() => {
       const header = document.querySelector('header');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (header as any).__renderCount || 0;
     });
 
@@ -461,7 +466,7 @@ test.describe('Phase 8.1: Performance Optimizations - Compression', () => {
 
     // If we have compressed size, it should be significantly smaller
     if (compressedSize > 0) {
-      const reductionRate = 1 - (compressedSize / (compressedSize + uncompressedSize));
+      const reductionRate = 1 - compressedSize / (compressedSize + uncompressedSize);
       console.log(`Compression rate: ${(reductionRate * 100).toFixed(1)}%`);
       expect(reductionRate).toBeGreaterThan(0.5); // At least 50% reduction
     }
@@ -500,6 +505,7 @@ test.describe('Phase 8.1: Performance Optimizations - Cache Headers', () => {
   });
 
   test('should NOT cache HTML files', async ({ page }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let htmlResponse: any = null;
 
     page.on('response', async (response) => {
@@ -568,11 +574,13 @@ test.describe('Phase 8.1: Performance Optimizations - Overall Page Performance',
       if (msg.type() === 'error') {
         const text = msg.text();
         // Filter out known non-critical errors
-        if (!text.includes('favicon') &&
-            !text.includes('404') &&
-            !text.includes('401') &&
-            !text.includes('net::ERR') &&
-            !text.includes('Failed to load resource')) {
+        if (
+          !text.includes('favicon') &&
+          !text.includes('404') &&
+          !text.includes('401') &&
+          !text.includes('net::ERR') &&
+          !text.includes('Failed to load resource')
+        ) {
           consoleErrors.push(text);
         }
       }
@@ -628,6 +636,7 @@ test.describe('Phase 8.1: Performance Optimizations - Overall Page Performance',
 test.describe('Phase 8.1: Database Migration - Social Connections', () => {
   test('should have social_connections table created', async ({ page }) => {
     // This test verifies the migration was applied by checking API response
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let apiResponse: any = null;
 
     page.on('response', async (response) => {
@@ -653,7 +662,7 @@ test.describe('Phase 8.1: Database Migration - Social Connections', () => {
 
 // Production-specific tests
 test.describe('Phase 8.1: Production Validation', () => {
-  test.skip(({ }, testInfo) => !testInfo.project.name.includes('production'), 'Production only');
+  test.skip(({}, testInfo) => !testInfo.project.name.includes('production'), 'Production only');
 
   test('should load production site with all Phase 8.1 optimizations', async ({ page }) => {
     await page.goto(PRODUCTION_URL);

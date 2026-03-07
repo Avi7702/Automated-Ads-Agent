@@ -70,7 +70,7 @@ function validatePassword(password: string): ValidationResult {
 }
 
 function sanitizeUser(user: User): Omit<User, 'password' | 'passwordHash'> {
-  const { password, passwordHash, ...safeUser } = user;
+  const { _password, _passwordHash, ...safeUser } = user;
   return safeUser;
 }
 

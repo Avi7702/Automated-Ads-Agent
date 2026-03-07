@@ -201,7 +201,7 @@ describe('OAuth Service', () => {
       const verifier = values['codeVerifier'] as string;
 
       // Compute expected challenge
-      const expectedChallenge = crypto.createHash('sha256').update(verifier).digest('base64url');
+      const _expectedChallenge = crypto.createHash('sha256').update(verifier).digest('base64url');
 
       // Extract challenge from the URL
       // The URL is the return value, but we need to get it differently
@@ -264,6 +264,7 @@ describe('OAuth Service', () => {
       vi.mocked(socialRepo.getSocialConnectionByPlatform).mockResolvedValue(null);
       vi.mocked(socialRepo.createSocialConnection).mockResolvedValue({
         id: 'conn-new',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
       vi.mocked(storeTokens).mockResolvedValue(undefined);
 
@@ -337,7 +338,9 @@ describe('OAuth Service', () => {
       // Existing connection
       vi.mocked(socialRepo.getSocialConnectionByPlatform).mockResolvedValue({
         id: 'existing-conn',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       vi.mocked(socialRepo.updateSocialConnection).mockResolvedValue({} as any);
       vi.mocked(storeTokens).mockResolvedValue(undefined);
 
@@ -390,6 +393,7 @@ describe('OAuth Service', () => {
       vi.mocked(socialRepo.getSocialConnectionByPlatform).mockResolvedValue(null);
       vi.mocked(socialRepo.createSocialConnection).mockResolvedValue({
         id: 'tw-conn',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
       vi.mocked(storeTokens).mockResolvedValue(undefined);
 

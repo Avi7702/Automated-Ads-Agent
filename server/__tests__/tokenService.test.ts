@@ -85,6 +85,7 @@ describe('Token Service', () => {
   describe('storeTokens', () => {
     it('should encrypt and store access token', async () => {
       const mockUpdate = vi.mocked(socialRepo.updateSocialConnection);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mockUpdate.mockResolvedValue({} as any);
 
       await storeTokens('conn-1', {
@@ -107,6 +108,7 @@ describe('Token Service', () => {
 
     it('should encrypt and store refresh token when provided', async () => {
       const mockUpdate = vi.mocked(socialRepo.updateSocialConnection);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mockUpdate.mockResolvedValue({} as any);
 
       await storeTokens('conn-1', {
@@ -131,6 +133,7 @@ describe('Token Service', () => {
 
     it('should set tokenExpiresAt based on expiresIn', async () => {
       const mockUpdate = vi.mocked(socialRepo.updateSocialConnection);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mockUpdate.mockResolvedValue({} as any);
 
       const before = Date.now();
@@ -166,6 +169,7 @@ describe('Token Service', () => {
         tokenExpiresAt: futureDate,
         refreshToken: null,
         platform: 'linkedin',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       const token = await getAccessToken('conn-1');
@@ -183,6 +187,7 @@ describe('Token Service', () => {
         tokenExpiresAt: pastDate,
         refreshToken: null,
         platform: 'linkedin',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       await expect(getAccessToken('conn-1')).rejects.toThrow(TokenExpiredError);
@@ -211,6 +216,7 @@ describe('Token Service', () => {
         id: 'conn-1',
         platform: 'linkedin',
         refreshToken: null,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       await expect(refreshToken('conn-1')).rejects.toThrow('No refresh token stored');
@@ -218,6 +224,7 @@ describe('Token Service', () => {
 
     it('should throw TokenRefreshError for unsupported platform', async () => {
       // Build a valid refresh token blob
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const encResult = (encryptApiKey as any)('fake-refresh');
       const blob = `${encResult.ciphertext}:${encResult.iv}:${encResult.authTag}`;
 
@@ -226,12 +233,14 @@ describe('Token Service', () => {
         platform: 'instagram',
         refreshToken: blob,
         scopes: [],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       await expect(refreshToken('conn-1')).rejects.toThrow('Token refresh not supported');
     });
 
     it('should call LinkedIn refresh endpoint for linkedin platform', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const encResult = (encryptApiKey as any)('real-refresh-token');
       const blob = `${encResult.ciphertext}:${encResult.iv}:${encResult.authTag}`;
 
@@ -240,7 +249,9 @@ describe('Token Service', () => {
         platform: 'linkedin',
         refreshToken: blob,
         scopes: ['w_member_social'],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       vi.mocked(socialRepo.updateSocialConnection).mockResolvedValue({} as any);
 
       // Mock global fetch
@@ -267,6 +278,7 @@ describe('Token Service', () => {
     });
 
     it('should call Twitter refresh endpoint for twitter platform', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const encResult = (encryptApiKey as any)('twitter-refresh');
       const blob = `${encResult.ciphertext}:${encResult.iv}:${encResult.authTag}`;
 
@@ -275,7 +287,9 @@ describe('Token Service', () => {
         platform: 'twitter',
         refreshToken: blob,
         scopes: ['tweet.read', 'tweet.write'],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       vi.mocked(socialRepo.updateSocialConnection).mockResolvedValue({} as any);
 
       const mockFetch = vi.fn().mockResolvedValue({
@@ -303,6 +317,7 @@ describe('Token Service', () => {
     });
 
     it('should throw on failed LinkedIn refresh', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const encResult = (encryptApiKey as any)('old-refresh');
       const blob = `${encResult.ciphertext}:${encResult.iv}:${encResult.authTag}`;
 
@@ -311,6 +326,7 @@ describe('Token Service', () => {
         platform: 'linkedin',
         refreshToken: blob,
         scopes: [],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       const mockFetch = vi.fn().mockResolvedValue({
@@ -349,7 +365,9 @@ describe('Token Service', () => {
       // via the mocks matching their encode/decode convention
       const original = 'super-secret-access-token-12345';
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const encrypted = (encryptApiKey as any)(original);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const decrypted = (decryptApiKey as any)(encrypted);
 
       expect(decrypted).toBe(original);

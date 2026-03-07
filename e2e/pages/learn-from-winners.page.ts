@@ -1,4 +1,4 @@
-import { Page, Locator, expect } from '@playwright/test';
+import { Page, Locator } from '@playwright/test';
 
 /**
  * Page Object for the Learn from Winners page (/learn-from-winners)
@@ -63,12 +63,18 @@ export class LearnFromWinnersPage {
    * Wait for patterns to load (either show patterns, empty state, or error)
    */
   async waitForPatternsLoad() {
-    await this.page.waitForSelector('[class*="skeleton"], [class*="card"], text=Learn from Your Winners, text=Failed to load patterns', {
-      state: 'visible',
-      timeout: 15000
-    });
+    await this.page.waitForSelector(
+      '[class*="skeleton"], [class*="card"], text=Learn from Your Winners, text=Failed to load patterns',
+      {
+        state: 'visible',
+        timeout: 15000,
+      },
+    );
     // Wait for skeletons to disappear
-    await this.loadingSkeletons.first().waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
+    await this.loadingSkeletons
+      .first()
+      .waitFor({ state: 'hidden', timeout: 10000 })
+      .catch(() => {});
   }
 
   /**

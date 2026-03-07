@@ -5,6 +5,7 @@
  * Initialized lazily. No-op if VITE_POSTHOG_API_KEY is not set.
  */
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let posthogInstance: any = null;
 let initialized = false;
 

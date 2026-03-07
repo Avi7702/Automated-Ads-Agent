@@ -19,10 +19,18 @@ if (!OTEL_PACKAGES_AVAILABLE) {
   logger.info({ module: 'otel' }, 'Telemetry disabled - OpenTelemetry packages not installed');
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let NodeSDK: any, getNodeAutoInstrumentations: any, OTLPTraceExporter: any;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let OTLPMetricExporter: any, PeriodicExportingMetricReader: any;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let defaultResource: any, resourceFromAttributes: any;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let SEMRESATTRS_SERVICE_NAME: any, SEMRESATTRS_SERVICE_VERSION: any, SEMRESATTRS_DEPLOYMENT_ENVIRONMENT: any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let metrics: any;
 
 // =============================================================================
@@ -490,6 +498,7 @@ if (OTEL_ENABLED && OTEL_PACKAGES_AVAILABLE) {
     otelSdk
       .shutdown()
       .then(() => logger.info({ module: 'otel' }, 'OpenTelemetry SDK shut down successfully'))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .catch((error: any) => logger.error({ module: 'otel', err: error }, 'Error shutting down OpenTelemetry SDK'))
       .finally(() => process.exit(0));
   });

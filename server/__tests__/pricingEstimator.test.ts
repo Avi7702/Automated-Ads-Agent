@@ -1,11 +1,10 @@
-
 import {
   normalizeResolution,
   extractUsageMetadataTokens,
   estimateGenerationCostMicros,
   computeAdaptiveEstimate,
-  type GenerationResolution,
-  type GenerationCostInputs,
+  type _GenerationResolution,
+  type _GenerationCostInputs,
   type UsageRowForEstimation,
 } from '../services/pricingEstimator';
 
@@ -590,9 +589,7 @@ describe('Pricing Estimator', () => {
 
       it('handles negative cost values', () => {
         const now = Date.now();
-        const rows: UsageRowForEstimation[] = [
-          { estimatedCostMicros: -100000, createdAt: new Date(now - 1000) },
-        ];
+        const rows: UsageRowForEstimation[] = [{ estimatedCostMicros: -100000, createdAt: new Date(now - 1000) }];
 
         const result = computeAdaptiveEstimate({
           rows,
@@ -605,9 +602,7 @@ describe('Pricing Estimator', () => {
 
       it('handles very small halfLifeDays', () => {
         const now = Date.now();
-        const rows: UsageRowForEstimation[] = [
-          { estimatedCostMicros: 200000, createdAt: new Date(now - 1000) },
-        ];
+        const rows: UsageRowForEstimation[] = [{ estimatedCostMicros: 200000, createdAt: new Date(now - 1000) }];
 
         const result = computeAdaptiveEstimate({
           rows,
@@ -622,9 +617,7 @@ describe('Pricing Estimator', () => {
 
       it('handles very large priorStrength', () => {
         const now = Date.now();
-        const rows: UsageRowForEstimation[] = [
-          { estimatedCostMicros: 500000, createdAt: new Date(now - 1000) },
-        ];
+        const rows: UsageRowForEstimation[] = [{ estimatedCostMicros: 500000, createdAt: new Date(now - 1000) }];
 
         const result = computeAdaptiveEstimate({
           rows,

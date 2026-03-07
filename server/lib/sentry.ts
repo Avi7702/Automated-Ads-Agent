@@ -51,6 +51,7 @@ export function initSentry(): void {
     // Add useful context
     beforeSend(event, hint) {
       // Don't send 4xx errors (client errors)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const statusCode = (hint.originalException as any)?.statusCode;
       if (statusCode && statusCode >= 400 && statusCode < 500) {
         return null;
@@ -77,7 +78,7 @@ export function initSentry(): void {
 /**
  * Capture an exception manually
  */
-export function captureException(error: Error, context?: Record<string, any>): void {
+export function captureException(error: Error, context?: Record<string, unknown>): void {
   if (!SENTRY_DSN) return;
 
   Sentry.withScope((scope) => {
@@ -111,7 +112,7 @@ export function addBreadcrumb(breadcrumb: {
   category: string;
   message: string;
   level?: 'debug' | 'info' | 'warning' | 'error';
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
 }): void {
   if (!SENTRY_DSN) return;
   Sentry.addBreadcrumb(breadcrumb);

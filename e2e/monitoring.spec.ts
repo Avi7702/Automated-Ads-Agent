@@ -171,13 +171,14 @@ test.describe('Monitoring API Endpoints', () => {
     await request.get('/api/health');
 
     // Wait a moment for metrics to be recorded
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Check if metrics were recorded
     const response = await request.get('/api/monitoring/performance');
     expect(response.ok()).toBeTruthy();
 
     const data = await response.json();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const healthMetric = data.find((m: any) => m.endpoint === '/api/health');
 
     // Should have recorded the health check
@@ -280,7 +281,7 @@ test.describe('Monitoring UI Dashboard', () => {
     await page.waitForTimeout(1000);
 
     // Verify table or metrics display
-    const hasMetrics = await page.locator('text=/requests|latency|endpoint/i').count() > 0;
+    const hasMetrics = (await page.locator('text=/requests|latency|endpoint/i').count()) > 0;
     expect(hasMetrics).toBeTruthy();
   });
 
@@ -301,7 +302,7 @@ test.describe('Monitoring UI Dashboard', () => {
     await page.waitForTimeout(1000);
 
     // Verify stats section
-    const hasStats = await page.locator('text=/total|errors|last/i').count() > 0;
+    const hasStats = (await page.locator('text=/total|errors|last/i').count()) > 0;
     expect(hasStats).toBeTruthy();
   });
 
@@ -355,6 +356,7 @@ test.describe('Monitoring Edge Cases', () => {
     expect(metricsResponse.ok()).toBeTruthy();
 
     const data = await metricsResponse.json();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const healthMetrics = data.find((m: any) => m.endpoint === '/api/health');
 
     // Should have counted all requests
@@ -368,7 +370,7 @@ test.describe('Monitoring Edge Cases', () => {
     await request.get('/api/monitoring/nonexistent');
 
     // Wait for error to be tracked
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise((resolve) => setTimeout(resolve, 200));
 
     // Check error tracking
     const response = await request.get('/api/monitoring/errors');
@@ -384,12 +386,10 @@ test.describe('Monitoring Edge Cases', () => {
 
     // Verify aggregation logic
     const hasUnhealthyService =
-      data.services.database.status === 'unhealthy' ||
-      data.services.redis.status === 'unhealthy';
+      data.services.database.status === 'unhealthy' || data.services.redis.status === 'unhealthy';
 
     const hasDegradedService =
-      data.services.database.status === 'degraded' ||
-      data.services.redis.status === 'degraded';
+      data.services.database.status === 'degraded' || data.services.redis.status === 'degraded';
 
     // Overall status should reflect worst service status
     if (hasUnhealthyService) {

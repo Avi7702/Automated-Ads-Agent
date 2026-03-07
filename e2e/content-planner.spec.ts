@@ -1,4 +1,4 @@
-import { test, expect, type Page, type APIRequestContext } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
 /**
  * Content Planner E2E Tests
@@ -300,8 +300,8 @@ test.describe('Content Planner UI', () => {
     await expect(page.locator('text=Strategic guide')).toBeVisible();
   });
 
-  test('displays This Week\'s Balance card', async ({ page }) => {
-    await expect(page.locator('text=This Week\'s Balance')).toBeVisible();
+  test("displays This Week's Balance card", async ({ page }) => {
+    await expect(page.locator("text=This Week's Balance")).toBeVisible();
     await expect(page.locator('text=Track your posting distribution')).toBeVisible();
   });
 
@@ -459,7 +459,10 @@ test.describe('Content Planner Guidance Component', () => {
     await expect(page.locator('text=Content Planner Template')).toBeVisible({ timeout: 10000 });
 
     // Find and click dismiss button (X)
-    const dismissButton = page.locator('button').filter({ has: page.locator('svg.lucide-x') }).first();
+    const dismissButton = page
+      .locator('button')
+      .filter({ has: page.locator('svg.lucide-x') })
+      .first();
     if (await dismissButton.isVisible()) {
       await dismissButton.click();
 
@@ -538,7 +541,7 @@ test.describe('Content Planner Console Errors', () => {
         !err.includes('404') &&
         !err.includes('401') &&
         !err.includes('net::ERR') &&
-        !err.includes('Failed to load resource')
+        !err.includes('Failed to load resource'),
     );
 
     expect(criticalErrors).toHaveLength(0);
@@ -564,7 +567,7 @@ test.describe('Content Planner Console Errors', () => {
         !err.includes('404') &&
         !err.includes('401') &&
         !err.includes('net::ERR') &&
-        !err.includes('Failed to load resource')
+        !err.includes('Failed to load resource'),
     );
 
     expect(criticalErrors).toHaveLength(0);
@@ -600,7 +603,7 @@ test.describe('Content Planner Console Errors', () => {
         !err.includes('404') &&
         !err.includes('401') &&
         !err.includes('net::ERR') &&
-        !err.includes('Failed to load resource')
+        !err.includes('Failed to load resource'),
     );
 
     expect(criticalErrors).toHaveLength(0);
@@ -662,7 +665,7 @@ test.describe('Content Planner Responsive', () => {
 
     // Page should still show main elements
     await expect(page.locator('h1')).toContainText('Content Planner');
-    await expect(page.locator('text=This Week\'s Balance')).toBeVisible();
+    await expect(page.locator("text=This Week's Balance")).toBeVisible();
     await expect(page.locator('text=Suggested Next Post')).toBeVisible();
   });
 
@@ -704,7 +707,7 @@ test.describe('Recent Posts Section', () => {
 
     // Verify Recent Posts section is visible
     await expect(page.locator('text=Recent Posts (Last 7 Days)')).toBeVisible();
-    await expect(page.locator('text=Posts you\'ve marked as completed')).toBeVisible();
+    await expect(page.locator("text=Posts you've marked as completed")).toBeVisible();
   });
 
   test('shows post details correctly', async ({ page, request }) => {
@@ -733,7 +736,9 @@ test.describe('Recent Posts Section', () => {
     await expect(recentPostItems.first().locator('text=linkedin')).toBeVisible();
 
     // Verify date format (should show month abbreviation)
-    await expect(recentPostItems.first().locator('text=/Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec/')).toBeVisible();
+    await expect(
+      recentPostItems.first().locator('text=/Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec/'),
+    ).toBeVisible();
   });
 
   test('delete button removes post', async ({ page, request }) => {
@@ -759,9 +764,12 @@ test.describe('Recent Posts Section', () => {
     expect(initialCount).toBeGreaterThan(0);
 
     // Click delete button on first post
-    const deleteButton = recentPostItems.first().locator('button').filter({
-      has: page.locator('svg.lucide-trash-2'),
-    });
+    const deleteButton = recentPostItems
+      .first()
+      .locator('button')
+      .filter({
+        has: page.locator('svg.lucide-trash-2'),
+      });
     await deleteButton.click();
 
     // Verify toast notification
@@ -794,9 +802,12 @@ test.describe('Recent Posts Section', () => {
     const initialTotal = parseInt(initialTotalText?.match(/(\d+)/)?.[1] || '0');
 
     // Delete the post
-    const deleteButton = page.locator('button').filter({
-      has: page.locator('svg.lucide-trash-2'),
-    }).first();
+    const deleteButton = page
+      .locator('button')
+      .filter({
+        has: page.locator('svg.lucide-trash-2'),
+      })
+      .first();
     await deleteButton.click();
 
     // Wait for deletion
@@ -910,6 +921,7 @@ test.describe('Recent Posts API', () => {
       // Verify it's gone
       const getResponse = await request.get('/api/content-planner/posts');
       const posts = await getResponse.json();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const stillExists = posts.some((p: any) => p.id === postId);
       expect(stillExists).toBe(false);
     }

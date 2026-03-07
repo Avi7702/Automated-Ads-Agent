@@ -7,12 +7,14 @@
 
 import { logger } from './logger';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let posthogClient: any = null;
 let initialized = false;
 
 /**
  * Lazily initialize PostHog server client.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function getClient(): Promise<any> {
   if (initialized) return posthogClient;
   initialized = true;

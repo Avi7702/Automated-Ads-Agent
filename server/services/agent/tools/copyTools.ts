@@ -128,11 +128,13 @@ export function createExecutors(): Map<string, ToolExecutor> {
         framework,
         campaignObjective: 'engagement',
         variations,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       return {
         status: 'success',
         uiActions: [{ type: 'copy_generated', payload: { copies: results } }],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         copies: results.map((c: any) => ({
           headline: c.headline,
           hook: c.hook,
@@ -174,17 +176,21 @@ export function createExecutors(): Map<string, ToolExecutor> {
       if (productId !== undefined) request['productId'] = productId;
       if (userGoal !== undefined) request['userGoal'] = userGoal;
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await ideaBankService.generateSuggestions(request as any);
 
       if (!result.success) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return { status: 'error', message: (result as any).error?.message ?? 'Failed to generate suggestions' };
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const response = result.response as any;
       const suggestions = response.suggestions ?? [];
 
       return {
         status: 'success',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         suggestions: suggestions.map((s: any) => ({
           summary: s.summary,
           prompt: s.prompt,

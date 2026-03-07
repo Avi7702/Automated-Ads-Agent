@@ -358,6 +358,7 @@ async function assessBrandVoiceAlignment(
  * Build PTCF prompt for brand voice assessment
  */
 function buildBrandVoicePrompt(caption: string, brandProfile: BrandProfile, platform: string): string {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const voice = brandProfile.voice as any;
 
   return `You are an expert brand voice analyst. Evaluate how well this social media caption aligns with the brand's voice guidelines.
