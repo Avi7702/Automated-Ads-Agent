@@ -24,6 +24,8 @@ import { InspectorPanel } from '@/components/studio/InspectorPanel';
 import { IdeaBankBar } from '@/components/studio/IdeaBankBar';
 import { HistoryPanel } from '@/components/studio/HistoryPanel';
 import { AgentChatPanel } from '@/components/studio/AgentChat';
+import { PhoenixApprovalQueue } from '@/components/phoenix/PhoenixApprovalQueue';
+import { PhoenixContentCalendar } from '@/components/phoenix/PhoenixContentCalendar';
 import { AssetDrawer } from '@/components/studio/AssetDrawer';
 import { SaveToCatalogDialog } from '@/components/SaveToCatalogDialog';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -647,6 +649,7 @@ function PhoenixStudioContent() {
   });
   const [chatPanelOpen, setChatPanelOpen] = useState(true);
   const [chatPanelWidth, setChatPanelWidth] = useState(CHAT_PANEL_DEFAULT_WIDTH);
+  const [rightPanelTab, setRightPanelTab] = useState<'chat' | 'queue' | 'calendar'>('chat');
 
   // ── IdeaBank bridge state ───────────────────────────────
   const [ideaBankContext, setIdeaBankContext] = useState<IdeaBankContextSnapshot | null>(null);
@@ -899,17 +902,40 @@ function PhoenixStudioContent() {
                   className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 transition-colors z-10"
                   onMouseDown={handleResizeStart}
                 />
-                <AgentChatPanel
-                  products={orch.products ?? []}
-                  title="Ad Assistant"
-                  forceExpanded
-                  showCollapseToggle={false}
-                  className="h-full border-0 rounded-none"
-                  bodyMaxHeightClassName="flex-1"
-                  ideaBankContext={ideaBankContext}
-                  externalMessage={agentExternalMessage}
-                  onExternalMessageConsumed={handleExternalMessageConsumed}
-                />
+                {/* Right panel tab bar */}
+                <div className="flex items-center border-b border-border/50 bg-background/50 backdrop-blur-sm flex-shrink-0">
+                  {(['chat', 'queue', 'calendar'] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setRightPanelTab(tab)}
+                      className={cn(
+                        'flex-1 text-xs font-medium py-2 px-3 transition-colors capitalize border-b-2',
+                        rightPanelTab === tab
+                          ? 'border-primary text-primary'
+                          : 'border-transparent text-muted-foreground hover:text-foreground',
+                      )}
+                    >
+                      {tab === 'queue' ? 'Approval' : tab}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Right panel content */}
+                {rightPanelTab === 'chat' && (
+                  <AgentChatPanel
+                    products={orch.products ?? []}
+                    title="Ad Assistant"
+                    forceExpanded
+                    showCollapseToggle={false}
+                    className="h-full border-0 rounded-none"
+                    bodyMaxHeightClassName="flex-1"
+                    ideaBankContext={ideaBankContext}
+                    externalMessage={agentExternalMessage}
+                    onExternalMessageConsumed={handleExternalMessageConsumed}
+                  />
+                )}
+                {rightPanelTab === 'queue' && <PhoenixApprovalQueue className="h-full" />}
+                {rightPanelTab === 'calendar' && <PhoenixContentCalendar className="h-full" />}
               </motion.div>
             )}
           </AnimatePresence>
