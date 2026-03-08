@@ -17,6 +17,7 @@ import Login from '@/pages/Login';
 import Studio from '@/pages/Studio';
 
 // Lazy load all other pages to reduce initial bundle size
+const PhoenixStudio = lazy(() => import('@/pages/PhoenixStudio'));
 const GalleryPage = lazy(() => import('@/pages/GalleryPage'));
 const Pipeline = lazy(() => import('@/pages/Pipeline'));
 const Library = lazy(() => import('@/pages/Library'));
@@ -45,6 +46,15 @@ function Router() {
       <Route path="/">
         <ProtectedRoute>
           <Studio />
+        </ProtectedRoute>
+      </Route>
+
+      {/* Phoenix Studio — new unified workspace */}
+      <Route path="/phoenix">
+        <ProtectedRoute>
+          <Suspense fallback={<PageLoader />}>
+            <PhoenixStudio />
+          </Suspense>
         </ProtectedRoute>
       </Route>
 
