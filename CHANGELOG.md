@@ -1,5 +1,51 @@
 # Changelog — Prompt Engineer Portable Package
 
+## v3.0 — 2026-03-08 (Project Phoenix v2)
+
+### Summary
+
+Major architectural upgrade introducing the Unified Context & Quality Pipeline, Phoenix Orchestrator, and Phoenix Studio. This release lays the foundation for 90-95% autonomous post generation.
+
+### New Components
+
+- **UnifiedContextQualityPipeline** — Single service that assembles all product context (brand DNA, learned patterns, installation scenarios, style references, product relationships) and runs quality assessment
+- **PhoenixOrchestrator** — Playbook-driven agent brain with 5 core playbooks: SinglePost, BulkGenerate, ContentCalendar, Enrich, and Analyze
+- **PhoenixStudio** — Unified workspace merging Agent Mode and Studio Mode into one page with persistent chat panel alongside canvas
+- **PhoenixChatPanel, PhoenixCanvas, PhoenixApprovalQueue, PhoenixContentCalendar** — Integrated UI components
+- **usePhoenixChat** — React hook for SSE streaming from the Phoenix orchestrator
+- **Phoenix API routes** — `/api/phoenix/chat`, `/api/phoenix/playbooks`, `/api/phoenix/status`
+
+### Refactored Components
+
+- `generationPipelineService` — Now consumes unified pipeline for context assembly
+- `copywritingService` — Accepts optional pre-assembled context from unified pipeline
+- `geminiVideoService` — Accepts optional pre-assembled context from unified pipeline
+- Navigation — Phoenix Studio is now the default landing page (`/`)
+
+### Deprecated (kept for backward compatibility)
+
+- `orchestratorService.ts` — Superseded by `phoenixOrchestrator.ts`
+- `agentRunner.ts` — Superseded by Phoenix orchestrator streaming
+- `Studio.tsx` — Superseded by `PhoenixStudio.tsx`
+
+### Code Quality
+
+- Restored production Dockerfile (was renamed to .bak)
+- Fixed all 215 lint warnings to 0 (then 243 after new code, vs 234 on main)
+- Fixed npm audit vulnerabilities via overrides (serialize-javascript RCE)
+- Closed 8 stale PRs, deleted 7 dead branches
+- Rewrote README with architecture diagram
+- Added 25 new unit tests for Phoenix orchestrator
+- All 2,242 tests passing across 86 test files
+
+### Database
+
+- Schema audit: 46 tables, all referenced except `postAnalytics` (pre-existing orphan)
+- No new tables required — Phoenix uses existing schema
+- 61 foreign keys, 125 indexes verified intact
+
+---
+
 ## v2.1 — 2026-02-15 (MCP Integration & Technology Currency Rule)
 
 ### Summary

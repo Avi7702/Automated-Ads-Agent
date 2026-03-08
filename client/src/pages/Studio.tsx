@@ -1,5 +1,9 @@
 /**
- * Studio - Unified creative workspace
+ * @deprecated This page is superseded by `PhoenixStudio.tsx`.
+ * Kept for backward compatibility during the Phoenix migration.
+ * The Phoenix Studio merges Agent Mode and Studio Mode into a single unified workspace.
+ *
+ * Studio (LEGACY) - Unified creative workspace
  *
  * Includes two workspace modes:
  * - Agent Mode: full-screen assistant chat workspace
