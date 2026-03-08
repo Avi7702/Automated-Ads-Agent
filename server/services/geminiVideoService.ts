@@ -9,11 +9,15 @@
  * - Returns a long-running operation that must be polled
  * - Videos take 2-10 minutes to generate (vs 15-30s for images)
  * - Result is video bytes (MP4), not inline base64 image data
+ *
+ * Phoenix v2: Accepts optional pre-assembled context from the
+ * UnifiedContextQualityPipeline for prompt enrichment.
  */
 
 import { getGlobalGeminiClient } from '../lib/geminiClient';
 import { logger } from '../lib/logger';
 import { telemetry } from '../instrumentation';
+import type { AssembledContext } from './unifiedContextQualityPipeline';
 
 const VIDEO_MODEL = process.env['VEO_MODEL'] || 'veo-2.0-generate-001';
 
@@ -27,6 +31,8 @@ export interface VideoGenerateOptions {
   /** Base64 source image for image-to-video */
   sourceImageBase64?: string;
   sourceImageMimeType?: string;
+  /** Pre-assembled context from the UnifiedContextQualityPipeline */
+  preAssembledContext?: AssembledContext;
 }
 
 export interface VideoGenerateResult {
@@ -41,10 +47,47 @@ export interface VideoGenerateResult {
 }
 
 /**
+ * Enrich a video prompt with pre-assembled context from the unified pipeline.
+ * Adds product knowledge, brand DNA, and learned patterns to produce
+ * more targeted, on-brand video content.
+ */
+function enrichPromptWithContext(prompt: string, ctx: AssembledContext): string {
+  const enrichments: string[] = [];
+
+  if (ctx.product?.formattedContext) {
+    enrichments.push(`Product Context: ${ctx.product.formattedContext.substring(0, 500)}`);
+  }
+  if (ctx.brand) {
+    enrichments.push(`Brand: ${ctx.brand.name}, Style: ${ctx.brand.styles?.join(', ') || 'professional'}`);
+  }
+  if (ctx.brandDNA?.contentRules) {
+    enrichments.push(`Brand Voice: ${ctx.brandDNA.contentRules.substring(0, 300)}`);
+  }
+  if (ctx.patterns?.directive) {
+    enrichments.push(`Winning Patterns: ${ctx.patterns.directive.substring(0, 300)}`);
+  }
+
+  if (enrichments.length === 0) {
+    return prompt;
+  }
+
+  logger.info(
+    { module: 'VideoGeneration', sourcesLoaded: ctx.sourcesLoaded, enrichmentCount: enrichments.length },
+    'Video prompt enriched with unified pipeline context',
+  );
+
+  return `${prompt}\n\nADDITIONAL CONTEXT:\n${enrichments.join('\n')}`;
+}
+
+/**
  * Generate a video using Veo via the Gemini API.
  *
+ * When preAssembledContext is provided (from the UnifiedContextQualityPipeline),
+ * the prompt is enriched with product knowledge, brand DNA, and learned patterns
+ * to produce more targeted, on-brand video content.
+ *
  * @param prompt - Text description of the desired video
- * @param options - Video configuration options
+ * @param options - Video configuration options (may include preAssembledContext)
  * @param onProgress - Callback for progress updates
  * @param userId - User ID for telemetry
  */
@@ -61,10 +104,15 @@ export async function generateVideo(
   try {
     const client = getGlobalGeminiClient();
 
+    // Enrich prompt with pre-assembled context if available
+    const enrichedPrompt = options.preAssembledContext
+      ? enrichPromptWithContext(prompt, options.preAssembledContext)
+      : prompt;
+
     // Build the generate request
     const generateParams: Record<string, unknown> = {
       model: VIDEO_MODEL,
-      prompt,
+      prompt: enrichedPrompt,
       config: {
         aspectRatio: options.aspectRatio || '16:9',
         durationSeconds: options.duration || '8',
@@ -80,7 +128,7 @@ export async function generateVideo(
     }
 
     onProgress?.(5, 'Starting video generation...');
-    logger.info({ model: VIDEO_MODEL, prompt: prompt.substring(0, 100) }, 'Starting Veo video generation');
+    logger.info({ model: VIDEO_MODEL, prompt: enrichedPrompt.substring(0, 100) }, 'Starting Veo video generation');
 
     // Start generation — returns a long-running operation
     let operation = await client.models.generateVideos(

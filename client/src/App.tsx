@@ -17,6 +17,7 @@ import Login from '@/pages/Login';
 import Studio from '@/pages/Studio';
 
 // Lazy load all other pages to reduce initial bundle size
+const PhoenixStudio = lazy(() => import('@/pages/PhoenixStudio'));
 const GalleryPage = lazy(() => import('@/pages/GalleryPage'));
 const Pipeline = lazy(() => import('@/pages/Pipeline'));
 const Library = lazy(() => import('@/pages/Library'));
@@ -43,8 +44,15 @@ function Router() {
 
       {/* Protected routes */}
       <Route path="/">
+        <Redirect to="/phoenix" />
+      </Route>
+
+      {/* Phoenix Studio — new unified workspace */}
+      <Route path="/phoenix">
         <ProtectedRoute>
-          <Studio />
+          <Suspense fallback={<PageLoader />}>
+            <PhoenixStudio />
+          </Suspense>
         </ProtectedRoute>
       </Route>
 
@@ -148,7 +156,7 @@ function Router() {
 
 function App() {
   const [location] = useLocation();
-  const showGlobalChat = location !== '/';
+  const showGlobalChat = location !== '/phoenix' && location !== '/';
 
   // Initialize CSRF token on app load
   useEffect(() => {

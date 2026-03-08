@@ -1,5 +1,9 @@
 /**
- * Agent Orchestrator Service
+ * @deprecated This service is superseded by `phoenixOrchestrator.ts`.
+ * Kept for backward compatibility during the Phoenix migration.
+ * All new development should use the Phoenix Orchestrator.
+ *
+ * Agent Orchestrator Service (LEGACY)
  *
  * Three-stage pipeline for the Agent Mode:
  *   Stage 1 — Idea Bank Base (factual): pull pipeline state, generate suggestion cards

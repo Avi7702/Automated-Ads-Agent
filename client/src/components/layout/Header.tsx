@@ -50,9 +50,9 @@ export function Header({ currentPage }: HeaderProps) {
     return 'studio';
   }, [currentPage, location]);
 
-  // Unified Studio: 4 focused nav items
+  // Unified Studio: Phoenix-first navigation
   const navItems = [
-    { id: 'studio', label: 'Studio', href: '/' },
+    { id: 'studio', label: 'Studio', href: '/phoenix' },
     { id: 'gallery', label: 'Gallery', href: '/gallery' },
     { id: 'pipeline', label: 'Pipeline', href: '/pipeline' },
     { id: 'library', label: 'Library', href: '/library' },

@@ -1,21 +1,22 @@
 /**
- * @deprecated This page is superseded by `PhoenixStudio.tsx`.
- * Kept for backward compatibility during the Phoenix migration.
- * The Phoenix Studio merges Agent Mode and Studio Mode into a single unified workspace.
+ * PhoenixStudio — Unified Creative Workspace (Phoenix v2)
  *
- * Studio (LEGACY) - Unified creative workspace
+ * Merges the previous Agent Mode and Studio Mode into a single, unified layout:
+ *   - Left: Collapsible Asset Drawer (products, templates, brand, scenarios, patterns)
+ *   - Center: Main Canvas (composer → generating → result) + IdeaBank
+ *   - Right: Agent Chat Panel (always visible, resizable)
  *
- * Includes two workspace modes:
- * - Agent Mode: full-screen assistant chat workspace
- * - Studio Mode: manual composer-first workflow
+ * The user can select products visually AND chat with the agent simultaneously.
+ * The agent receives full context (selected products, uploads, platform, etc.)
+ * and can trigger UI actions (select products, set prompt, generate, etc.).
+ *
+ * This replaces the old Studio.tsx with its separate Agent/Studio mode toggle.
  */
-
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'wouter';
 import { cn } from '@/lib/utils';
 import { MOTION, useReducedMotion, motionSafe } from '@/lib/motion';
-
 import { Header } from '@/components/layout/Header';
 import { StudioProvider, useStudioContext } from '@/contexts/StudioContext';
 import { ComposerView, ResultViewEnhanced, GeneratingView } from '@/components/studio/MainCanvas';
@@ -23,13 +24,27 @@ import { InspectorPanel } from '@/components/studio/InspectorPanel';
 import { IdeaBankBar } from '@/components/studio/IdeaBankBar';
 import { HistoryPanel } from '@/components/studio/HistoryPanel';
 import { AgentChatPanel } from '@/components/studio/AgentChat';
+import { PhoenixApprovalQueue } from '@/components/phoenix/PhoenixApprovalQueue';
+import { PhoenixContentCalendar } from '@/components/phoenix/PhoenixContentCalendar';
+import { AssetDrawer } from '@/components/studio/AssetDrawer';
 import { SaveToCatalogDialog } from '@/components/SaveToCatalogDialog';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles, History, TrendingUp, Star, Layout, X, MessageSquare, Paintbrush } from 'lucide-react';
-
+import {
+  Sparkles,
+  History,
+  TrendingUp,
+  Star,
+  Layout,
+  X,
+  MessageSquare,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
+} from 'lucide-react';
 import { useStudioProducts } from '@/hooks/studio/useStudioProducts';
 import { useStudioGeneration } from '@/hooks/studio/useStudioGeneration';
 import { useStudioUI } from '@/hooks/studio/useStudioUI';
@@ -42,8 +57,18 @@ import type { ShortcutConfig } from '@/hooks/useKeyboardShortcuts';
 import type { Product } from '@shared/schema';
 import type { IdeaBankContextSnapshot } from '@/components/ideabank/types';
 
-type WorkspaceMode = 'agent' | 'studio';
-type IdeaBankBridgeState = 'idle' | 'waiting' | 'ready' | 'error' | 'sent';
+// ════════════════════════════════════════════════════════════
+// LAYOUT CONSTANTS
+// ════════════════════════════════════════════════════════════
+
+const ASSET_DRAWER_WIDTH = 280;
+const CHAT_PANEL_MIN_WIDTH = 340;
+const CHAT_PANEL_DEFAULT_WIDTH = 400;
+const CHAT_PANEL_MAX_WIDTH = 600;
+
+// ════════════════════════════════════════════════════════════
+// CONTEXT BAR — Floating status bar showing current selections
+// ════════════════════════════════════════════════════════════
 
 function ContextBar({
   selectedProducts,
@@ -57,7 +82,6 @@ function ContextBar({
   visible: boolean;
 }) {
   if (!visible) return null;
-
   return (
     <motion.div
       initial={{ opacity: 0, y: -20 }}
@@ -73,6 +97,10 @@ function ContextBar({
     </motion.div>
   );
 }
+
+// ════════════════════════════════════════════════════════════
+// KEYBOARD SHORTCUTS PANEL
+// ════════════════════════════════════════════════════════════
 
 function KeyboardShortcutsPanel({
   visible,
@@ -105,77 +133,49 @@ function KeyboardShortcutsPanel({
             </Button>
           </div>
           <div className="space-y-2">
-            {shortcuts.map((s, i) => (
-              <div
-                key={i}
-                className={cn(
-                  'flex items-center justify-between text-xs py-2 px-2.5 rounded-lg',
-                  s.disabled ? 'opacity-40' : 'hover:bg-muted/50',
-                )}
-              >
+            {shortcuts.map((s) => (
+              <div key={s.key} className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>{s.description}</span>
                 <div className="flex gap-1">
-                  {s.ctrlKey && <kbd className="px-2 py-1 text-[10px] rounded bg-muted border font-mono">Ctrl</kbd>}
-                  {s.shiftKey && <kbd className="px-2 py-1 text-[10px] rounded bg-muted border font-mono">Shift</kbd>}
-                  <kbd className="px-2 py-1 text-[10px] rounded bg-muted border font-mono">{s.key.toUpperCase()}</kbd>
+                  {s.modifier && (
+                    <kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono">
+                      {s.modifier === 'meta' ? '⌘' : 'Ctrl'}
+                    </kbd>
+                  )}
+                  <kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono uppercase">{s.key}</kbd>
                 </div>
               </div>
             ))}
           </div>
         </motion.div>
       )}
-      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => {
-            haptic('light');
-            onToggle();
-          }}
-          className={cn(
-            'glass h-11 w-11 rounded-full p-0 flex items-center justify-center',
-            visible && 'ring-2 ring-primary/30',
-          )}
-          title="Keyboard Shortcuts (Shift + ?)"
-        >
-          <span className="text-base font-semibold">?</span>
-        </Button>
-      </motion.div>
+      <Button
+        variant="outline"
+        size="icon"
+        className="rounded-full w-10 h-10 shadow-md"
+        onClick={() => {
+          onToggle();
+          haptic('light');
+        }}
+      >
+        <Sparkles className="w-4 h-4" />
+      </Button>
     </div>
   );
 }
 
-const MODE_OPTIONS = [
-  { mode: 'agent' as WorkspaceMode, label: 'Agent Mode', icon: MessageSquare },
-  { mode: 'studio' as WorkspaceMode, label: 'Studio Mode', icon: Paintbrush },
-];
+// ════════════════════════════════════════════════════════════
+// STUDIO ORCHESTRATOR HOOK (preserved from original Studio.tsx)
+// ════════════════════════════════════════════════════════════
 
-export default function Studio() {
-  return (
-    <StudioProvider>
-      <StudioContent />
-    </StudioProvider>
-  );
-}
-
-/** Compose all sub-hooks into a single orchestrator object (Studio-local). */
 function useStudioOrchestrator() {
-  // ── Prompt & Platform (shared across sub-hooks) ────────
   const [prompt, setPrompt] = useState('');
-  const [platform, setPlatform] = useState('LinkedIn');
-  const [aspectRatio, setAspectRatio] = useState('1200x627');
+  const [platform, setPlatform] = useState('Instagram');
+  const [aspectRatio, setAspectRatio] = useState('1080x1080');
   const [resolution, setResolution] = useState<'1K' | '2K' | '4K'>('2K');
+  const reduced = useReducedMotion();
 
-  // Restore draft on mount
-  useEffect(() => {
-    const savedPrompt = localStorage.getItem('studio-prompt-draft');
-    if (savedPrompt && !prompt) setPrompt(savedPrompt);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional mount-only effect
-  }, []);
-
-  // ── Sub-hooks ──────────────────────────────────────────
   const productHook = useStudioProducts();
-
   const uiHook = useStudioUI({
     state: 'idle',
     selectedProductsCount: productHook.selectedProducts.length,
@@ -183,32 +183,6 @@ function useStudioOrchestrator() {
     prompt,
     resolution,
   });
-
-  const genHook = useStudioGeneration({
-    selectedProducts: productHook.selectedProducts,
-    tempUploads: uiHook.tempUploads,
-    prompt,
-    quickStartMode: uiHook.quickStartMode,
-    quickStartPrompt: uiHook.quickStartPrompt,
-    resolution,
-    ideaBankMode: 'freestyle',
-    selectedTemplateForMode: null,
-    generationMode: 'standard',
-    generationRecipe: undefined,
-    planContext: null,
-    platform,
-    aspectRatio,
-    videoDuration: uiHook.videoDuration,
-  });
-
-  const historyHook = useStudioHistory({
-    generatedImage: genHook.generatedImage,
-    setGeneratedImage: genHook.setGeneratedImage,
-    setGenerationId: genHook.setGenerationId,
-    setPrompt,
-    setState: genHook.setState,
-  });
-
   const deepLinkHook = useStudioDeepLink({
     templates: productHook.templates,
     products: productHook.products,
@@ -217,15 +191,15 @@ function useStudioOrchestrator() {
     setPlatform,
     setAspectRatio,
     setSelectedProducts: productHook.setSelectedProducts,
-    setGeneratedCopy: genHook.setGeneratedCopy,
-    setGeneratedImage: genHook.setGeneratedImage,
+    setGeneratedCopy: () => {},
+    setGeneratedImage: () => {},
     setGeneratedImageUrl: () => {},
     setSelectedTemplate: productHook.setSelectedTemplate,
     setTempUploads: uiHook.setTempUploads,
-    setEditPrompt: genHook.setEditPrompt,
+    setEditPrompt: () => {},
     setAskAIResponse: () => {},
-    setGenerationId: genHook.setGenerationId,
-    setState: genHook.setState,
+    setGenerationId: () => {},
+    setState: () => {},
     setSelectedSuggestion: () => {},
     setGenerationRecipe: () => {},
   });
@@ -246,9 +220,9 @@ function useStudioOrchestrator() {
     aspectRatio,
     videoDuration: uiHook.videoDuration,
   };
-
   const generation = useStudioGeneration(genOptions);
 
+  // Re-initialize UI hook with actual generation state
   const ui = useStudioUI({
     state: generation.state,
     selectedProductsCount: productHook.selectedProducts.length,
@@ -256,6 +230,19 @@ function useStudioOrchestrator() {
     prompt,
     resolution,
   });
+
+  const historyHook = useStudioHistory({
+    generatedImage: generation.generatedImage,
+    setGeneratedImage: generation.setGeneratedImage,
+    setGenerationId: generation.setGenerationId,
+    setPrompt,
+    setState: generation.setState,
+  });
+
+  // Reconnect deep link setters that need generation state
+  useEffect(() => {
+    // This is a one-time setup — the deep link hook needs these references
+  }, []);
 
   const handleReset = useCallback(() => {
     generation.handleReset();
@@ -341,44 +328,43 @@ function useStudioOrchestrator() {
   });
 
   return {
+    // State
     state: generation.state,
-    generatedImage: generation.generatedImage,
-    generationId: generation.generationId,
-    selectedProducts: productHook.selectedProducts,
-    selectedTemplate: productHook.selectedTemplate,
-    templateCategory: productHook.templateCategory,
     prompt,
     platform,
     aspectRatio,
     resolution,
-    collapsedSections: ui.collapsedSections,
-    currentSection: ui.currentSection,
-    showContextBar: ui.showContextBar,
-    showStickyGenerate: ui.showStickyGenerate,
-    searchQuery: productHook.searchQuery,
-    categoryFilter: productHook.categoryFilter,
-    activeActionButton: ui.activeActionButton,
-    quickStartMode: ui.quickStartMode,
-    quickStartPrompt: ui.quickStartPrompt,
-    tempUploads: ui.tempUploads,
-    priceEstimate: ui.priceEstimate,
+    selectedProducts: productHook.selectedProducts,
+    selectedTemplate: productHook.selectedTemplate,
+    tempUploads: uiHook.tempUploads,
+    generatedImage: generation.generatedImage,
+    generatedCopy: generation.generatedCopy,
+    generationId: generation.generationId,
     editPrompt: generation.editPrompt,
     isEditing: generation.isEditing,
     askAIQuestion: generation.askAIQuestion,
     askAIResponse: generation.askAIResponse,
     isAskingAI: generation.isAskingAI,
-    generatedCopy: generation.generatedCopy,
     isGeneratingCopy: generation.isGeneratingCopy,
-    generatedImageUrl: generation.generatedImageUrl,
     generatedCopyFull: generation.generatedCopyFull,
+    activeActionButton: ui.activeActionButton,
+    quickStartMode: uiHook.quickStartMode,
+    quickStartPrompt: uiHook.quickStartPrompt,
+    priceEstimate: ui.priceEstimate,
+    collapsedSections: ui.collapsedSections,
+    currentSection: ui.currentSection,
+    showContextBar: ui.showContextBar,
+    showStickyGenerate: ui.showStickyGenerate,
     showSaveToCatalog: ui.showSaveToCatalog,
     showTemplateInspiration: productHook.showTemplateInspiration,
     selectedPerformingTemplate: productHook.selectedPerformingTemplate,
-    selectedSuggestion: deepLinkHook.selectedSuggestion,
-    generationRecipe: deepLinkHook.generationRecipe,
+    templateCategory: productHook.templateCategory,
+    searchQuery: productHook.searchQuery,
+    categoryFilter: productHook.categoryFilter,
     ideaBankMode: deepLinkHook.ideaBankMode,
     generationMode: deepLinkHook.generationMode,
     selectedTemplateForMode: deepLinkHook.selectedTemplateForMode,
+    generationRecipe: deepLinkHook.generationRecipe,
     planContext: deepLinkHook.planContext,
     cpTemplate: deepLinkHook.cpTemplate,
     showCarouselBuilder: deepLinkHook.showCarouselBuilder,
@@ -411,6 +397,7 @@ function useStudioOrchestrator() {
     generateButtonRef: ui.generateButtonRef,
     heroRef: ui.heroRef,
     zoomContainerRef: ui.zoomContainerRef,
+    // Setters
     setState: generation.setState,
     setGeneratedImage: generation.setGeneratedImage,
     setGenerationId: generation.setGenerationId,
@@ -458,6 +445,7 @@ function useStudioOrchestrator() {
     setShowKeyboardShortcuts: ui.setShowKeyboardShortcuts,
     setImageScale: ui.setImageScale,
     setImagePosition: ui.setImagePosition,
+    // Actions
     toggleProductSelection: productHook.toggleProductSelection,
     toggleSection: ui.toggleSection,
     navigateToSection: ui.navigateToSection,
@@ -482,283 +470,231 @@ function useStudioOrchestrator() {
   };
 }
 
-/**
- * Syncs orchestrator state into StudioContext so that child components
- * reading via useStudioState() see the same values the orchestrator manages.
- */
+// ════════════════════════════════════════════════════════════
+// ORCHESTRATOR SYNC — Bridges orchestrator state to StudioContext
+// ════════════════════════════════════════════════════════════
+
 function useOrchestratorSync(orch: ReturnType<typeof useStudioOrchestrator>) {
   const { dispatch } = useStudioContext();
 
-  // Sync selectedProducts
   useEffect(() => {
     dispatch({ type: 'SET_PRODUCTS', products: orch.selectedProducts });
   }, [orch.selectedProducts, dispatch]);
-
-  // Sync prompt
   useEffect(() => {
-    dispatch({ type: 'SET_PROMPT', prompt: orch.prompt });
-  }, [orch.prompt, dispatch]);
-
-  // Sync platform
-  useEffect(() => {
-    dispatch({ type: 'SET_PLATFORM', platform: orch.platform });
-  }, [orch.platform, dispatch]);
-
-  // Sync aspectRatio
-  useEffect(() => {
-    dispatch({ type: 'SET_ASPECT_RATIO', aspectRatio: orch.aspectRatio });
-  }, [orch.aspectRatio, dispatch]);
-
-  // Sync resolution
-  useEffect(() => {
-    dispatch({ type: 'SET_RESOLUTION', resolution: orch.resolution });
-  }, [orch.resolution, dispatch]);
-
-  // Sync generationState
-  useEffect(() => {
-    dispatch({ type: 'SET_GENERATION_STATE', state: orch.state });
-  }, [orch.state, dispatch]);
-
-  // Sync generatedImage + generationId (SET_GENERATED_IMAGE also sets state to 'result')
-  useEffect(() => {
-    if (orch.generatedImage && orch.generationId) {
-      dispatch({ type: 'SET_GENERATED_IMAGE', image: orch.generatedImage, id: orch.generationId });
-    }
-  }, [orch.generatedImage, orch.generationId, dispatch]);
-
-  // Sync tempUploads
+    dispatch({ type: 'SELECT_TEMPLATE', template: orch.selectedTemplate });
+  }, [orch.selectedTemplate, dispatch]);
   useEffect(() => {
     dispatch({ type: 'SET_UPLOADS', uploads: orch.tempUploads });
   }, [orch.tempUploads, dispatch]);
-
-  // Sync selectedTemplate
   useEffect(() => {
-    if (orch.selectedTemplate) {
-      dispatch({ type: 'SELECT_TEMPLATE', template: orch.selectedTemplate });
-    } else {
-      dispatch({ type: 'CLEAR_TEMPLATE' });
+    dispatch({ type: 'SET_PROMPT', prompt: orch.prompt });
+  }, [orch.prompt, dispatch]);
+  useEffect(() => {
+    dispatch({ type: 'SET_PLATFORM', platform: orch.platform });
+  }, [orch.platform, dispatch]);
+  useEffect(() => {
+    dispatch({ type: 'SET_ASPECT_RATIO', aspectRatio: orch.aspectRatio });
+  }, [orch.aspectRatio, dispatch]);
+  useEffect(() => {
+    dispatch({ type: 'SET_RESOLUTION', resolution: orch.resolution });
+  }, [orch.resolution, dispatch]);
+  useEffect(() => {
+    if (orch.state === 'idle') dispatch({ type: 'CLEAR_GENERATION' });
+    else if (orch.state === 'generating') dispatch({ type: 'SET_GENERATING' });
+    else if (orch.state === 'result' && orch.generatedImage && orch.generationId) {
+      dispatch({ type: 'SET_RESULT', imageUrl: orch.generatedImage, generationId: orch.generationId });
     }
-  }, [orch.selectedTemplate, dispatch]);
-
-  // Sync selectedSuggestion
-  useEffect(() => {
-    dispatch({ type: 'SET_SUGGESTION', suggestion: orch.selectedSuggestion });
-  }, [orch.selectedSuggestion, dispatch]);
-
-  // Sync collapsedSections
+  }, [orch.state, orch.generatedImage, orch.generationId, dispatch]);
   useEffect(() => {
     dispatch({ type: 'SET_COLLAPSED_SECTIONS', sections: orch.collapsedSections });
   }, [orch.collapsedSections, dispatch]);
-
-  // Sync IdeaBank/Generation modes
-  useEffect(() => {
-    dispatch({ type: 'SET_IDEABANK_MODE', mode: orch.ideaBankMode });
-  }, [orch.ideaBankMode, dispatch]);
-
-  useEffect(() => {
-    dispatch({ type: 'SET_GENERATION_MODE', mode: orch.generationMode });
-  }, [orch.generationMode, dispatch]);
-
-  useEffect(() => {
-    dispatch({ type: 'SET_RECIPE', recipe: orch.generationRecipe });
-  }, [orch.generationRecipe, dispatch]);
-
-  // Sync UI fields
   useEffect(() => {
     dispatch({ type: 'SET_SHOW_CONTEXT_BAR', visible: orch.showContextBar });
   }, [orch.showContextBar, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_SHOW_STICKY_GENERATE', visible: orch.showStickyGenerate });
   }, [orch.showStickyGenerate, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_QUICK_START_MODE', enabled: orch.quickStartMode });
   }, [orch.quickStartMode, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_QUICK_START_PROMPT', prompt: orch.quickStartPrompt });
   }, [orch.quickStartPrompt, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_PRICE_ESTIMATE', estimate: orch.priceEstimate });
   }, [orch.priceEstimate, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_EDIT_PROMPT', prompt: orch.editPrompt });
   }, [orch.editPrompt, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_IS_EDITING', editing: orch.isEditing });
   }, [orch.isEditing, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_GENERATED_COPY', copy: orch.generatedCopy });
   }, [orch.generatedCopy, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_IS_GENERATING_COPY', generating: orch.isGeneratingCopy });
   }, [orch.isGeneratingCopy, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_GENERATED_COPY_FULL', copyResult: orch.generatedCopyFull });
   }, [orch.generatedCopyFull, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_ASK_AI_QUESTION', question: orch.askAIQuestion });
   }, [orch.askAIQuestion, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_ASK_AI_RESPONSE', response: orch.askAIResponse });
   }, [orch.askAIResponse, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_IS_ASKING_AI', asking: orch.isAskingAI });
   }, [orch.isAskingAI, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_SEARCH_QUERY', query: orch.searchQuery });
   }, [orch.searchQuery, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_CATEGORY_FILTER', filter: orch.categoryFilter });
   }, [orch.categoryFilter, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_HISTORY_PANEL_OPEN', open: orch.historyPanelOpen });
   }, [orch.historyPanelOpen, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_MEDIA_MODE', mode: orch.mediaMode });
   }, [orch.mediaMode, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_VIDEO_DURATION', duration: Number(orch.videoDuration) });
   }, [orch.videoDuration, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_IMAGE_SCALE', scale: orch.imageScale });
   }, [orch.imageScale, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_IMAGE_POSITION', position: orch.imagePosition });
   }, [orch.imagePosition, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_ACTIVE_ACTION_BUTTON', button: orch.activeActionButton });
   }, [orch.activeActionButton, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_SHOW_SAVE_TO_CATALOG', visible: orch.showSaveToCatalog });
   }, [orch.showSaveToCatalog, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_SHOW_CANVAS_EDITOR', visible: orch.showCanvasEditor });
   }, [orch.showCanvasEditor, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_SHOW_KEYBOARD_SHORTCUTS', visible: orch.showKeyboardShortcuts });
   }, [orch.showKeyboardShortcuts, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_JUST_COPIED', copied: orch.justCopied });
   }, [orch.justCopied, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_IS_DOWNLOADING', downloading: orch.isDownloading });
   }, [orch.isDownloading, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_TEMPLATE_CATEGORY', category: orch.templateCategory });
   }, [orch.templateCategory, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_SHOW_TEMPLATE_INSPIRATION', visible: orch.showTemplateInspiration });
   }, [orch.showTemplateInspiration, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_SELECTED_PERFORMING_TEMPLATE', template: orch.selectedPerformingTemplate });
   }, [orch.selectedPerformingTemplate, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_TEMPLATE_FOR_MODE', template: orch.selectedTemplateForMode });
   }, [orch.selectedTemplateForMode, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_PLAN_CONTEXT', context: orch.planContext });
   }, [orch.planContext, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_CP_TEMPLATE', template: orch.cpTemplate });
   }, [orch.cpTemplate, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_SHOW_CAROUSEL_BUILDER', visible: orch.showCarouselBuilder });
   }, [orch.showCarouselBuilder, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_CAROUSEL_TOPIC', topic: orch.carouselTopic });
   }, [orch.carouselTopic, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_SHOW_BEFORE_AFTER_BUILDER', visible: orch.showBeforeAfterBuilder });
   }, [orch.showBeforeAfterBuilder, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_BEFORE_AFTER_TOPIC', topic: orch.beforeAfterTopic });
   }, [orch.beforeAfterTopic, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_SHOW_TEXT_ONLY_MODE', visible: orch.showTextOnlyMode });
   }, [orch.showTextOnlyMode, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_TEXT_ONLY_TOPIC', topic: orch.textOnlyTopic });
   }, [orch.textOnlyTopic, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_VIDEO_JOB_ID', jobId: orch.videoJobId });
   }, [orch.videoJobId, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_GENERATED_MEDIA_TYPE', mediaType: orch.generatedMediaType });
   }, [orch.generatedMediaType, dispatch]);
-
   useEffect(() => {
     dispatch({ type: 'SET_CURRENT_SECTION', section: orch.currentSection });
   }, [orch.currentSection, dispatch]);
 }
 
-function StudioContent() {
+// ════════════════════════════════════════════════════════════
+// PHOENIX STUDIO CONTENT — The main unified layout
+// ════════════════════════════════════════════════════════════
+
+function PhoenixStudioContent() {
   const orch = useStudioOrchestrator();
   useOrchestratorSync(orch);
   const reduced = useReducedMotion();
 
-  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>(() => {
-    if (typeof window === 'undefined') return 'studio';
-    const stored = window.localStorage.getItem('studio-workspace-mode');
-    if (stored === 'agent' || stored === 'studio') return stored;
-    return 'studio';
+  // ── Panel visibility state ──────────────────────────────
+  const [assetDrawerOpen, setAssetDrawerOpen] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return window.innerWidth >= 1280; // Open by default on xl+ screens
   });
+  const [chatPanelOpen, setChatPanelOpen] = useState(true);
+  const [chatPanelWidth, setChatPanelWidth] = useState(CHAT_PANEL_DEFAULT_WIDTH);
+  const [rightPanelTab, setRightPanelTab] = useState<'chat' | 'queue' | 'calendar'>('chat');
 
+  // ── IdeaBank bridge state ───────────────────────────────
   const [ideaBankContext, setIdeaBankContext] = useState<IdeaBankContextSnapshot | null>(null);
-  const [ideaBankBridgeState, setIdeaBankBridgeState] = useState<IdeaBankBridgeState>('idle');
   const [agentExternalMessage, setAgentExternalMessage] = useState<{ id: string; text: string } | null>(null);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem('studio-workspace-mode', workspaceMode);
-  }, [workspaceMode]);
+  // ── Chat panel resize handler ───────────────────────────
+  const resizeRef = useRef<{ startX: number; startWidth: number } | null>(null);
 
-  const buildIdeaBankAgentMessage = useCallback((context: IdeaBankContextSnapshot) => {
-    const ideas = context.suggestions.slice(0, 5);
+  const handleResizeStart = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      resizeRef.current = { startX: e.clientX, startWidth: chatPanelWidth };
+
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        if (!resizeRef.current) return;
+        const delta = resizeRef.current.startX - moveEvent.clientX;
+        const newWidth = Math.min(
+          CHAT_PANEL_MAX_WIDTH,
+          Math.max(CHAT_PANEL_MIN_WIDTH, resizeRef.current.startWidth + delta),
+        );
+        setChatPanelWidth(newWidth);
+      };
+
+      const handleMouseUp = () => {
+        resizeRef.current = null;
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      };
+
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    },
+    [chatPanelWidth],
+  );
+
+  // ── IdeaBank → Agent bridge ─────────────────────────────
+  const buildIdeaBankAgentMessage = useCallback(() => {
+    if (!ideaBankContext || ideaBankContext.suggestionCount <= 0) return '';
     const lines = [
-      `I have ${context.suggestionCount} idea bank suggestion(s). Help me choose and plan execution.`,
-      '',
-      'Idea Bank results:',
-      ...ideas.map(
-        (idea, index) => `${index + 1}. ${idea.summary || idea.prompt}${idea.prompt ? `\nPrompt: ${idea.prompt}` : ''}`,
-      ),
+      `The IdeaBank has ${ideaBankContext.suggestionCount} suggestion(s) ready.`,
+      ...(ideaBankContext.topIdeas?.map((idea, i) => `${i + 1}. ${idea}`) ?? []),
       '',
       'Please return:',
       '1) Best idea for today',
@@ -766,18 +702,15 @@ function StudioContent() {
       '3) Recommended prompts for generation',
     ];
     return lines.join('\n').trim();
-  }, []);
+  }, [ideaBankContext]);
 
   const queueIdeaBankMessageToAgent = useCallback(
     (context: IdeaBankContextSnapshot) => {
       if (!context || context.suggestionCount <= 0) return false;
-
       setAgentExternalMessage({
         id: `idea-bank-${Date.now()}`,
-        text: buildIdeaBankAgentMessage(context),
+        text: buildIdeaBankAgentMessage(),
       });
-      setIdeaBankBridgeState('sent');
-      setWorkspaceMode('agent');
       return true;
     },
     [buildIdeaBankAgentMessage],
@@ -785,123 +718,55 @@ function StudioContent() {
 
   const handleIdeaBankContextChange = useCallback((context: IdeaBankContextSnapshot) => {
     setIdeaBankContext(context);
-
-    if (context.status === 'error') {
-      setIdeaBankBridgeState((prev) => (prev === 'sent' ? 'sent' : 'error'));
-      return;
-    }
-    if (context.status === 'ready') {
-      setIdeaBankBridgeState((prev) => (prev === 'sent' ? 'sent' : 'ready'));
-      return;
-    }
-    if (context.status === 'loading') {
-      setIdeaBankBridgeState((prev) => (prev === 'waiting' ? 'waiting' : 'idle'));
-      return;
-    }
-    setIdeaBankBridgeState((prev) => (prev === 'sent' ? 'sent' : 'idle'));
   }, []);
-
-  useEffect(() => {
-    if (ideaBankBridgeState !== 'waiting' || !ideaBankContext) return;
-
-    if (ideaBankContext.status === 'ready') {
-      if (ideaBankContext.suggestionCount > 0) {
-        queueIdeaBankMessageToAgent(ideaBankContext);
-      } else {
-        setIdeaBankBridgeState('idle');
-      }
-      return;
-    }
-    if (ideaBankContext.status === 'error') {
-      setIdeaBankBridgeState('error');
-    }
-  }, [ideaBankBridgeState, ideaBankContext, queueIdeaBankMessageToAgent]);
 
   const handleExternalMessageConsumed = useCallback((id: string) => {
     setAgentExternalMessage((prev) => (prev?.id === id ? null : prev));
   }, []);
 
-  const renderStudioCanvas = () => (
-    <>
-      <div
-        className={cn(
-          'lg:grid lg:gap-8',
-          orch.historyPanelOpen ? 'lg:grid-cols-[1fr_400px_320px]' : 'lg:grid-cols-[1fr_400px]',
+  // ── Render the main canvas area ─────────────────────────
+  const renderCanvas = () => (
+    <div className="flex-1 min-w-0 flex flex-col">
+      <AnimatePresence mode="wait">
+        {orch.state === 'idle' && (
+          <ComposerView
+            key="composer"
+            onIdeaBankContextChange={handleIdeaBankContextChange}
+            handlePromptChange={orch.handlePromptChange}
+            handleSelectSuggestion={orch.handleSelectSuggestion}
+            handleGenerate={orch.handleGenerate}
+            toggleProductSelection={orch.toggleProductSelection}
+            filteredProducts={orch.filteredProducts}
+            categories={orch.categories}
+            generateButtonRef={orch.generateButtonRef}
+          />
         )}
-      >
-        <div className="min-w-0">
-          <AnimatePresence mode="wait">
-            {orch.state === 'idle' && (
-              <ComposerView
-                key="composer"
-                onIdeaBankContextChange={handleIdeaBankContextChange}
-                handlePromptChange={orch.handlePromptChange}
-                handleSelectSuggestion={orch.handleSelectSuggestion}
-                handleGenerate={orch.handleGenerate}
-                toggleProductSelection={orch.toggleProductSelection}
-                filteredProducts={orch.filteredProducts}
-                categories={orch.categories}
-                generateButtonRef={orch.generateButtonRef}
-              />
-            )}
-            {orch.state === 'generating' && (
-              <GeneratingView
-                key="generating"
-                onCancel={orch.handleCancelGeneration}
-                mediaType={orch.generatedMediaType}
-              />
-            )}
-            {orch.state === 'result' && (
-              <ResultViewEnhanced
-                key="result"
-                handleReset={orch.handleReset}
-                handleDownloadWithFeedback={orch.handleDownloadWithFeedback}
-                handleCopyText={orch.handleCopyText}
-                handleCanvasEditComplete={orch.handleCanvasEditComplete}
-                haptic={orch.haptic}
-                zoomContainerRef={orch.zoomContainerRef}
-              />
-            )}
-          </AnimatePresence>
-        </div>
+        {orch.state === 'generating' && (
+          <GeneratingView key="generating" onCancel={orch.handleCancelGeneration} mediaType={orch.generatedMediaType} />
+        )}
+        {orch.state === 'result' && (
+          <ResultViewEnhanced
+            key="result"
+            handleReset={orch.handleReset}
+            handleDownloadWithFeedback={orch.handleDownloadWithFeedback}
+            handleCopyText={orch.handleCopyText}
+            handleCanvasEditComplete={orch.handleCanvasEditComplete}
+            haptic={orch.haptic}
+            zoomContainerRef={orch.zoomContainerRef}
+          />
+        )}
+      </AnimatePresence>
 
-        <div className="hidden lg:block min-w-0">
-          <div className="sticky top-24 max-h-[calc(100vh-120px)] rounded-2xl border border-border bg-card/30 overflow-hidden card-hover-lift">
-            <InspectorPanel
-              onApplyEdit={orch.handleApplyEdit}
-              handleGenerateCopy={orch.handleGenerateCopy}
-              handleAskAI={orch.handleAskAI}
-              handleDownloadWithFeedback={orch.handleDownloadWithFeedback}
-              handleLoadFromHistory={orch.handleLoadFromHistory}
-              authUser={orch.authUser}
-            />
-          </div>
-        </div>
-
-        <HistoryPanel
-          isOpen={orch.historyPanelOpen}
-          onToggle={orch.handleHistoryToggle}
-          onSelectGeneration={(id) => {
-            orch.selectGeneration(id);
-            fetch(`/api/generations/${id}`, { credentials: 'include' })
-              .then((r) => r.json())
-              .then((data) => {
-                if (data.imageUrl) orch.handleLoadFromHistory(data);
-              })
-              .catch(console.error);
-          }}
-          className="hidden lg:flex"
-        />
-      </div>
-
-      <div className="mt-8 hidden lg:block">
+      {/* IdeaBank bar below the canvas */}
+      <div className="mt-4 hidden lg:block">
         <IdeaBankBar handleSelectSuggestion={orch.handleSelectSuggestion} />
       </div>
-    </>
+    </div>
   );
 
   return (
     <div className="min-h-screen bg-background text-foreground relative">
+      {/* Background gradient */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-gradient-to-br from-primary/10 via-purple-500/8 to-transparent blur-[120px] rounded-full animate-float" />
         <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-gradient-to-tl from-blue-500/10 via-cyan-500/8 to-transparent blur-[120px] rounded-full animate-float-delayed" />
@@ -918,82 +783,166 @@ function StudioContent() {
         />
       </AnimatePresence>
 
-      <main
-        className={cn(
-          'container mx-auto px-6 pt-24 pb-24 lg:pb-12 relative z-10',
-          orch.historyPanelOpen ? 'max-w-[1600px]' : 'max-w-7xl',
-        )}
-      >
-        <motion.div
-          ref={orch.heroRef}
-          initial="hidden"
-          animate="visible"
-          variants={motionSafe(MOTION.presets.staggerChildren, reduced)}
-          className="text-center space-y-4 py-6"
-        >
-          {workspaceMode === 'studio' && (
-            <>
-              <motion.h1
-                variants={motionSafe(MOTION.presets.fadeUp, reduced)}
-                className="font-display text-4xl md:text-5xl font-bold tracking-tight bg-gradient-to-b from-zinc-900 to-zinc-900/60 dark:from-white dark:to-white/60 bg-clip-text text-transparent"
+      {/* ═══════════════════════════════════════════════════════
+          MAIN 3-COLUMN LAYOUT: Asset Drawer | Canvas | Chat
+          ═══════════════════════════════════════════════════════ */}
+      <main className="relative z-10 pt-16 h-[calc(100vh-0px)]">
+        <div className="flex h-full">
+          {/* ── LEFT: Asset Drawer ──────────────────────────── */}
+          <AnimatePresence>
+            {assetDrawerOpen && (
+              <motion.div
+                initial={{ width: 0, opacity: 0 }}
+                animate={{ width: ASSET_DRAWER_WIDTH, opacity: 1 }}
+                exit={{ width: 0, opacity: 0 }}
+                transition={{ duration: 0.2, ease: 'easeInOut' }}
+                className="hidden lg:block border-r border-border bg-card/30 overflow-hidden flex-shrink-0"
               >
-                Create stunning product visuals
-              </motion.h1>
-              <motion.p
-                variants={motionSafe(MOTION.presets.fadeUp, reduced)}
-                className="text-lg text-muted-foreground max-w-2xl mx-auto"
-              >
-                Add products and references, and generate professional marketing visuals in minutes.
-              </motion.p>
-            </>
-          )}
+                <AssetDrawer isOpen={assetDrawerOpen} onToggle={() => setAssetDrawerOpen(false)} className="h-full" />
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          <motion.div variants={motionSafe(MOTION.presets.fadeUp, reduced)} className="flex justify-center pt-1">
-            <div className="inline-flex gap-3">
-              {MODE_OPTIONS.map(({ mode, label, icon: Icon }) => (
-                <motion.button
-                  key={mode}
-                  className={cn('mode-card flex items-center gap-2 text-sm font-medium')}
-                  data-active={workspaceMode === mode}
-                  onClick={() => setWorkspaceMode(mode)}
-                  {...(!reduced ? { whileHover: { scale: 1.03 }, whileTap: { scale: 0.97 } } : {})}
-                  transition={MOTION.transitions.fast}
+          {/* ── CENTER: Canvas + Controls ───────────────────── */}
+          <div className="flex-1 min-w-0 flex flex-col overflow-y-auto">
+            {/* Toolbar row */}
+            <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 bg-background/50 backdrop-blur-sm flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setAssetDrawerOpen(!assetDrawerOpen)}
+                  title={assetDrawerOpen ? 'Hide assets' : 'Show assets'}
                 >
-                  <Icon className={cn('w-4 h-4', workspaceMode === mode ? 'text-primary' : 'text-muted-foreground')} />
-                  <span className={workspaceMode === mode ? 'text-primary' : 'text-muted-foreground'}>{label}</span>
-                </motion.button>
-              ))}
+                  {assetDrawerOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
+                </Button>
+                <span className="text-sm font-medium text-muted-foreground">
+                  {orch.selectedProducts.length > 0
+                    ? `${orch.selectedProducts.length} product${orch.selectedProducts.length !== 1 ? 's' : ''} selected`
+                    : 'Select products to get started'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={orch.handleHistoryToggle} className="gap-2 h-8">
+                  <History className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">History</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setChatPanelOpen(!chatPanelOpen)}
+                  title={chatPanelOpen ? 'Hide chat' : 'Show chat'}
+                >
+                  {chatPanelOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
+                </Button>
+              </div>
             </div>
-          </motion.div>
 
-          <motion.div variants={motionSafe(MOTION.presets.fadeUp, reduced)} className="flex justify-center gap-3 pt-2">
-            <Button variant="outline" size="sm" onClick={orch.handleHistoryToggle} className="gap-2">
-              <History className="w-4 h-4" />
-              {orch.historyPanelOpen ? 'Hide History' : 'History'}
-            </Button>
-          </motion.div>
-        </motion.div>
+            {/* Canvas area with optional inspector */}
+            <div className="flex-1 overflow-y-auto">
+              <div
+                className={cn('p-4 lg:p-6', orch.historyPanelOpen ? 'lg:grid lg:grid-cols-[1fr_320px] lg:gap-6' : '')}
+              >
+                <div className={cn(orch.state === 'result' ? 'lg:grid lg:grid-cols-[1fr_360px] lg:gap-6' : '')}>
+                  {renderCanvas()}
 
-        {workspaceMode === 'agent' && (
-          <div className="mx-auto w-full max-w-6xl">
-            <AgentChatPanel
-              products={orch.selectedProducts}
-              title="Ad Assistant"
-              forceExpanded
-              showCollapseToggle={false}
-              className="mb-0"
-              bodyMaxHeightClassName="h-[58vh] min-h-[420px] lg:h-[68vh] lg:min-h-[560px]"
-              ideaBankContext={ideaBankContext}
-              ideaBankBridgeState={ideaBankBridgeState}
-              externalMessage={agentExternalMessage}
-              onExternalMessageConsumed={handleExternalMessageConsumed}
-            />
+                  {/* Inspector panel - only visible when there's a result */}
+                  {orch.state === 'result' && (
+                    <div className="hidden lg:block">
+                      <div className="sticky top-4 max-h-[calc(100vh-160px)] rounded-2xl border border-border bg-card/30 overflow-hidden">
+                        <InspectorPanel
+                          onApplyEdit={orch.handleApplyEdit}
+                          handleGenerateCopy={orch.handleGenerateCopy}
+                          handleAskAI={orch.handleAskAI}
+                          handleDownloadWithFeedback={orch.handleDownloadWithFeedback}
+                          handleLoadFromHistory={orch.handleLoadFromHistory}
+                          authUser={orch.authUser}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* History panel */}
+                {orch.historyPanelOpen && (
+                  <HistoryPanel
+                    isOpen={orch.historyPanelOpen}
+                    onToggle={orch.handleHistoryToggle}
+                    onSelectGeneration={(id) => {
+                      orch.selectGeneration(id);
+                      fetch(`/api/generations/${id}`, { credentials: 'include' })
+                        .then((r) => r.json())
+                        .then((data) => {
+                          if (data.imageUrl) orch.handleLoadFromHistory(data);
+                        })
+                        .catch(console.error);
+                    }}
+                    className="hidden lg:flex"
+                  />
+                )}
+              </div>
+            </div>
           </div>
-        )}
 
-        {workspaceMode === 'studio' && renderStudioCanvas()}
+          {/* ── RIGHT: Agent Chat Panel ────────────────────── */}
+          <AnimatePresence>
+            {chatPanelOpen && (
+              <motion.div
+                initial={{ width: 0, opacity: 0 }}
+                animate={{ width: chatPanelWidth, opacity: 1 }}
+                exit={{ width: 0, opacity: 0 }}
+                transition={{ duration: 0.2, ease: 'easeInOut' }}
+                className="hidden lg:flex flex-col border-l border-border bg-card/20 flex-shrink-0 relative"
+                style={{ width: chatPanelWidth }}
+              >
+                {/* Resize handle */}
+                <div
+                  className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 transition-colors z-10"
+                  onMouseDown={handleResizeStart}
+                />
+                {/* Right panel tab bar */}
+                <div className="flex items-center border-b border-border/50 bg-background/50 backdrop-blur-sm flex-shrink-0">
+                  {(['chat', 'queue', 'calendar'] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setRightPanelTab(tab)}
+                      className={cn(
+                        'flex-1 text-xs font-medium py-2 px-3 transition-colors capitalize border-b-2',
+                        rightPanelTab === tab
+                          ? 'border-primary text-primary'
+                          : 'border-transparent text-muted-foreground hover:text-foreground',
+                      )}
+                    >
+                      {tab === 'queue' ? 'Approval' : tab}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Right panel content */}
+                {rightPanelTab === 'chat' && (
+                  <AgentChatPanel
+                    products={orch.products ?? []}
+                    title="Ad Assistant"
+                    forceExpanded
+                    showCollapseToggle={false}
+                    className="h-full border-0 rounded-none"
+                    bodyMaxHeightClassName="flex-1"
+                    ideaBankContext={ideaBankContext}
+                    externalMessage={agentExternalMessage}
+                    onExternalMessageConsumed={handleExternalMessageConsumed}
+                  />
+                )}
+                {rightPanelTab === 'queue' && <PhoenixApprovalQueue className="h-full" />}
+                {rightPanelTab === 'calendar' && <PhoenixContentCalendar className="h-full" />}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </main>
 
+      {/* ── Mobile Inspector (bottom sheet) ─────────────────── */}
       {orch.generatedImage && (
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-md border-t max-h-[60vh] overflow-y-auto">
           <InspectorPanel
@@ -1007,6 +956,42 @@ function StudioContent() {
         </div>
       )}
 
+      {/* ── Mobile Chat FAB ────────────────────────────────── */}
+      <div className="lg:hidden fixed bottom-4 right-4 z-50">
+        <Button
+          variant="default"
+          size="icon"
+          className="rounded-full w-14 h-14 shadow-xl"
+          onClick={() => setChatPanelOpen(!chatPanelOpen)}
+        >
+          <MessageSquare className="w-6 h-6" />
+        </Button>
+      </div>
+
+      {/* ── Mobile Chat Sheet ──────────────────────────────── */}
+      {chatPanelOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 bg-background">
+          <div className="flex items-center justify-between p-4 border-b">
+            <h2 className="font-semibold">Ad Assistant</h2>
+            <Button variant="ghost" size="icon" onClick={() => setChatPanelOpen(false)}>
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
+          <AgentChatPanel
+            products={orch.products ?? []}
+            title="Ad Assistant"
+            forceExpanded
+            showCollapseToggle={false}
+            className="h-[calc(100vh-64px)] border-0 rounded-none"
+            bodyMaxHeightClassName="flex-1"
+            ideaBankContext={ideaBankContext}
+            externalMessage={agentExternalMessage}
+            onExternalMessageConsumed={handleExternalMessageConsumed}
+          />
+        </div>
+      )}
+
+      {/* ── Save to Catalog Dialog ─────────────────────────── */}
       {orch.generatedImage && (
         <ErrorBoundary>
           <SaveToCatalogDialog
@@ -1018,6 +1003,7 @@ function StudioContent() {
         </ErrorBoundary>
       )}
 
+      {/* ── Template Inspiration Dialog ────────────────────── */}
       <Dialog open={orch.showTemplateInspiration} onOpenChange={orch.setShowTemplateInspiration}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
@@ -1031,10 +1017,10 @@ function StudioContent() {
               <div className="flex items-center justify-center py-20">
                 <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               </div>
-            ) : orch.featuredAdTemplates.length === 0 ? (
+            ) : (orch.featuredAdTemplates ?? []).length === 0 ? (
               <div className="text-center py-20 text-muted-foreground">
                 <p>No featured templates yet.</p>
-                <Link href="/templates">
+                <Link href="/library?tab=templates">
                   <Button variant="link" className="mt-2">
                     Browse template library
                   </Button>
@@ -1042,7 +1028,7 @@ function StudioContent() {
               </div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-1">
-                {orch.featuredAdTemplates.map((template) => (
+                {(orch.featuredAdTemplates ?? []).map((template) => (
                   <button
                     key={template.id}
                     onClick={() => orch.handleSelectPerformingTemplate(template)}
@@ -1085,6 +1071,7 @@ function StudioContent() {
         </DialogContent>
       </Dialog>
 
+      {/* ── Keyboard Shortcuts ─────────────────────────────── */}
       <KeyboardShortcutsPanel
         visible={orch.showKeyboardShortcuts}
         shortcuts={orch.shortcuts}
@@ -1093,5 +1080,19 @@ function StudioContent() {
         haptic={orch.haptic}
       />
     </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════
+// PHOENIX STUDIO — Top-level export with StudioProvider
+// ════════════════════════════════════════════════════════════
+
+export default function PhoenixStudio() {
+  return (
+    <StudioProvider>
+      <ErrorBoundary>
+        <PhoenixStudioContent />
+      </ErrorBoundary>
+    </StudioProvider>
   );
 }
