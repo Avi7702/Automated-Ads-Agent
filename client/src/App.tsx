@@ -44,9 +44,7 @@ function Router() {
 
       {/* Protected routes */}
       <Route path="/">
-        <ProtectedRoute>
-          <Studio />
-        </ProtectedRoute>
+        <Redirect to="/phoenix" />
       </Route>
 
       {/* Phoenix Studio — new unified workspace */}
@@ -158,7 +156,7 @@ function Router() {
 
 function App() {
   const [location] = useLocation();
-  const showGlobalChat = location !== '/';
+  const showGlobalChat = location !== '/phoenix' && location !== '/';
 
   // Initialize CSRF token on app load
   useEffect(() => {
