@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 // @vitest-environment jsdom
 import React from 'react';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';

@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
 // Use vi.hoisted to define mocks that will be available to vi.mock factories
 const { mockGenerateContent, mockStorage, mockFetch } = vi.hoisted(() => {

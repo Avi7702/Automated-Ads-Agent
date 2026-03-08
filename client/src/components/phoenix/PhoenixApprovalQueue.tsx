@@ -231,7 +231,6 @@ export function PhoenixApprovalQueue({ className, compact = false, maxItems = 20
   const [isActioning, setIsActioning] = useState<number | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved'>('pending');
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const items: ApprovalItem[] =
     (data as any[])?.map((d: any) => ({
       id: d.id,
